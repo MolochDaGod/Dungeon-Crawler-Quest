@@ -161,7 +161,7 @@ export default function Home() {
 
           <p className="text-gray-600 text-xs mt-1">
             {selectedMode === 'moba'
-              ? 'WASD move | QWER abilities | LMB attack | RMB move/target | MMB camera | B shop'
+              ? 'RMB move/target | A+LMB attack-move | QWER abilities | MMB camera | B shop | S stop'
               : 'WASD move | QWER abilities | LMB/Space attack | I inventory | Scroll zoom'
             }
           </p>

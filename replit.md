@@ -65,9 +65,20 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 
 ### Keybinding System (keybindings.ts)
 - All actions rebindable including mouse buttons (LMB=mouse0, RMB=mouse2, MMB=mouse1)
-- Categories: Movement, Combat, Abilities, UI
+- Categories: Movement, Combat, Abilities, Level Up, Items, Camera, UI
+- Default MOBA bindings: Arrow keys for movement (secondary), QWER abilities, S stop, RMB move/target, LMB attack, MMB camera pan
+- Integrated into both game.tsx and dungeon-game.tsx via matchesKeyDown()
 - Persists to localStorage
-- Settings page with visual rebinding UI
+- Settings page with visual rebinding UI (click to rebind, press new key/mouse, ESC cancel)
+
+### AI System (engine.ts)
+- Threat evaluation: weighted by enemy proximity, attack power, tower range
+- Ally awareness: counts nearby allies to determine retreat thresholds
+- Smart retreat: dynamic threshold (15-35% HP based on ally count), dash ability usage when critically low
+- Ability targeting: evaluates heal/buff on wounded allies, AoE on enemy clusters, finisher priority on low-HP targets
+- Class-aware strategy: Mage conserves mana, Warrior ignores heal when healthy, Ranger kites at range
+- Smart shopping: class-weighted item scoring (Warriors prioritize DEF/HP, Mages prioritize ATK/MP, Rangers prioritize ATK/SPD)
+- Lane waypoint following with nearest-waypoint tracking
 
 ### Voxel Art System
 - Procedural isometric cube rendering, 14z×8y×8x hero grids (expanded from 12×6×6)
@@ -121,6 +132,16 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - **Escape**: Cancel ability selection / Pause / close menus
 - **Arrow keys**: Manual movement (secondary, MOBA-style RMB is primary)
 - I: Inventory (dungeon mode)
+
+### Generated Art Assets (attached_assets/)
+- `hud-frame.png` - Ornate golden dragon HUD frame border for bottom bar
+- `terrain-tiles.png` - Isometric voxel terrain tileset
+- `minimap-bg.png` - MOBA minimap parchment background
+- `ability-icons.png` - RPG ability spell icons (sword/shield/fire/heal)
+- `shop-panel.png` - Medieval shop stall background
+- `tower-model.png` - Voxel defense tower sprite
+- `nexus-crystal.png` - Glowing nexus crystal sprite
+- `scoreboard-bg.png` - Ornate scoreboard panel background
 
 ## Design
 - Dark fantasy theme with crimson (#ef4444), gold (#ffd700), purple (#a855f7) accent colors
