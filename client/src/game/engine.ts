@@ -2692,7 +2692,7 @@ export class MobaRenderer {
       }
     }
 
-    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, hero.facing, hero.animState, hero.animTimer, heroData.race);
+    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, hero.facing, hero.animState, hero.animTimer, heroData.race, heroData.name, hero.buffTimer);
 
     if (hero.animState === 'attack' || hero.animState === 'ability' || hero.animState === 'combo_finisher') {
       const isMelee = heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg';

@@ -55,7 +55,8 @@ export default function CharacterSelect() {
         selectedHero.heroClass,
         Math.sin(t * 0.5) * 0.3,
         'idle', t,
-        selectedHero.race
+        selectedHero.race,
+        selectedHero.name
       );
 
       animId = requestAnimationFrame(animate);
