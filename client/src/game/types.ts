@@ -57,6 +57,14 @@ export interface GameEntity {
   dead: boolean;
 }
 
+export interface StatusEffectDisplay {
+  name: string;
+  icon: string;
+  color: string;
+  remaining: number;
+  stacks: number;
+}
+
 export interface MobaHero extends GameEntity {
   heroDataId: number;
   level: number;
@@ -87,6 +95,8 @@ export interface MobaHero extends GameEntity {
   buffTimer: number;
   shieldHp: number;
   lastDamagedBy: number[];
+  activeEffects: any[];
+  ccImmunityTimers: Map<string, number>;
 }
 
 export interface MobaMinion extends GameEntity {
@@ -213,6 +223,7 @@ export interface HudState {
   atk: number;
   def: number;
   spd: number;
+  activeEffects: StatusEffectDisplay[];
 }
 
 export const HEROES: HeroData[] = [

@@ -7,6 +7,8 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import CharacterSelect from "@/pages/character-select";
 import GamePage from "@/pages/game";
+import DungeonGamePage from "@/pages/dungeon-game";
+import SettingsPage from "@/pages/settings";
 import { useEffect } from "react";
 
 function Router() {
@@ -15,6 +17,8 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/character-select" component={CharacterSelect} />
       <Route path="/game" component={GamePage} />
+      <Route path="/dungeon" component={DungeonGamePage} />
+      <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>
   );

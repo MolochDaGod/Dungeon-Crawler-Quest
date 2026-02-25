@@ -18,6 +18,9 @@ export default function GamePage() {
   const rendererRef = useRef<MobaRenderer | null>(null);
   const keysRef = useRef<Set<string>>(new Set());
   const [hud, setHud] = useState<HudState | null>(null);
+  const panRef = useRef<{ active: boolean; startX: number; startY: number; camStartX: number; camStartY: number }>({
+    active: false, startX: 0, startY: 0, camStartX: 0, camStartY: 0
+  });
 
   const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
   const team = parseInt(localStorage.getItem('grudge_team') || '0');
@@ -81,6 +84,10 @@ export default function GamePage() {
         state.showScoreboard = false;
         state.paused = !state.paused;
       }
+      if (key === 'f1') {
+        const player = state.heroes[state.playerHeroIndex];
+        if (player) { state.camera.x = player.x; state.camera.y = player.y; }
+      }
 
       if (key >= '1' && key <= '4') {
         handlePlayerAbility(state, parseInt(key) - 1);
@@ -104,9 +111,36 @@ export default function GamePage() {
       handleRightClick(state, worldX, worldY);
     };
 
-    const onClick = (e: MouseEvent) => {
+    const onMouseDown = (e: MouseEvent) => {
       if (e.button === 0) {
         handlePlayerAttack(state);
+      }
+      if (e.button === 1) {
+        e.preventDefault();
+        panRef.current = {
+          active: true,
+          startX: e.clientX, startY: e.clientY,
+          camStartX: state.camera.x, camStartY: state.camera.y
+        };
+      }
+    };
+
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 1) panRef.current.active = false;
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      state.mouseWorld.x = (sx - canvas.width / 2) / state.camera.zoom + state.camera.x;
+      state.mouseWorld.y = (sy - canvas.height / 2) / state.camera.zoom + state.camera.y;
+
+      if (panRef.current.active) {
+        const dx = (e.clientX - panRef.current.startX) / state.camera.zoom;
+        const dy = (e.clientY - panRef.current.startY) / state.camera.zoom;
+        state.camera.x = panRef.current.camStartX - dx;
+        state.camera.y = panRef.current.camStartY - dy;
       }
     };
 
@@ -115,7 +149,9 @@ export default function GamePage() {
     };
 
     canvas.addEventListener('contextmenu', onContextMenu);
-    canvas.addEventListener('click', onClick);
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('wheel', onWheel);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
@@ -126,7 +162,9 @@ export default function GamePage() {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       canvas.removeEventListener('contextmenu', onContextMenu);
-      canvas.removeEventListener('click', onClick);
+      canvas.removeEventListener('mousedown', onMouseDown);
+      canvas.removeEventListener('mouseup', onMouseUp);
+      canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('wheel', onWheel);
     };
   }, [heroId, team, setLocation]);
@@ -213,6 +251,26 @@ export default function GamePage() {
                 <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden mb-1">
                   <div className="h-full bg-yellow-500 transition-all" style={{ width: `${(hud.xp / hud.xpToNext) * 100}%` }} data-testid="bar-xp" />
                 </div>
+
+                {hud.activeEffects.length > 0 && (
+                  <div className="flex gap-0.5 flex-wrap justify-center mb-1" data-testid="panel-active-effects">
+                    {hud.activeEffects.map((eff, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-bold"
+                        style={{
+                          background: `${eff.color}22`,
+                          border: `1px solid ${eff.color}66`,
+                          color: eff.color
+                        }}
+                        title={`${eff.name} (${eff.remaining.toFixed(1)}s)`}
+                        data-testid={`effect-${eff.name}-${i}`}
+                      >
+                        {eff.name}{eff.stacks > 1 ? ` x${eff.stacks}` : ''} {eff.remaining.toFixed(1)}s
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex gap-1">
                   {abilities.map((ab, i) => {

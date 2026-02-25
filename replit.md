@@ -1,21 +1,25 @@
-# GRUDGE Warlords - MOBA
+# GRUDGE Warlords
 
-A browser-based MOBA game with procedural voxel art, 26 playable heroes across 6 races and 4 classes, built with React and HTML5 Canvas.
+A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (procedural floors, boss fights). Features 26 playable heroes across 6 races and 4 classes, built with React and HTML5 Canvas.
 
 ## Architecture
 
 ### Frontend (Game)
-- **Game Engine**: Custom HTML5 Canvas 2D MOBA engine with top-down perspective
+- **Game Engine**: Custom HTML5 Canvas 2D engine
   - `client/src/game/types.ts` - All game types, 26 hero definitions from hero-codex, items, abilities, map data, stat calculations
   - `client/src/game/voxel.ts` - Procedural voxel art renderer (isometric cubes, hero/minion models per race+class)
-  - `client/src/game/engine.ts` - MOBA game loop, combat math, AI opponents, rendering, minimap
+  - `client/src/game/engine.ts` - MOBA game loop, combat, AI opponents, rendering, minimap
+  - `client/src/game/dungeon.ts` - Dungeon crawler engine: procedural floor generation, enemy AI, boss fights, loot, traps
+  - `client/src/game/combat.ts` - Status effects system: 19 effect types (Stun/Freeze/Root/Silence/Poison/Bleed/Burn/etc), DoT ticking, CC diminishing returns, crit/armor pen/lifesteal combat math
+  - `client/src/game/keybindings.ts` - Rebindable keybinding framework with LMB/RMB/MMB support, localStorage persistence
 - **Pages**:
-  - `client/src/pages/home.tsx` - Title screen with animated particle background
+  - `client/src/pages/home.tsx` - Title screen with mode selection (MOBA / Dungeon) and Settings button
   - `client/src/pages/character-select.tsx` - Hero selection with race/class filters, stat bars, ability previews, voxel model preview
-  - `client/src/pages/game.tsx` - Main game canvas with RPG UI overlay (hotbar, health/mana bars, item slots, shop, scoreboard)
+  - `client/src/pages/game.tsx` - MOBA game canvas with RPG UI overlay, status effects display, MMB camera pan
+  - `client/src/pages/dungeon-game.tsx` - Dungeon crawler with RPG HUD, inventory, floor/loot display
+  - `client/src/pages/settings.tsx` - Keybinding settings page with rebinding UI
 - **UI Framework**: React + Shadcn + Tailwind CSS (dark mode forced)
 - **Routing**: Wouter
-- **Fonts**: Oxanium for headings, Inter for body
 
 ### Backend
 - Express server (minimal, serves static files)
@@ -30,7 +34,7 @@ A browser-based MOBA game with procedural voxel art, 26 playable heroes across 6
 - 2 Secret heroes: Racalvin the Pirate King, Cpt. John Wayne
 - Stats: HP, ATK, DEF, SPD, RNG, MP with race modifiers
 
-### MOBA Mechanics
+### MOBA Mode
 - 4000x4000 map with 3 lanes (top, mid, bot)
 - 5v5 (player + 4 AI allies vs 5 AI enemies)
 - Towers along each lane (2 per lane per team + 1 base tower)
@@ -43,48 +47,58 @@ A browser-based MOBA game with procedural voxel art, 26 playable heroes across 6
 - Gold from last-hits, kills (+300g), assists (+100g)
 - KDA scoring and kill feed
 
+### Dungeon Crawler Mode
+- Procedural floor generation (10 floors)
+- Enemy types: Slime, Skeleton, Orc Grunt, Dark Mage
+- Boss fights every 5th floor (Dragon, Lich)
+- Traps (spike, fire, poison), chests with loot
+- Inventory and gold system
+- Uses same hero abilities/stats as MOBA mode
+
+### Combat System (combat.ts)
+- 19 Status Effect Types: Stun, Freeze, Root, Silence, Poison, Bleed, Burn, Curse, Slow, Haste, Immobilize, Blind, Sleep, Fear, Shield, Regen, AtkBuff, DefBuff, SpdBuff
+- DoT system: tick-based damage for Poison/Bleed/Burn/Curse
+- CC diminishing returns: immunity window after CC expires
+- Combat formulas: crit chance, crit damage (1.5x), armor penetration, lifesteal
+- Abilities apply status effects via getAbilityStatusEffects() mapping
+- Status effects display in HUD with color-coded icons, stacks, duration
+
+### Keybinding System (keybindings.ts)
+- All actions rebindable including mouse buttons (LMB=mouse0, RMB=mouse2, MMB=mouse1)
+- Categories: Movement, Combat, Abilities, UI
+- Persists to localStorage
+- Settings page with visual rebinding UI
+
 ### Voxel Art System
-- Procedural isometric cube rendering inspired by IsoVoxel/PixVoxelAssets GitHub repos
-- Unique hero models per race+class combination (skin color, armor, weapons, racial features)
+- Procedural isometric cube rendering
+- Unique hero models per race+class combination
 - Minion voxel models (melee/siege variants)
 - Animation states: idle, walk, attack, ability
 
 ### RPG UI Overlay
-- Based on Forced-Top-Layer RPG UI template
-- Stone/gold panel styling with corner rivets
+- Stone/gold panel styling (#c5a059 gold border) with corner rivets
 - Bottom hotbar with ability slots (Q/W/E/R) and 6 item slots
+- Active buff/debuff display above hotbar
 - Left chat/kill feed panel
 - Right stat panel with portrait, ATK/DEF/SPD, KDA
 - Top team score bar with game timer
-- Full-screen shop panel (B key)
-- Scoreboard (Tab key)
-- Victory/defeat screen with stats
+- MMB camera pan, F1 center camera, scroll zoom
 
-### Combat Math
-- Damage formula: ATK * (1 ± 10% variance) * (1 - DEF/(DEF+50))
-- Shield absorption system
-- Buff/debuff timers (ATK boost, speed slow, stun)
-- AoE abilities with radius checks
-- Dash abilities with distance capping
-
-### AI System
-- Heroes retreat to base when HP < 20%
-- Auto-use abilities when off cooldown and targets in range
-- Auto-buy most expensive affordable item
-- Lane pathing when no enemies nearby
-- Base healing when near own base
-
-## Controls
+## Controls (Default)
 - WASD: Move hero
 - Q/W/E/R or 1-4: Use abilities
-- Space/Left-click: Auto-attack nearest enemy
-- Right-click: Move to position or target enemy
+- LMB/Space: Auto-attack nearest enemy
+- RMB: Move to position or target enemy
+- MMB: Camera pan (drag)
 - B: Toggle item shop
 - Tab: Show scoreboard
+- F1: Center camera on hero
 - Scroll: Zoom camera
-- Escape: Pause
+- Escape: Pause / close menus
+- I: Inventory (dungeon mode)
 
 ## Design
 - Dark fantasy theme with crimson (#ef4444), gold (#ffd700), purple (#a855f7) accent colors
 - Forced dark mode via `document.documentElement.classList.add("dark")`
 - Game state in useRef, HUD synced to React every ~100ms for performance
+- Font: Oxanium for headings

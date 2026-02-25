@@ -7,6 +7,13 @@ import {
   RACE_COLORS, CLASS_COLORS, RARITY_COLORS
 } from './types';
 import { VoxelRenderer } from './voxel';
+import {
+  StatusEffect, updateStatusEffects, applyStatusEffect,
+  isStunned, isRooted, isSilenced, getSpeedMultiplier,
+  hasLifesteal, getAbilityStatusEffects,
+  CombatEntity, calculateDamage as combatCalcDamage,
+  DOT_TYPES, CC_TYPES
+} from './combat';
 
 const BASE_POSITIONS: Vec2[] = [
   { x: 300, y: 3700 },
@@ -151,7 +158,9 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     animState: 'idle', animTimer: 0,
     respawnTimer: 0, isPlayer, dead: false,
     stunTimer: 0, buffTimer: 0, shieldHp: 0,
-    lastDamagedBy: []
+    lastDamagedBy: [],
+    activeEffects: [],
+    ccImmunityTimers: new Map()
   };
 }
 
@@ -214,21 +223,23 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   const player = state.heroes[state.playerHeroIndex];
 
   if (player && !player.dead) {
+    const playerSpdMult = getSpeedMultiplier(player as any as CombatEntity);
+    const playerRooted = isRooted(player as any as CombatEntity);
     let mx = 0, my = 0;
     if (keys.has('w') || keys.has('arrowup')) my = -1;
     if (keys.has('s') || keys.has('arrowdown')) my = 1;
     if (keys.has('a') || keys.has('arrowleft')) mx = -1;
     if (keys.has('d') || keys.has('arrowright')) mx = 1;
 
-    if (mx !== 0 || my !== 0) {
+    if (!playerRooted && (mx !== 0 || my !== 0)) {
       const len = Math.sqrt(mx * mx + my * my);
-      const speed = player.spd * 1.8;
+      const speed = player.spd * 1.8 * playerSpdMult;
       player.vx = (mx / len) * speed;
       player.vy = (my / len) * speed;
       player.facing = Math.atan2(my, mx);
       player.moveTarget = null;
       player.animState = 'walk';
-    } else if (player.moveTarget) {
+    } else if (!playerRooted && player.moveTarget) {
       const d = dist(player, player.moveTarget);
       if (d < 10) {
         player.moveTarget = null;
@@ -237,7 +248,7 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
         player.animState = 'idle';
       } else {
         const angle = angleTo(player, player.moveTarget);
-        const speed = player.spd * 1.8;
+        const speed = player.spd * 1.8 * playerSpdMult;
         player.vx = Math.cos(angle) * speed;
         player.vy = Math.sin(angle) * speed;
         player.facing = angle;
@@ -316,10 +327,26 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
   hero.animTimer += dt;
   hero.mp = Math.min(hero.maxMp, hero.mp + dt * 2);
 
-  if (hero.stunTimer > 0) {
-    hero.stunTimer -= dt;
+  const effectResult = updateStatusEffects(hero as any as CombatEntity, dt);
+  if (effectResult.damage > 0) {
+    hero.hp -= effectResult.damage;
+    addFloatingText(state, hero.x, hero.y - 20, `-${Math.floor(effectResult.damage)}`, '#ff6666', 10);
+  }
+  if (effectResult.heal > 0) {
+    hero.hp = Math.min(hero.maxHp, hero.hp + effectResult.heal);
+  }
+
+  if (hero.stunTimer > 0) hero.stunTimer -= dt;
+
+  const stunned = isStunned(hero as any as CombatEntity) || hero.stunTimer > 0;
+  if (stunned) {
     hero.vx = 0;
     hero.vy = 0;
+    hero.autoAttackTimer -= dt;
+    for (let i = 0; i < hero.abilityCooldowns.length; i++) {
+      if (hero.abilityCooldowns[i] > 0) hero.abilityCooldowns[i] -= dt;
+    }
+    if (hero.hp <= 0) killHero(state, hero);
     return;
   }
 
@@ -518,13 +545,17 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
 
   const abilityColor = CLASS_COLORS[heroData.heroClass] || '#ffffff';
 
+  const statusEffects = getAbilityStatusEffects(ab.name, hero.id, hero.atk);
+
   switch (ab.type) {
     case 'damage': {
       if (target) {
         const dmg = ab.damage + hero.atk * 0.8;
         dealDamage(state, hero, target, dmg);
         spawnAbilityParticles(state, target.x, target.y, abilityColor, 8);
-        if (ab.duration > 0 && 'stunTimer' in target) {
+        if (target.activeEffects) {
+          for (const eff of statusEffects) applyStatusEffect(target as any as CombatEntity, eff);
+        } else if (ab.duration > 0 && 'stunTimer' in target) {
           target.stunTimer = ab.duration;
         }
       }
@@ -538,6 +569,9 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
         if (dist({ x: cx, y: cy }, e) < ab.radius) {
           const dmg = ab.damage + hero.atk * 0.6;
           dealDamage(state, hero, e, dmg);
+          if (e.activeEffects) {
+            for (const eff of statusEffects) applyStatusEffect(e as any as CombatEntity, { ...eff });
+          }
         }
       }
       spawnAbilityParticles(state, cx, cy, abilityColor, 20);
@@ -545,9 +579,7 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
     }
     case 'buff': {
       hero.buffTimer = ab.duration;
-      const buffAtk = Math.floor(hero.atk * 0.3);
-      hero.atk += buffAtk;
-      const buffTimeout = setTimeout(() => { hero.atk -= buffAtk; }, ab.duration * 1000);
+      for (const eff of statusEffects) applyStatusEffect(hero as any as CombatEntity, eff);
       if (ab.name === 'Avatar') {
         const buffHp = Math.floor(hero.maxHp * 0.5);
         hero.maxHp += buffHp;
@@ -561,13 +593,14 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
       const entities = getAllEnemies(state, hero.team);
       for (const e of entities) {
         if (dist(hero, e) < ab.radius) {
-          if ('spd' in e) {
-            const origSpd = e.spd;
-            e.spd = Math.floor(e.spd * 0.6);
-            setTimeout(() => { e.spd = origSpd; }, ab.duration * 1000);
-          }
-          if ('stunTimer' in e && ab.name === 'Trap') {
-            e.stunTimer = ab.duration;
+          if (e.activeEffects) {
+            for (const eff of statusEffects) applyStatusEffect(e as any as CombatEntity, { ...eff });
+          } else {
+            if ('spd' in e) {
+              const origSpd = e.spd;
+              e.spd = Math.floor(e.spd * 0.6);
+              setTimeout(() => { e.spd = origSpd; }, ab.duration * 1000);
+            }
           }
           if (ab.damage > 0) dealDamage(state, hero, e, ab.damage);
         }
@@ -577,6 +610,7 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
     }
     case 'heal': {
       hero.shieldHp = 100 + hero.def * 2;
+      for (const eff of statusEffects) applyStatusEffect(hero as any as CombatEntity, eff);
       spawnAbilityParticles(state, hero.x, hero.y, '#22c55e', 10);
       break;
     }
@@ -594,6 +628,7 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
         hero.y += Math.sin(hero.facing) * dashDist;
         spawnAbilityParticles(state, hero.x, hero.y, abilityColor, 8);
       }
+      for (const eff of statusEffects) applyStatusEffect(hero as any as CombatEntity, eff);
       hero.x = Math.max(50, Math.min(MAP_SIZE - 50, hero.x));
       hero.y = Math.max(50, Math.min(MAP_SIZE - 50, hero.y));
       break;
@@ -1037,7 +1072,14 @@ export function getHudState(state: MobaState): HudState {
     killFeed: state.killFeed,
     atk: player?.atk ?? 0,
     def: player?.def ?? 0,
-    spd: player?.spd ?? 0
+    spd: player?.spd ?? 0,
+    activeEffects: (player?.activeEffects || []).map((e: any) => ({
+      name: e.name || e.type,
+      icon: e.icon || '',
+      color: e.color || '#fff',
+      remaining: e.remaining || 0,
+      stacks: e.stacks || 1,
+    }))
   };
 }
 
