@@ -6,7 +6,7 @@ import {
   xpForLevel, heroStatsAtLevel, calcDamage,
   RACE_COLORS, CLASS_COLORS, RARITY_COLORS
 } from './types';
-import { VoxelRenderer } from './voxel';
+import { VoxelRenderer, TerrainType } from './voxel';
 import {
   StatusEffect, updateStatusEffects, applyStatusEffect,
   isStunned, isRooted, isSilenced, getSpeedMultiplier,
@@ -70,6 +70,95 @@ function angleTo(a: Vec2, b: Vec2): number {
   return Math.atan2(b.y - a.y, b.x - a.x);
 }
 
+function seededRandom(x: number, y: number): number {
+  let h = (x * 374761393 + y * 668265263 + 1013904223) | 0;
+  h = ((h ^ (h >> 13)) * 1274126177) | 0;
+  return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+}
+
+const TILE_GRID = Math.ceil(MAP_SIZE / 80);
+
+function isOnLaneStatic(x: number, y: number): boolean {
+  for (const lane of LANE_WAYPOINTS) {
+    for (let i = 1; i < lane.length; i++) {
+      const a = lane[i - 1], b = lane[i];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy;
+      if (len2 === 0) continue;
+      const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / len2));
+      const px = a.x + t * dx, py = a.y + t * dy;
+      const d = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
+      if (d < 120) return true;
+    }
+  }
+  return false;
+}
+
+function isNearRiver(x: number, y: number): boolean {
+  const cx = MAP_SIZE / 2, cy = MAP_SIZE / 2;
+  const angle = Math.atan2(y - cy, x - cx);
+  const riverDist = Math.abs(Math.sin(angle * 2)) * 200 + 50;
+  const distCenter = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+  return Math.abs(distCenter - 1000) < riverDist * 0.15 && !isOnLaneStatic(x, y);
+}
+
+function generateTerrainMap(): number[][] {
+  const grid: number[][] = [];
+  for (let ty = 0; ty < TILE_GRID; ty++) {
+    grid[ty] = [];
+    for (let tx = 0; tx < TILE_GRID; tx++) {
+      const wx = tx * 80 + 40;
+      const wy = ty * 80 + 40;
+      const distToCenter = Math.sqrt((wx - MAP_SIZE / 2) ** 2 + (wy - MAP_SIZE / 2) ** 2);
+
+      const distBase0 = Math.sqrt((wx - BASE_POSITIONS[0].x) ** 2 + (wy - BASE_POSITIONS[0].y) ** 2);
+      const distBase1 = Math.sqrt((wx - BASE_POSITIONS[1].x) ** 2 + (wy - BASE_POSITIONS[1].y) ** 2);
+
+      if (distBase0 < 200) { grid[ty][tx] = 6; continue; }
+      if (distBase1 < 200) { grid[ty][tx] = 7; continue; }
+
+      if (isNearRiver(wx, wy)) { grid[ty][tx] = 8; continue; }
+
+      if (isOnLaneStatic(wx, wy)) { grid[ty][tx] = 4; continue; }
+
+      if (distToCenter > 400 && distToCenter < 1800) {
+        grid[ty][tx] = 5;
+      } else {
+        grid[ty][tx] = seededRandom(tx, ty) > 0.85 ? 1 : 0;
+      }
+    }
+  }
+  return grid;
+}
+
+const TERRAIN_LOOKUP: TerrainType[] = ['grass', 'dirt', 'stone', 'water', 'lane', 'jungle', 'base_blue', 'base_red', 'river'];
+
+function generateDecorations(): { x: number; y: number; type: 'tree' | 'rock'; seed: number }[] {
+  const decos: { x: number; y: number; type: 'tree' | 'rock'; seed: number }[] = [];
+  for (let i = 0; i < 200; i++) {
+    const x = seededRandom(i * 7, i * 13) * MAP_SIZE;
+    const y = seededRandom(i * 11, i * 17) * MAP_SIZE;
+    const distBase0 = Math.sqrt((x - BASE_POSITIONS[0].x) ** 2 + (y - BASE_POSITIONS[0].y) ** 2);
+    const distBase1 = Math.sqrt((x - BASE_POSITIONS[1].x) ** 2 + (y - BASE_POSITIONS[1].y) ** 2);
+    if (distBase0 < 300 || distBase1 < 300) continue;
+    if (isOnLaneStatic(x, y)) continue;
+    const distCenter = Math.sqrt((x - MAP_SIZE / 2) ** 2 + (y - MAP_SIZE / 2) ** 2);
+    if (distCenter > 400 && distCenter < 1800) {
+      decos.push({ x, y, type: seededRandom(i, i + 100) > 0.3 ? 'tree' : 'rock', seed: i });
+    }
+  }
+  for (let i = 0; i < 80; i++) {
+    const x = seededRandom(i * 23 + 500, i * 29) * MAP_SIZE;
+    const y = seededRandom(i * 31, i * 37 + 500) * MAP_SIZE;
+    if (isOnLaneStatic(x, y)) continue;
+    const distBase0 = Math.sqrt((x - BASE_POSITIONS[0].x) ** 2 + (y - BASE_POSITIONS[0].y) ** 2);
+    const distBase1 = Math.sqrt((x - BASE_POSITIONS[1].x) ** 2 + (y - BASE_POSITIONS[1].y) ** 2);
+    if (distBase0 < 300 || distBase1 < 300) continue;
+    decos.push({ x, y, type: 'rock', seed: i + 300 });
+  }
+  return decos;
+}
+
 export function createInitialState(playerHeroId: number, playerTeam: number): MobaState {
   initTowerPositions();
 
@@ -93,7 +182,10 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     selectedAbility: -1,
     showShop: false,
     showScoreboard: false,
-    killFeed: []
+    killFeed: [],
+    terrainMap: generateTerrainMap(),
+    decorations: generateDecorations(),
+    cursorMode: 'default'
   };
 
   const team0Heroes = [playerHeroId];
@@ -1108,7 +1200,7 @@ export class MobaRenderer {
     ctx.scale(cam.zoom, cam.zoom);
     ctx.translate(-cam.x, -cam.y);
 
-    this.renderMap(ctx, cam, W, H);
+    this.renderMap(ctx, cam, W, H, state);
     this.renderLanes(ctx);
 
     for (const nexus of state.nexuses) {
@@ -1141,44 +1233,98 @@ export class MobaRenderer {
       this.renderFloatingText(ctx, ft);
     }
 
+    this.renderCursor(ctx, state);
+
     ctx.restore();
 
     this.renderMinimap(ctx, state, W, H);
     this.renderKillFeed(ctx, state, W);
   }
 
-  private renderMap(ctx: CanvasRenderingContext2D, cam: Camera, W: number, H: number) {
-    const startX = Math.max(0, Math.floor((cam.x - W / 2 / cam.zoom) / 80)) * 80;
-    const startY = Math.max(0, Math.floor((cam.y - H / 2 / cam.zoom) / 80)) * 80;
-    const endX = Math.min(MAP_SIZE, cam.x + W / 2 / cam.zoom + 80);
-    const endY = Math.min(MAP_SIZE, cam.y + H / 2 / cam.zoom + 80);
+  private renderCursor(ctx: CanvasRenderingContext2D, state: MobaState) {
+    const mx = state.mouseWorld.x;
+    const my = state.mouseWorld.y;
+    const t = Date.now() * 0.004;
 
-    for (let x = startX; x < endX; x += 80) {
-      for (let y = startY; y < endY; y += 80) {
-        const tileX = Math.floor(x / 80);
-        const tileY = Math.floor(y / 80);
-        const isLight = (tileX + tileY) % 2 === 0;
+    ctx.save();
+    ctx.translate(mx, my);
 
-        const distToCenter = Math.sqrt(Math.pow(x - MAP_SIZE / 2, 2) + Math.pow(y - MAP_SIZE / 2, 2));
-        const isJungle = distToCenter > 400 && distToCenter < 1800 &&
-          !this.isOnLane(x, y);
+    if (state.cursorMode === 'attack') {
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-8, 0); ctx.lineTo(-3, 0);
+      ctx.moveTo(3, 0); ctx.lineTo(8, 0);
+      ctx.moveTo(0, -8); ctx.lineTo(0, -3);
+      ctx.moveTo(0, 3); ctx.lineTo(0, 8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, 10, 0, Math.PI * 2);
+      ctx.globalAlpha = 0.4 + Math.sin(t) * 0.2;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else if (state.cursorMode === 'ability') {
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.5 + Math.sin(t) * 0.3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, t, t + Math.PI * 1.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, 6, -t, -t + Math.PI);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else if (state.cursorMode === 'move') {
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.lineTo(5, -3); ctx.lineTo(2, -3);
+      ctx.lineTo(2, 8); ctx.lineTo(-2, 8);
+      ctx.lineTo(-2, -3); ctx.lineTo(-5, -3);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.strokeStyle = '#c5a059';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.5;
+      const sz = 6;
+      ctx.beginPath();
+      ctx.moveTo(-sz, -sz + 3); ctx.lineTo(-sz, -sz); ctx.lineTo(-sz + 3, -sz);
+      ctx.moveTo(sz, -sz + 3); ctx.lineTo(sz, -sz); ctx.lineTo(sz - 3, -sz);
+      ctx.moveTo(-sz, sz - 3); ctx.lineTo(-sz, sz); ctx.lineTo(-sz + 3, sz);
+      ctx.moveTo(sz, sz - 3); ctx.lineTo(sz, sz); ctx.lineTo(sz - 3, sz);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
-        if (isJungle) {
-          ctx.fillStyle = isLight ? '#0d150d' : '#0b120b';
-        } else {
-          ctx.fillStyle = isLight ? '#111811' : '#0e150e';
-        }
-        ctx.fillRect(x, y, 80, 80);
+    ctx.restore();
+  }
+
+  private renderMap(ctx: CanvasRenderingContext2D, cam: Camera, W: number, H: number, state: MobaState) {
+    const startTX = Math.max(0, Math.floor((cam.x - W / 2 / cam.zoom) / 80) - 1);
+    const startTY = Math.max(0, Math.floor((cam.y - H / 2 / cam.zoom) / 80) - 1);
+    const endTX = Math.min(TILE_GRID, Math.ceil((cam.x + W / 2 / cam.zoom) / 80) + 1);
+    const endTY = Math.min(TILE_GRID, Math.ceil((cam.y + H / 2 / cam.zoom) / 80) + 1);
+
+    for (let ty = startTY; ty < endTY; ty++) {
+      for (let tx = startTX; tx < endTX; tx++) {
+        const terrainIdx = state.terrainMap[ty]?.[tx] ?? 0;
+        const terrain = TERRAIN_LOOKUP[terrainIdx] || 'grass';
+        this.voxel.drawTerrainTile(ctx, tx * 80, ty * 80, 80, terrain, tx, ty);
       }
     }
 
-    for (let team = 0; team < 2; team++) {
-      const base = BASE_POSITIONS[team];
-      const gradient = ctx.createRadialGradient(base.x, base.y, 0, base.x, base.y, 250);
-      gradient.addColorStop(0, team === 0 ? 'rgba(59,130,246,0.15)' : 'rgba(239,68,68,0.15)');
-      gradient.addColorStop(1, 'transparent');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(base.x - 250, base.y - 250, 500, 500);
+    for (const deco of state.decorations) {
+      if (deco.x < cam.x - W / 2 / cam.zoom - 40 || deco.x > cam.x + W / 2 / cam.zoom + 40) continue;
+      if (deco.y < cam.y - H / 2 / cam.zoom - 80 || deco.y > cam.y + H / 2 / cam.zoom + 40) continue;
+      if (deco.type === 'tree') {
+        this.voxel.drawTreeVoxel(ctx, deco.x, deco.y, deco.seed);
+      } else {
+        this.voxel.drawRockVoxel(ctx, deco.x, deco.y, deco.seed);
+      }
     }
   }
 
@@ -1226,34 +1372,24 @@ export class MobaRenderer {
     ctx.save();
     ctx.translate(nexus.x, nexus.y);
 
-    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 50);
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 60);
     gradient.addColorStop(0, color);
     gradient.addColorStop(1, 'transparent');
-    ctx.globalAlpha = 0.3 * pulse;
+    ctx.globalAlpha = 0.25 * pulse;
     ctx.fillStyle = gradient;
-    ctx.fillRect(-50, -50, 100, 100);
+    ctx.fillRect(-60, -60, 120, 120);
     ctx.globalAlpha = 1;
 
-    ctx.fillStyle = '#1a1a2e';
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 3) * i - Math.PI / 6;
-      const px = Math.cos(angle) * 35;
-      const py = Math.sin(angle) * 35;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    this.voxel.drawNexusVoxel(ctx, 0, 0, color);
 
     ctx.fillStyle = color;
     ctx.globalAlpha = pulse;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 15;
     ctx.beginPath();
-    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+    ctx.arc(0, -24, 6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
 
     this.renderHealthBar(ctx, 0, -50, 50, nexus.hp, nexus.maxHp, color);
@@ -1267,36 +1403,22 @@ export class MobaRenderer {
     ctx.save();
     ctx.translate(tower.x, tower.y);
 
-    ctx.fillStyle = '#2a2a3e';
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-
-    ctx.fillRect(-12, -40, 24, 40);
-    ctx.strokeRect(-12, -40, 24, 40);
-
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(-18, -40);
-    ctx.lineTo(18, -40);
-    ctx.lineTo(12, -52);
-    ctx.lineTo(-12, -52);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#000';
-    ctx.fillRect(-4, -25, 8, 12);
+    this.voxel.drawTowerVoxel(ctx, 0, 0, color, tower.tierIndex || 1);
 
     const pulse = Math.sin(Date.now() * 0.005) * 3;
     ctx.fillStyle = color;
     ctx.globalAlpha = 0.8;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
     ctx.beginPath();
     ctx.arc(0, -56, 4 + pulse, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
 
     if (tower.targetId !== null) {
       ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha = 0.2;
       ctx.lineWidth = 1;
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
@@ -1366,6 +1488,21 @@ export class MobaRenderer {
       ctx.globalAlpha = 1;
     }
 
+    if (hero.activeEffects && hero.activeEffects.length > 0) {
+      for (const eff of hero.activeEffects) {
+        const effColor = eff.color || '#fff';
+        ctx.strokeStyle = effColor;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.006) * 0.15;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+      }
+    }
+
     this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, hero.facing, hero.animState, hero.animTimer, heroData.race);
 
     const teamColor = TEAM_COLORS[hero.team];
@@ -1383,6 +1520,17 @@ export class MobaRenderer {
     ctx.fillRect(-24, -22, 48, 3);
     ctx.fillStyle = '#6366f1';
     ctx.fillRect(-24, -22, 48 * mpPct, 3);
+
+    if (hero.activeEffects && hero.activeEffects.length > 0) {
+      let ox = -hero.activeEffects.length * 5;
+      for (const eff of hero.activeEffects) {
+        ctx.fillStyle = eff.color || '#fff';
+        ctx.globalAlpha = 0.8;
+        ctx.fillRect(ox, -18, 8, 3);
+        ctx.globalAlpha = 1;
+        ox += 10;
+      }
+    }
 
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 9px sans-serif';

@@ -70,19 +70,28 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - Settings page with visual rebinding UI
 
 ### Voxel Art System
-- Procedural isometric cube rendering
-- Unique hero models per race+class combination
+- Procedural isometric cube rendering inspired by IsoVoxel/MagicaVoxel patterns
+- Unique hero models per race+class combination (skin, armor, weapons, racial features)
 - Minion voxel models (melee/siege variants)
 - Animation states: idle, walk, attack, ability
+- Voxel terrain tiles: grass, dirt, stone, water, lane, jungle, base_blue/red, river (cached to offscreen canvases)
+- Voxel structures: towers (tier-scaled stone+team color), nexus (hexagonal base + crystal top)
+- Voxel decorations: trees (trunk + leaf canopy, 6 seed variants), rocks (3 variants)
+- Dungeon voxel tiles: floor, wall (with 3D wall-top overhang), door, trap, stairs, chest
+- Seeded random for deterministic tile variation (no flicker on re-render)
+- Tile cache system (max 500 entries) for performance
 
 ### RPG UI Overlay
 - Stone/gold panel styling (#c5a059 gold border) with corner rivets
 - Bottom hotbar with ability slots (Q/W/E/R) and 6 item slots
-- Active buff/debuff display above hotbar
+- Active buff/debuff display above hotbar with color-coded indicators
 - Left chat/kill feed panel
 - Right stat panel with portrait, ATK/DEF/SPD, KDA
 - Top team score bar with game timer
-- MMB camera pan, F1 center camera, scroll zoom
+- Custom in-game cursor: attack crosshair (A+click), ability targeting (purple), move arrow (RMB), default brackets
+- MMB camera pan (drag), F1 center camera, scroll zoom
+- Hero status effect glows visible on entities (burn/poison/freeze rings)
+- Terrain map: procedural terrain grid with biomes (grass, jungle, lanes, bases, river)
 
 ## Controls (Default)
 - WASD: Move hero
