@@ -1039,7 +1039,7 @@ export class DungeonRenderer {
       ctx.globalAlpha = 1;
     }
 
-    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, hd.heroClass, p.facing, p.animState, p.animTimer, hd.race);
+    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, hd.heroClass, p.facing, p.animState, p.animTimer, hd.race, hd.name);
 
     this.renderHealthBar(ctx, 0, -24, 20, p.hp, p.maxHp, '#22c55e');
     const mpPct = p.mp / p.maxMp;

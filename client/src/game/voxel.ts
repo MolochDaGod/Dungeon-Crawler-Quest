@@ -260,7 +260,107 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   return idle;
 }
 
-function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number): VoxelModel {
+function buildBearModel(animState: string, animTimer: number): VoxelModel {
+  const fur = '#5a3a1a';
+  const darkFur = '#3a2a12';
+  const lightFur = '#7a5a3a';
+  const nose = '#222222';
+  const eye = '#111111';
+  const claw = '#ccccaa';
+
+  const W = 10, D = 10, H = 12;
+  const model: VoxelModel = [];
+  for (let z = 0; z < H; z++) {
+    model[z] = [];
+    for (let y = 0; y < D; y++) {
+      model[z][y] = [];
+      for (let x = 0; x < W; x++) model[z][y][x] = null;
+    }
+  }
+
+  const setV = (z: number, y: number, x: number, c: string) => {
+    if (z >= 0 && z < H && y >= 0 && y < D && x >= 0 && x < W) model[z][y][x] = c;
+  };
+
+  const t = animTimer;
+  const walkPhase = animState === 'walk' ? Math.sin(t * 8) : 0;
+  const atkPhase = animState === 'attack' ? Math.max(0, Math.sin(t * 10)) : 0;
+
+  const fLegOx = Math.round(walkPhase * 1.2);
+  const bLegOx = Math.round(-walkPhase * 1.2);
+
+  for (let y = 3; y <= 6; y++) {
+    setV(0, y, 2 + fLegOx, darkFur);
+    setV(1, y, 2 + fLegOx, fur);
+    setV(0, y, 7 + fLegOx, darkFur);
+    setV(1, y, 7 + fLegOx, fur);
+  }
+  setV(0, 3 + fLegOx, 2, claw); setV(0, 3 + fLegOx, 7, claw);
+
+  for (let y = 3; y <= 6; y++) {
+    setV(0, y, 3 + bLegOx, darkFur);
+    setV(1, y, 3 + bLegOx, fur);
+    setV(0, y, 6 + bLegOx, darkFur);
+    setV(1, y, 6 + bLegOx, fur);
+  }
+
+  for (let x = 2; x <= 7; x++) {
+    for (let y = 3; y <= 6; y++) {
+      setV(2, y, x, fur);
+      setV(3, y, x, fur);
+      setV(4, y, x, darkFur);
+    }
+  }
+  for (let x = 3; x <= 6; x++) {
+    for (let y = 3; y <= 6; y++) {
+      setV(5, y, x, fur);
+    }
+  }
+
+  for (let x = 2; x <= 7; x++) {
+    setV(3, 4, x, lightFur);
+    setV(3, 5, x, lightFur);
+  }
+
+  const headOz = Math.round(atkPhase * 1.5);
+  for (let x = 3; x <= 6; x++) {
+    for (let y = 2; y <= 5; y++) {
+      setV(5 + headOz, y, x, fur);
+      setV(6 + headOz, y, x, fur);
+      setV(7 + headOz, y, x, darkFur);
+    }
+  }
+  for (let x = 4; x <= 5; x++) {
+    setV(8 + headOz, 3, x, fur);
+    setV(8 + headOz, 4, x, fur);
+  }
+
+  setV(7 + headOz, 2, 3, eye);
+  setV(7 + headOz, 2, 6, eye);
+
+  setV(6 + headOz, 2, 4, nose);
+  setV(6 + headOz, 2, 5, nose);
+  setV(5 + headOz, 2, 4, '#994444');
+  setV(5 + headOz, 2, 5, '#994444');
+
+  setV(8 + headOz, 3, 3, fur);
+  setV(8 + headOz, 3, 6, fur);
+  setV(9 + headOz, 3, 3, darkFur);
+  setV(9 + headOz, 3, 6, darkFur);
+
+  if (atkPhase > 0.3) {
+    const clawExtend = Math.round(atkPhase * 2);
+    setV(3, 2, 1, claw);
+    setV(3, 2 - clawExtend, 1, claw);
+    setV(3, 2, 8, claw);
+    setV(3, 2 - clawExtend, 8, claw);
+  }
+
+  return model;
+}
+
+function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number, heroName?: string): VoxelModel {
+  const isPirate = heroName?.includes('Racalvin') || heroName?.includes('Pirate King');
   const skin = RACE_SKIN[race] || '#c4956a';
   const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
   const hair = race === 'Elf' ? '#e8d090' : race === 'Orc' ? '#2a2a2a' : race === 'Undead' ? '#444444' : race === 'Dwarf' ? '#a0522d' : '#3a2a1a';
@@ -394,11 +494,43 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     setV(7 + hP.oz, 3 + hP.oy, 4 + hP.ox, '#555555');
     setV(8 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#3a3a3a');
   }
-  if (race === 'Barbarian') {
+  if (race === 'Barbarian' && !isPirate) {
     setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, hair);
     setV(10 + hP.oz, 3 + hP.oy, 4 + hP.ox, hair);
     setV(9 + hP.oz, 3 + hP.oy, 2 + hP.ox, hair);
     setV(9 + hP.oz, 3 + hP.oy, 5 + hP.ox, hair);
+  }
+
+  if (isPirate) {
+    const hatColor = '#1a1a2e';
+    const hatBrim = '#222244';
+    const hatBand = '#c5a059';
+    for (let x = 1; x <= 6; x++) {
+      setV(9 + hP.oz, 3 + hP.oy, x + hP.ox, hatBrim);
+      setV(9 + hP.oz, 2 + hP.oy, x + hP.ox, hatBrim);
+    }
+    for (let x = 2; x <= 5; x++) {
+      setV(10 + hP.oz, 3 + hP.oy, x + hP.ox, hatColor);
+      setV(10 + hP.oz, 2 + hP.oy, x + hP.ox, hatColor);
+      setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hatColor);
+    }
+    for (let x = 3; x <= 4; x++) {
+      setV(12 + hP.oz, 3 + hP.oy, x + hP.ox, hatColor);
+    }
+    setV(10 + hP.oz, 2 + hP.oy, 2 + hP.ox, hatBand);
+    setV(10 + hP.oz, 2 + hP.oy, 3 + hP.ox, hatBand);
+    setV(10 + hP.oz, 2 + hP.oy, 4 + hP.ox, hatBand);
+    setV(10 + hP.oz, 2 + hP.oy, 5 + hP.ox, hatBand);
+
+    const beardColor = '#2a1a0a';
+    setV(6 + hP.oz, 2 + hP.oy, 3 + hP.ox, beardColor);
+    setV(6 + hP.oz, 2 + hP.oy, 4 + hP.ox, beardColor);
+    setV(5 + hP.oz, 2 + hP.oy, 3 + hP.ox, beardColor);
+    setV(5 + hP.oz, 2 + hP.oy, 4 + hP.ox, beardColor);
+    setV(5 + hP.oz, 3 + hP.oy, 3 + hP.ox, beardColor);
+    setV(5 + hP.oz, 3 + hP.oy, 4 + hP.ox, beardColor);
+    setV(4 + hP.oz, 2 + hP.oy, 3 + hP.ox, beardColor);
+    setV(4 + hP.oz, 2 + hP.oy, 4 + hP.ox, beardColor);
   }
 
   const wP = poses.weapon;
@@ -432,7 +564,22 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     }
   }
 
-  if (heroClass === 'Ranger') {
+  if (heroClass === 'Ranger' && isPirate) {
+    const gunMetal = '#555555';
+    const gunWood = '#5a3a1a';
+    setV(4 + wP.oz, 1 + wP.oy, 0 + wP.ox, gunWood);
+    setV(3 + wP.oz, 1 + wP.oy, 0 + wP.ox, gunWood);
+    setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, gunMetal);
+    setV(6 + wP.oz, 1 + wP.oy, 0 + wP.ox, gunMetal);
+    setV(7 + wP.oz, 1 + wP.oy, 0 + wP.ox, gunMetal);
+    setV(7 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#333333');
+    setV(8 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#333333');
+    setV(5 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#c5a059');
+    if (poses.weaponGlow > 0) {
+      setV(8 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend('#ff6600', '#ffff00', poses.weaponGlow));
+      setV(9 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend('#ff4400', '#ffff00', poses.weaponGlow * 0.5));
+    }
+  } else if (heroClass === 'Ranger') {
     for (let z = 3; z <= 9; z++) {
       setV(z + wP.oz, 0 + wP.oy, 0 + wP.ox, '#6b4423');
     }
@@ -659,9 +806,16 @@ export class VoxelRenderer {
     raceColor: string, classColor: string,
     heroClass: string, facing: number,
     animState: string, animTimer: number,
-    race: string
+    race: string,
+    heroName?: string,
+    buffTimer?: number
   ) {
-    const model = buildHeroModel(race, heroClass, animState, animTimer);
+    if (heroClass === 'Worg' && buffTimer && buffTimer > 0) {
+      const bearModel = buildBearModel(animState, animTimer);
+      this.renderVoxelModel(ctx, x, y - 28, bearModel, this.cubeSize, facing);
+      return;
+    }
+    const model = buildHeroModel(race, heroClass, animState, animTimer, heroName);
     this.renderVoxelModel(ctx, x, y - 22, model, this.cubeSize, facing);
   }
 
