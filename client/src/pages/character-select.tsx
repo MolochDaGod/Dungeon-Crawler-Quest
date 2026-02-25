@@ -36,7 +36,7 @@ export default function CharacterSelect() {
     let t = 0;
     const animate = () => {
       t += 0.016;
-      ctx.fillStyle = '#0a0a0f';
+      ctx.fillStyle = '#0a0f0a';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = 'rgba(255,215,0,0.03)';
@@ -83,12 +83,12 @@ export default function CharacterSelect() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white" data-testid="character-select-page">
-      <div className="sticky top-0 z-50 bg-[#0a0a0f]/95 backdrop-blur border-b border-red-900/40 px-4 py-3">
+    <div className="min-h-screen bg-[#0a0f0a] text-white" data-testid="character-select-page">
+      <div className="sticky top-0 z-50 bg-[#0a0f0a]/95 backdrop-blur border-b border-[#c5a059]/30 px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1
-            className="text-2xl font-black text-yellow-500 tracking-wider"
-            style={{ fontFamily: "'Oxanium', sans-serif" }}
+            className="text-2xl font-black tracking-wider"
+            style={{ fontFamily: "'Oxanium', sans-serif", color: '#c5a059' }}
             data-testid="text-page-title"
           >
             HERO SELECT
@@ -107,7 +107,7 @@ export default function CharacterSelect() {
             {RACES.map(r => (
               <button
                 key={r}
-                className={`px-3 py-1 text-xs rounded border transition-all ${raceFilter === r ? 'border-yellow-500 text-yellow-500 bg-yellow-500/10' : 'border-gray-700 text-gray-500 hover:border-gray-500'}`}
+                className={`px-3 py-1 text-xs rounded border transition-all ${raceFilter === r ? 'border-[#c5a059] text-[#c5a059] bg-[#c5a059]/10' : 'border-gray-700 text-gray-500 hover:border-gray-500'}`}
                 onClick={() => setRaceFilter(r)}
                 data-testid={`filter-race-${r.toLowerCase()}`}
               >
@@ -120,7 +120,7 @@ export default function CharacterSelect() {
             {CLASSES.map(c => (
               <button
                 key={c}
-                className={`px-3 py-1 text-xs rounded border transition-all ${classFilter === c ? 'border-yellow-500 text-yellow-500 bg-yellow-500/10' : 'border-gray-700 text-gray-500 hover:border-gray-500'}`}
+                className={`px-3 py-1 text-xs rounded border transition-all ${classFilter === c ? 'border-[#c5a059] text-[#c5a059] bg-[#c5a059]/10' : 'border-gray-700 text-gray-500 hover:border-gray-500'}`}
                 onClick={() => setClassFilter(c)}
                 data-testid={`filter-class-${c.toLowerCase()}`}
               >
@@ -138,11 +138,11 @@ export default function CharacterSelect() {
               return (
                 <Card
                   key={hero.id}
-                  className={`cursor-pointer transition-all p-3 bg-[#1a1a2e] border hover:border-yellow-500/50 ${isSelected ? 'border-yellow-500 ring-1 ring-yellow-500/30' : 'border-gray-800'} ${hero.isSecret ? 'bg-gradient-to-br from-[#1a1a2e] to-[#281432]' : ''}`}
+                  className={`cursor-pointer transition-all p-3 bg-[#1a1a2e] border hover:border-[#c5a059]/50 ${isSelected ? 'border-[#c5a059] ring-1 ring-[#c5a059]/30' : 'border-gray-800'} ${hero.isSecret ? 'bg-gradient-to-br from-[#1a1a2e] to-[#281432]' : ''}`}
                   onClick={() => setSelectedHero(hero)}
                   data-testid={`card-hero-${hero.id}`}
                 >
-                  {hero.isSecret && <span className="text-[10px] bg-gradient-to-r from-yellow-500 to-amber-500 text-black px-2 py-0.5 rounded font-bold tracking-wider">SECRET</span>}
+                  {hero.isSecret && <span className="text-[10px] bg-gradient-to-r from-[#c5a059] to-amber-600 text-black px-2 py-0.5 rounded font-bold tracking-wider">SECRET</span>}
                   <div className="mt-1">
                     <h3 className="text-sm font-bold truncate" style={{ color: rarityColor }}>{hero.name}</h3>
                     <p className="text-[10px] text-gray-500 italic truncate">{hero.title}</p>
@@ -168,7 +168,7 @@ export default function CharacterSelect() {
             {selectedHero ? (
               <div className="sticky top-20 bg-[#1a1a2e] border border-gray-800 rounded-xl p-4" data-testid="hero-detail-panel">
                 <div className="flex justify-center mb-4">
-                  <canvas ref={previewRef} width={200} height={160} className="rounded-lg bg-[#0a0a0f]" data-testid="canvas-hero-preview" />
+                  <canvas ref={previewRef} width={200} height={160} className="rounded-lg bg-[#0a0f0a]" data-testid="canvas-hero-preview" />
                 </div>
 
                 <h2 className="text-xl font-bold" style={{ fontFamily: "'Oxanium', sans-serif", color: RARITY_COLORS[selectedHero.rarity] }}>

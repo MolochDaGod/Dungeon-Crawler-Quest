@@ -5,18 +5,22 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 ## Architecture
 
 ### Frontend (Game)
-- **Game Engine**: Custom HTML5 Canvas 2D engine
+- **Game Engine**: Dual renderer - Custom HTML5 Canvas 2D + Three.js 3D
   - `client/src/game/types.ts` - All game types, 26 hero definitions from hero-codex, items, abilities, map data, stat calculations
   - `client/src/game/voxel.ts` - Procedural voxel art renderer (isometric cubes, hero/minion models per race+class)
-  - `client/src/game/engine.ts` - MOBA game loop, combat, AI opponents, rendering, minimap
+  - `client/src/game/engine.ts` - MOBA game loop, combat, AI opponents, 2D rendering, minimap
+  - `client/src/game/three-renderer.ts` - Three.js 3D renderer with lighting, terrain, entity management, health bars, camera
+  - `client/src/game/model-loader.ts` - GLTFLoader/FBXLoader with caching for 3D model assets
+  - `client/src/game/prefabs.ts` - TOWER_PREFABS, HERO_PREFABS, ENV_PREFABS, WEAPON_PREFABS mapping
   - `client/src/game/dungeon.ts` - Dungeon crawler engine: procedural floor generation, enemy AI, boss fights, loot, traps
   - `client/src/game/combat.ts` - Status effects system: 19 effect types (Stun/Freeze/Root/Silence/Poison/Bleed/Burn/etc), DoT ticking, CC diminishing returns, crit/armor pen/lifesteal combat math
   - `client/src/game/keybindings.ts` - Rebindable keybinding framework with LMB/RMB/MMB support, localStorage persistence
 - **Pages**:
   - `client/src/pages/home.tsx` - Title screen with mode selection (MOBA / Dungeon) and Settings button
   - `client/src/pages/character-select.tsx` - Hero selection with race/class filters, stat bars, ability previews, voxel model preview
-  - `client/src/pages/game.tsx` - MOBA game canvas with RPG UI overlay, status effects display, MMB camera pan
+  - `client/src/pages/game.tsx` - MOBA game canvas with RPG UI overlay, status effects display, MMB camera pan, 2D/3D toggle
   - `client/src/pages/dungeon-game.tsx` - Dungeon crawler with RPG HUD, inventory, floor/loot display
+  - `client/src/pages/open-world.tsx` - Open world exploration with 3 towns (Elvenhollow, Ironjaw Keep, Valorheim), WASD movement, minimap
   - `client/src/pages/settings.tsx` - Keybinding settings page with rebinding UI
 - **UI Framework**: React + Shadcn + Tailwind CSS (dark mode forced)
 - **Routing**: Wouter
