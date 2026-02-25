@@ -387,38 +387,67 @@ export default function GamePage() {
                   {abilities.map((ab, i) => {
                     const cd = hud.abilityCooldowns[i] || 0;
                     const onCd = cd > 0;
+                    const ready = !onCd && hud.mp >= ab.manaCost;
                     const selected = stateRef.current?.selectedAbility === i;
                     return (
-                      <button
-                        key={i}
-                        className="relative flex items-center justify-center font-bold text-white"
-                        style={{
-                          width: 50, height: 50,
-                          background: onCd ? 'linear-gradient(135deg, #1a1a1a, #0a0a0a)' : `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
-                          border: `2px solid ${selected ? '#ffd700' : onCd ? '#333' : '#c5a059'}`,
-                          borderRadius: 4,
-                          boxShadow: selected ? '0 0 12px rgba(255,215,0,0.5)' : 'inset 0 0 8px rgba(0,0,0,0.6)',
-                          opacity: onCd ? 0.6 : 1,
-                          cursor: 'pointer',
-                          transition: 'all 0.1s'
-                        }}
-                        onClick={() => {
-                          if (stateRef.current) {
-                            stateRef.current.selectedAbility = i;
-                            stateRef.current.cursorMode = 'ability';
-                          }
-                        }}
-                        title={`${ab.name}: ${ab.description}`}
-                        data-testid={`button-ability-${i}`}
-                      >
-                        <span className="absolute text-[9px] font-bold" style={{ top: 2, left: 4, color: selected ? '#ffd700' : '#888' }}>{ab.key}</span>
-                        <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{ab.name.substring(0, 2)}</span>
-                        {onCd && (
-                          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 2 }}>
-                            <span className="text-sm font-black text-white" style={{ textShadow: '0 0 4px #000' }}>{Math.ceil(cd)}</span>
+                      <div key={i} className="relative flex flex-col items-center group" style={{ gap: 1 }}>
+                        <div
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block pointer-events-none"
+                          style={{ width: 200, zIndex: 10 }}
+                          data-testid={`tooltip-ability-${i}`}
+                        >
+                          <div
+                            className="p-2 rounded text-left"
+                            style={{
+                              background: 'linear-gradient(to bottom, rgba(15,10,5,0.98), rgba(5,2,0,0.98))',
+                              border: '1px solid #c5a059',
+                              boxShadow: '0 4px 16px rgba(0,0,0,0.9), 0 0 4px rgba(197,160,89,0.3)'
+                            }}
+                          >
+                            <div className="text-xs font-black text-[#c5a059] mb-1">{ab.name}</div>
+                            <p className="text-[10px] text-gray-400 mb-1.5 leading-tight">{ab.description}</p>
+                            <div className="flex justify-between text-[9px]">
+                              <span style={{ color: '#60a5fa' }}>Mana: {ab.manaCost}</span>
+                              <span style={{ color: '#fbbf24' }}>CD: {ab.cooldown}s</span>
+                            </div>
+                            {ab.damage > 0 && <div className="text-[9px] mt-0.5" style={{ color: '#f87171' }}>Damage: {ab.damage}</div>}
+                            {ab.range > 0 && <div className="text-[9px]" style={{ color: '#4ade80' }}>Range: {ab.range}</div>}
                           </div>
-                        )}
-                      </button>
+                        </div>
+                        <button
+                          className="relative flex items-center justify-center font-bold text-white"
+                          style={{
+                            width: 50, height: 50,
+                            background: onCd ? 'linear-gradient(135deg, #1a1a1a, #0a0a0a)' : `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
+                            border: `2px solid ${selected ? '#ffd700' : onCd ? '#333' : '#c5a059'}`,
+                            borderRadius: 4,
+                            boxShadow: selected
+                              ? '0 0 12px rgba(255,215,0,0.5)'
+                              : ready
+                              ? `0 0 10px ${CLASS_COLORS[hud.heroClass] || '#c5a059'}66, inset 0 0 8px rgba(0,0,0,0.4)`
+                              : 'inset 0 0 8px rgba(0,0,0,0.6)',
+                            opacity: onCd ? 0.6 : 1,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                          onClick={() => {
+                            if (stateRef.current) {
+                              stateRef.current.selectedAbility = i;
+                              stateRef.current.cursorMode = 'ability';
+                            }
+                          }}
+                          data-testid={`button-ability-${i}`}
+                        >
+                          <span className="absolute text-[9px] font-bold" style={{ top: 2, left: 4, color: selected ? '#ffd700' : '#888' }}>{ab.key}</span>
+                          <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{ab.name.substring(0, 2)}</span>
+                          {onCd && (
+                            <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 2 }}>
+                              <span className="text-sm font-black text-white" style={{ textShadow: '0 0 4px #000' }}>{cd.toFixed(1)}</span>
+                            </div>
+                          )}
+                        </button>
+                        <span className="text-[8px] font-bold" style={{ color: hud.mp >= ab.manaCost ? '#60a5fa' : '#f87171' }}>{ab.manaCost}</span>
+                      </div>
                     );
                   })}
 
@@ -427,21 +456,39 @@ export default function GamePage() {
                   {hud.items.map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-center"
+                      className="relative flex items-center justify-center group"
                       style={{
                         width: 38, height: 50,
                         background: item ? 'linear-gradient(135deg, #1a1a2e, #0a0a15)' : 'linear-gradient(135deg, #0a0a0a, #050505)',
-                        border: `1px solid ${item ? '#c5a05980' : '#222'}`,
+                        border: item ? '1px solid #c5a05980' : '1px dashed #333',
                         borderRadius: 3,
                         color: item ? '#c5a059' : '#333',
                         fontSize: 9,
                         fontWeight: 'bold',
                         boxShadow: 'inset 0 0 6px rgba(0,0,0,0.5)'
                       }}
-                      title={item?.name}
                       data-testid={`slot-item-${i}`}
                     >
                       {item ? item.name.split(' ').map(w => w[0]).join('') : ''}
+                      {item && (
+                        <div
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block pointer-events-none"
+                          style={{ width: 160, zIndex: 10 }}
+                          data-testid={`tooltip-item-${i}`}
+                        >
+                          <div
+                            className="p-2 rounded text-left"
+                            style={{
+                              background: 'linear-gradient(to bottom, rgba(15,10,5,0.98), rgba(5,2,0,0.98))',
+                              border: '1px solid #c5a059',
+                              boxShadow: '0 4px 16px rgba(0,0,0,0.9), 0 0 4px rgba(197,160,89,0.3)'
+                            }}
+                          >
+                            <div className="text-xs font-black text-[#c5a059] mb-1">{item.name}</div>
+                            <p className="text-[10px] text-gray-400 leading-tight">{item.description}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -502,7 +549,7 @@ export default function GamePage() {
                     {hud.heroClass.charAt(0)}
                   </div>
                   <span className="text-[10px] font-bold flex items-center" style={{ gap: 2 }}>
-                    <span style={{ color: '#ffd700' }}>{hud.gold}</span>
+                    <span style={{ color: '#ffd700' }}>{Math.floor(hud.gold)}</span>
                     <span style={{ color: '#c5a059' }}>g</span>
                   </span>
                 </div>
@@ -530,6 +577,27 @@ export default function GamePage() {
             </div>
           </div>
 
+          {hud.dead && !hud.gameOver && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" data-testid="overlay-respawn"
+              style={{ background: 'rgba(0,0,0,0.6)', zIndex: 10 }}
+            >
+              <div className="text-center">
+                <div
+                  className="text-5xl font-black mb-2"
+                  style={{
+                    fontFamily: "'Oxanium', sans-serif",
+                    color: '#ef4444',
+                    textShadow: '0 0 40px rgba(239,68,68,0.6), 0 2px 8px rgba(0,0,0,0.8)'
+                  }}
+                  data-testid="text-respawn-timer"
+                >
+                  RESPAWNING IN {hud.respawnTimer.toFixed(1)}s
+                </div>
+                <div className="text-gray-500 text-sm" style={{ fontFamily: "'Oxanium', sans-serif" }}>You have been slain</div>
+              </div>
+            </div>
+          )}
+
           {hud.showShop && <ShopPanel hud={hud} onBuy={(id) => stateRef.current && buyItem(stateRef.current, id)} onClose={() => stateRef.current && (stateRef.current.showShop = false)} />}
           {hud.showScoreboard && <Scoreboard hud={hud} />}
           {hud.gameOver && <GameOverScreen hud={hud} onReturn={() => setLocation('/')} />}
@@ -555,7 +623,7 @@ function ShopPanel({ hud, onBuy, onClose }: { hud: HudState; onBuy: (id: number)
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg text-[#c5a059] font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>ITEM SHOP</h2>
           <div className="flex items-center gap-3">
-            <span className="text-yellow-500 text-sm font-bold" data-testid="text-shop-gold">{hud.gold}g</span>
+            <span className="text-yellow-500 text-sm font-bold" data-testid="text-shop-gold">{Math.floor(hud.gold)}g</span>
             <button className="text-gray-400 hover:text-white text-xl cursor-pointer" onClick={onClose} data-testid="button-close-shop">&times;</button>
           </div>
         </div>

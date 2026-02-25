@@ -201,6 +201,7 @@ export interface MobaState {
   cursorMode: 'default' | 'attack' | 'ability' | 'move' | 'attackmove';
   hoveredEntityId: number | null;
   aKeyHeld: boolean;
+  _ambientTimer: number;
 }
 
 export interface HudState {
@@ -232,6 +233,9 @@ export interface HudState {
   atk: number;
   def: number;
   spd: number;
+  rng: number;
+  dead: boolean;
+  respawnTimer: number;
   activeEffects: StatusEffectDisplay[];
 }
 
