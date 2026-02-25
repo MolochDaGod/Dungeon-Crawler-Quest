@@ -22,6 +22,14 @@ function blend(hex1: string, hex2: string, t: number): string {
   return rgbToHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
 }
 
+function facingToDir(facing: number): number {
+  const a = ((facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  if (a < Math.PI * 0.25 || a >= Math.PI * 1.75) return 1;
+  if (a < Math.PI * 0.75) return 2;
+  if (a < Math.PI * 1.25) return 3;
+  return 0;
+}
+
 function seededRandom(x: number, y: number): number {
   let h = (x * 374761393 + y * 668265263 + 1013904223) | 0;
   h = ((h ^ (h >> 13)) * 1274126177) | 0;
@@ -657,11 +665,11 @@ export class VoxelRenderer {
     ctx: CanvasRenderingContext2D,
     x: number, y: number,
     color: string, _size: number,
-    _facing: number, animTimer: number,
+    facing: number, animTimer: number,
     minionType: string
   ) {
     const model = buildMinionModel(color, minionType, animTimer);
-    this.renderVoxelModel(ctx, x, y - 6, model, 3, 0);
+    this.renderVoxelModel(ctx, x, y - 6, model, 3, facing);
   }
 
   drawTowerVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, teamColor: string, tier: number) {
@@ -884,24 +892,73 @@ export class VoxelRenderer {
     cx: number, cy: number,
     model: VoxelModel,
     cubeSize: number,
-    _facing: number
+    facing: number
   ) {
     const cs = cubeSize;
     const isoX = cs;
     const isoY = cs * 0.5;
 
+    const dir = facingToDir(facing);
+
     for (let z = 0; z < model.length; z++) {
       const layer = model[z];
       if (!layer) continue;
-      for (let y = layer.length - 1; y >= 0; y--) {
-        const row = layer[y];
-        if (!row) continue;
-        for (let x = 0; x < row.length; x++) {
-          const color = row[x];
-          if (!color) continue;
-          const screenX = cx + (x - y) * isoX;
-          const screenY = cy + (x + y) * isoY - z * cs;
-          this.drawIsoCube(ctx, screenX, screenY, cs, color);
+      const rows = layer.length;
+      const cols = layer[0]?.length || 0;
+
+      if (dir === 0) {
+        for (let y = rows - 1; y >= 0; y--) {
+          const row = layer[y];
+          if (!row) continue;
+          for (let x = 0; x < cols; x++) {
+            const color = row[x];
+            if (!color) continue;
+            const screenX = cx + (x - y) * isoX;
+            const screenY = cy + (x + y) * isoY - z * cs;
+            this.drawIsoCube(ctx, screenX, screenY, cs, color);
+          }
+        }
+      } else if (dir === 1) {
+        for (let x = 0; x < cols; x++) {
+          for (let y = 0; y < rows; y++) {
+            const row = layer[y];
+            if (!row) continue;
+            const color = row[x];
+            if (!color) continue;
+            const mx = rows - 1 - y;
+            const my = x;
+            const screenX = cx + (mx - my) * isoX;
+            const screenY = cy + (mx + my) * isoY - z * cs;
+            this.drawIsoCube(ctx, screenX, screenY, cs, color);
+          }
+        }
+      } else if (dir === 2) {
+        for (let y = 0; y < rows; y++) {
+          const row = layer[y];
+          if (!row) continue;
+          for (let x = cols - 1; x >= 0; x--) {
+            const color = row[x];
+            if (!color) continue;
+            const mx = cols - 1 - x;
+            const my = rows - 1 - y;
+            const screenX = cx + (mx - my) * isoX;
+            const screenY = cy + (mx + my) * isoY - z * cs;
+            this.drawIsoCube(ctx, screenX, screenY, cs, color);
+          }
+        }
+      } else {
+        for (let x = cols - 1; x >= 0; x--) {
+          for (let y = rows - 1; y >= 0; y--) {
+            const row = layer[y];
+            if (!row) continue;
+            const color = row[x];
+            if (!color) continue;
+            const mx = y;
+            const my = cols - 1 - x;
+            const screenX = cx + (mx - my) * isoX;
+            const screenY = cy + (mx + my) * isoY - z * cs;
+            this.drawIsoCube(ctx, screenX, screenY, cs, color);
+          }
         }
       }
     }

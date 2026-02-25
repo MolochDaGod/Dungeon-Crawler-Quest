@@ -42,7 +42,9 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - Minion waves every 30 seconds (melee + siege after 2 min)
 - Hero leveling 1-18 with stat scaling
 - 4 abilities per class (Q/W/E/R) with cooldowns and mana costs
-- Auto-attack system with projectiles
+- Auto-attack system with projectiles and line-of-sight checks (blocked by enemy towers)
+- Combat actions: Dodge Roll (Space, iFrames), Dash Attack (F, 1.5x damage), Shield Block (V, 70% reduction)
+- Auto-attack combo system (3-hit combo = golden finisher with 1.5x damage + VFX)
 - Item shop (12 items across 3 tiers)
 - Gold from last-hits, kills (+300g), assists (+100g)
 - KDA scoring and kill feed

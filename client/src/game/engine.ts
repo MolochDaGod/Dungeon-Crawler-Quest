@@ -602,6 +602,14 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
     const target = findEntityById(state, hero.targetId);
     if (!target || target.dead) {
       hero.targetId = null;
+    } else if (!hasLineOfSight(state, hero, target, hero.team)) {
+      const angle = angleTo(hero, target);
+      const spdMult = getSpeedMultiplier(hero as any as CombatEntity);
+      const speed = hero.spd * 1.8 * spdMult;
+      hero.vx = Math.cos(angle) * speed;
+      hero.vy = Math.sin(angle) * speed;
+      hero.facing = angle;
+      hero.animState = 'walk';
     } else {
       const d = dist(hero, target);
       if (d <= hero.rng + 30) {
@@ -828,6 +836,7 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
       if (h.team === hero.team || h.dead) continue;
       const d = dist(hero, h);
       if (d > aggroRange) continue;
+      if (!hasLineOfSight(state, hero, h, hero.team)) continue;
       let score = (aggroRange - d) / aggroRange * 5;
       score += (1 - h.hp / h.maxHp) * 8;
       if (h.hp < hero.atk * 2) score += 15;
@@ -940,12 +949,12 @@ function findNearestEnemy(state: MobaState, entity: { x: number; y: number; team
   for (const h of state.heroes) {
     if (h.team === entity.team || h.dead) continue;
     const d = dist(entity, h);
-    if (d < nearestDist) { nearestDist = d; nearest = h; }
+    if (d < nearestDist && hasLineOfSight(state, entity, h, entity.team)) { nearestDist = d; nearest = h; }
   }
   for (const m of state.minions) {
     if (m.team === entity.team || m.dead) continue;
     const d = dist(entity, m);
-    if (d < nearestDist) { nearestDist = d; nearest = m; }
+    if (d < nearestDist && hasLineOfSight(state, entity, m, entity.team)) { nearestDist = d; nearest = m; }
   }
   for (const t of state.towers) {
     if (t.team === entity.team || t.dead) continue;
@@ -1423,6 +1432,24 @@ function updateTower(state: MobaState, tower: MobaTower, dt: number) {
   }
 }
 
+function hasLineOfSight(state: MobaState, a: Vec2, b: Vec2, attackerTeam: number): boolean {
+  const d = dist(a, b);
+  if (d < 30) return true;
+  const steps = Math.ceil(d / 40);
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    const px = a.x + (b.x - a.x) * t;
+    const py = a.y + (b.y - a.y) * t;
+    for (const tower of state.towers) {
+      if (tower.dead) continue;
+      if (tower.team === attackerTeam) continue;
+      const td = dist({ x: px, y: py }, tower);
+      if (td < 35) return false;
+    }
+  }
+  return true;
+}
+
 function updateProjectiles(state: MobaState, dt: number) {
   for (const proj of state.projectiles) {
     const target = findEntityById(state, proj.targetId);
@@ -1431,6 +1458,24 @@ function updateProjectiles(state: MobaState, dt: number) {
     const angle = angleTo(proj, target);
     proj.x += Math.cos(angle) * proj.speed * dt;
     proj.y += Math.sin(angle) * proj.speed * dt;
+
+    let hitTower = false;
+    for (const tower of state.towers) {
+      if (tower.dead || tower.team === proj.team) continue;
+      if (tower.id === proj.targetId) continue;
+      if (dist(proj, tower) < 30) {
+        hitTower = true;
+        for (let i = 0; i < 3; i++) {
+          state.particles.push({
+            x: proj.x, y: proj.y,
+            vx: (Math.random() - 0.5) * 80, vy: -Math.random() * 50,
+            life: 0.2, maxLife: 0.2, color: '#888', size: 2, type: 'spark'
+          });
+        }
+        break;
+      }
+    }
+    if (hitTower) { proj.targetId = -1; continue; }
 
     if (dist(proj, target) < 15) {
       const attacker = findEntityById(state, proj.sourceId);
