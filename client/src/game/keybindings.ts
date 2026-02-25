@@ -27,11 +27,14 @@ export enum KeybindAction {
   LevelUpAbility2 = 'LevelUpAbility2',
   LevelUpAbility3 = 'LevelUpAbility3',
   LevelUpAbility4 = 'LevelUpAbility4',
+  Dodge = 'Dodge',
+  DashAttack = 'DashAttack',
+  Block = 'Block',
 }
 
 export const ACTION_CATEGORIES: Record<string, KeybindAction[]> = {
   Movement: [KeybindAction.MoveUp, KeybindAction.MoveDown, KeybindAction.MoveLeft, KeybindAction.MoveRight, KeybindAction.StopMove],
-  Combat: [KeybindAction.Attack, KeybindAction.MoveToTarget],
+  Combat: [KeybindAction.Attack, KeybindAction.MoveToTarget, KeybindAction.Dodge, KeybindAction.DashAttack, KeybindAction.Block],
   Abilities: [KeybindAction.Ability1, KeybindAction.Ability2, KeybindAction.Ability3, KeybindAction.Ability4],
   'Level Up': [KeybindAction.LevelUpAbility1, KeybindAction.LevelUpAbility2, KeybindAction.LevelUpAbility3, KeybindAction.LevelUpAbility4],
   Items: [KeybindAction.Item1, KeybindAction.Item2, KeybindAction.Item3, KeybindAction.Item4, KeybindAction.Item5, KeybindAction.Item6],
@@ -68,6 +71,9 @@ export const ACTION_LABELS: Record<KeybindAction, string> = {
   [KeybindAction.LevelUpAbility2]: 'Level Up W',
   [KeybindAction.LevelUpAbility3]: 'Level Up E',
   [KeybindAction.LevelUpAbility4]: 'Level Up R',
+  [KeybindAction.Dodge]: 'Dodge Roll',
+  [KeybindAction.DashAttack]: 'Dash Attack',
+  [KeybindAction.Block]: 'Shield Block',
 };
 
 export interface KeyBind {
@@ -117,6 +123,9 @@ export function getDefaultBindings(): KeybindConfig {
     [KeybindAction.LevelUpAbility2]: makeKeyBind('w', false, true),
     [KeybindAction.LevelUpAbility3]: makeKeyBind('e', false, true),
     [KeybindAction.LevelUpAbility4]: makeKeyBind('r', false, true),
+    [KeybindAction.Dodge]: makeKeyBind(' '),
+    [KeybindAction.DashAttack]: makeKeyBind('f'),
+    [KeybindAction.Block]: makeKeyBind('v'),
   };
 }
 

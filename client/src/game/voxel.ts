@@ -171,6 +171,66 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
     };
   }
 
+  if (animState === 'dodge') {
+    const roll = Math.min(1, t * 8);
+    const spin = Math.sin(roll * Math.PI * 2);
+    return {
+      leftLeg: { ox: Math.round(spin * 2), oy: 0, oz: Math.round(-roll * 2) },
+      rightLeg: { ox: Math.round(-spin * 2), oy: 0, oz: Math.round(-roll * 2) },
+      leftArm: { ox: Math.round(-spin * 1.5), oy: Math.round(-roll), oz: Math.round(-roll * 3) },
+      rightArm: { ox: Math.round(spin * 1.5), oy: Math.round(roll), oz: Math.round(-roll * 3) },
+      torso: { ox: Math.round(spin * 0.5), oy: 0, oz: Math.round(-roll * 4) },
+      head: { ox: Math.round(spin * 0.3), oy: 0, oz: Math.round(-roll * 5) },
+      weapon: { ox: Math.round(-spin * 2), oy: 0, oz: Math.round(-roll * 3) },
+      weaponGlow: 0
+    };
+  }
+
+  if (animState === 'dash_attack') {
+    const thrust = Math.min(1, t * 6);
+    const extend = Math.sin(thrust * Math.PI);
+    return {
+      leftLeg: { ox: Math.round(-extend * 2), oy: 0, oz: 0 },
+      rightLeg: { ox: Math.round(extend * 2), oy: 0, oz: 0 },
+      leftArm: { ox: Math.round(extend * 3), oy: Math.round(-extend), oz: Math.round(extend * 2) },
+      rightArm: { ox: Math.round(extend * 2), oy: 0, oz: Math.round(extend) },
+      torso: { ox: Math.round(extend * 2), oy: 0, oz: Math.round(extend * 0.5) },
+      head: { ox: Math.round(extend * 1.5), oy: 0, oz: Math.round(extend * 0.5) },
+      weapon: { ox: Math.round(extend * 4), oy: Math.round(-extend * 2), oz: Math.round(extend * 3) },
+      weaponGlow: extend > 0.5 ? extend : 0
+    };
+  }
+
+  if (animState === 'combo_finisher') {
+    const phase = t * 16;
+    const spin = Math.sin(phase);
+    const power = Math.abs(Math.sin(phase * 0.5));
+    return {
+      leftLeg: { ox: Math.round(spin * 1.5), oy: 0, oz: 0 },
+      rightLeg: { ox: Math.round(-spin * 1.5), oy: 0, oz: 0 },
+      leftArm: { ox: Math.round(spin * 3), oy: Math.round(-power * 2), oz: Math.round(power * 3) },
+      rightArm: { ox: Math.round(-spin * 2), oy: Math.round(power), oz: Math.round(power * 2) },
+      torso: { ox: Math.round(spin * 1), oy: 0, oz: Math.round(power * 0.5) },
+      head: { ox: Math.round(spin * 0.5), oy: 0, oz: Math.round(power * 0.5) },
+      weapon: { ox: Math.round(spin * 4 + power * 2), oy: Math.round(-power * 3), oz: Math.round(power * 4) },
+      weaponGlow: power > 0.4 ? 1.0 : 0.3
+    };
+  }
+
+  if (animState === 'block') {
+    const brace = Math.min(1, t * 6);
+    return {
+      leftLeg: { ox: Math.round(-brace * 0.5), oy: 0, oz: 0 },
+      rightLeg: { ox: Math.round(brace * 0.5), oy: 0, oz: 0 },
+      leftArm: { ox: Math.round(-brace * 2), oy: Math.round(brace), oz: Math.round(brace * 2) },
+      rightArm: { ox: Math.round(brace * 1), oy: Math.round(-brace * 0.5), oz: Math.round(brace * 1.5) },
+      torso: { ox: Math.round(-brace * 0.5), oy: 0, oz: Math.round(brace * 0.3) },
+      head: { ox: Math.round(-brace * 0.5), oy: 0, oz: Math.round(brace * 0.3) },
+      weapon: { ox: Math.round(-brace * 1), oy: Math.round(brace * 2), oz: Math.round(brace * 3) },
+      weaponGlow: 0.2
+    };
+  }
+
   if (animState === 'death') {
     const fall = Math.min(1, t * 2);
     return {

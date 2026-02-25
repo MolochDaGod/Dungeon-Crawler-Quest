@@ -2,7 +2,7 @@ import {
   MobaState, MobaHero, MobaMinion, MobaTower, MobaNexus,
   Projectile, Particle, FloatingText, HudState, Camera,
   HeroData, HEROES, ITEMS, CLASS_ABILITIES, LANE_WAYPOINTS,
-  MAP_SIZE, TEAM_COLORS, TEAM_NAMES, Vec2,
+  MAP_SIZE, TEAM_COLORS, TEAM_NAMES, Vec2, SpellEffect,
   xpForLevel, heroStatsAtLevel, calcDamage,
   RACE_COLORS, CLASS_COLORS, RARITY_COLORS
 } from './types';
@@ -188,7 +188,9 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     cursorMode: 'default',
     hoveredEntityId: null,
     aKeyHeld: false,
-    _ambientTimer: 0
+    _ambientTimer: 0,
+    spellEffects: [],
+    screenShake: 0
   };
 
   const team0Heroes = [playerHeroId];
@@ -256,7 +258,12 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     stunTimer: 0, buffTimer: 0, shieldHp: 0,
     lastDamagedBy: [],
     activeEffects: [],
-    ccImmunityTimers: new Map()
+    ccImmunityTimers: new Map(),
+    dodgeCooldown: 0, dodgeTimer: 0, dodgeDir: 0,
+    dashAttackCooldown: 0, dashAttackTimer: 0,
+    comboCount: 0, comboTimer: 0,
+    blockActive: false, blockTimer: 0, blockCooldown: 0,
+    iFrames: 0
   };
 }
 
@@ -449,6 +456,7 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   updateProjectiles(state, dt);
   updateParticles(state, dt);
   updateFloatingTexts(state, dt);
+  updateSpellEffects(state, dt);
 
   state.minions = state.minions.filter(m => !m.dead);
   state.towers = state.towers.filter(t => !t.dead);
@@ -488,6 +496,66 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
 
   hero.animTimer += dt;
   if (hero.attackAnimPhase > 0) hero.attackAnimPhase -= dt;
+  if (hero.dodgeCooldown > 0) hero.dodgeCooldown -= dt;
+  if (hero.dashAttackCooldown > 0) hero.dashAttackCooldown -= dt;
+  if (hero.blockCooldown > 0) hero.blockCooldown -= dt;
+  if (hero.iFrames > 0) hero.iFrames -= dt;
+  if (hero.comboTimer > 0) {
+    hero.comboTimer -= dt;
+    if (hero.comboTimer <= 0) hero.comboCount = 0;
+  }
+
+  if (hero.dodgeTimer > 0) {
+    hero.dodgeTimer -= dt;
+    const dodgeSpeed = hero.spd * 5;
+    hero.vx = Math.cos(hero.dodgeDir) * dodgeSpeed;
+    hero.vy = Math.sin(hero.dodgeDir) * dodgeSpeed;
+    hero.animState = 'dodge';
+    if (hero.dodgeTimer <= 0) {
+      hero.vx = 0;
+      hero.vy = 0;
+      hero.animState = 'idle';
+    }
+  }
+
+  if (hero.dashAttackTimer > 0) {
+    hero.dashAttackTimer -= dt;
+    const dashSpeed = hero.spd * 6;
+    hero.vx = Math.cos(hero.facing) * dashSpeed;
+    hero.vy = Math.sin(hero.facing) * dashSpeed;
+    hero.animState = 'dash_attack';
+    const enemies = getAllEnemies(state, hero.team);
+    for (const e of enemies) {
+      if (dist(hero, e) < 60) {
+        const dmg = hero.atk * 1.5;
+        dealDamage(state, hero, e, dmg);
+        spawnSlashEffect(state, e.x, e.y, hero.facing, CLASS_COLORS[HEROES[hero.heroDataId]?.heroClass || 'Warrior'] || '#ef4444');
+        hero.dashAttackTimer = 0;
+        hero.vx = 0;
+        hero.vy = 0;
+        hero.animState = 'idle';
+        state.screenShake = 0.15;
+        break;
+      }
+    }
+    if (hero.dashAttackTimer <= 0) {
+      hero.vx = 0;
+      hero.vy = 0;
+    }
+  }
+
+  if (hero.blockActive && hero.blockTimer > 0) {
+    hero.blockTimer -= dt;
+    if (hero.blockTimer <= 0) {
+      hero.blockActive = false;
+      hero.animState = 'idle';
+    } else {
+      hero.animState = 'block';
+      hero.vx *= 0.3;
+      hero.vy *= 0.3;
+    }
+  }
+
   hero.mp = Math.min(hero.maxMp, hero.mp + dt * (2 + hero.level * 0.5));
 
   const effectResult = updateStatusEffects(hero as any as CombatEntity, dt);
@@ -538,11 +606,32 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
       const d = dist(hero, target);
       if (d <= hero.rng + 30) {
         if (hero.autoAttackTimer <= 0) {
-          performAutoAttack(state, hero, target);
+          hero.comboCount = (hero.comboCount + 1);
+          hero.comboTimer = 2.0;
+          const comboMult = hero.comboCount >= 3 ? 1.5 : 1.0;
+          performAutoAttack(state, hero, target, comboMult);
           hero.autoAttackTimer = Math.max(0.3, 1.2 - hero.spd * 0.008);
-          hero.animState = 'attack';
+          hero.animState = hero.comboCount >= 3 ? 'combo_finisher' : 'attack';
           hero.attackAnimPhase = 0.3;
           hero.facing = angleTo(hero, target);
+          const heroData = HEROES[hero.heroDataId];
+          if (heroData && (heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg') && d < 100) {
+            const slashColor = CLASS_COLORS[heroData.heroClass] || '#ef4444';
+            state.spellEffects.push({
+              x: hero.x + Math.cos(hero.facing) * 25, y: hero.y + Math.sin(hero.facing) * 25,
+              type: 'slash_arc', life: 0.2, maxLife: 0.2, radius: 25, color: slashColor, angle: hero.facing
+            });
+          }
+          if (hero.comboCount >= 3) {
+            spawnSlashEffect(state, target.x, target.y, hero.facing, '#ffd700');
+            state.screenShake = 0.1;
+            state.spellEffects.push({
+              x: target.x, y: target.y, type: 'combo_burst',
+              life: 0.4, maxLife: 0.4, radius: 50, color: '#ffd700', angle: 0
+            });
+            addFloatingText(state, target.x, target.y - 35, `COMBO x${hero.comboCount}!`, '#ffd700', 16);
+            hero.comboCount = 0;
+          }
         }
         hero.vx = 0;
         hero.vy = 0;
@@ -880,21 +969,27 @@ function findEntityById(state: MobaState, id: number): any {
   return null;
 }
 
-function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, target: any) {
+function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, target: any, comboMult: number = 1.0) {
   const atk = 'atk' in attacker ? attacker.atk : 15;
   const color = attacker.team === 0 ? '#60a5fa' : '#f87171';
+  const dmg = Math.floor(atk * comboMult);
   state.projectiles.push({
     id: state.nextEntityId++,
     x: attacker.x, y: attacker.y,
     targetId: target.id,
     targetType: 'hero',
-    damage: atk,
+    damage: dmg,
     speed: 600,
     team: attacker.team,
     sourceId: attacker.id,
-    color,
-    size: 4
+    color: comboMult > 1 ? '#ffd700' : color,
+    size: comboMult > 1 ? 6 : 4
   });
+  if (comboMult > 1 && 'heroDataId' in attacker) {
+    const heroData = HEROES[(attacker as MobaHero).heroDataId];
+    const atkColor = CLASS_COLORS[heroData?.heroClass || 'Warrior'] || '#ef4444';
+    spawnSlashEffect(state, attacker.x + Math.cos((attacker as MobaHero).facing) * 30, attacker.y + Math.sin((attacker as MobaHero).facing) * 30, (attacker as MobaHero).facing, atkColor);
+  }
 }
 
 export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: number, target: any) {
@@ -1018,8 +1113,38 @@ function getAllEnemies(state: MobaState, team: number): any[] {
 }
 
 function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number) {
+  if ('iFrames' in target && target.iFrames > 0) {
+    addFloatingText(state, target.x, target.y - 20, 'DODGE', '#22d3ee', 14);
+    for (let i = 0; i < 4; i++) {
+      state.particles.push({
+        x: target.x, y: target.y,
+        vx: (Math.random() - 0.5) * 120, vy: (Math.random() - 0.5) * 120,
+        life: 0.3, maxLife: 0.3, color: '#22d3ee', size: 2, type: 'dodge'
+      });
+    }
+    return;
+  }
+
   const def = 'def' in target ? target.def : 0;
   let dmg = calcDamage(rawDmg, def);
+
+  if ('blockActive' in target && target.blockActive) {
+    const blockReduction = 0.7;
+    const blocked = Math.floor(dmg * blockReduction);
+    dmg -= blocked;
+    addFloatingText(state, target.x, target.y - 30, `BLOCKED ${blocked}`, '#f59e0b', 12);
+    state.spellEffects.push({
+      x: target.x, y: target.y, type: 'shield_flash',
+      life: 0.25, maxLife: 0.25, radius: 30, color: '#f59e0b', angle: 0
+    });
+    for (let i = 0; i < 6; i++) {
+      state.particles.push({
+        x: target.x, y: target.y - 10,
+        vx: (Math.random() - 0.5) * 150, vy: -Math.random() * 80,
+        life: 0.4, maxLife: 0.4, color: '#fbbf24', size: 3, type: 'spark'
+      });
+    }
+  }
 
   if ('shieldHp' in target && target.shieldHp > 0) {
     const absorbed = Math.min(target.shieldHp, dmg);
@@ -1315,6 +1440,16 @@ function updateProjectiles(state: MobaState, dt: number) {
         target.hp -= proj.damage;
         if (target.hp <= 0) target.dead = true;
       }
+      for (let i = 0; i < 4; i++) {
+        state.particles.push({
+          x: target.x, y: target.y - 5,
+          vx: (Math.random() - 0.5) * 100, vy: -Math.random() * 60 - 20,
+          life: 0.25, maxLife: 0.25, color: proj.color, size: 2, type: 'spark'
+        });
+      }
+      if (proj.size >= 6) {
+        spawnImpactRing(state, target.x, target.y, proj.color, 35);
+      }
       proj.targetId = -1;
     }
   }
@@ -1364,6 +1499,136 @@ function spawnAbilityParticles(state: MobaState, x: number, y: number, color: st
       life: 0.6, maxLife: 0.6,
       color, size: 3, type: 'ability'
     });
+  }
+}
+
+function spawnSlashEffect(state: MobaState, x: number, y: number, angle: number, color: string) {
+  state.spellEffects.push({
+    x, y, type: 'slash_arc',
+    life: 0.3, maxLife: 0.3, radius: 40, color, angle
+  });
+  for (let i = 0; i < 8; i++) {
+    const spread = angle + (Math.random() - 0.5) * 1.2;
+    state.particles.push({
+      x, y,
+      vx: Math.cos(spread) * (80 + Math.random() * 60),
+      vy: Math.sin(spread) * (80 + Math.random() * 60),
+      life: 0.35, maxLife: 0.35, color, size: 2 + Math.random() * 2, type: 'slash'
+    });
+  }
+}
+
+function spawnImpactRing(state: MobaState, x: number, y: number, color: string, radius: number) {
+  state.spellEffects.push({
+    x, y, type: 'impact_ring',
+    life: 0.4, maxLife: 0.4, radius, color, angle: 0
+  });
+}
+
+function updateSpellEffects(state: MobaState, dt: number) {
+  for (let i = state.spellEffects.length - 1; i >= 0; i--) {
+    state.spellEffects[i].life -= dt;
+    if (state.spellEffects[i].life <= 0) state.spellEffects.splice(i, 1);
+  }
+  if (state.screenShake > 0) state.screenShake -= dt;
+}
+
+export function handleDodge(state: MobaState) {
+  const player = state.heroes[state.playerHeroIndex];
+  if (!player || player.dead) return;
+  if (player.dodgeCooldown > 0 || player.mp < 15) return;
+
+  player.mp -= 15;
+  player.dodgeCooldown = 3.0;
+  player.dodgeTimer = 0.2;
+  player.iFrames = 0.3;
+
+  let dodgeDir = player.facing + Math.PI;
+  if (player.moveTarget) {
+    dodgeDir = Math.atan2(player.moveTarget.y - player.y, player.moveTarget.x - player.x);
+  }
+  player.dodgeDir = dodgeDir;
+
+  player.targetId = null;
+  player.stopCommand = false;
+
+  for (let i = 0; i < 6; i++) {
+    state.particles.push({
+      x: player.x, y: player.y,
+      vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100,
+      life: 0.3, maxLife: 0.3, color: '#22d3ee', size: 3, type: 'dodge'
+    });
+  }
+  state.spellEffects.push({
+    x: player.x, y: player.y, type: 'dash_trail',
+    life: 0.3, maxLife: 0.3, radius: 20, color: '#22d3ee', angle: dodgeDir
+  });
+  addFloatingText(state, player.x, player.y - 25, 'DODGE', '#22d3ee', 14);
+}
+
+export function handleDashAttack(state: MobaState) {
+  const player = state.heroes[state.playerHeroIndex];
+  if (!player || player.dead) return;
+  if (player.dashAttackCooldown > 0 || player.mp < 25) return;
+
+  player.mp -= 25;
+  player.dashAttackCooldown = 5.0;
+  player.dashAttackTimer = 0.25;
+
+  if (state.hoveredEntityId !== null) {
+    const target = findEntityById(state, state.hoveredEntityId);
+    if (target && !target.dead) {
+      player.facing = angleTo(player, target);
+    }
+  } else {
+    player.facing = Math.atan2(state.mouseWorld.y - player.y, state.mouseWorld.x - player.x);
+  }
+
+  player.animState = 'dash_attack';
+  player.animTimer = 0;
+  player.targetId = null;
+  player.stopCommand = false;
+
+  for (let i = 0; i < 5; i++) {
+    const angle = player.facing + Math.PI + (Math.random() - 0.5) * 0.8;
+    state.particles.push({
+      x: player.x, y: player.y,
+      vx: Math.cos(angle) * (60 + Math.random() * 40),
+      vy: Math.sin(angle) * (60 + Math.random() * 40),
+      life: 0.3, maxLife: 0.3, color: '#f97316', size: 3, type: 'slash'
+    });
+  }
+  state.spellEffects.push({
+    x: player.x, y: player.y, type: 'dash_trail',
+    life: 0.35, maxLife: 0.35, radius: 15, color: '#f97316', angle: player.facing
+  });
+  addFloatingText(state, player.x, player.y - 25, 'DASH!', '#f97316', 14);
+}
+
+export function handleBlock(state: MobaState, active: boolean) {
+  const player = state.heroes[state.playerHeroIndex];
+  if (!player || player.dead) return;
+
+  if (active) {
+    if (player.blockCooldown > 0) return;
+    player.blockActive = true;
+    player.blockTimer = 1.5;
+    player.animState = 'block';
+    player.animTimer = 0;
+    player.vx = 0;
+    player.vy = 0;
+    player.targetId = null;
+    state.spellEffects.push({
+      x: player.x, y: player.y, type: 'shield_flash',
+      life: 0.2, maxLife: 0.2, radius: 25, color: '#f59e0b', angle: player.facing
+    });
+  } else {
+    if (player.blockActive) {
+      player.blockActive = false;
+      player.blockTimer = 0;
+      player.blockCooldown = 2.0;
+      player.animState = 'idle';
+    }
   }
 }
 
@@ -1556,7 +1821,13 @@ export function getHudState(state: MobaState): HudState {
       color: e.color || '#fff',
       remaining: e.remaining || 0,
       stacks: e.stacks || 1,
-    }))
+    })),
+    dodgeCooldown: player?.dodgeCooldown ?? 0,
+    dashAttackCooldown: player?.dashAttackCooldown ?? 0,
+    comboCount: player?.comboCount ?? 0,
+    comboTimer: player?.comboTimer ?? 0,
+    blockActive: player?.blockActive ?? false,
+    blockCooldown: player?.blockCooldown ?? 0
   };
 }
 
@@ -1582,6 +1853,11 @@ export class MobaRenderer {
 
     ctx.save();
     ctx.translate(W / 2, H / 2);
+    if (state.screenShake > 0) {
+      const shakeX = (Math.random() - 0.5) * state.screenShake * 30;
+      const shakeY = (Math.random() - 0.5) * state.screenShake * 30;
+      ctx.translate(shakeX, shakeY);
+    }
     ctx.scale(cam.zoom, cam.zoom);
     ctx.translate(-cam.x, -cam.y);
 
@@ -1661,6 +1937,10 @@ export class MobaRenderer {
 
     for (const ft of state.floatingTexts) {
       this.renderFloatingText(ctx, ft);
+    }
+
+    for (const se of state.spellEffects) {
+      this.renderSpellEffect(ctx, se);
     }
 
     this.renderCursor(ctx, state);
@@ -1953,6 +2233,40 @@ export class MobaRenderer {
       ctx.globalAlpha = 1;
     }
 
+    if (hero.blockActive) {
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.6 + Math.sin(Date.now() * 0.01) * 0.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 24, hero.facing - Math.PI / 3, hero.facing + Math.PI / 3);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(245,158,11,0.1)';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, 24, hero.facing - Math.PI / 3, hero.facing + Math.PI / 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    if (hero.iFrames > 0) {
+      ctx.globalAlpha = 0.4 + Math.sin(Date.now() * 0.03) * 0.3;
+    }
+
+    if (hero.comboCount > 0 && hero.comboTimer > 0) {
+      const comboAlpha = 0.3 + hero.comboCount * 0.15;
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = comboAlpha;
+      for (let c = 0; c < hero.comboCount; c++) {
+        const cAngle = (c / Math.max(hero.comboCount, 1)) * Math.PI * 2 + Date.now() * 0.005;
+        ctx.beginPath();
+        ctx.arc(Math.cos(cAngle) * 18, Math.sin(cAngle) * 18 - 5, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
     if (hero.activeEffects && hero.activeEffects.length > 0) {
       for (const eff of hero.activeEffects) {
         const effColor = eff.color || '#fff';
@@ -2091,6 +2405,102 @@ export class MobaRenderer {
     ctx.strokeText(ft.text, ft.x, ft.y);
     ctx.fillStyle = ft.color;
     ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.globalAlpha = 1;
+  }
+
+  private renderSpellEffect(ctx: CanvasRenderingContext2D, se: SpellEffect) {
+    const progress = 1 - (se.life / se.maxLife);
+    ctx.save();
+    ctx.translate(se.x, se.y);
+
+    if (se.type === 'slash_arc') {
+      ctx.globalAlpha = (1 - progress) * 0.8;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 4 * (1 - progress);
+      ctx.lineCap = 'round';
+      const sweep = Math.PI * 0.8;
+      const startAngle = se.angle - sweep / 2;
+      const r = se.radius * (0.5 + progress * 0.5);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, startAngle, startAngle + sweep * progress);
+      ctx.stroke();
+      ctx.lineWidth = 2 * (1 - progress);
+      ctx.strokeStyle = '#ffffff';
+      ctx.globalAlpha = (1 - progress) * 0.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.9, startAngle + sweep * 0.2, startAngle + sweep * progress * 0.8);
+      ctx.stroke();
+    } else if (se.type === 'impact_ring') {
+      const r = se.radius * progress;
+      ctx.globalAlpha = (1 - progress) * 0.6;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 3 * (1 - progress);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = (1 - progress) * 0.1;
+      ctx.fillStyle = se.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (se.type === 'dash_trail') {
+      ctx.globalAlpha = (1 - progress) * 0.5;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = se.radius * (1 - progress);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-Math.cos(se.angle) * 60 * progress, -Math.sin(se.angle) * 60 * progress);
+      ctx.stroke();
+      for (let i = 0; i < 3; i++) {
+        const off = (i + 1) * 15 * progress;
+        ctx.globalAlpha = (1 - progress) * 0.3 * (1 - i * 0.3);
+        ctx.fillStyle = se.color;
+        ctx.beginPath();
+        ctx.arc(-Math.cos(se.angle) * off, -Math.sin(se.angle) * off, se.radius * (1 - progress) * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (se.type === 'shield_flash') {
+      ctx.globalAlpha = (1 - progress) * 0.7;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 4 * (1 - progress);
+      const r = se.radius * (0.8 + progress * 0.4);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, se.angle - Math.PI / 3, se.angle + Math.PI / 3);
+      ctx.stroke();
+      ctx.fillStyle = se.color;
+      ctx.globalAlpha = (1 - progress) * 0.15;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (se.type === 'combo_burst') {
+      const rays = 6;
+      ctx.globalAlpha = (1 - progress) * 0.6;
+      for (let i = 0; i < rays; i++) {
+        const a = (i / rays) * Math.PI * 2 + progress * Math.PI;
+        const r = se.radius * progress;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        ctx.stroke();
+      }
+    } else if (se.type === 'ground_slam') {
+      ctx.globalAlpha = (1 - progress) * 0.4;
+      ctx.fillStyle = se.color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, se.radius * progress, se.radius * 0.3 * progress, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = (1 - progress) * 0.6;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, se.radius * progress, se.radius * 0.3 * progress, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
     ctx.globalAlpha = 1;
   }
 

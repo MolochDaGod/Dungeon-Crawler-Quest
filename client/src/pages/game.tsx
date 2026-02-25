@@ -9,7 +9,7 @@ import {
   createInitialState, updateGame, getHudState,
   MobaRenderer, handlePlayerAbility, handlePlayerAttack,
   handleRightClick, handleAttackMoveClick, handleStopCommand,
-  buyItem
+  buyItem, handleDodge, handleDashAttack, handleBlock
 } from '@/game/engine';
 import hudFramePath from '@assets/hud-frame.png';
 import shopPanelPath from '@assets/shop-panel.png';
@@ -118,6 +118,17 @@ export default function GamePage() {
         state.cursorMode = 'attackmove';
       }
 
+      if (matchesKeyDown(bindings[KeybindAction.Dodge], e)) {
+        e.preventDefault();
+        handleDodge(state);
+      }
+      if (matchesKeyDown(bindings[KeybindAction.DashAttack], e)) {
+        handleDashAttack(state);
+      }
+      if (matchesKeyDown(bindings[KeybindAction.Block], e)) {
+        handleBlock(state, true);
+      }
+
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility1], e)) handlePlayerAbility(state, 0);
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility2], e)) handlePlayerAbility(state, 1);
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility3], e)) handlePlayerAbility(state, 2);
@@ -135,6 +146,9 @@ export default function GamePage() {
         if (state.cursorMode === 'attackmove') {
           state.cursorMode = state.hoveredEntityId !== null ? 'attack' : 'default';
         }
+      }
+      if (matchesKeyDown(bindings[KeybindAction.Block], e)) {
+        handleBlock(state, false);
       }
     };
 
@@ -450,6 +464,57 @@ export default function GamePage() {
                       </div>
                     );
                   })}
+
+                  <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, transparent, #c5a059, transparent)', margin: '0 4px' }} />
+
+                  {[
+                    { name: 'Dodge', key: 'SPACE', cd: hud.dodgeCooldown, color: '#22d3ee', cost: 15, action: () => stateRef.current && handleDodge(stateRef.current) },
+                    { name: 'Dash', key: 'F', cd: hud.dashAttackCooldown, color: '#f97316', cost: 25, action: () => stateRef.current && handleDashAttack(stateRef.current) },
+                    { name: 'Block', key: 'V', cd: hud.blockCooldown, color: '#f59e0b', cost: 0, active: hud.blockActive, action: () => stateRef.current && handleBlock(stateRef.current, !hud.blockActive) },
+                  ].map((act, i) => {
+                    const onCd = act.cd > 0;
+                    const ready = !onCd && (!act.cost || hud.mp >= act.cost);
+                    return (
+                      <div key={i} className="relative flex flex-col items-center" style={{ gap: 1 }}>
+                        <button
+                          className="relative flex items-center justify-center font-bold text-white"
+                          style={{
+                            width: 36, height: 36,
+                            background: act.active ? `linear-gradient(135deg, ${act.color}44, ${act.color}22)` : onCd ? 'linear-gradient(135deg, #1a1a1a, #0a0a0a)' : `linear-gradient(135deg, ${act.color}33, ${act.color}11)`,
+                            border: `2px solid ${act.active ? act.color : onCd ? '#333' : act.color + '80'}`,
+                            borderRadius: 4,
+                            opacity: onCd ? 0.5 : 1,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            boxShadow: act.active ? `0 0 8px ${act.color}66` : 'none'
+                          }}
+                          onClick={act.action}
+                          data-testid={`button-combat-${act.name.toLowerCase()}`}
+                        >
+                          <span className="absolute text-[7px] font-bold" style={{ top: 1, left: 2, color: '#888' }}>{act.key}</span>
+                          <span className="text-[9px] font-black" style={{ color: act.color, textShadow: '0 1px 2px #000' }}>{act.name.substring(0, 3)}</span>
+                          {onCd && (
+                            <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 2 }}>
+                              <span className="text-[10px] font-black text-white" style={{ textShadow: '0 0 4px #000' }}>{act.cd.toFixed(1)}</span>
+                            </div>
+                          )}
+                        </button>
+                        {act.cost > 0 && <span className="text-[7px] font-bold" style={{ color: hud.mp >= act.cost ? '#60a5fa' : '#f87171' }}>{act.cost}</span>}
+                      </div>
+                    );
+                  })}
+
+                  {hud.comboCount > 0 && hud.comboTimer > 0 && (
+                    <div className="flex flex-col items-center justify-center" style={{ gap: 1 }}>
+                      <div className="text-xs font-black" style={{ color: '#ffd700', textShadow: '0 0 6px rgba(255,215,0,0.5)' }} data-testid="text-combo-count">
+                        x{hud.comboCount}
+                      </div>
+                      <div className="h-1 rounded-full overflow-hidden" style={{ width: 24, background: '#333' }}>
+                        <div className="h-full transition-all" style={{ width: `${(hud.comboTimer / 2) * 100}%`, background: '#ffd700' }} />
+                      </div>
+                      <span className="text-[7px]" style={{ color: '#ffd700' }}>COMBO</span>
+                    </div>
+                  )}
 
                   <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, transparent, #c5a059, transparent)', margin: '0 4px' }} />
 
