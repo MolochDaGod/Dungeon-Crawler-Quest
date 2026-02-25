@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { loadGLB, loadFBX, LoadedModel, createAnimatedEntity, playAnimation, AnimatedEntity } from './model-loader';
-import { TOWER_PREFABS, HERO_PREFABS, ENV_PREFABS, getTowerPrefab, getHeroPrefabKey, getWeaponForClass, WEAPON_PREFABS } from './prefabs';
-import { MobaState, MobaHero, MobaMinion, MobaTower, MobaNexus, HEROES, MAP_SIZE, TEAM_COLORS, LANE_WAYPOINTS, CLASS_COLORS, Projectile, Particle, FloatingText, SpellEffect } from './types';
+import { TOWER_PREFABS, HERO_PREFABS, ENV_PREFABS, CREATURE_PREFABS, MINION_PREFABS, getTowerPrefab, getHeroPrefabKey, getMinionPrefabKey, getJungleMobPrefab, getWeaponForClass, WEAPON_PREFABS } from './prefabs';
+import { MobaState, MobaHero, MobaMinion, MobaTower, MobaNexus, HEROES, MAP_SIZE, TEAM_COLORS, LANE_WAYPOINTS, CLASS_COLORS, Projectile, Particle, FloatingText, SpellEffect, JungleCamp, JungleMob } from './types';
 
 interface Entity3D {
   group: THREE.Group;
@@ -29,6 +29,7 @@ export class ThreeRenderer {
   private minionMeshes = new Map<number, Entity3D>();
   private towerMeshes = new Map<number, Entity3D>();
   private nexusMeshes = new Map<number, Entity3D>();
+  private jungleMobMeshes = new Map<number, Entity3D>();
   private projectileMeshes = new Map<number, THREE.Mesh>();
   private particlePool: THREE.Mesh[] = [];
   private activeParticles: THREE.Mesh[] = [];
@@ -235,48 +236,51 @@ export class ThreeRenderer {
     }
   }
 
+  private loadModel(prefab: { modelPath: string; texturePath?: string; format?: string }): Promise<void> {
+    if (this.loadedModels.has(prefab.modelPath) || this.modelLoadQueue.has(prefab.modelPath)) {
+      return Promise.resolve();
+    }
+    this.modelLoadQueue.add(prefab.modelPath);
+    const isGlb = prefab.format === 'glb' || prefab.modelPath.endsWith('.glb');
+    const loader = isGlb ? loadGLB(prefab.modelPath) : loadFBX(prefab.modelPath, prefab.texturePath);
+    return loader
+      .then(m => { this.loadedModels.set(prefab.modelPath, m); })
+      .catch(() => {});
+  }
+
   async loadModels(state: MobaState) {
     const promises: Promise<void>[] = [];
 
     for (const tower of state.towers) {
       const prefabKey = getTowerPrefab(tower.team, tower.lane);
       const prefab = TOWER_PREFABS[prefabKey];
-      if (prefab && !this.loadedModels.has(prefab.modelPath) && !this.modelLoadQueue.has(prefab.modelPath)) {
-        this.modelLoadQueue.add(prefab.modelPath);
-        promises.push(
-          loadFBX(prefab.modelPath, prefab.texturePath)
-            .then(m => { this.loadedModels.set(prefab.modelPath, m); })
-            .catch(() => {})
-        );
-      }
+      if (prefab) promises.push(this.loadModel(prefab));
     }
 
     for (const hero of state.heroes) {
       const heroData = HEROES[hero.heroDataId];
       if (!heroData) continue;
-      const prefabKey = getHeroPrefabKey(heroData.race, heroData.heroClass);
+      const prefabKey = getHeroPrefabKey(heroData.race, heroData.heroClass, heroData.name);
       const prefab = HERO_PREFABS[prefabKey];
-      if (prefab && !this.loadedModels.has(prefab.modelPath) && !this.modelLoadQueue.has(prefab.modelPath)) {
-        this.modelLoadQueue.add(prefab.modelPath);
-        promises.push(
-          loadFBX(prefab.modelPath, prefab.texturePath)
-            .then(m => { this.loadedModels.set(prefab.modelPath, m); })
-            .catch(() => {})
-        );
-      }
+      if (prefab) promises.push(this.loadModel(prefab));
+    }
+
+    const minionPrefabKeys = ['melee_team0', 'melee_team1', 'ranged_team0', 'ranged_team1', 'siege_team0', 'siege_team1'];
+    for (const key of minionPrefabKeys) {
+      const prefab = MINION_PREFABS[key];
+      if (prefab) promises.push(this.loadModel(prefab));
+    }
+
+    const creatureKeys = ['wolf', 'dragon', 'raptor', 'skeleton'];
+    for (const key of creatureKeys) {
+      const prefab = CREATURE_PREFABS[key];
+      if (prefab) promises.push(this.loadModel(prefab));
     }
 
     const envModelsToLoad = ['tree', 'rock', 'castle', 'fortress', 'banner', 'torch', 'campfire'];
     for (const key of envModelsToLoad) {
       const prefab = ENV_PREFABS[key];
-      if (prefab && !this.loadedModels.has(prefab.modelPath) && !this.modelLoadQueue.has(prefab.modelPath)) {
-        this.modelLoadQueue.add(prefab.modelPath);
-        promises.push(
-          loadGLB(prefab.modelPath)
-            .then(m => { this.loadedModels.set(prefab.modelPath, m); })
-            .catch(() => {})
-        );
-      }
+      if (prefab) promises.push(this.loadModel(prefab));
     }
 
     await Promise.allSettled(promises);
@@ -302,12 +306,14 @@ export class ThreeRenderer {
     const heroData = HEROES[hero.heroDataId];
     if (!heroData) return null;
 
-    const prefabKey = getHeroPrefabKey(heroData.race, heroData.heroClass);
+    const prefabKey = getHeroPrefabKey(heroData.race, heroData.heroClass, heroData.name);
     const prefab = HERO_PREFABS[prefabKey];
     if (!prefab) return null;
 
     const model = this.loadedModels.get(prefab.modelPath);
     const group = new THREE.Group();
+    let mixer: THREE.AnimationMixer | undefined;
+    let entity: AnimatedEntity | undefined;
 
     if (model) {
       const clone = model.scene.clone();
@@ -319,6 +325,24 @@ export class ThreeRenderer {
         }
       });
       group.add(clone);
+
+      if (model.animations && model.animations.length > 0) {
+        mixer = new THREE.AnimationMixer(clone);
+        const actions = new Map<string, THREE.AnimationAction>();
+        for (const clip of model.animations) {
+          const action = mixer.clipAction(clip);
+          const clipName = clip.name.toLowerCase();
+          actions.set(clipName, action);
+          if (clipName.includes('idle') || clipName.includes('tpose') || clipName.includes('t-pose')) {
+            action.play();
+          }
+        }
+        if (actions.size > 0 && !Array.from(actions.values()).some(a => a.isRunning())) {
+          const firstAction = actions.values().next().value;
+          if (firstAction) firstAction.play();
+        }
+        entity = { group: clone, mixer, actions, currentAction: '' };
+      }
     } else {
       const capsuleGeo = new THREE.CapsuleGeometry(0.3, 0.8, 8, 16);
       const color = new THREE.Color(CLASS_COLORS[heroData.heroClass] || '#888');
@@ -330,16 +354,24 @@ export class ThreeRenderer {
       mesh.castShadow = true;
       mesh.position.y = 0.7;
       group.add(mesh);
-
-      if (hero.isPlayer) {
-        const ringGeo = new THREE.RingGeometry(0.5, 0.6, 32);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.y = 0.01;
-        group.add(ring);
-      }
     }
+
+    if (hero.isPlayer) {
+      const ringGeo = new THREE.RingGeometry(0.5, 0.6, 32);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.01;
+      group.add(ring);
+    }
+
+    const teamColor = new THREE.Color(TEAM_COLORS[hero.team]);
+    const indicatorGeo = new THREE.RingGeometry(0.35, 0.4, 16);
+    const indicatorMat = new THREE.MeshBasicMaterial({ color: teamColor, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+    const indicator = new THREE.Mesh(indicatorGeo, indicatorMat);
+    indicator.rotation.x = -Math.PI / 2;
+    indicator.position.y = 0.02;
+    group.add(indicator);
 
     const { bar, bg } = this.createHealthBar(1.2);
     const hpGroup = new THREE.Group();
@@ -349,7 +381,7 @@ export class ThreeRenderer {
     hpGroup.lookAt(this.camera.position);
     group.add(hpGroup);
 
-    const entity3D: Entity3D = { group, healthBar: bar, healthBg: bg };
+    const entity3D: Entity3D = { group, healthBar: bar, healthBg: bg, entity, mixer };
     this.scene.add(group);
     this.heroMeshes.set(hero.id, entity3D);
     return entity3D;
@@ -359,36 +391,125 @@ export class ThreeRenderer {
     if (this.minionMeshes.has(minion.id)) return this.minionMeshes.get(minion.id)!;
 
     const group = new THREE.Group();
-    const size = minion.minionType === 'siege' ? 0.35 : 0.2;
-    const teamColor = new THREE.Color(TEAM_COLORS[minion.team]);
+    const prefabKey = getMinionPrefabKey(minion.minionType, minion.team);
+    const prefab = MINION_PREFABS[prefabKey];
+    const model = prefab ? this.loadedModels.get(prefab.modelPath) : null;
+    let mixer: THREE.AnimationMixer | undefined;
 
-    const bodyGeo = new THREE.BoxGeometry(size, size * 1.2, size);
-    const mat = new THREE.MeshStandardMaterial({ color: teamColor, roughness: 0.6, metalness: 0.2 });
-    const body = new THREE.Mesh(bodyGeo, mat);
-    body.castShadow = true;
-    body.position.y = size * 0.6;
-    group.add(body);
+    if (model) {
+      const clone = model.scene.clone();
+      clone.scale.setScalar(prefab!.scale);
+      clone.traverse(child => {
+        if ((child as THREE.Mesh).isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      group.add(clone);
 
-    const eyeSize = size * 0.15;
-    const eyeGeo = new THREE.SphereGeometry(eyeSize, 8, 8);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffff88 });
-    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-    leftEye.position.set(-size * 0.2, size * 0.8, size * 0.4);
-    group.add(leftEye);
-    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-    rightEye.position.set(size * 0.2, size * 0.8, size * 0.4);
-    group.add(rightEye);
+      if (model.animations && model.animations.length > 0) {
+        mixer = new THREE.AnimationMixer(clone);
+        for (const clip of model.animations) {
+          const action = mixer.clipAction(clip);
+          action.play();
+          break;
+        }
+      }
+    } else {
+      const size = minion.minionType === 'siege' ? 0.35 : 0.2;
+      const teamColor = new THREE.Color(TEAM_COLORS[minion.team]);
+      const bodyGeo = new THREE.BoxGeometry(size, size * 1.2, size);
+      const mat = new THREE.MeshStandardMaterial({ color: teamColor, roughness: 0.6, metalness: 0.2 });
+      const body = new THREE.Mesh(bodyGeo, mat);
+      body.castShadow = true;
+      body.position.y = size * 0.6;
+      group.add(body);
+
+      const eyeSize = size * 0.15;
+      const eyeGeo = new THREE.SphereGeometry(eyeSize, 8, 8);
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffff88 });
+      const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+      leftEye.position.set(-size * 0.2, size * 0.8, size * 0.4);
+      group.add(leftEye);
+      const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+      rightEye.position.set(size * 0.2, size * 0.8, size * 0.4);
+      group.add(rightEye);
+    }
 
     const { bar, bg } = this.createHealthBar(0.6);
     const hpGroup = new THREE.Group();
     hpGroup.add(bg);
     hpGroup.add(bar);
-    hpGroup.position.y = size * 1.6;
+    hpGroup.position.y = 1.2;
     group.add(hpGroup);
 
-    const entity3D: Entity3D = { group, healthBar: bar, healthBg: bg };
+    const entity3D: Entity3D = { group, healthBar: bar, healthBg: bg, mixer };
     this.scene.add(group);
     this.minionMeshes.set(minion.id, entity3D);
+    return entity3D;
+  }
+
+  private getOrCreateJungleMob(mob: JungleMob): Entity3D {
+    if (this.jungleMobMeshes.has(mob.id)) return this.jungleMobMeshes.get(mob.id)!;
+
+    const group = new THREE.Group();
+    const prefabKey = getJungleMobPrefab(mob.mobType);
+    const prefab = CREATURE_PREFABS[prefabKey];
+    const model = prefab ? this.loadedModels.get(prefab.modelPath) : null;
+    let mixer: THREE.AnimationMixer | undefined;
+
+    if (model) {
+      const clone = model.scene.clone();
+      clone.scale.setScalar(prefab!.scale);
+      clone.traverse(child => {
+        if ((child as THREE.Mesh).isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      group.add(clone);
+
+      if (model.animations && model.animations.length > 0) {
+        mixer = new THREE.AnimationMixer(clone);
+        for (const clip of model.animations) {
+          const action = mixer.clipAction(clip);
+          action.play();
+          break;
+        }
+      }
+    } else {
+      const size = mob.mobType === 'buff' ? 0.5 : mob.mobType === 'medium' ? 0.35 : 0.25;
+      const mobColor = mob.mobType === 'buff' ? 0x9333ea : mob.mobType === 'medium' ? 0x3b82f6 : 0x22c55e;
+      const bodyGeo = new THREE.SphereGeometry(size, 12, 8);
+      const mat = new THREE.MeshStandardMaterial({
+        color: mobColor, roughness: 0.5, metalness: 0.2,
+        emissive: new THREE.Color(mobColor), emissiveIntensity: 0.2
+      });
+      const body = new THREE.Mesh(bodyGeo, mat);
+      body.castShadow = true;
+      body.position.y = size;
+      group.add(body);
+
+      const eyeGeo = new THREE.SphereGeometry(size * 0.2, 8, 8);
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff4444 });
+      const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+      leftEye.position.set(-size * 0.3, size * 1.2, size * 0.6);
+      group.add(leftEye);
+      const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+      rightEye.position.set(size * 0.3, size * 1.2, size * 0.6);
+      group.add(rightEye);
+    }
+
+    const { bar, bg } = this.createHealthBar(0.8);
+    const hpGroup = new THREE.Group();
+    hpGroup.add(bg);
+    hpGroup.add(bar);
+    hpGroup.position.y = 1.5;
+    group.add(hpGroup);
+
+    const entity3D: Entity3D = { group, healthBar: bar, healthBg: bg, mixer };
+    this.scene.add(group);
+    this.jungleMobMeshes.set(mob.id, entity3D);
     return entity3D;
   }
 

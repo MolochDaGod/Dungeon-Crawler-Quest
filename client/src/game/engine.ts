@@ -880,6 +880,15 @@ function countAlliesNearby(state: MobaState, hero: MobaHero, range: number): num
   return count;
 }
 
+function countEnemiesNearby(state: MobaState, hero: MobaHero, range: number): number {
+  let count = 0;
+  for (const h of state.heroes) {
+    if (h.team === hero.team || h.dead) continue;
+    if (dist(hero, h) < range) count++;
+  }
+  return count;
+}
+
 function findBestAbilityTarget(state: MobaState, hero: MobaHero, ability: any, abilityIndex: number): any {
   if (ability.type === 'heal' || ability.type === 'buff') {
     let weakestAlly: any = null;
@@ -992,9 +1001,15 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     let bestAbilityScore = 0;
     let bestAbilityTarget: any = null;
 
+    const enemiesNearby = countEnemiesNearby(state, hero, 500);
+
     for (let i = 0; i < abilities.length; i++) {
-      if (hero.abilityCooldowns[i] > 0 || hero.mp < abilities[i].manaCost) continue;
       const ab = abilities[i];
+      if (ab.maxCharges && ab.maxCharges > 0) {
+        if (hero.abilityCharges[i] <= 0 || hero.mp < ab.manaCost) continue;
+      } else {
+        if (hero.abilityCooldowns[i] > 0 || hero.mp < ab.manaCost) continue;
+      }
       const target = findBestAbilityTarget(state, hero, ab, i);
       if (!target) continue;
 
@@ -1002,7 +1017,17 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
       if (ab.type === 'aoe') score *= 1.5;
       if (ab.type === 'damage' && 'heroDataId' in target && target.hp < ab.damage + hero.atk * 0.8) score += 20;
       if (ab.type === 'heal' && target.hp / target.maxHp < 0.4) score += 15;
-      if (i === 3) score *= 1.3;
+
+      const isCC = ab.name === 'Shield Bash' || ab.name === 'Frost Nova' || ab.name === 'Howl' || ab.name === 'Trap';
+      if (isCC) score += 12;
+
+      if (i === 3) {
+        if (enemiesNearby >= 2 || ('heroDataId' in target && target.hp < ab.damage + hero.atk)) {
+          score *= 2.0;
+        } else {
+          score = 0;
+        }
+      }
 
       if (isMage && mpPct < 0.3 && i < 3) score *= 0.3;
       if (isWarrior && hpPct > 0.8 && ab.type === 'heal') score = 0;
@@ -1943,10 +1968,139 @@ function spawnImpactRing(state: MobaState, x: number, y: number, color: string, 
   });
 }
 
+function updateSpellProjectiles(state: MobaState, dt: number) {
+  for (let i = state.spellProjectiles.length - 1; i >= 0; i--) {
+    const sp = state.spellProjectiles[i];
+    sp.x += sp.vx * dt;
+    sp.y += sp.vy * dt;
+    sp.life -= dt;
+
+    if (Math.random() < 0.6) {
+      state.particles.push({
+        x: sp.x + (Math.random() - 0.5) * 10,
+        y: sp.y + (Math.random() - 0.5) * 10,
+        vx: (Math.random() - 0.5) * 30,
+        vy: (Math.random() - 0.5) * 30,
+        life: 0.2, maxLife: 0.2,
+        color: sp.trailColor, size: 3, type: 'ability'
+      });
+    }
+
+    const enemies = getAllEnemies(state, sp.team);
+    for (const e of enemies) {
+      if (sp.hitIds.includes(e.id)) continue;
+      const d = dist(sp, e);
+      if (d < 30) {
+        const attacker = findEntityById(state, sp.sourceId);
+        if (attacker) {
+          dealDamage(state, attacker, e, sp.damage);
+        }
+
+        for (let p = 0; p < 5; p++) {
+          state.particles.push({
+            x: e.x, y: e.y,
+            vx: (Math.random() - 0.5) * 120,
+            vy: (Math.random() - 0.5) * 120,
+            life: 0.3, maxLife: 0.3,
+            color: sp.color, size: 4, type: 'hit'
+          });
+        }
+
+        if (sp.piercing) {
+          sp.hitIds.push(e.id);
+          sp.damage *= 0.8;
+        } else {
+          if (sp.aoeRadius > 0) {
+            state.spellEffects.push({
+              x: sp.x, y: sp.y, type: 'fire_ring',
+              life: 0.4, maxLife: 0.4, radius: sp.aoeRadius,
+              color: sp.color, angle: 0
+            });
+            state.spellEffects.push({
+              x: sp.x, y: sp.y, type: 'ground_scorch',
+              life: 1.0, maxLife: 1.0, radius: sp.aoeRadius * 0.6,
+              color: '#332200', angle: 0
+            });
+            for (const ae of enemies) {
+              if (ae.id === e.id) continue;
+              if (dist(sp, ae) < sp.aoeRadius) {
+                if (attacker) dealDamage(state, attacker, ae, sp.damage * 0.6);
+              }
+            }
+          }
+          sp.life = 0;
+          break;
+        }
+      }
+    }
+
+    if (sp.life <= 0) {
+      state.spellProjectiles.splice(i, 1);
+    }
+  }
+}
+
 function updateSpellEffects(state: MobaState, dt: number) {
   for (let i = state.spellEffects.length - 1; i >= 0; i--) {
-    state.spellEffects[i].life -= dt;
-    if (state.spellEffects[i].life <= 0) state.spellEffects.splice(i, 1);
+    const eff = state.spellEffects[i];
+    eff.life -= dt;
+
+    if (eff.type === 'meteor_shadow' && eff.life <= 0 && eff.data) {
+      state.spellEffects.push({
+        x: eff.x, y: eff.y, type: 'meteor_impact',
+        life: 0.5, maxLife: 0.5, radius: eff.radius,
+        color: '#ff6600', angle: 0
+      });
+      state.spellEffects.push({
+        x: eff.x, y: eff.y, type: 'ground_scorch',
+        life: 2.0, maxLife: 2.0, radius: eff.radius * 0.7,
+        color: '#331100', angle: 0
+      });
+      state.screenShake = 0.3;
+
+      const enemies = getAllEnemies(state, eff.data.team);
+      const attacker = findEntityById(state, eff.data.sourceId);
+      for (const e of enemies) {
+        if (dist(eff, e) < eff.radius) {
+          if (attacker) dealDamage(state, attacker, e, eff.data.damage);
+        }
+      }
+      for (let p = 0; p < 20; p++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 80 + Math.random() * 150;
+        state.particles.push({
+          x: eff.x, y: eff.y,
+          vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+          life: 0.5, maxLife: 0.5,
+          color: Math.random() > 0.5 ? '#ff6600' : '#ff3300', size: 4, type: 'ability'
+        });
+      }
+    }
+
+    if (eff.type === 'arrow_rain' && eff.data && eff.life > 0) {
+      eff.data.tickTimer = (eff.data.tickTimer || 0) + dt;
+      if (eff.data.tickTimer >= 0.5) {
+        eff.data.tickTimer = 0;
+        const enemies = getAllEnemies(state, eff.data.team);
+        const attacker = findEntityById(state, eff.data.sourceId);
+        for (const e of enemies) {
+          if (dist(eff, e) < eff.radius) {
+            if (attacker) dealDamage(state, attacker, e, eff.data.damage);
+          }
+        }
+        for (let p = 0; p < 6; p++) {
+          const ax = eff.x + (Math.random() - 0.5) * eff.radius * 2;
+          const ay = eff.y + (Math.random() - 0.5) * eff.radius * 2;
+          state.particles.push({
+            x: ax, y: ay, vx: 0, vy: 40,
+            life: 0.3, maxLife: 0.3,
+            color: '#22c55e', size: 2, type: 'ability'
+          });
+        }
+      }
+    }
+
+    if (eff.life <= 0) state.spellEffects.splice(i, 1);
   }
   if (state.screenShake > 0) state.screenShake -= dt;
 }
@@ -2224,7 +2378,7 @@ export function getHudState(state: MobaState): HudState {
     showScoreboard: state.showScoreboard,
     allHeroes: state.heroes.map(h => {
       const hd = HEROES[h.heroDataId];
-      return { name: hd?.name ?? '', kills: h.kills, deaths: h.deaths, assists: h.assists, level: h.level, team: h.team, hp: h.hp, maxHp: h.maxHp, heroRace: hd?.race ?? '', heroClass: hd?.heroClass ?? '' };
+      return { name: hd?.name ?? '', kills: h.kills, deaths: h.deaths, assists: h.assists, level: h.level, team: h.team, hp: h.hp, maxHp: h.maxHp, heroRace: hd?.race ?? '', heroClass: hd?.heroClass ?? '', items: h.items ?? [null, null, null, null, null, null] };
     }),
     killFeed: state.killFeed,
     atk: player?.atk ?? 0,
@@ -2245,7 +2399,9 @@ export function getHudState(state: MobaState): HudState {
     comboCount: player?.comboCount ?? 0,
     comboTimer: player?.comboTimer ?? 0,
     blockActive: player?.blockActive ?? false,
-    blockCooldown: player?.blockCooldown ?? 0
+    blockCooldown: player?.blockCooldown ?? 0,
+    abilityCharges: player?.abilityCharges ?? [0, 0, 0, 0],
+    abilityMaxCharges: heroData ? (CLASS_ABILITIES[heroData.heroClass] || []).map(ab => ab.maxCharges || 0) : [0, 0, 0, 0]
   };
 }
 
@@ -2432,6 +2588,28 @@ export class MobaRenderer {
 
     for (const proj of state.projectiles) {
       this.renderProjectile(ctx, proj, state);
+    }
+
+    for (const sp of state.spellProjectiles) {
+      ctx.save();
+      ctx.translate(sp.x, sp.y);
+      const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 18);
+      glow.addColorStop(0, sp.color);
+      glow.addColorStop(0.5, sp.trailColor + '88');
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = sp.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     for (const p of state.particles) {
@@ -2836,36 +3014,48 @@ export class MobaRenderer {
       }
     }
 
-    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, hero.facing, hero.animState, hero.animTimer, heroData.race, heroData.name, hero.buffTimer);
+    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, hero.facing, hero.animState, hero.animTimer, heroData.race, heroData.name, hero.buffTimer, hero.items);
 
     if (hero.animState === 'attack' || hero.animState === 'ability' || hero.animState === 'combo_finisher') {
       const isMelee = heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg';
-      const trailColor = heroData.heroClass === 'Mage' ? '#a855f7' : heroData.heroClass === 'Ranger' ? '#22d3ee' : '#f59e0b';
+      const trailColor = heroData.heroClass === 'Mage' ? '#a855f7' : heroData.heroClass === 'Ranger' ? '#22d3ee' : heroData.heroClass === 'Worg' ? '#ff6622' : '#f59e0b';
+      const trailGlowColor = heroData.heroClass === 'Mage' ? '#d8b4fe' : heroData.heroClass === 'Ranger' ? '#67e8f9' : heroData.heroClass === 'Worg' ? '#fbbf24' : '#fde68a';
       const swingPhase = Math.sin(hero.animTimer * (isMelee ? 10 : 6));
+      const isCombo = hero.animState === 'combo_finisher';
+      const trailIntensity = isCombo ? 1.4 : 1.0;
 
       if (isMelee && swingPhase > 0) {
         ctx.save();
-        ctx.globalAlpha = swingPhase * 0.4;
-        ctx.strokeStyle = trailColor;
-        ctx.lineWidth = 3;
-        ctx.shadowColor = trailColor;
-        ctx.shadowBlur = 8;
-        const arcStart = hero.facing - Math.PI * 0.6;
-        const arcEnd = hero.facing + Math.PI * 0.3 * swingPhase;
-        ctx.beginPath();
-        ctx.arc(0, -5, 28, arcStart, arcEnd);
-        ctx.stroke();
+        for (let trail = 2; trail >= 0; trail--) {
+          const trailOffset = trail * 0.08;
+          const trailAlpha = (swingPhase * 0.5 * trailIntensity) * (1 - trail * 0.3);
+          ctx.globalAlpha = trailAlpha;
+          ctx.strokeStyle = trail === 0 ? trailColor : trailGlowColor;
+          ctx.lineWidth = isCombo ? 5 - trail : 3 - trail * 0.5;
+          ctx.shadowColor = trailColor;
+          ctx.shadowBlur = isCombo ? 14 : 8;
+          const arcStart = hero.facing - Math.PI * (isCombo ? 0.9 : 0.6) - trailOffset;
+          const arcEnd = hero.facing + Math.PI * (isCombo ? 0.5 : 0.3) * swingPhase + trailOffset;
+          ctx.beginPath();
+          ctx.arc(0, -5, 28 + trail * 3, arcStart, arcEnd);
+          ctx.stroke();
+        }
         ctx.restore();
       } else if (!isMelee && swingPhase > 0.3) {
         ctx.save();
-        ctx.globalAlpha = swingPhase * 0.3;
+        ctx.globalAlpha = swingPhase * 0.35 * trailIntensity;
         ctx.fillStyle = trailColor;
-        ctx.shadowColor = trailColor;
-        ctx.shadowBlur = 10;
+        ctx.shadowColor = trailGlowColor;
+        ctx.shadowBlur = 12;
         const px = Math.cos(hero.facing) * 18;
         const py = Math.sin(hero.facing) * 18 - 10;
         ctx.beginPath();
-        ctx.arc(px, py, 4 + swingPhase * 3, 0, Math.PI * 2);
+        ctx.arc(px, py, 5 + swingPhase * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = swingPhase * 0.15;
+        ctx.fillStyle = trailGlowColor;
+        ctx.beginPath();
+        ctx.arc(px, py, 8 + swingPhase * 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
@@ -3085,6 +3275,164 @@ export class MobaRenderer {
       ctx.beginPath();
       ctx.ellipse(0, 0, se.radius * progress, se.radius * 0.3 * progress, 0, 0, Math.PI * 2);
       ctx.stroke();
+    } else if (se.type === 'fire_ring') {
+      const r = se.radius * progress;
+      ctx.globalAlpha = (1 - progress) * 0.7;
+      ctx.strokeStyle = '#ff6600';
+      ctx.lineWidth = 6 * (1 - progress);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#ff3300';
+      ctx.lineWidth = 3 * (1 - progress);
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
+      ctx.stroke();
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, 'rgba(255,100,0,0.3)');
+      grad.addColorStop(0.7, 'rgba(255,50,0,0.1)');
+      grad.addColorStop(1, 'rgba(255,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (se.type === 'frost_ring') {
+      const r = se.radius * Math.min(1, progress * 2);
+      ctx.globalAlpha = (1 - progress) * 0.7;
+      ctx.strokeStyle = '#67e8f9';
+      ctx.lineWidth = 5 * (1 - progress);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 2 * (1 - progress);
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, 'rgba(34,211,238,0.2)');
+      grad.addColorStop(0.8, 'rgba(103,232,249,0.1)');
+      grad.addColorStop(1, 'rgba(34,211,238,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (se.type === 'meteor_shadow') {
+      const r = se.radius * progress * 0.6;
+      ctx.globalAlpha = 0.4 + progress * 0.3;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r, r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ff4400';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = progress * 0.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(0, 0, se.radius * 0.4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (se.type === 'meteor_impact') {
+      const r = se.radius * (0.5 + progress * 0.5);
+      ctx.globalAlpha = (1 - progress) * 0.9;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 6 * (1 - progress);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#ff6600';
+      ctx.lineWidth = 4 * (1 - progress);
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, `rgba(255,200,50,${(1 - progress) * 0.5})`);
+      grad.addColorStop(0.4, `rgba(255,100,0,${(1 - progress) * 0.3})`);
+      grad.addColorStop(1, 'rgba(255,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (se.type === 'arrow_rain') {
+      ctx.globalAlpha = 0.15 + (1 - progress) * 0.15;
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(0, 0, se.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, se.radius);
+      grad.addColorStop(0, 'rgba(34,197,94,0.1)');
+      grad.addColorStop(1, 'rgba(34,197,94,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, se.radius, 0, Math.PI * 2);
+      ctx.fill();
+      const t = se.maxLife - se.life;
+      for (let a = 0; a < 5; a++) {
+        const ax = Math.sin(t * 8 + a * 1.3) * se.radius * 0.7;
+        const ay = Math.cos(t * 6 + a * 2.1) * se.radius * 0.7;
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay - 8);
+        ctx.lineTo(ax, ay + 4);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(ax - 2, ay - 4);
+        ctx.lineTo(ax, ay - 8);
+        ctx.lineTo(ax + 2, ay - 4);
+        ctx.stroke();
+      }
+    } else if (se.type === 'whirlwind_slash') {
+      ctx.globalAlpha = (1 - progress) * 0.7;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 3 * (1 - progress);
+      ctx.lineCap = 'round';
+      const sweep = Math.PI * 0.6;
+      const r = se.radius * (0.6 + progress * 0.4);
+      const startAngle = se.angle + progress * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, startAngle, startAngle + sweep);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5 * (1 - progress);
+      ctx.globalAlpha = (1 - progress) * 0.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.9, startAngle + sweep * 0.1, startAngle + sweep * 0.9);
+      ctx.stroke();
+    } else if (se.type === 'ground_scorch') {
+      ctx.globalAlpha = (1 - progress) * 0.3;
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, se.radius);
+      grad.addColorStop(0, 'rgba(50,30,0,0.5)');
+      grad.addColorStop(0.6, 'rgba(30,15,0,0.3)');
+      grad.addColorStop(1, 'rgba(20,10,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, se.radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (se.type === 'ground_frost') {
+      ctx.globalAlpha = (1 - progress) * 0.25;
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, se.radius);
+      grad.addColorStop(0, 'rgba(34,211,238,0.4)');
+      grad.addColorStop(0.5, 'rgba(103,232,249,0.2)');
+      grad.addColorStop(1, 'rgba(34,211,238,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, se.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(103,232,249,0.3)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const r = se.radius * (0.3 + Math.random() * 0.5);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        ctx.stroke();
+      }
     }
 
     ctx.restore();

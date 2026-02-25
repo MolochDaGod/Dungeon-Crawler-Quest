@@ -315,7 +315,7 @@ export interface HudState {
   team: number;
   showShop: boolean;
   showScoreboard: boolean;
-  allHeroes: { name: string; kills: number; deaths: number; assists: number; level: number; team: number; hp: number; maxHp: number; heroRace: string; heroClass: string }[];
+  allHeroes: { name: string; kills: number; deaths: number; assists: number; level: number; team: number; hp: number; maxHp: number; heroRace: string; heroClass: string; items: (ItemDef | null)[] }[];
   killFeed: { text: string; color: string; time: number }[];
   atk: number;
   def: number;
