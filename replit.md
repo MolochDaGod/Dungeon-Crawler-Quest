@@ -21,7 +21,7 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
   - `client/src/pages/game.tsx` - MOBA game canvas with RPG UI overlay, status effects display, MMB camera pan, 2D/3D toggle
   - `client/src/pages/dungeon-game.tsx` - Dungeon crawler with RPG HUD, inventory, floor/loot display
   - `client/src/pages/open-world.tsx` - Open world exploration with 3 towns (Elvenhollow, Ironjaw Keep, Valorheim), WASD movement, minimap
-  - `client/src/pages/settings.tsx` - Keybinding settings page with rebinding UI
+  - `client/src/pages/settings.tsx` - Settings page with MOBA/Dungeon keybinding tabs, graphics settings (particle quality, screen shake, minimap size)
 - **UI Framework**: React + Shadcn + Tailwind CSS (dark mode forced)
 - **Routing**: Wouter
 
@@ -39,19 +39,22 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - Stats: HP, ATK, DEF, SPD, RNG, MP with race modifiers
 
 ### MOBA Mode
-- 4000x4000 map with 3 lanes (top, mid, bot)
+- 4000x4000 map with 3 lanes (top, mid, bot) and diagonal river
 - 5v5 (player + 4 AI allies vs 5 AI enemies)
 - Towers along each lane (2 per lane per team + 1 base tower)
 - Nexus base structure (destroy to win)
 - Minion waves every 30 seconds (melee + siege after 2 min)
+- Jungle camps: 10 camps (6 small, 2 medium, 2 buff) with aggro/leash/respawn mechanics
 - Hero leveling 1-18 with stat scaling
 - 4 abilities per class (Q/W/E/R) with cooldowns and mana costs
-- Auto-attack system with projectiles and line-of-sight checks (blocked by enemy towers)
+- LoL-style spell casting indicators: ground AoE circles, skillshot rectangles, line beams, cone arcs, targeted lines
+- Ability castType system: 'targeted' | 'skillshot' | 'ground_aoe' | 'self_cast' | 'cone' | 'line'
+- Slow auto-attacks: hero base ~2.2s, minion ~2.6s, tower 2.5s; melee instant-hit, ranged fires projectiles at 450 speed
 - Combat actions: Dodge Roll (Space, iFrames), Dash Attack (F, 1.5x damage), Shield Block (V, 70% reduction)
 - Auto-attack combo system (3-hit combo = golden finisher with 1.5x damage + VFX)
 - Item shop (12 items across 3 tiers)
-- Gold from last-hits, kills (+300g), assists (+100g)
-- KDA scoring and kill feed
+- Gold from last-hits, kills (+300g), assists (+100g), jungle mobs
+- KDA scoring and kill feed with AI chat callouts
 
 ### Dungeon Crawler Mode
 - Procedural floor generation (10 floors)
@@ -83,8 +86,11 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - Smart retreat: dynamic threshold (15-35% HP based on ally count), dash ability usage when critically low
 - Ability targeting: evaluates heal/buff on wounded allies, AoE on enemy clusters, finisher priority on low-HP targets
 - Class-aware strategy: Mage conserves mana, Warrior ignores heal when healthy, Ranger kites at range
-- Smart shopping: class-weighted item scoring (Warriors prioritize DEF/HP, Mages prioritize ATK/MP, Rangers prioritize ATK/SPD)
-- Lane waypoint following with nearest-waypoint tracking
+- Smart shopping: tiered purchasing (tier 1 at 300g, tier 2 at 750g, tier 3 at 1400g), class-weighted item scoring
+- Assigned lane system: heroes assigned to specific lanes via `assignedLane` field, follow their lane waypoints
+- Last-hitting: AI prioritizes killing minions when their HP is within lethal range (atk * 1.2 + 5)
+- Chat callouts: AI heroes post strategic messages ("push mid", "enemy missing", "going b", "need backup", "group up")
+- Base healing: AI retreats and heals at base when low, then returns to assigned lane
 
 ### Voxel Art System
 - Procedural isometric cube rendering, 14z×8y×8x hero grids (expanded from 12×6×6)
@@ -93,7 +99,8 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
   - Warrior/Worg: melee sword/axe swing with wind-up → slash → follow-through
   - Ranger: bow draw-back → hold → release with arrow projectile
   - Mage: staff raise → charge glow → cast forward with particle trail
-- Walk cycle: alternating leg strides, opposing arm swing, head bob
+- Walk cycle: alternating leg strides with knee-lift, opposing arm swing, head bob, torso sway
+- Weapon trail VFX: melee swing arcs (golden glow), ranged charge orbs (cyan/purple glow) during attack/ability states
 - Idle: subtle breathing torso movement
 - Ability: both arms raise, energy pulse, weapon glow
 - Death: body collapse with staggered limb fall

@@ -26,6 +26,7 @@ export interface AbilityDef {
   radius: number;
   duration: number;
   type: 'damage' | 'buff' | 'debuff' | 'heal' | 'aoe' | 'dash' | 'summon';
+  castType: 'targeted' | 'skillshot' | 'ground_aoe' | 'self_cast' | 'cone' | 'line';
   description: string;
 }
 
@@ -112,6 +113,7 @@ export interface MobaHero extends GameEntity {
   blockTimer: number;
   blockCooldown: number;
   iFrames: number;
+  assignedLane: number;
 }
 
 export interface MobaMinion extends GameEntity {
@@ -142,6 +144,39 @@ export interface MobaTower extends GameEntity {
 
 export interface MobaNexus extends GameEntity {
   destroyed: boolean;
+}
+
+export interface JungleMob {
+  id: number;
+  x: number;
+  y: number;
+  hp: number;
+  maxHp: number;
+  atk: number;
+  def: number;
+  rng: number;
+  dead: boolean;
+  facing: number;
+  animTimer: number;
+  autoAttackTimer: number;
+  targetId: number | null;
+  goldValue: number;
+  xpValue: number;
+  mobType: 'small' | 'medium' | 'buff';
+  homeX: number;
+  homeY: number;
+  leashRange: number;
+}
+
+export interface JungleCamp {
+  id: number;
+  x: number;
+  y: number;
+  mobs: JungleMob[];
+  respawnTimer: number;
+  respawnDelay: number;
+  campType: 'small' | 'medium' | 'buff';
+  allDead: boolean;
 }
 
 export interface Projectile {
@@ -191,6 +226,7 @@ export interface MobaState {
   minions: MobaMinion[];
   towers: MobaTower[];
   nexuses: MobaNexus[];
+  jungleCamps: JungleCamp[];
   projectiles: Projectile[];
   particles: Particle[];
   floatingTexts: FloatingText[];
@@ -253,7 +289,7 @@ export interface HudState {
   team: number;
   showShop: boolean;
   showScoreboard: boolean;
-  allHeroes: { name: string; kills: number; deaths: number; assists: number; level: number; team: number; hp: number; maxHp: number }[];
+  allHeroes: { name: string; kills: number; deaths: number; assists: number; level: number; team: number; hp: number; maxHp: number; heroRace: string; heroClass: string }[];
   killFeed: { text: string; color: string; time: number }[];
   atk: number;
   def: number;
@@ -322,28 +358,28 @@ export const STAT_COLORS: Record<string, string> = {
 
 export const CLASS_ABILITIES: Record<string, AbilityDef[]> = {
   Warrior: [
-    { name: "Shield Bash", key: "Q", cooldown: 6, manaCost: 20, damage: 30, range: 80, radius: 0, duration: 1.5, type: 'damage', description: "Bash target, dealing damage and stunning for 1.5s" },
-    { name: "Battle Cry", key: "W", cooldown: 15, manaCost: 30, damage: 0, range: 0, radius: 200, duration: 5, type: 'buff', description: "Boost ATK by 25% for 5s in radius" },
-    { name: "Whirlwind", key: "E", cooldown: 10, manaCost: 35, damage: 50, range: 0, radius: 120, duration: 0, type: 'aoe', description: "Spin dealing AoE damage around you" },
-    { name: "Avatar", key: "R", cooldown: 60, manaCost: 80, damage: 0, range: 0, radius: 0, duration: 10, type: 'buff', description: "Transform into a giant, +50% HP and ATK for 10s" }
+    { name: "Shield Bash", key: "Q", cooldown: 6, manaCost: 20, damage: 30, range: 80, radius: 0, duration: 1.5, type: 'damage', castType: 'targeted', description: "Bash target, dealing damage and stunning for 1.5s" },
+    { name: "Battle Cry", key: "W", cooldown: 15, manaCost: 30, damage: 0, range: 0, radius: 200, duration: 5, type: 'buff', castType: 'self_cast', description: "Boost ATK by 25% for 5s in radius" },
+    { name: "Whirlwind", key: "E", cooldown: 10, manaCost: 35, damage: 50, range: 0, radius: 120, duration: 0, type: 'aoe', castType: 'self_cast', description: "Spin dealing AoE damage around you" },
+    { name: "Avatar", key: "R", cooldown: 60, manaCost: 80, damage: 0, range: 0, radius: 0, duration: 10, type: 'buff', castType: 'self_cast', description: "Transform into a giant, +50% HP and ATK for 10s" }
   ],
   Worg: [
-    { name: "Feral Charge", key: "Q", cooldown: 8, manaCost: 25, damage: 40, range: 300, radius: 0, duration: 0, type: 'dash', description: "Dash to target, dealing damage on impact" },
-    { name: "Howl", key: "W", cooldown: 12, manaCost: 20, damage: 0, range: 0, radius: 250, duration: 3, type: 'debuff', description: "Howl, slowing enemies by 30% for 3s" },
-    { name: "Rend", key: "E", cooldown: 5, manaCost: 15, damage: 60, range: 80, radius: 0, duration: 3, type: 'damage', description: "Rend target, dealing damage over 3s" },
-    { name: "Primal Fury", key: "R", cooldown: 55, manaCost: 70, damage: 0, range: 0, radius: 0, duration: 12, type: 'buff', description: "Enter frenzy, +40% ATK SPD and lifesteal for 12s" }
+    { name: "Feral Charge", key: "Q", cooldown: 8, manaCost: 25, damage: 40, range: 300, radius: 0, duration: 0, type: 'dash', castType: 'targeted', description: "Dash to target, dealing damage on impact" },
+    { name: "Howl", key: "W", cooldown: 12, manaCost: 20, damage: 0, range: 0, radius: 250, duration: 3, type: 'debuff', castType: 'self_cast', description: "Howl, slowing enemies by 30% for 3s" },
+    { name: "Rend", key: "E", cooldown: 5, manaCost: 15, damage: 60, range: 80, radius: 0, duration: 3, type: 'damage', castType: 'targeted', description: "Rend target, dealing damage over 3s" },
+    { name: "Primal Fury", key: "R", cooldown: 55, manaCost: 70, damage: 0, range: 0, radius: 0, duration: 12, type: 'buff', castType: 'self_cast', description: "Enter frenzy, +40% ATK SPD and lifesteal for 12s" }
   ],
   Mage: [
-    { name: "Fireball", key: "Q", cooldown: 4, manaCost: 25, damage: 55, range: 400, radius: 60, duration: 0, type: 'damage', description: "Hurl a fireball dealing AoE damage" },
-    { name: "Frost Nova", key: "W", cooldown: 12, manaCost: 35, damage: 30, range: 0, radius: 180, duration: 2, type: 'aoe', description: "Freeze nearby enemies, dealing damage and slowing" },
-    { name: "Arcane Barrier", key: "E", cooldown: 18, manaCost: 40, damage: 0, range: 0, radius: 0, duration: 4, type: 'heal', description: "Create a magic shield absorbing 100 damage" },
-    { name: "Meteor", key: "R", cooldown: 50, manaCost: 90, damage: 120, range: 500, radius: 150, duration: 0, type: 'aoe', description: "Call down a meteor dealing massive AoE damage" }
+    { name: "Fireball", key: "Q", cooldown: 4, manaCost: 25, damage: 55, range: 400, radius: 60, duration: 0, type: 'damage', castType: 'skillshot', description: "Hurl a fireball dealing AoE damage" },
+    { name: "Frost Nova", key: "W", cooldown: 12, manaCost: 35, damage: 30, range: 0, radius: 180, duration: 2, type: 'aoe', castType: 'self_cast', description: "Freeze nearby enemies, dealing damage and slowing" },
+    { name: "Arcane Barrier", key: "E", cooldown: 18, manaCost: 40, damage: 0, range: 0, radius: 0, duration: 4, type: 'heal', castType: 'self_cast', description: "Create a magic shield absorbing 100 damage" },
+    { name: "Meteor", key: "R", cooldown: 50, manaCost: 90, damage: 120, range: 500, radius: 150, duration: 0, type: 'aoe', castType: 'ground_aoe', description: "Call down a meteor dealing massive AoE damage" }
   ],
   Ranger: [
-    { name: "Power Shot", key: "Q", cooldown: 5, manaCost: 20, damage: 45, range: 500, radius: 0, duration: 0, type: 'damage', description: "Fire a piercing shot dealing high damage" },
-    { name: "Trap", key: "W", cooldown: 14, manaCost: 25, damage: 20, range: 300, radius: 50, duration: 2, type: 'debuff', description: "Place a trap that roots for 2s" },
-    { name: "Shadow Step", key: "E", cooldown: 10, manaCost: 30, damage: 0, range: 250, radius: 0, duration: 0, type: 'dash', description: "Teleport to location, becoming invisible for 1s" },
-    { name: "Storm of Arrows", key: "R", cooldown: 55, manaCost: 80, damage: 80, range: 400, radius: 200, duration: 3, type: 'aoe', description: "Rain arrows over an area for 3s" }
+    { name: "Power Shot", key: "Q", cooldown: 5, manaCost: 20, damage: 45, range: 500, radius: 0, duration: 0, type: 'damage', castType: 'line', description: "Fire a piercing shot dealing high damage" },
+    { name: "Trap", key: "W", cooldown: 14, manaCost: 25, damage: 20, range: 300, radius: 50, duration: 2, type: 'debuff', castType: 'ground_aoe', description: "Place a trap that roots for 2s" },
+    { name: "Shadow Step", key: "E", cooldown: 10, manaCost: 30, damage: 0, range: 250, radius: 0, duration: 0, type: 'dash', castType: 'ground_aoe', description: "Teleport to location, becoming invisible for 1s" },
+    { name: "Storm of Arrows", key: "R", cooldown: 55, manaCost: 80, damage: 80, range: 400, radius: 200, duration: 3, type: 'aoe', castType: 'ground_aoe', description: "Rain arrows over an area for 3s" }
   ]
 };
 

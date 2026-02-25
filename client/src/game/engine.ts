@@ -4,7 +4,8 @@ import {
   HeroData, HEROES, ITEMS, CLASS_ABILITIES, LANE_WAYPOINTS,
   MAP_SIZE, TEAM_COLORS, TEAM_NAMES, Vec2, SpellEffect,
   xpForLevel, heroStatsAtLevel, calcDamage,
-  RACE_COLORS, CLASS_COLORS, RARITY_COLORS
+  RACE_COLORS, CLASS_COLORS, RARITY_COLORS,
+  JungleCamp, JungleMob
 } from './types';
 import { VoxelRenderer, TerrainType } from './voxel';
 import {
@@ -185,6 +186,7 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     killFeed: [],
     terrainMap: generateTerrainMap(),
     decorations: generateDecorations(),
+    jungleCamps: [],
     cursorMode: 'default',
     hoveredEntityId: null,
     aKeyHeld: false,
@@ -209,6 +211,7 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     const lane = laneAssign[idx] ?? 1;
     const spawn = laneSpawn(lane, 0);
     const hero = createHero(state, hd, 0, spawn.x, spawn.y, idx === 0);
+    hero.assignedLane = lane;
     if (idx === 0) state.playerHeroIndex = state.heroes.length;
     state.heroes.push(hero);
   });
@@ -217,7 +220,9 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     const hd = HEROES.find(h => h.id === hid)!;
     const lane = laneAssign[_idx] ?? 1;
     const spawn = laneSpawn(lane, 1);
-    state.heroes.push(createHero(state, hd, 1, spawn.x, spawn.y, false));
+    const hero = createHero(state, hd, 1, spawn.x, spawn.y, false);
+    hero.assignedLane = lane;
+    state.heroes.push(hero);
   });
 
   TOWER_POSITIONS.forEach(tp => {
@@ -226,6 +231,8 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
 
   state.nexuses.push({ id: state.nextEntityId++, x: BASE_POSITIONS[0].x, y: BASE_POSITIONS[0].y, team: 0, hp: 3000, maxHp: 3000, dead: false, destroyed: false });
   state.nexuses.push({ id: state.nextEntityId++, x: BASE_POSITIONS[1].x, y: BASE_POSITIONS[1].y, team: 1, hp: 3000, maxHp: 3000, dead: false, destroyed: false });
+
+  createJungleCamps(state);
 
   return state;
 }
@@ -263,7 +270,8 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     dashAttackCooldown: 0, dashAttackTimer: 0,
     comboCount: 0, comboTimer: 0,
     blockActive: false, blockTimer: 0, blockCooldown: 0,
-    iFrames: 0
+    iFrames: 0,
+    assignedLane: 1
   };
 }
 
@@ -278,6 +286,158 @@ function createTower(state: MobaState, x: number, y: number, team: number, lane:
     targetId: null, dead: false,
     isNexusTower: tier === 3
   };
+}
+
+const JUNGLE_CAMP_POSITIONS: { x: number; y: number; type: 'small' | 'medium' | 'buff' }[] = [
+  { x: 1000, y: 1000, type: 'small' },
+  { x: 1500, y: 2500, type: 'medium' },
+  { x: 800, y: 2200, type: 'buff' },
+  { x: 1800, y: 1200, type: 'small' },
+  { x: 3000, y: 3000, type: 'small' },
+  { x: 2500, y: 1500, type: 'medium' },
+  { x: 3200, y: 1800, type: 'buff' },
+  { x: 2200, y: 2800, type: 'small' },
+  { x: 1200, y: 3200, type: 'small' },
+  { x: 2800, y: 800, type: 'small' },
+];
+
+function createJungleCamps(state: MobaState) {
+  for (const pos of JUNGLE_CAMP_POSITIONS) {
+    const camp: JungleCamp = {
+      id: state.nextEntityId++,
+      x: pos.x, y: pos.y,
+      mobs: [],
+      respawnTimer: 0,
+      respawnDelay: 60,
+      campType: pos.type,
+      allDead: false
+    };
+
+    const mobCount = pos.type === 'small' ? 3 : pos.type === 'medium' ? 2 : 1;
+    for (let i = 0; i < mobCount; i++) {
+      const hp = pos.type === 'small' ? 200 : pos.type === 'medium' ? 500 : 1200;
+      const atk = pos.type === 'small' ? 15 : pos.type === 'medium' ? 30 : 60;
+      const gold = pos.type === 'small' ? 25 : pos.type === 'medium' ? 60 : 120;
+      const xp = pos.type === 'small' ? 30 : pos.type === 'medium' ? 80 : 200;
+      const offX = (i - mobCount / 2) * 30;
+      const offY = (Math.random() - 0.5) * 20;
+      camp.mobs.push({
+        id: state.nextEntityId++,
+        x: pos.x + offX, y: pos.y + offY,
+        hp, maxHp: hp, atk, def: pos.type === 'buff' ? 10 : 3,
+        rng: 60, dead: false,
+        facing: Math.random() * Math.PI * 2,
+        animTimer: Math.random() * 10,
+        autoAttackTimer: 0,
+        targetId: null,
+        goldValue: gold, xpValue: xp,
+        mobType: pos.type,
+        homeX: pos.x + offX, homeY: pos.y + offY,
+        leashRange: 300
+      });
+    }
+    state.jungleCamps.push(camp);
+  }
+}
+
+function updateJungleCamps(state: MobaState, dt: number) {
+  for (const camp of state.jungleCamps) {
+    if (camp.allDead) {
+      camp.respawnTimer -= dt;
+      if (camp.respawnTimer <= 0) {
+        camp.allDead = false;
+        for (const mob of camp.mobs) {
+          mob.dead = false;
+          mob.hp = mob.maxHp;
+          mob.x = mob.homeX;
+          mob.y = mob.homeY;
+          mob.targetId = null;
+        }
+      }
+      continue;
+    }
+
+    let allDead = true;
+    for (const mob of camp.mobs) {
+      if (mob.dead) continue;
+      allDead = false;
+      mob.animTimer += dt;
+      mob.autoAttackTimer -= dt;
+
+      if (mob.targetId !== null) {
+        const target = findEntityById(state, mob.targetId);
+        if (!target || target.dead || dist(mob, target) > mob.leashRange) {
+          mob.targetId = null;
+          const angle = angleTo(mob, { x: mob.homeX, y: mob.homeY });
+          mob.x += Math.cos(angle) * 60 * dt;
+          mob.y += Math.sin(angle) * 60 * dt;
+          mob.facing = angle;
+          mob.hp = Math.min(mob.maxHp, mob.hp + dt * 20);
+          continue;
+        }
+        const d = dist(mob, target);
+        if (d <= mob.rng + 20) {
+          if (mob.autoAttackTimer <= 0) {
+            dealDamage(state, mob as any, target, mob.atk);
+            mob.autoAttackTimer = 1.5;
+            mob.facing = angleTo(mob, target);
+            state.spellEffects.push({
+              x: target.x, y: target.y, type: 'impact_ring',
+              life: 0.15, maxLife: 0.15, radius: 15,
+              color: mob.mobType === 'buff' ? '#a855f7' : '#65a30d', angle: 0
+            });
+          }
+        } else {
+          const angle = angleTo(mob, target);
+          mob.x += Math.cos(angle) * 50 * dt;
+          mob.y += Math.sin(angle) * 50 * dt;
+          mob.facing = angle;
+        }
+      } else {
+        let nearestHero: MobaHero | null = null;
+        let nearestDist = 200;
+        for (const h of state.heroes) {
+          if (h.dead) continue;
+          const d = dist(mob, h);
+          if (d < nearestDist) { nearestDist = d; nearestHero = h; }
+        }
+        if (nearestHero) {
+          mob.targetId = nearestHero.id;
+        } else {
+          const homeDist = dist(mob, { x: mob.homeX, y: mob.homeY });
+          if (homeDist > 20) {
+            const angle = angleTo(mob, { x: mob.homeX, y: mob.homeY });
+            mob.x += Math.cos(angle) * 30 * dt;
+            mob.y += Math.sin(angle) * 30 * dt;
+            mob.facing = angle;
+          }
+        }
+      }
+
+      if (mob.hp <= 0) {
+        mob.dead = true;
+        const killer = mob.targetId !== null ? findEntityById(state, mob.targetId) : null;
+        if (!killer) {
+          for (const h of state.heroes) {
+            if (h.dead) continue;
+            if (dist(mob, h) < 400) {
+              (h as MobaHero).gold += mob.goldValue;
+              (h as MobaHero).xp += mob.xpValue;
+              checkLevelUp(state, h as MobaHero);
+              addFloatingText(state, mob.x, mob.y - 10, `+${mob.goldValue}g`, '#ffd700', 12);
+              break;
+            }
+          }
+        }
+        spawnDeathParticles(state, mob.x, mob.y, mob.mobType === 'buff' ? '#a855f7' : '#65a30d');
+      }
+    }
+
+    if (allDead) {
+      camp.allDead = true;
+      camp.respawnTimer = camp.respawnDelay;
+    }
+  }
 }
 
 function spawnMinionWave(state: MobaState) {
@@ -453,6 +613,7 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
     updateTower(state, tower, dt);
   }
 
+  updateJungleCamps(state, dt);
   updateProjectiles(state, dt);
   updateParticles(state, dt);
   updateFloatingTexts(state, dt);
@@ -618,9 +779,9 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
           hero.comboTimer = 2.0;
           const comboMult = hero.comboCount >= 3 ? 1.5 : 1.0;
           performAutoAttack(state, hero, target, comboMult);
-          hero.autoAttackTimer = Math.max(0.3, 1.2 - hero.spd * 0.008);
+          hero.autoAttackTimer = Math.max(0.8, 2.2 - hero.spd * 0.008);
           hero.animState = hero.comboCount >= 3 ? 'combo_finisher' : 'attack';
-          hero.attackAnimPhase = 0.3;
+          hero.attackAnimPhase = 0.6;
           hero.facing = angleTo(hero, target);
           const heroData = HEROES[hero.heroDataId];
           if (heroData && (heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg') && d < 100) {
@@ -844,13 +1005,28 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     }
 
     if (!bestTarget) {
+      let lastHitTarget: any = null;
+      let lastHitScore = -1;
       for (const m of state.minions) {
         if (m.team === hero.team || m.dead) continue;
         const d = dist(hero, m);
         if (d > 350) continue;
-        let score = (350 - d) / 350 * 2;
-        if (m.hp < hero.atk * 1.5) score += 5;
-        if (score > bestScore) { bestScore = score; bestTarget = m; }
+        if (m.hp <= hero.atk * 1.2 + 5) {
+          const sc = 20 + (350 - d) / 350 * 5;
+          if (sc > lastHitScore) { lastHitScore = sc; lastHitTarget = m; }
+        }
+      }
+      if (lastHitTarget) {
+        bestTarget = lastHitTarget;
+        bestScore = lastHitScore;
+      } else {
+        for (const m of state.minions) {
+          if (m.team === hero.team || m.dead) continue;
+          const d = dist(hero, m);
+          if (d > 350) continue;
+          let score = (350 - d) / 350 * 2;
+          if (score > bestScore) { bestScore = score; bestTarget = m; }
+        }
       }
     }
 
@@ -866,7 +1042,7 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     if (bestTarget) {
       hero.targetId = bestTarget.id;
     } else {
-      const lane = hero.id % 3;
+      const lane = hero.assignedLane;
       const waypoints = hero.team === 0 ? LANE_WAYPOINTS[lane] : [...LANE_WAYPOINTS[lane]].reverse();
 
       let nearestWpIdx = 0;
@@ -902,34 +1078,52 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     }
   }
 
-  if (hero.gold >= 600) {
+  const ownedCount = hero.items.filter(s => s !== null).length;
+  const bestTier = ownedCount < 2 ? 1 : ownedCount < 4 ? 2 : 3;
+  const buyThreshold = bestTier === 1 ? 300 : bestTier === 2 ? 750 : 1400;
+
+  if (hero.gold >= buyThreshold) {
     const slot = hero.items.findIndex(s => s === null);
     if (slot !== -1) {
-      const sortedItems = [...ITEMS].filter(item => item.cost <= hero.gold).sort((a, b) => {
-        let aScore = a.atk * 2 + a.def + a.hp * 0.1 + a.spd * 3;
-        let bScore = b.atk * 2 + b.def + b.hp * 0.1 + b.spd * 3;
-        if (heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg') {
-          aScore += a.def * 2 + a.hp * 0.2;
-          bScore += b.def * 2 + b.hp * 0.2;
-        }
-        if (heroData.heroClass === 'Mage') {
-          aScore += a.atk * 1.5 + a.mp * 0.3;
-          bScore += b.atk * 1.5 + b.mp * 0.3;
-        }
-        if (heroData.heroClass === 'Ranger') {
-          aScore += a.atk * 2 + a.spd * 4;
-          bScore += b.atk * 2 + b.spd * 4;
-        }
-        return bScore - aScore;
-      });
+      const sortedItems = [...ITEMS]
+        .filter(item => item.cost <= hero.gold && item.tier <= bestTier)
+        .sort((a, b) => {
+          const scoreItem = (it: typeof a) => {
+            let s = it.atk * 2 + it.def + it.hp * 0.1 + it.spd * 3;
+            if (heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg') s += it.def * 2 + it.hp * 0.2;
+            if (heroData.heroClass === 'Mage') s += it.atk * 1.5 + it.mp * 0.3;
+            if (heroData.heroClass === 'Ranger') s += it.atk * 2 + it.spd * 4;
+            if (hpPct < 0.5) s += it.hp * 0.3 + it.def * 1.5;
+            return s;
+          };
+          return scoreItem(b) - scoreItem(a);
+        });
       if (sortedItems.length > 0) {
         const item = sortedItems[0];
         hero.items[slot] = item;
         hero.gold -= item.cost;
         applyItemStats(hero, item);
+        addAiChat(state, hero, heroData, `bought ${item.name}`);
       }
     }
   }
+
+  if (Math.random() < 0.001 * dt) {
+    const msgs = ['push ' + ['top', 'mid', 'bot'][hero.assignedLane], 'enemy missing', 'group up', 'need backup', 'going b', 'care'];
+    if (hpPct < 0.3) addAiChat(state, hero, heroData, 'going b');
+    else if (threat > 3 && alliesNearby === 0) addAiChat(state, hero, heroData, 'need backup');
+    else addAiChat(state, hero, heroData, msgs[Math.floor(Math.random() * msgs.length)]);
+  }
+}
+
+function addAiChat(state: MobaState, hero: MobaHero, heroData: HeroData, msg: string) {
+  if (state.killFeed.length > 8) return;
+  const name = heroData.name || `${heroData.race} ${heroData.heroClass}`;
+  state.killFeed.push({
+    text: `[${TEAM_NAMES[hero.team]}] ${name}: ${msg}`,
+    color: hero.team === 0 ? '#60a5fa' : '#f87171',
+    time: state.gameTime
+  });
 }
 
 function applyItemStats(hero: MobaHero, item: { hp: number; atk: number; def: number; spd: number; mp: number }) {
@@ -975,25 +1169,60 @@ function findEntityById(state: MobaState, id: number): any {
   for (const m of state.minions) if (m.id === id) return m;
   for (const t of state.towers) if (t.id === id) return t;
   for (const n of state.nexuses) if (n.id === id) return n;
+  for (const camp of state.jungleCamps) {
+    for (const mob of camp.mobs) if (mob.id === id) return mob;
+  }
   return null;
+}
+
+function isMeleeClass(heroClass: string): boolean {
+  return heroClass === 'Warrior' || heroClass === 'Worg';
 }
 
 function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, target: any, comboMult: number = 1.0) {
   const atk = 'atk' in attacker ? attacker.atk : 15;
   const color = attacker.team === 0 ? '#60a5fa' : '#f87171';
   const dmg = Math.floor(atk * comboMult);
-  state.projectiles.push({
-    id: state.nextEntityId++,
-    x: attacker.x, y: attacker.y,
-    targetId: target.id,
-    targetType: 'hero',
-    damage: dmg,
-    speed: 600,
-    team: attacker.team,
-    sourceId: attacker.id,
-    color: comboMult > 1 ? '#ffd700' : color,
-    size: comboMult > 1 ? 6 : 4
-  });
+
+  let isMelee = false;
+  if ('heroDataId' in attacker) {
+    const heroData = HEROES[(attacker as MobaHero).heroDataId];
+    isMelee = heroData ? isMeleeClass(heroData.heroClass) : false;
+  } else if ('minionType' in attacker) {
+    isMelee = (attacker as MobaMinion).minionType === 'melee';
+  }
+
+  if (isMelee && dist(attacker, target) < 120) {
+    dealDamage(state, attacker, target, dmg);
+    const slashAngle = angleTo(attacker, target);
+    state.spellEffects.push({
+      x: target.x, y: target.y,
+      type: 'slash_arc', life: 0.15, maxLife: 0.15,
+      radius: 20, color: comboMult > 1 ? '#ffd700' : color, angle: slashAngle
+    });
+    for (let i = 0; i < 3; i++) {
+      state.particles.push({
+        x: target.x + (Math.random() - 0.5) * 20,
+        y: target.y + (Math.random() - 0.5) * 20,
+        vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60,
+        life: 0.25, maxLife: 0.25, color, size: 2, type: 'hit'
+      });
+    }
+  } else {
+    state.projectiles.push({
+      id: state.nextEntityId++,
+      x: attacker.x, y: attacker.y,
+      targetId: target.id,
+      targetType: 'hero',
+      damage: dmg,
+      speed: 450,
+      team: attacker.team,
+      sourceId: attacker.id,
+      color: comboMult > 1 ? '#ffd700' : color,
+      size: comboMult > 1 ? 6 : 4
+    });
+  }
+
   if (comboMult > 1 && 'heroDataId' in attacker) {
     const heroData = HEROES[(attacker as MobaHero).heroDataId];
     const atkColor = CLASS_COLORS[heroData?.heroClass || 'Warrior'] || '#ef4444';
@@ -1332,7 +1561,7 @@ function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
   if (enemy && dist(minion, enemy) < minion.rng + 20) {
     if (minion.autoAttackTimer <= 0) {
       performAutoAttack(state, minion as any, enemy);
-      minion.autoAttackTimer = Math.max(0.5, 1.4 - minion.spd * 0.005);
+      minion.autoAttackTimer = Math.max(1.0, 2.6 - minion.spd * 0.005);
       minion.facing = angleTo(minion, enemy);
     }
     return;
@@ -1417,7 +1646,7 @@ function updateTower(state: MobaState, tower: MobaTower, dt: number) {
         color: TEAM_COLORS[tower.team],
         size: 6
       });
-      tower.autoAttackTimer = 1.5;
+      tower.autoAttackTimer = 2.5;
 
       for (let i = 0; i < 3; i++) {
         state.particles.push({
@@ -1851,7 +2080,7 @@ export function getHudState(state: MobaState): HudState {
     showScoreboard: state.showScoreboard,
     allHeroes: state.heroes.map(h => {
       const hd = HEROES[h.heroDataId];
-      return { name: hd?.name ?? '', kills: h.kills, deaths: h.deaths, assists: h.assists, level: h.level, team: h.team, hp: h.hp, maxHp: h.maxHp };
+      return { name: hd?.name ?? '', kills: h.kills, deaths: h.deaths, assists: h.assists, level: h.level, team: h.team, hp: h.hp, maxHp: h.maxHp, heroRace: hd?.race ?? '', heroClass: hd?.heroClass ?? '' };
     }),
     killFeed: state.killFeed,
     atk: player?.atk ?? 0,
@@ -1935,6 +2164,13 @@ export class MobaRenderer {
       }
     }
 
+    for (const camp of state.jungleCamps) {
+      if (camp.allDead) continue;
+      for (const mob of camp.mobs) {
+        if (!mob.dead) this.renderJungleMob(ctx, mob, camp);
+      }
+    }
+
     const sortedMinions = [...state.minions].sort((a, b) => a.y - b.y);
     for (const minion of sortedMinions) {
       if (!minion.dead) this.renderMinion(ctx, minion);
@@ -1950,18 +2186,96 @@ export class MobaRenderer {
       const heroData = HEROES[player.heroDataId];
       const abilities = heroData ? CLASS_ABILITIES[heroData.heroClass] : null;
       const ab = abilities ? abilities[state.selectedAbility] : null;
-      const range = ab ? ab.range || 300 : 300;
-      ctx.strokeStyle = '#a855f7';
-      ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.25 + Math.sin(Date.now() * 0.004) * 0.1;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, range, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(168,85,247,0.04)';
-      ctx.fill();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
+      if (ab) {
+        const range = ab.range || 300;
+        const castType = ab.castType || 'targeted';
+        const mx = state.mouseWorld.x;
+        const my = state.mouseWorld.y;
+        const pulse = 0.25 + Math.sin(Date.now() * 0.004) * 0.1;
+
+        ctx.save();
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 4]);
+        ctx.globalAlpha = pulse;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, range, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (castType === 'ground_aoe' && ab.radius > 0) {
+          const r = ab.radius;
+          ctx.globalAlpha = 0.15 + Math.sin(Date.now() * 0.005) * 0.05;
+          ctx.fillStyle = '#a855f7';
+          ctx.beginPath();
+          ctx.arc(mx, my, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#c084fc';
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.6;
+          ctx.stroke();
+        } else if (castType === 'skillshot') {
+          const angle = angleTo(player, { x: mx, y: my });
+          const w = 30;
+          ctx.globalAlpha = 0.12;
+          ctx.fillStyle = '#a855f7';
+          ctx.save();
+          ctx.translate(player.x, player.y);
+          ctx.rotate(angle);
+          ctx.fillRect(0, -w, range, w * 2);
+          ctx.strokeStyle = '#c084fc';
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = 0.5;
+          ctx.strokeRect(0, -w, range, w * 2);
+          ctx.restore();
+        } else if (castType === 'line') {
+          const angle = angleTo(player, { x: mx, y: my });
+          const w = 15;
+          ctx.globalAlpha = 0.15;
+          ctx.fillStyle = '#22d3ee';
+          ctx.save();
+          ctx.translate(player.x, player.y);
+          ctx.rotate(angle);
+          ctx.fillRect(0, -w, range, w * 2);
+          ctx.strokeStyle = '#67e8f9';
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = 0.6;
+          ctx.strokeRect(0, -w, range, w * 2);
+          ctx.restore();
+        } else if (castType === 'cone') {
+          const angle = angleTo(player, { x: mx, y: my });
+          const spread = Math.PI / 4;
+          ctx.globalAlpha = 0.12;
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.moveTo(player.x, player.y);
+          ctx.arc(player.x, player.y, range, angle - spread, angle + spread);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = '#fb923c';
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = 0.4;
+          ctx.stroke();
+        } else if (castType === 'targeted') {
+          if (state.hoveredEntityId !== null) {
+            const tgt = findEntityById(state, state.hoveredEntityId);
+            if (tgt && !tgt.dead) {
+              ctx.globalAlpha = 0.3;
+              ctx.strokeStyle = '#ef4444';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(player.x, player.y);
+              ctx.lineTo(tgt.x, tgt.y);
+              ctx.stroke();
+              ctx.beginPath();
+              ctx.arc(tgt.x, tgt.y, 18, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+          }
+        }
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
     }
 
     if (player && !player.dead) {
@@ -2232,6 +2546,57 @@ export class MobaRenderer {
     ctx.restore();
   }
 
+  private renderJungleMob(ctx: CanvasRenderingContext2D, mob: JungleMob, camp: JungleCamp) {
+    const colors: Record<string, string> = { small: '#65a30d', medium: '#3b82f6', buff: '#a855f7' };
+    const color = colors[mob.mobType] || '#65a30d';
+    const size = mob.mobType === 'small' ? 8 : mob.mobType === 'medium' ? 12 : 18;
+
+    ctx.save();
+    ctx.translate(mob.x, mob.y);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(0, size * 0.6, size * 0.7, size * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const bob = Math.sin(mob.animTimer * 2) * 2;
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = mob.mobType === 'buff' ? 8 : 3;
+    ctx.beginPath();
+    if (mob.mobType === 'buff') {
+      ctx.save();
+      ctx.translate(0, bob - 4);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        const px = Math.cos(a) * size;
+        const py = Math.sin(a) * size;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+        const ia = ((i + 0.5) / 5) * Math.PI * 2 - Math.PI / 2;
+        ctx.lineTo(Math.cos(ia) * size * 0.5, Math.sin(ia) * size * 0.5);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.arc(0, bob, size, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#000';
+      const eyeOff = size * 0.3;
+      ctx.beginPath();
+      ctx.arc(-eyeOff, bob - 2, 2, 0, Math.PI * 2);
+      ctx.arc(eyeOff, bob - 2, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    this.renderHealthBar(ctx, 0, -size - 10, size + 6, mob.hp, mob.maxHp, color);
+
+    ctx.restore();
+  }
+
   renderHero(ctx: CanvasRenderingContext2D, hero: MobaHero, _state: MobaState) {
     const heroData = HEROES[hero.heroDataId];
     if (!heroData) return;
@@ -2328,6 +2693,39 @@ export class MobaRenderer {
     }
 
     this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, hero.facing, hero.animState, hero.animTimer, heroData.race);
+
+    if (hero.animState === 'attack' || hero.animState === 'ability' || hero.animState === 'combo_finisher') {
+      const isMelee = heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg';
+      const trailColor = heroData.heroClass === 'Mage' ? '#a855f7' : heroData.heroClass === 'Ranger' ? '#22d3ee' : '#f59e0b';
+      const swingPhase = Math.sin(hero.animTimer * (isMelee ? 10 : 6));
+
+      if (isMelee && swingPhase > 0) {
+        ctx.save();
+        ctx.globalAlpha = swingPhase * 0.4;
+        ctx.strokeStyle = trailColor;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = trailColor;
+        ctx.shadowBlur = 8;
+        const arcStart = hero.facing - Math.PI * 0.6;
+        const arcEnd = hero.facing + Math.PI * 0.3 * swingPhase;
+        ctx.beginPath();
+        ctx.arc(0, -5, 28, arcStart, arcEnd);
+        ctx.stroke();
+        ctx.restore();
+      } else if (!isMelee && swingPhase > 0.3) {
+        ctx.save();
+        ctx.globalAlpha = swingPhase * 0.3;
+        ctx.fillStyle = trailColor;
+        ctx.shadowColor = trailColor;
+        ctx.shadowBlur = 10;
+        const px = Math.cos(hero.facing) * 18;
+        const py = Math.sin(hero.facing) * 18 - 10;
+        ctx.beginPath();
+        ctx.arc(px, py, 4 + swingPhase * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
 
     const teamColor = TEAM_COLORS[hero.team];
     ctx.fillStyle = teamColor;
@@ -2596,6 +2994,16 @@ export class MobaRenderer {
       ctx.fillStyle = TEAM_COLORS[nexus.team];
       ctx.beginPath();
       ctx.arc(mx + nexus.x * scale, my + nexus.y * scale, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    for (const camp of state.jungleCamps) {
+      if (camp.allDead) continue;
+      const campColors: Record<string, string> = { small: '#65a30d', medium: '#3b82f6', buff: '#a855f7' };
+      ctx.fillStyle = campColors[camp.campType] || '#65a30d';
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.arc(mx + camp.x * scale, my + camp.y * scale, camp.campType === 'buff' ? 3 : 2, 0, Math.PI * 2);
       ctx.fill();
     }
 
