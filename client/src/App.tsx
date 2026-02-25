@@ -9,6 +9,7 @@ import CharacterSelect from "@/pages/character-select";
 import GamePage from "@/pages/game";
 import DungeonGamePage from "@/pages/dungeon-game";
 import SettingsPage from "@/pages/settings";
+import OpenWorldPage from "@/pages/open-world";
 import { useEffect } from "react";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/character-select" component={CharacterSelect} />
       <Route path="/game" component={GamePage} />
       <Route path="/dungeon" component={DungeonGamePage} />
+      <Route path="/open-world" component={OpenWorldPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>

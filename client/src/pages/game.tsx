@@ -11,6 +11,7 @@ import {
   handleRightClick, handleAttackMoveClick, handleStopCommand,
   buyItem, handleDodge, handleDashAttack, handleBlock
 } from '@/game/engine';
+import { ThreeRenderer } from '@/game/three-renderer';
 import hudFramePath from '@assets/hud-frame.png';
 import shopPanelPath from '@assets/shop-panel.png';
 import scoreboardBgPath from '@assets/scoreboard-bg.png';
@@ -21,10 +22,15 @@ import {
 export default function GamePage() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<MobaState | null>(null);
   const rendererRef = useRef<MobaRenderer | null>(null);
+  const threeRendererRef = useRef<ThreeRenderer | null>(null);
   const keysRef = useRef<Set<string>>(new Set());
   const [hud, setHud] = useState<HudState | null>(null);
+  const [renderMode, setRenderMode] = useState<'2d' | '3d'>(() =>
+    (localStorage.getItem('grudge_render_mode') as '2d' | '3d') || '3d'
+  );
   const panRef = useRef<{ active: boolean; startX: number; startY: number; camStartX: number; camStartY: number }>({
     active: false, startX: 0, startY: 0, camStartX: 0, camStartY: 0
   });
@@ -38,20 +44,28 @@ export default function GamePage() {
       return;
     }
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener('resize', resize);
-
     const state = createInitialState(heroId, team);
     stateRef.current = state;
-    const renderer = new MobaRenderer(canvas);
-    rendererRef.current = renderer;
+
+    let renderer2d: MobaRenderer | null = null;
+    let renderer3d: ThreeRenderer | null = null;
+    let resizeHandler: (() => void) | null = null;
+
+    if (renderMode === '3d' && containerRef.current) {
+      renderer3d = new ThreeRenderer(containerRef.current);
+      threeRendererRef.current = renderer3d;
+      renderer3d.loadModels(state);
+    } else if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      resizeHandler = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      };
+      resizeHandler();
+      window.addEventListener('resize', resizeHandler);
+      renderer2d = new MobaRenderer(canvas);
+      rendererRef.current = renderer2d;
+    }
 
     let lastTime = performance.now();
     let hudTimer = 0;
@@ -63,7 +77,11 @@ export default function GamePage() {
       lastTime = now;
 
       updateGame(state, dt, keysRef.current);
-      renderer.render(state);
+      if (renderer3d) {
+        renderer3d.render(state);
+      } else if (renderer2d) {
+        renderer2d.render(state);
+      }
 
       hudTimer += dt;
       if (hudTimer > 0.1) {
@@ -152,7 +170,14 @@ export default function GamePage() {
       }
     };
 
+    const eventTarget = renderer3d ? renderer3d.getCanvas() : (canvasRef.current || document.body);
+
     const getWorldPos = (e: MouseEvent) => {
+      if (renderer3d) {
+        return renderer3d.screenToWorld(e.clientX, e.clientY);
+      }
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: 0, y: 0 };
       const rect = canvas.getBoundingClientRect();
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
@@ -199,13 +224,11 @@ export default function GamePage() {
     };
 
     const onMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const sx = e.clientX - rect.left;
-      const sy = e.clientY - rect.top;
-      state.mouseWorld.x = (sx - canvas.width / 2) / state.camera.zoom + state.camera.x;
-      state.mouseWorld.y = (sy - canvas.height / 2) / state.camera.zoom + state.camera.y;
+      const wp = getWorldPos(e);
+      state.mouseWorld.x = wp.x;
+      state.mouseWorld.y = wp.y;
 
-      if (panRef.current.active) {
+      if (panRef.current.active && !renderer3d) {
         const dx = (e.clientX - panRef.current.startX) / state.camera.zoom;
         const dy = (e.clientY - panRef.current.startY) / state.camera.zoom;
         state.camera.x = panRef.current.camStartX - dx;
@@ -227,26 +250,27 @@ export default function GamePage() {
       state.camera.zoom = Math.max(0.4, Math.min(2, state.camera.zoom - e.deltaY * 0.001));
     };
 
-    canvas.addEventListener('contextmenu', onContextMenu);
-    canvas.addEventListener('mousedown', onMouseDown);
-    canvas.addEventListener('mouseup', onMouseUp);
-    canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('wheel', onWheel);
+    eventTarget.addEventListener('contextmenu', onContextMenu);
+    eventTarget.addEventListener('mousedown', onMouseDown);
+    eventTarget.addEventListener('mouseup', onMouseUp);
+    eventTarget.addEventListener('mousemove', onMouseMove);
+    eventTarget.addEventListener('wheel', onWheel);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
     return () => {
       cancelAnimationFrame(animId);
-      window.removeEventListener('resize', resize);
+      if (resizeHandler) window.removeEventListener('resize', resizeHandler);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
-      canvas.removeEventListener('contextmenu', onContextMenu);
-      canvas.removeEventListener('mousedown', onMouseDown);
-      canvas.removeEventListener('mouseup', onMouseUp);
-      canvas.removeEventListener('mousemove', onMouseMove);
-      canvas.removeEventListener('wheel', onWheel);
+      eventTarget.removeEventListener('contextmenu', onContextMenu);
+      eventTarget.removeEventListener('mousedown', onMouseDown);
+      eventTarget.removeEventListener('mouseup', onMouseUp);
+      eventTarget.removeEventListener('mousemove', onMouseMove);
+      eventTarget.removeEventListener('wheel', onWheel);
+      if (renderer3d) renderer3d.dispose();
     };
-  }, [heroId, team, setLocation]);
+  }, [heroId, team, setLocation, renderMode]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -257,9 +281,20 @@ export default function GamePage() {
   const heroData = HEROES.find(h => h.id === heroId);
   const abilities = heroData ? CLASS_ABILITIES[heroData.heroClass] || [] : [];
 
+  const toggleRenderMode = () => {
+    const newMode = renderMode === '2d' ? '3d' : '2d';
+    localStorage.setItem('grudge_render_mode', newMode);
+    setRenderMode(newMode);
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="game-page">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'none' }} data-testid="canvas-game" />
+      {renderMode === '2d' && (
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'none' }} data-testid="canvas-game" />
+      )}
+      {renderMode === '3d' && (
+        <div ref={containerRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'crosshair' }} data-testid="three-container" />
+      )}
 
       {hud && (
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 9999, fontFamily: "'Oxanium', sans-serif" }}>
@@ -292,6 +327,19 @@ export default function GamePage() {
               </span>
               <div className="w-5 h-5 rounded-full" style={{ background: 'linear-gradient(135deg, #ef4444, #b91c1c)', boxShadow: '0 0 8px rgba(239,68,68,0.5)' }} />
             </div>
+            <button
+              onClick={toggleRenderMode}
+              className="ml-2 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded"
+              style={{
+                background: renderMode === '3d' ? 'linear-gradient(135deg, #c5a059, #8b6914)' : 'rgba(197,160,89,0.2)',
+                border: '1px solid #c5a059',
+                color: '#c5a059',
+                cursor: 'pointer',
+              }}
+              data-testid="button-toggle-render"
+            >
+              {renderMode === '3d' ? '3D' : '2D'}
+            </button>
           </div>
 
           <div className="absolute bottom-0 left-0 right-0 flex items-end pointer-events-auto" style={{ padding: '0 8px 8px 8px', gap: 8 }}>
