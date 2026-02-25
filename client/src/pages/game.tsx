@@ -12,6 +12,7 @@ import {
   buyItem, handleDodge, handleDashAttack, handleBlock
 } from '@/game/engine';
 import { ThreeRenderer } from '@/game/three-renderer';
+import { VoxelRenderer } from '@/game/voxel';
 import hudFramePath from '@assets/hud-frame.png';
 import shopPanelPath from '@assets/shop-panel.png';
 import scoreboardBgPath from '@assets/scoreboard-bg.png';
@@ -31,6 +32,8 @@ export default function GamePage() {
   const [renderMode, setRenderMode] = useState<'2d' | '3d'>(() =>
     (localStorage.getItem('grudge_render_mode') as '2d' | '3d') || '3d'
   );
+  const portraitCanvasRef = useRef<HTMLCanvasElement>(null);
+  const portraitVoxelRef = useRef<VoxelRenderer | null>(null);
   const panRef = useRef<{ active: boolean; startX: number; startY: number; camStartX: number; camStartY: number }>({
     active: false, startX: 0, startY: 0, camStartX: 0, camStartY: 0
   });
@@ -281,6 +284,19 @@ export default function GamePage() {
   const heroData = HEROES.find(h => h.id === heroId);
   const abilities = heroData ? CLASS_ABILITIES[heroData.heroClass] || [] : [];
 
+  useEffect(() => {
+    if (!hud || !portraitCanvasRef.current) return;
+    const canvas = portraitCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    if (!portraitVoxelRef.current) portraitVoxelRef.current = new VoxelRenderer();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    portraitVoxelRef.current.drawHeroPortrait(
+      ctx, 0, 0, canvas.width, canvas.height,
+      hud.heroRace, hud.heroClass, hud.heroName
+    );
+  }, [hud?.heroRace, hud?.heroClass, hud?.heroName]);
+
   const toggleRenderMode = () => {
     const newMode = renderMode === '2d' ? '3d' : '2d';
     localStorage.setItem('grudge_render_mode', newMode);
@@ -387,16 +403,15 @@ export default function GamePage() {
 
                 <div className="flex items-center w-full mb-1.5" style={{ gap: 8 }}>
                   <div className="flex items-center" style={{ gap: 4, flex: 1 }}>
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-black"
+                    <div className="relative w-10 h-10 rounded-lg overflow-hidden"
                       style={{
-                        background: `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
                         border: '2px solid #c5a059',
-                        color: '#fff',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-                        boxShadow: '0 0 8px rgba(0,0,0,0.6)'
+                        boxShadow: '0 0 8px rgba(0,0,0,0.6)',
+                        background: `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`
                       }}
+                      data-testid="portrait-hotbar"
                     >
-                      {hud.heroClass.charAt(0)}
+                      <canvas ref={portraitCanvasRef} width={40} height={40} className="w-full h-full" />
                     </div>
                     <div className="flex flex-col" style={{ gap: 2, flex: 1 }}>
                       <div className="flex items-center" style={{ gap: 4 }}>
@@ -448,7 +463,10 @@ export default function GamePage() {
                 <div className="flex items-center flex-wrap" style={{ gap: 4 }}>
                   {abilities.map((ab, i) => {
                     const cd = hud.abilityCooldowns[i] || 0;
-                    const onCd = cd > 0;
+                    const maxCharges = hud.abilityMaxCharges?.[i] || 0;
+                    const charges = hud.abilityCharges?.[i] || 0;
+                    const hasCharges = maxCharges > 0;
+                    const onCd = hasCharges ? charges <= 0 : cd > 0;
                     const ready = !onCd && hud.mp >= ab.manaCost;
                     const selected = stateRef.current?.selectedAbility === i;
                     return (
@@ -474,6 +492,7 @@ export default function GamePage() {
                             </div>
                             {ab.damage > 0 && <div className="text-[9px] mt-0.5" style={{ color: '#f87171' }}>Damage: {ab.damage}</div>}
                             {ab.range > 0 && <div className="text-[9px]" style={{ color: '#4ade80' }}>Range: {ab.range}</div>}
+                            {hasCharges && <div className="text-[9px] mt-0.5" style={{ color: '#a78bfa' }}>Charges: {charges}/{maxCharges}</div>}
                           </div>
                         </div>
                         <button
@@ -502,13 +521,32 @@ export default function GamePage() {
                         >
                           <span className="absolute text-[9px] font-bold" style={{ top: 2, left: 4, color: selected ? '#ffd700' : '#888' }}>{ab.key}</span>
                           <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{ab.name.substring(0, 2)}</span>
-                          {onCd && (
+                          {hasCharges && charges > 0 ? (
+                            <span className="absolute text-[10px] font-black" style={{ bottom: 2, right: 4, color: '#a78bfa', textShadow: '0 0 4px rgba(167,139,250,0.5)' }} data-testid={`text-charges-${i}`}>{charges}</span>
+                          ) : onCd ? (
                             <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 2 }}>
                               <span className="text-sm font-black text-white" style={{ textShadow: '0 0 4px #000' }}>{cd.toFixed(1)}</span>
                             </div>
-                          )}
+                          ) : null}
                         </button>
-                        <span className="text-[8px] font-bold" style={{ color: hud.mp >= ab.manaCost ? '#60a5fa' : '#f87171' }}>{ab.manaCost}</span>
+                        <div className="flex items-center" style={{ gap: 2 }}>
+                          <span className="text-[8px] font-bold" style={{ color: hud.mp >= ab.manaCost ? '#60a5fa' : '#f87171' }}>{ab.manaCost}</span>
+                          {hasCharges && (
+                            <div className="flex" style={{ gap: 1 }} data-testid={`pips-charges-${i}`}>
+                              {Array.from({ length: maxCharges }).map((_, ci) => (
+                                <div
+                                  key={ci}
+                                  style={{
+                                    width: 4, height: 4,
+                                    borderRadius: '50%',
+                                    background: ci < charges ? '#a78bfa' : '#333',
+                                    boxShadow: ci < charges ? '0 0 3px rgba(167,139,250,0.5)' : 'none',
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -777,9 +815,10 @@ function Scoreboard({ hud }: { hud: HudState }) {
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto" data-testid="panel-scoreboard">
       <div
-        className="p-4 rounded-lg"
+        className="p-4 rounded-lg overflow-y-auto"
         style={{
-          width: 600,
+          width: 700,
+          maxHeight: '85vh',
           background: 'linear-gradient(to bottom, #1a1a2e, #0a0a15)',
           border: '2px solid #c5a059',
           boxShadow: '0 0 30px rgba(0,0,0,0.8)'
@@ -791,7 +830,7 @@ function Scoreboard({ hud }: { hud: HudState }) {
             <h3 className="text-xs font-bold mb-1" style={{ color: TEAM_COLORS[t] }}>{TEAM_NAMES[t]}</h3>
             <div className="space-y-1">
               {hud.allHeroes.filter(h => h.team === t).map((h, i) => (
-                <div key={i} className="flex items-center gap-3 bg-black/30 px-3 py-1.5 rounded text-xs">
+                <div key={i} className="flex items-center gap-2 bg-black/30 px-2 py-1 rounded text-xs" data-testid={`row-scoreboard-${t}-${i}`}>
                   <img
                     src={`/assets/portraits/${h.heroRace.toLowerCase()}_${h.heroClass.toLowerCase()}.png`}
                     alt={`${h.heroRace} ${h.heroClass}`}
@@ -806,14 +845,35 @@ function Scoreboard({ hud }: { hud: HudState }) {
                     }}
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
-                  <span className="flex-1 text-gray-300 truncate">{h.name}</span>
-                  <span className="text-gray-500">Lv{h.level}</span>
-                  <span className="text-green-400 w-6 text-center">{h.kills}</span>
-                  <span className="text-gray-600">/</span>
-                  <span className="text-red-400 w-6 text-center">{h.deaths}</span>
-                  <span className="text-gray-600">/</span>
-                  <span className="text-yellow-400 w-6 text-center">{h.assists}</span>
-                  <div className="w-16 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                  <span className="text-gray-300 truncate" style={{ width: 110, flexShrink: 0 }}>{h.name.split(' ').pop()}</span>
+                  <span className="text-gray-500" style={{ width: 28, flexShrink: 0 }}>Lv{h.level}</span>
+                  <span className="text-green-400 w-5 text-center" style={{ flexShrink: 0 }}>{h.kills}</span>
+                  <span className="text-gray-600" style={{ flexShrink: 0 }}>/</span>
+                  <span className="text-red-400 w-5 text-center" style={{ flexShrink: 0 }}>{h.deaths}</span>
+                  <span className="text-gray-600" style={{ flexShrink: 0 }}>/</span>
+                  <span className="text-yellow-400 w-5 text-center" style={{ flexShrink: 0 }}>{h.assists}</span>
+                  <div className="flex" style={{ gap: 2, flexShrink: 0 }}>
+                    {(h.items || []).slice(0, 6).map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-center"
+                        style={{
+                          width: 18, height: 18,
+                          background: item ? 'linear-gradient(135deg, #1a1a2e, #0a0a15)' : 'rgba(10,10,10,0.5)',
+                          border: item ? '1px solid #c5a05960' : '1px solid #222',
+                          borderRadius: 2,
+                          fontSize: 7,
+                          fontWeight: 'bold',
+                          color: '#c5a059'
+                        }}
+                        title={item?.name || ''}
+                        data-testid={`scoreboard-item-${t}-${i}-${idx}`}
+                      >
+                        {item ? item.name.split(' ').map(w => w[0]).join('') : ''}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="w-12 h-1.5 bg-gray-800 rounded-full overflow-hidden" style={{ flexShrink: 0 }}>
                     <div className="h-full rounded-full" style={{ width: `${(h.hp / h.maxHp) * 100}%`, backgroundColor: TEAM_COLORS[t] }} />
                   </div>
                 </div>

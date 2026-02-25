@@ -11,6 +11,9 @@ interface GraphicsSettings {
   particleQuality: 'low' | 'medium' | 'high';
   screenShake: boolean;
   minimapSize: number;
+  masterVolume: number;
+  sfxVolume: number;
+  musicVolume: number;
 }
 
 const GRAPHICS_STORAGE_KEY = 'grudge_graphics_settings';
@@ -20,7 +23,7 @@ function loadGraphicsSettings(): GraphicsSettings {
     const stored = localStorage.getItem(GRAPHICS_STORAGE_KEY);
     if (stored) return JSON.parse(stored);
   } catch {}
-  return { particleQuality: 'medium', screenShake: true, minimapSize: 180 };
+  return { particleQuality: 'medium', screenShake: true, minimapSize: 180, masterVolume: 80, sfxVolume: 100, musicVolume: 60 };
 }
 
 function saveGraphicsSettings(settings: GraphicsSettings): void {
@@ -352,6 +355,55 @@ export default function SettingsPage() {
                 <span className="text-[10px] text-gray-600">280</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div
+          className="rounded-md overflow-hidden mb-8"
+          style={{
+            background: 'linear-gradient(to bottom, rgba(15,18,15,0.95), rgba(10,12,10,0.95))',
+            border: '1px solid rgba(197,160,89,0.2)',
+          }}
+          data-testid="panel-audio"
+        >
+          <div
+            className="px-4 py-2.5 text-xs font-bold tracking-wider uppercase"
+            style={{ color: '#c5a059', background: 'rgba(197,160,89,0.06)', borderBottom: '1px solid rgba(197,160,89,0.15)' }}
+          >
+            Audio
+          </div>
+
+          <div className="px-4 py-4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {([
+              { label: 'Master Volume', key: 'masterVolume' as const, description: 'Overall game volume' },
+              { label: 'SFX Volume', key: 'sfxVolume' as const, description: 'Sound effects for combat and abilities' },
+              { label: 'Music Volume', key: 'musicVolume' as const, description: 'Background music volume' },
+            ]).map((vol) => (
+              <div key={vol.key} className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <span className="text-sm text-gray-300 block">{vol.label}</span>
+                  <span className="text-xs text-gray-600">{vol.description}</span>
+                </div>
+                <div className="flex items-center" style={{ gap: 10, minWidth: 180 }}>
+                  <span className="text-[10px] text-gray-600">0</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={graphics[vol.key]}
+                    onChange={(e) => updateGraphics({ [vol.key]: parseInt(e.target.value) })}
+                    className="flex-1"
+                    style={{
+                      accentColor: '#c5a059',
+                      height: 4,
+                    }}
+                    data-testid={`slider-${vol.key}`}
+                  />
+                  <span className="text-[10px] text-gray-600 w-6 text-right">{graphics[vol.key]}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

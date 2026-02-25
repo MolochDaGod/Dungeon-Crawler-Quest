@@ -104,15 +104,16 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   if (animState === 'walk') {
     const phase = Math.sin(t * 10);
     const phase2 = Math.cos(t * 10);
-    const bounce = Math.abs(Math.sin(t * 20)) * 0.5;
+    const bounce = Math.abs(Math.sin(t * 20)) * 0.7;
+    const hipSway = Math.sin(t * 10) * 0.4;
     return {
-      leftLeg: { ox: Math.round(phase * 1.8), oy: 0, oz: Math.round(Math.max(0, -phase) * 0.5) },
-      rightLeg: { ox: Math.round(-phase * 1.8), oy: 0, oz: Math.round(Math.max(0, phase) * 0.5) },
-      leftArm: { ox: Math.round(-phase * 1.2), oy: 0, oz: Math.round(phase2 * 0.5) },
-      rightArm: { ox: Math.round(phase * 1.2), oy: 0, oz: Math.round(-phase2 * 0.5) },
-      torso: { ox: 0, oy: Math.round(Math.sin(t * 5) * 0.3), oz: Math.round(bounce) },
-      head: { ox: 0, oy: Math.round(Math.sin(t * 5) * 0.2), oz: Math.round(bounce * 0.8) },
-      weapon: { ox: Math.round(phase * 0.5), oy: 0, oz: 0 },
+      leftLeg: { ox: Math.round(phase * 2.2), oy: 0, oz: Math.round(Math.max(0, -phase) * 1.0) },
+      rightLeg: { ox: Math.round(-phase * 2.2), oy: 0, oz: Math.round(Math.max(0, phase) * 1.0) },
+      leftArm: { ox: Math.round(-phase * 1.5), oy: 0, oz: Math.round(phase2 * 0.6) },
+      rightArm: { ox: Math.round(phase * 1.5), oy: 0, oz: Math.round(-phase2 * 0.6) },
+      torso: { ox: 0, oy: Math.round(hipSway), oz: Math.round(bounce) },
+      head: { ox: 0, oy: Math.round(Math.sin(t * 5) * 0.3), oz: Math.round(bounce * 0.9) },
+      weapon: { ox: Math.round(phase * 0.7), oy: 0, oz: Math.round(bounce * 0.3) },
       weaponGlow: 0
     };
   }
@@ -122,17 +123,18 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
       const phase = t * 10;
       const windUp = Math.max(0, Math.sin(phase));
       const swing = Math.max(0, Math.sin(phase + 1.8));
-      const armExtend = Math.round(windUp > 0.5 ? -windUp * 2.5 : swing * 3);
-      const lunge = Math.round(swing * 1.5);
+      const armExtend = Math.round(windUp > 0.5 ? -windUp * 3.0 : swing * 3.5);
+      const lunge = Math.round(swing * 2.0);
+      const bodyLean = Math.round(swing * 0.8);
       return {
-        leftLeg: { ox: Math.round(swing * 1.5), oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(-swing * 0.5), oy: 0, oz: 0 },
-        leftArm: { ox: armExtend, oy: Math.round(swing * -2), oz: Math.round(swing * 3) },
-        rightArm: { ox: Math.round(-windUp), oy: Math.round(windUp * 0.5), oz: Math.round(windUp) },
-        torso: { ox: lunge, oy: Math.round(swing * 0.3), oz: 0 },
-        head: { ox: Math.round(swing * 0.5), oy: 0, oz: 0 },
-        weapon: { ox: armExtend + Math.round(swing * 2.5), oy: Math.round(swing * -3), oz: Math.round(windUp * 4 - swing * 3) },
-        weaponGlow: swing > 0.2 ? 0.8 : windUp > 0.3 ? 0.3 : 0
+        leftLeg: { ox: Math.round(swing * 2.0), oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(-swing * 0.8), oy: 0, oz: 0 },
+        leftArm: { ox: armExtend, oy: Math.round(swing * -2.5), oz: Math.round(swing * 3.5) },
+        rightArm: { ox: Math.round(-windUp * 1.2), oy: Math.round(windUp * 0.6), oz: Math.round(windUp * 1.2) },
+        torso: { ox: lunge, oy: Math.round(swing * 0.4), oz: Math.round(-bodyLean * 0.3) },
+        head: { ox: Math.round(swing * 0.7), oy: 0, oz: Math.round(-bodyLean * 0.2) },
+        weapon: { ox: armExtend + Math.round(swing * 3.0), oy: Math.round(swing * -3.5), oz: Math.round(windUp * 5 - swing * 3.5) },
+        weaponGlow: swing > 0.2 ? 0.9 : windUp > 0.3 ? 0.4 : 0
       };
     }
     if (heroClass === 'Ranger') {
@@ -171,15 +173,16 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   if (animState === 'ability') {
     const pulse = (Math.sin(t * 8) + 1) * 0.5;
     const burst = Math.max(0, Math.sin(t * 8 + 1.5));
+    const channel = Math.min(1, t * 4);
     return {
-      leftLeg: { ox: Math.round(-burst * 0.5), oy: 0, oz: 0 },
-      rightLeg: { ox: Math.round(burst * 0.5), oy: 0, oz: 0 },
-      leftArm: { ox: Math.round(burst * 2), oy: Math.round(-pulse), oz: Math.round(pulse * 3) },
-      rightArm: { ox: Math.round(burst * 2), oy: Math.round(pulse), oz: Math.round(pulse * 3) },
-      torso: { ox: 0, oy: 0, oz: Math.round(pulse * 0.5) },
-      head: { ox: 0, oy: 0, oz: Math.round(pulse * 0.5) },
-      weapon: { ox: Math.round(burst * 2), oy: 0, oz: Math.round(pulse * 4) },
-      weaponGlow: pulse * 0.9
+      leftLeg: { ox: Math.round(-burst * 0.8), oy: 0, oz: 0 },
+      rightLeg: { ox: Math.round(burst * 0.8), oy: 0, oz: 0 },
+      leftArm: { ox: Math.round(burst * 2.5), oy: Math.round(-pulse * 1.5), oz: Math.round(pulse * 4 + channel * 2) },
+      rightArm: { ox: Math.round(burst * 2.5), oy: Math.round(pulse * 1.5), oz: Math.round(pulse * 4 + channel * 2) },
+      torso: { ox: 0, oy: 0, oz: Math.round(pulse * 0.7 + channel * 0.5) },
+      head: { ox: 0, oy: 0, oz: Math.round(pulse * 0.8 + channel * 0.5) },
+      weapon: { ox: Math.round(burst * 2.5), oy: 0, oz: Math.round(pulse * 5 + channel) },
+      weaponGlow: Math.max(pulse, channel * 0.6) * 0.95
     };
   }
 
@@ -214,18 +217,20 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   }
 
   if (animState === 'combo_finisher') {
-    const phase = t * 16;
+    const phase = t * 20;
     const spin = Math.sin(phase);
+    const spin2 = Math.cos(phase * 0.7);
     const power = Math.abs(Math.sin(phase * 0.5));
+    const slam = Math.max(0, Math.sin(phase * 0.5 + 1.2));
     return {
-      leftLeg: { ox: Math.round(spin * 1.5), oy: 0, oz: 0 },
-      rightLeg: { ox: Math.round(-spin * 1.5), oy: 0, oz: 0 },
-      leftArm: { ox: Math.round(spin * 3), oy: Math.round(-power * 2), oz: Math.round(power * 3) },
-      rightArm: { ox: Math.round(-spin * 2), oy: Math.round(power), oz: Math.round(power * 2) },
-      torso: { ox: Math.round(spin * 1), oy: 0, oz: Math.round(power * 0.5) },
-      head: { ox: Math.round(spin * 0.5), oy: 0, oz: Math.round(power * 0.5) },
-      weapon: { ox: Math.round(spin * 4 + power * 2), oy: Math.round(-power * 3), oz: Math.round(power * 4) },
-      weaponGlow: power > 0.4 ? 1.0 : 0.3
+      leftLeg: { ox: Math.round(spin * 2.5), oy: Math.round(spin2 * 0.5), oz: Math.round(Math.max(0, -spin) * 1.2) },
+      rightLeg: { ox: Math.round(-spin * 2.5), oy: Math.round(-spin2 * 0.5), oz: Math.round(Math.max(0, spin) * 1.2) },
+      leftArm: { ox: Math.round(spin * 4), oy: Math.round(-power * 3), oz: Math.round(power * 4 + slam * 2) },
+      rightArm: { ox: Math.round(-spin * 3), oy: Math.round(power * 1.5), oz: Math.round(power * 3 + slam) },
+      torso: { ox: Math.round(spin * 1.5), oy: Math.round(spin2 * 0.5), oz: Math.round(power * 1.0 - slam * 1.5) },
+      head: { ox: Math.round(spin * 0.8), oy: Math.round(spin2 * 0.3), oz: Math.round(power * 0.8 - slam) },
+      weapon: { ox: Math.round(spin * 5 + power * 3), oy: Math.round(-power * 4 + slam * 2), oz: Math.round(power * 5 - slam * 3) },
+      weaponGlow: power > 0.3 ? 1.0 : 0.5
     };
   }
 
@@ -359,7 +364,32 @@ function buildBearModel(animState: string, animTimer: number): VoxelModel {
   return model;
 }
 
-function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number, heroName?: string): VoxelModel {
+function buildRapierWeapon(wP: BodyPartPose, setV: (z: number, y: number, x: number, c: string) => void, weaponGlow: number) {
+  const blade = '#d4d4d4';
+  const guard = '#c5a059';
+  const handle = '#6b4423';
+  const pommel = '#dc2626';
+
+  setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, pommel);
+
+  setV(3 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(4 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+
+  setV(5 + wP.oz, 0 + wP.oy, 0 + wP.ox, guard);
+  setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, guard);
+  setV(5 + wP.oz, 2 + wP.oy, 0 + wP.ox, guard);
+
+  for (let z = 6; z <= 12; z++) {
+    const bladeColor = weaponGlow > 0 ? blend(blade, '#ffffff', weaponGlow * 0.4) : blade;
+    setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, bladeColor);
+  }
+
+  if (weaponGlow > 0) {
+    setV(12 + wP.oz, 1 + wP.oy, 0 + wP.ox, blend(blade, '#ffffff', weaponGlow));
+  }
+}
+
+function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number, heroName?: string, heroItems?: ({ id: number } | null)[]): VoxelModel {
   const isPirate = heroName?.includes('Racalvin') || heroName?.includes('Pirate King');
   const skin = RACE_SKIN[race] || '#c4956a';
   const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
@@ -534,7 +564,11 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   }
 
   const wP = poses.weapon;
-  if (heroClass === 'Warrior') {
+  const hasRapier = heroItems?.some(item => item && item.id === 12) ?? false;
+
+  if (hasRapier) {
+    buildRapierWeapon(wP, setV, poses.weaponGlow);
+  } else if (heroClass === 'Warrior') {
     for (let z = 3; z <= 9; z++) {
       setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, z < 5 ? '#8a6914' : armor.weapon);
     }
@@ -553,7 +587,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     setV(10 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#888888');
   }
 
-  if (heroClass === 'Worg') {
+  if (!hasRapier && heroClass === 'Worg') {
     for (let z = 2; z <= 7; z++) {
       setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, z < 4 ? '#5a3a1a' : armor.weapon);
     }
@@ -564,7 +598,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     }
   }
 
-  if (heroClass === 'Ranger' && isPirate) {
+  if (!hasRapier && heroClass === 'Ranger' && isPirate) {
     const gunMetal = '#555555';
     const gunWood = '#5a3a1a';
     setV(4 + wP.oz, 1 + wP.oy, 0 + wP.ox, gunWood);
@@ -579,7 +613,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
       setV(8 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend('#ff6600', '#ffff00', poses.weaponGlow));
       setV(9 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend('#ff4400', '#ffff00', poses.weaponGlow * 0.5));
     }
-  } else if (heroClass === 'Ranger') {
+  } else if (!hasRapier && heroClass === 'Ranger') {
     for (let z = 3; z <= 9; z++) {
       setV(z + wP.oz, 0 + wP.oy, 0 + wP.ox, '#6b4423');
     }
@@ -597,7 +631,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     }
   }
 
-  if (heroClass === 'Mage') {
+  if (!hasRapier && heroClass === 'Mage') {
     for (let z = 2; z <= 11; z++) {
       setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#553322');
     }
@@ -808,15 +842,126 @@ export class VoxelRenderer {
     animState: string, animTimer: number,
     race: string,
     heroName?: string,
-    buffTimer?: number
+    buffTimer?: number,
+    heroItems?: ({ id: number } | null)[]
   ) {
     if (heroClass === 'Worg' && buffTimer && buffTimer > 0) {
       const bearModel = buildBearModel(animState, animTimer);
       this.renderVoxelModel(ctx, x, y - 28, bearModel, this.cubeSize, facing);
       return;
     }
-    const model = buildHeroModel(race, heroClass, animState, animTimer, heroName);
+
+    if ((animState === 'attack' || animState === 'combo_finisher') && animTimer > 0.05) {
+      const trailAlpha = animState === 'combo_finisher' ? 0.15 : 0.1;
+      const trailOffset = 0.08;
+      ctx.save();
+      ctx.globalAlpha = trailAlpha;
+      const trailModel = buildHeroModel(race, heroClass, animState, Math.max(0, animTimer - trailOffset), heroName, heroItems);
+      this.renderVoxelModel(ctx, x, y - 22, trailModel, this.cubeSize, facing);
+      ctx.restore();
+    }
+
+    const model = buildHeroModel(race, heroClass, animState, animTimer, heroName, heroItems);
     this.renderVoxelModel(ctx, x, y - 22, model, this.cubeSize, facing);
+  }
+
+  drawHeroPortrait(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number,
+    width: number, height: number,
+    race: string, heroClass: string,
+    heroName?: string
+  ) {
+    const skin = RACE_SKIN[race] || '#c4956a';
+    const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
+    const hair = race === 'Elf' ? '#e8d090' : race === 'Orc' ? '#2a2a2a' : race === 'Undead' ? '#444444' : race === 'Dwarf' ? '#a0522d' : '#3a2a1a';
+    const eye = race === 'Undead' ? '#ff4444' : race === 'Orc' ? '#ffaa00' : '#2244aa';
+    const isPirate = heroName?.includes('Racalvin') || heroName?.includes('Pirate King');
+
+    const px = Math.floor(width / 8);
+    const py = Math.floor(height / 10);
+
+    ctx.fillStyle = armor.primary;
+    ctx.fillRect(x + px, y + height - py * 3, width - px * 2, py * 3);
+    ctx.fillStyle = armor.secondary;
+    ctx.fillRect(x + px * 2, y + height - py * 2, width - px * 4, py);
+
+    ctx.fillStyle = skin;
+    ctx.fillRect(x + px * 2, y + py * 2, width - px * 4, py * 5);
+
+    ctx.fillStyle = shade(skin, 0.9);
+    ctx.fillRect(x + px * 2, y + py * 5, width - px * 4, py);
+
+    ctx.fillStyle = eye;
+    ctx.fillRect(x + px * 2 + px, y + py * 4, px, py);
+    ctx.fillRect(x + width - px * 3 - px, y + py * 4, px, py);
+
+    ctx.fillStyle = '#ffffff';
+    const eyeHighlight = Math.max(1, Math.floor(px * 0.4));
+    ctx.fillRect(x + px * 2 + px, y + py * 4, eyeHighlight, eyeHighlight);
+    ctx.fillRect(x + width - px * 3 - px, y + py * 4, eyeHighlight, eyeHighlight);
+
+    ctx.fillStyle = shade(skin, 0.8);
+    ctx.fillRect(x + px * 3, y + py * 5, px, Math.floor(py * 0.6));
+    ctx.fillRect(x + width - px * 4, y + py * 5, px, Math.floor(py * 0.6));
+
+    ctx.fillStyle = hair;
+    ctx.fillRect(x + px, y + py, width - px * 2, py * 2);
+    ctx.fillRect(x + px, y + py * 2, px, py * 2);
+    ctx.fillRect(x + width - px * 2, y + py * 2, px, py * 2);
+
+    if (race === 'Dwarf') {
+      ctx.fillStyle = hair;
+      ctx.fillRect(x + px * 2, y + py * 6, px, py * 2);
+      ctx.fillRect(x + width - px * 3, y + py * 6, px, py * 2);
+      ctx.fillRect(x + px * 3, y + py * 7, width - px * 6, py);
+    }
+
+    if (race === 'Elf') {
+      ctx.fillStyle = skin;
+      ctx.fillRect(x + px, y + py * 3, px, py * 2);
+      ctx.fillRect(x + width - px * 2, y + py * 3, px, py * 2);
+    }
+
+    if (race === 'Orc') {
+      ctx.fillStyle = '#445522';
+      ctx.fillRect(x + px * 3, y + py * 6, px, py);
+      ctx.fillRect(x + width - px * 4, y + py * 6, px, py);
+    }
+
+    if (race === 'Undead') {
+      ctx.fillStyle = '#555555';
+      ctx.fillRect(x + px * 3, y + py * 5, width - px * 6, Math.floor(py * 0.5));
+    }
+
+    if (isPirate) {
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(x, y + py, width, py);
+      ctx.fillRect(x + px, y, width - px * 2, py * 2);
+      ctx.fillStyle = '#c5a059';
+      ctx.fillRect(x + px, y + py * 2, width - px * 2, Math.max(1, Math.floor(py * 0.4)));
+      ctx.fillStyle = '#2a1a0a';
+      ctx.fillRect(x + px * 2, y + py * 6, width - px * 4, py * 2);
+    }
+
+    if (heroClass === 'Warrior' && !isPirate) {
+      ctx.fillStyle = '#888888';
+      ctx.fillRect(x + px, y + py, width - px * 2, Math.max(1, Math.floor(py * 0.5)));
+      ctx.fillRect(x + px * 2, y + py * 2, px, py);
+      ctx.fillRect(x + width - px * 3, y + py * 2, px, py);
+    }
+
+    if (heroClass === 'Mage') {
+      ctx.fillStyle = armor.secondary;
+      ctx.fillRect(x + px, y, width - px * 2, py);
+      ctx.fillRect(x + px * 3, y - Math.floor(py * 0.5), px * 2, py);
+    }
+
+    ctx.fillStyle = armor.primary + '44';
+    ctx.fillRect(x, y, 1, height);
+    ctx.fillRect(x + width - 1, y, 1, height);
+    ctx.fillRect(x, y, width, 1);
+    ctx.fillRect(x, y + height - 1, width, 1);
   }
 
   drawMinionVoxel(
