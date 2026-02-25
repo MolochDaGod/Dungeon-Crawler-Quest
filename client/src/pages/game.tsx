@@ -8,7 +8,8 @@ import {
 import {
   createInitialState, updateGame, getHudState,
   MobaRenderer, handlePlayerAbility, handlePlayerAttack,
-  handleRightClick, buyItem
+  handleRightClick, handleAttackMoveClick, handleStopCommand,
+  buyItem
 } from '@/game/engine';
 
 export default function GamePage() {
@@ -73,20 +74,35 @@ export default function GamePage() {
       keysRef.current.add(key);
 
       if (key === 'q') handlePlayerAbility(state, 0);
-      if (key === 'w' && e.shiftKey) handlePlayerAbility(state, 1);
+      if (key === 'w') handlePlayerAbility(state, 1);
       if (key === 'e') handlePlayerAbility(state, 2);
       if (key === 'r') handlePlayerAbility(state, 3);
       if (key === ' ') handlePlayerAttack(state);
       if (key === 'b') state.showShop = !state.showShop;
       if (key === 'tab') { e.preventDefault(); state.showScoreboard = true; }
       if (key === 'escape') {
-        state.showShop = false;
-        state.showScoreboard = false;
-        state.paused = !state.paused;
+        if (state.selectedAbility >= 0) {
+          state.selectedAbility = -1;
+          state.cursorMode = 'default';
+        } else {
+          state.showShop = false;
+          state.showScoreboard = false;
+          state.paused = !state.paused;
+        }
       }
       if (key === 'f1') {
+        e.preventDefault();
         const player = state.heroes[state.playerHeroIndex];
         if (player) { state.camera.x = player.x; state.camera.y = player.y; }
+      }
+
+      if (key === 's' && !e.ctrlKey) {
+        handleStopCommand(state);
+      }
+
+      if (key === 'a') {
+        state.aKeyHeld = true;
+        state.cursorMode = 'attackmove';
       }
 
       if (key >= '1' && key <= '4') {
@@ -95,36 +111,49 @@ export default function GamePage() {
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      keysRef.current.delete(e.key.toLowerCase());
-      if (e.key.toLowerCase() === 'tab') {
+      const key = e.key.toLowerCase();
+      keysRef.current.delete(key);
+      if (key === 'tab') {
         state.showScoreboard = false;
       }
+      if (key === 'a') {
+        state.aKeyHeld = false;
+        if (state.cursorMode === 'attackmove') {
+          state.cursorMode = state.hoveredEntityId !== null ? 'attack' : 'default';
+        }
+      }
+    };
+
+    const getWorldPos = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      return {
+        x: (sx - canvas.width / 2) / state.camera.zoom + state.camera.x,
+        y: (sy - canvas.height / 2) / state.camera.zoom + state.camera.y
+      };
     };
 
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const sx = e.clientX - rect.left;
-      const sy = e.clientY - rect.top;
-      const worldX = (sx - canvas.width / 2) / state.camera.zoom + state.camera.x;
-      const worldY = (sy - canvas.height / 2) / state.camera.zoom + state.camera.y;
+      const wp = getWorldPos(e);
       state.cursorMode = 'move';
-      handleRightClick(state, worldX, worldY);
-      setTimeout(() => { if (state.cursorMode === 'move') state.cursorMode = 'default'; }, 300);
+      handleRightClick(state, wp.x, wp.y);
+      setTimeout(() => { if (state.cursorMode === 'move') state.cursorMode = 'default'; }, 250);
     };
 
     const onMouseDown = (e: MouseEvent) => {
       if (e.button === 0) {
-        if (keysRef.current.has('a')) {
-          state.cursorMode = 'attack';
-          handlePlayerAttack(state);
+        const wp = getWorldPos(e);
+        if (state.aKeyHeld) {
+          handleAttackMoveClick(state, wp.x, wp.y);
+          state.cursorMode = 'attackmove';
         } else if (state.selectedAbility >= 0) {
           const abIdx = state.selectedAbility;
           state.selectedAbility = -1;
           state.cursorMode = 'default';
           handlePlayerAbility(state, abIdx);
         } else {
-          handlePlayerAttack(state);
         }
       }
       if (e.button === 1) {
@@ -155,10 +184,12 @@ export default function GamePage() {
         state.camera.y = panRef.current.camStartY - dy;
       }
 
-      if (keysRef.current.has('a')) {
-        state.cursorMode = 'attack';
+      if (state.aKeyHeld) {
+        state.cursorMode = 'attackmove';
       } else if (state.selectedAbility >= 0) {
         state.cursorMode = 'ability';
+      } else if (state.hoveredEntityId !== null) {
+        state.cursorMode = 'attack';
       } else {
         state.cursorMode = 'default';
       }

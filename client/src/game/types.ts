@@ -84,11 +84,15 @@ export interface MobaHero extends GameEntity {
   autoAttackTimer: number;
   targetId: number | null;
   moveTarget: Vec2 | null;
+  attackMoveTarget: Vec2 | null;
+  isAttackMoving: boolean;
+  stopCommand: boolean;
   vx: number;
   vy: number;
   facing: number;
   animState: string;
   animTimer: number;
+  attackAnimPhase: number;
   respawnTimer: number;
   isPlayer: boolean;
   stunTimer: number;
@@ -194,7 +198,9 @@ export interface MobaState {
   killFeed: { text: string; color: string; time: number }[];
   terrainMap: number[][];
   decorations: { x: number; y: number; type: 'tree' | 'rock'; seed: number }[];
-  cursorMode: 'default' | 'attack' | 'ability' | 'move';
+  cursorMode: 'default' | 'attack' | 'ability' | 'move' | 'attackmove';
+  hoveredEntityId: number | null;
+  aKeyHeld: boolean;
 }
 
 export interface HudState {

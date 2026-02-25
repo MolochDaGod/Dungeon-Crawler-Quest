@@ -70,10 +70,20 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - Settings page with visual rebinding UI
 
 ### Voxel Art System
-- Procedural isometric cube rendering inspired by IsoVoxel/MagicaVoxel patterns
+- Procedural isometric cube rendering, 14z×8y×8x hero grids (expanded from 12×6×6)
+- Multi-part body pose system: head, torso, arms, legs, weapon — each independently animated
+- Class-specific attack animations:
+  - Warrior/Worg: melee sword/axe swing with wind-up → slash → follow-through
+  - Ranger: bow draw-back → hold → release with arrow projectile
+  - Mage: staff raise → charge glow → cast forward with particle trail
+- Walk cycle: alternating leg strides, opposing arm swing, head bob
+- Idle: subtle breathing torso movement
+- Ability: both arms raise, energy pulse, weapon glow
+- Death: body collapse with staggered limb fall
+- Weapon glow effects: context-sensitive color blend on impact/release
 - Unique hero models per race+class combination (skin, armor, weapons, racial features)
+- Race features: Dwarf beards, Elf pointed ears, Orc tusks, Undead decay, Barbarian top-knot
 - Minion voxel models (melee/siege variants)
-- Animation states: idle, walk, attack, ability
 - Voxel terrain tiles: grass, dirt, stone, water, lane, jungle, base_blue/red, river (cached to offscreen canvases)
 - Voxel structures: towers (tier-scaled stone+team color), nexus (hexagonal base + crystal top)
 - Voxel decorations: trees (trunk + leaf canopy, 6 seed variants), rocks (3 variants)
@@ -93,17 +103,23 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - Hero status effect glows visible on entities (burn/poison/freeze rings)
 - Terrain map: procedural terrain grid with biomes (grass, jungle, lanes, bases, river)
 
-## Controls (Default)
-- WASD: Move hero
-- Q/W/E/R or 1-4: Use abilities
-- LMB/Space: Auto-attack nearest enemy
-- RMB: Move to position or target enemy
-- MMB: Camera pan (drag)
-- B: Toggle item shop
-- Tab: Show scoreboard
-- F1: Center camera on hero
-- Scroll: Zoom camera
-- Escape: Pause / close menus
+## MOBA Controls
+- **RMB on ground**: Move to position
+- **RMB on enemy**: Target and attack that unit
+- **A key**: Enter attack-move mode (orange crosshair cursor)
+- **A + LMB on ground**: Attack-move to position (auto-attacks closest enemy en route)
+- **A + LMB on unit**: Attack that specific unit
+- **S key**: Stop (cancel all movement and attacking)
+- **Q/W/E/R or 1-4**: Use abilities
+- **LMB**: Place spell when ability selected, otherwise no action
+- **Space**: Auto-attack nearest enemy
+- **MMB**: Camera pan (drag)
+- **B**: Toggle item shop
+- **Tab**: Show scoreboard (hold)
+- **F1**: Center camera on hero
+- **Scroll**: Zoom camera
+- **Escape**: Cancel ability selection / Pause / close menus
+- **Arrow keys**: Manual movement (secondary, MOBA-style RMB is primary)
 - I: Inventory (dungeon mode)
 
 ## Design
