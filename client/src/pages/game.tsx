@@ -342,7 +342,7 @@ export default function GamePage() {
             </button>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 flex items-end pointer-events-auto" style={{ padding: '0 8px 8px 8px', gap: 8 }}>
+          <div className="absolute bottom-0 left-0 right-0 flex items-end pointer-events-auto" style={{ padding: '0 8px 8px 8px', gap: 8, maxHeight: '45vh' }}>
 
             <div className="flex flex-col" style={{ width: 220, flexShrink: 0 }}>
               <div
@@ -445,7 +445,7 @@ export default function GamePage() {
                   </div>
                 )}
 
-                <div className="flex items-center" style={{ gap: 4 }}>
+                <div className="flex items-center flex-wrap" style={{ gap: 4 }}>
                   {abilities.map((ab, i) => {
                     const cd = hud.abilityCooldowns[i] || 0;
                     const onCd = cd > 0;
@@ -479,7 +479,7 @@ export default function GamePage() {
                         <button
                           className="relative flex items-center justify-center font-bold text-white"
                           style={{
-                            width: 50, height: 50,
+                            width: 48, height: 48,
                             background: onCd ? 'linear-gradient(135deg, #1a1a1a, #0a0a0a)' : `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
                             border: `2px solid ${selected ? '#ffd700' : onCd ? '#333' : '#c5a059'}`,
                             borderRadius: 4,
@@ -571,7 +571,7 @@ export default function GamePage() {
                       key={i}
                       className="relative flex items-center justify-center group"
                       style={{
-                        width: 38, height: 50,
+                        width: 40, height: 40,
                         background: item ? 'linear-gradient(135deg, #1a1a2e, #0a0a15)' : 'linear-gradient(135deg, #0a0a0a, #050505)',
                         border: item ? '1px solid #c5a05980' : '1px dashed #333',
                         borderRadius: 3,
@@ -650,23 +650,26 @@ export default function GamePage() {
                 data-testid="panel-stats"
               >
                 <div className="flex flex-col items-center" style={{ gap: 4 }}>
-                  <div className="rounded-lg flex items-center justify-center text-sm font-black"
+                  <img
+                    src={`/assets/portraits/${hud.heroRace.toLowerCase()}_${hud.heroClass.toLowerCase()}.png`}
+                    alt={`${hud.heroRace} ${hud.heroClass}`}
+                    data-testid="img-hero-portrait"
                     style={{
-                      width: 38, height: 38,
-                      background: `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, #111)`,
+                      width: 48, height: 48,
+                      borderRadius: 6,
                       border: '2px solid #c5a059',
-                      color: '#fff',
-                      boxShadow: '0 0 10px rgba(0,0,0,0.6), 0 0 4px rgba(197,160,89,0.2)'
+                      boxShadow: '0 0 10px rgba(0,0,0,0.6), 0 0 4px rgba(197,160,89,0.2)',
+                      objectFit: 'cover',
+                      background: '#1a1a2e'
                     }}
-                  >
-                    {hud.heroClass.charAt(0)}
-                  </div>
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
                   <span className="text-[10px] font-bold flex items-center" style={{ gap: 2 }}>
                     <span style={{ color: '#ffd700' }}>{Math.floor(hud.gold)}</span>
                     <span style={{ color: '#c5a059' }}>g</span>
                   </span>
                 </div>
-                <div className="flex-1" style={{ fontSize: 10 }}>
+                <div className="flex-1 overflow-y-auto" style={{ fontSize: 10, maxHeight: 120 }}>
                   <div className="font-bold truncate" style={{ color: '#c5a059', fontSize: 11, marginBottom: 4, borderBottom: '1px solid #333', paddingBottom: 3 }}>{hud.heroName.split(' ').pop()}</div>
                   <div className="flex justify-between" style={{ gap: 8 }}>
                     <div className="flex flex-col" style={{ gap: 1 }}>
@@ -789,6 +792,20 @@ function Scoreboard({ hud }: { hud: HudState }) {
             <div className="space-y-1">
               {hud.allHeroes.filter(h => h.team === t).map((h, i) => (
                 <div key={i} className="flex items-center gap-3 bg-black/30 px-3 py-1.5 rounded text-xs">
+                  <img
+                    src={`/assets/portraits/${h.heroRace.toLowerCase()}_${h.heroClass.toLowerCase()}.png`}
+                    alt={`${h.heroRace} ${h.heroClass}`}
+                    data-testid={`img-scoreboard-portrait-${t}-${i}`}
+                    style={{
+                      width: 24, height: 24,
+                      borderRadius: 4,
+                      border: '1px solid #c5a059',
+                      objectFit: 'cover',
+                      background: '#1a1a2e',
+                      flexShrink: 0
+                    }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
                   <span className="flex-1 text-gray-300 truncate">{h.name}</span>
                   <span className="text-gray-500">Lv{h.level}</span>
                   <span className="text-green-400 w-6 text-center">{h.kills}</span>

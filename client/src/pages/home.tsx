@@ -89,7 +89,7 @@ export default function Home() {
     <div className="relative w-full h-screen overflow-hidden bg-[#0a0f0a]" data-testid="home-page">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
-      <div className={`relative z-10 flex flex-col items-center justify-center h-full transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <div className={`relative z-10 flex flex-col items-center justify-center h-full px-4 transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-4 mb-4">
             <Sword className="w-9 h-9 text-red-500" />
@@ -129,9 +129,9 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="flex gap-5 mb-8">
+        <div className="flex flex-wrap justify-center gap-5 mb-8">
           <button
-            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[220px] ${
+            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
               selectedMode === 'moba'
                 ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
                 : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
@@ -147,7 +147,7 @@ export default function Home() {
             </p>
           </button>
           <button
-            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[220px] ${
+            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
               selectedMode === 'dungeon'
                 ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
                 : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
@@ -185,7 +185,7 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="max-w-lg mx-auto bg-black/20 rounded-lg px-6 py-4 border border-gray-800/50" data-testid="section-how-to-play">
+        <div className="w-full max-w-lg mx-auto bg-black/20 rounded-lg px-6 py-4 border border-gray-800/50 overflow-y-auto" style={{ maxHeight: '40vh' }} data-testid="section-how-to-play">
           <h3 className="text-xs uppercase tracking-[0.2em] text-center mb-3" style={{ fontFamily: "'Oxanium', sans-serif", color: '#c5a059' }}>
             How to Play
           </h3>

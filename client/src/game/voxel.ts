@@ -104,13 +104,14 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   if (animState === 'walk') {
     const phase = Math.sin(t * 10);
     const phase2 = Math.cos(t * 10);
+    const bounce = Math.abs(Math.sin(t * 20)) * 0.5;
     return {
-      leftLeg: { ox: Math.round(phase * 1.2), oy: 0, oz: 0 },
-      rightLeg: { ox: Math.round(-phase * 1.2), oy: 0, oz: 0 },
-      leftArm: { ox: Math.round(-phase * 0.8), oy: 0, oz: Math.round(phase2 * 0.3) },
-      rightArm: { ox: Math.round(phase * 0.8), oy: 0, oz: Math.round(-phase2 * 0.3) },
-      torso: { ox: 0, oy: 0, oz: Math.round(Math.abs(phase) * 0.3) },
-      head: { ox: 0, oy: 0, oz: Math.round(Math.abs(phase) * 0.3) },
+      leftLeg: { ox: Math.round(phase * 1.8), oy: 0, oz: Math.round(Math.max(0, -phase) * 0.5) },
+      rightLeg: { ox: Math.round(-phase * 1.8), oy: 0, oz: Math.round(Math.max(0, phase) * 0.5) },
+      leftArm: { ox: Math.round(-phase * 1.2), oy: 0, oz: Math.round(phase2 * 0.5) },
+      rightArm: { ox: Math.round(phase * 1.2), oy: 0, oz: Math.round(-phase2 * 0.5) },
+      torso: { ox: 0, oy: Math.round(Math.sin(t * 5) * 0.3), oz: Math.round(bounce) },
+      head: { ox: 0, oy: Math.round(Math.sin(t * 5) * 0.2), oz: Math.round(bounce * 0.8) },
       weapon: { ox: Math.round(phase * 0.5), oy: 0, oz: 0 },
       weaponGlow: 0
     };
@@ -118,47 +119,50 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
 
   if (animState === 'attack') {
     if (heroClass === 'Warrior' || heroClass === 'Worg') {
-      const phase = t * 14;
-      const windUp = Math.max(0, Math.sin(phase) * 1.5);
-      const swing = Math.max(0, Math.sin(phase + 1.5));
-      const armExtend = Math.round(windUp > 0.5 ? -windUp : swing * 2);
+      const phase = t * 10;
+      const windUp = Math.max(0, Math.sin(phase));
+      const swing = Math.max(0, Math.sin(phase + 1.8));
+      const armExtend = Math.round(windUp > 0.5 ? -windUp * 2.5 : swing * 3);
+      const lunge = Math.round(swing * 1.5);
       return {
-        leftLeg: { ox: Math.round(Math.sin(phase * 0.5) * 0.5), oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(-Math.sin(phase * 0.5) * 0.5), oy: 0, oz: 0 },
-        leftArm: { ox: armExtend, oy: Math.round(swing * -1), oz: Math.round(swing * 2) },
-        rightArm: { ox: 0, oy: 0, oz: 0 },
-        torso: { ox: Math.round(swing * 0.5), oy: 0, oz: 0 },
-        head: { ox: Math.round(swing * 0.3), oy: 0, oz: 0 },
-        weapon: { ox: armExtend + Math.round(swing * 1.5), oy: Math.round(swing * -2), oz: Math.round(windUp * 3 - swing * 2) },
-        weaponGlow: swing > 0.3 ? 0.6 : 0
+        leftLeg: { ox: Math.round(swing * 1.5), oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(-swing * 0.5), oy: 0, oz: 0 },
+        leftArm: { ox: armExtend, oy: Math.round(swing * -2), oz: Math.round(swing * 3) },
+        rightArm: { ox: Math.round(-windUp), oy: Math.round(windUp * 0.5), oz: Math.round(windUp) },
+        torso: { ox: lunge, oy: Math.round(swing * 0.3), oz: 0 },
+        head: { ox: Math.round(swing * 0.5), oy: 0, oz: 0 },
+        weapon: { ox: armExtend + Math.round(swing * 2.5), oy: Math.round(swing * -3), oz: Math.round(windUp * 4 - swing * 3) },
+        weaponGlow: swing > 0.2 ? 0.8 : windUp > 0.3 ? 0.3 : 0
       };
     }
     if (heroClass === 'Ranger') {
-      const drawPhase = (Math.sin(t * 8) + 1) * 0.5;
-      const release = Math.max(0, Math.sin(t * 8 + 2));
+      const drawPhase = (Math.sin(t * 6) + 1) * 0.5;
+      const hold = Math.min(1, drawPhase * 1.5);
+      const release = Math.max(0, Math.sin(t * 6 + 2.5));
       return {
-        leftLeg: { ox: 0, oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(drawPhase * -0.5), oy: 0, oz: 0 },
-        leftArm: { ox: Math.round(drawPhase * -2), oy: 0, oz: Math.round(drawPhase) },
-        rightArm: { ox: Math.round(release * 2), oy: 0, oz: Math.round(drawPhase) },
-        torso: { ox: Math.round(-drawPhase * 0.3), oy: 0, oz: 0 },
-        head: { ox: Math.round(release * 0.5), oy: 0, oz: 0 },
-        weapon: { ox: Math.round(-drawPhase * 1.5), oy: 0, oz: Math.round(drawPhase * 2) },
-        weaponGlow: release > 0.5 ? 0.8 : 0
+        leftLeg: { ox: Math.round(-hold * 0.5), oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(hold * 0.8), oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(hold * -3), oy: Math.round(-hold * 0.5), oz: Math.round(hold * 2) },
+        rightArm: { ox: Math.round(release * 3), oy: 0, oz: Math.round(hold * 1.5) },
+        torso: { ox: Math.round(-hold * 0.5), oy: Math.round(-hold * 0.3), oz: 0 },
+        head: { ox: Math.round(release * 0.8), oy: 0, oz: 0 },
+        weapon: { ox: Math.round(-hold * 2 + release * 2), oy: 0, oz: Math.round(hold * 3) },
+        weaponGlow: release > 0.4 ? 1.0 : hold > 0.7 ? 0.5 : 0
       };
     }
     if (heroClass === 'Mage') {
-      const raise = (Math.sin(t * 6) + 1) * 0.5;
-      const cast = Math.max(0, Math.sin(t * 6 + 2));
+      const raise = (Math.sin(t * 5) + 1) * 0.5;
+      const cast = Math.max(0, Math.sin(t * 5 + 2));
+      const glow = Math.max(raise, cast);
       return {
-        leftLeg: { ox: 0, oy: 0, oz: 0 },
-        rightLeg: { ox: 0, oy: 0, oz: 0 },
-        leftArm: { ox: Math.round(cast * 2), oy: 0, oz: Math.round(raise * 3) },
-        rightArm: { ox: Math.round(cast * 1), oy: 0, oz: Math.round(raise * 2) },
-        torso: { ox: 0, oy: 0, oz: Math.round(raise * 0.5) },
-        head: { ox: 0, oy: 0, oz: Math.round(raise * 0.5) },
-        weapon: { ox: Math.round(cast * 2), oy: 0, oz: Math.round(raise * 4) },
-        weaponGlow: raise > 0.3 ? raise : 0
+        leftLeg: { ox: Math.round(-cast * 0.5), oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(cast * 0.5), oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(cast * 3), oy: Math.round(-raise), oz: Math.round(raise * 4) },
+        rightArm: { ox: Math.round(cast * 2), oy: Math.round(raise * 0.5), oz: Math.round(raise * 3) },
+        torso: { ox: 0, oy: 0, oz: Math.round(raise) },
+        head: { ox: 0, oy: 0, oz: Math.round(raise) },
+        weapon: { ox: Math.round(cast * 3), oy: Math.round(-cast), oz: Math.round(raise * 5) },
+        weaponGlow: glow > 0.2 ? glow : 0
       };
     }
     return idle;

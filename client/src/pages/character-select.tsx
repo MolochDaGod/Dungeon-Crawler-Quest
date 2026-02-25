@@ -143,9 +143,18 @@ export default function CharacterSelect() {
                   data-testid={`card-hero-${hero.id}`}
                 >
                   {hero.isSecret && <span className="text-[10px] bg-gradient-to-r from-[#c5a059] to-amber-600 text-black px-2 py-0.5 rounded font-bold tracking-wider">SECRET</span>}
-                  <div className="mt-1">
-                    <h3 className="text-sm font-bold truncate" style={{ color: rarityColor }}>{hero.name}</h3>
-                    <p className="text-[10px] text-gray-500 italic truncate">{hero.title}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <img
+                      src={`/assets/portraits/${hero.race.toLowerCase()}_${hero.heroClass.toLowerCase()}.png`}
+                      alt={hero.name}
+                      className="w-10 h-10 rounded border border-gray-700 object-cover bg-[#0a0f0a]"
+                      data-testid={`img-hero-card-portrait-${hero.id}`}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold truncate" style={{ color: rarityColor }}>{hero.name}</h3>
+                      <p className="text-[10px] text-gray-500 italic truncate">{hero.title}</p>
+                    </div>
                   </div>
                   <div className="flex gap-1 mt-2 flex-wrap">
                     <span className="text-[10px] px-1.5 py-0.5 rounded border border-gray-700" style={{ color: RACE_COLORS[hero.race] }}>{hero.race}</span>
@@ -167,8 +176,15 @@ export default function CharacterSelect() {
           <div className="w-80 shrink-0">
             {selectedHero ? (
               <div className="sticky top-20 bg-[#1a1a2e] border border-gray-800 rounded-xl p-4" data-testid="hero-detail-panel">
-                <div className="flex justify-center mb-4">
-                  <canvas ref={previewRef} width={200} height={160} className="rounded-lg bg-[#0a0f0a]" data-testid="canvas-hero-preview" />
+                <div className="flex gap-3 mb-4 items-start">
+                  <img
+                    src={`/assets/portraits/${selectedHero.race.toLowerCase()}_${selectedHero.heroClass.toLowerCase()}.png`}
+                    alt={selectedHero.name}
+                    className="w-16 h-16 rounded-lg border-2 border-[#c5a059]/40 object-cover bg-[#0a0f0a] shrink-0"
+                    data-testid="img-detail-portrait"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <canvas ref={previewRef} width={200} height={160} className="rounded-lg bg-[#0a0f0a] flex-1" data-testid="canvas-hero-preview" />
                 </div>
 
                 <h2 className="text-xl font-bold" style={{ fontFamily: "'Oxanium', sans-serif", color: RARITY_COLORS[selectedHero.rarity] }}>
