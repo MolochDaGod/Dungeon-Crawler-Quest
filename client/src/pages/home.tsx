@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Sword, Shield, Skull, Crown } from 'lucide-react';
+import { Sword, Shield, Skull, Crown, Settings, Map } from 'lucide-react';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<'moba' | 'dungeon'>('moba');
 
   useEffect(() => {
     setLoaded(true);
@@ -63,6 +64,11 @@ export default function Home() {
     };
   }, []);
 
+  const handlePlay = () => {
+    localStorage.setItem('grudge_mode', selectedMode);
+    setLocation('/character-select');
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#0a0a0f]" data-testid="home-page">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
@@ -97,24 +103,68 @@ export default function Home() {
             WARLORDS
           </h2>
           <p className="text-gray-400 max-w-lg mx-auto text-lg mb-2">
-            Command 26 legendary heroes across 6 races in an epic MOBA battleground.
+            Command 26 legendary heroes across 6 races in epic battle.
           </p>
-          <p className="text-gray-500 text-sm mb-8">
-            3 lanes &bull; Towers &bull; Minions &bull; AI opponents &bull; Voxel art
+          <p className="text-gray-500 text-sm mb-6">
+            Choose your mode below
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 items-center">
+        <div className="flex gap-4 mb-6">
+          <button
+            className={`flex flex-col items-center gap-2 px-6 py-4 rounded-lg border-2 transition-all cursor-pointer ${
+              selectedMode === 'moba'
+                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059]'
+                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500'
+            }`}
+            onClick={() => setSelectedMode('moba')}
+            data-testid="button-mode-moba"
+          >
+            <Sword className="w-8 h-8" />
+            <span className="text-sm font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>MOBA ARENA</span>
+            <span className="text-[10px] text-gray-500">5v5 &bull; 3 Lanes &bull; Towers</span>
+          </button>
+          <button
+            className={`flex flex-col items-center gap-2 px-6 py-4 rounded-lg border-2 transition-all cursor-pointer ${
+              selectedMode === 'dungeon'
+                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059]'
+                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500'
+            }`}
+            onClick={() => setSelectedMode('dungeon')}
+            data-testid="button-mode-dungeon"
+          >
+            <Map className="w-8 h-8" />
+            <span className="text-sm font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>DUNGEON CRAWL</span>
+            <span className="text-[10px] text-gray-500">PvE &bull; 10 Floors &bull; Bosses</span>
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3 items-center">
           <Button
             size="lg"
             className="text-lg px-12 py-6 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white font-bold tracking-wider shadow-lg shadow-red-900/50"
             style={{ fontFamily: "'Oxanium', sans-serif" }}
-            onClick={() => setLocation('/character-select')}
+            onClick={handlePlay}
             data-testid="button-play"
           >
-            ENTER THE ARENA
+            {selectedMode === 'moba' ? 'ENTER THE ARENA' : 'DESCEND INTO DARKNESS'}
           </Button>
-          <p className="text-gray-600 text-xs">WASD to move &bull; QWER abilities &bull; Right-click to target &bull; B for shop</p>
+
+          <button
+            className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer mt-2"
+            onClick={() => setLocation('/settings')}
+            data-testid="button-settings"
+          >
+            <Settings className="w-4 h-4" />
+            <span>Keybindings &amp; Settings</span>
+          </button>
+
+          <p className="text-gray-600 text-xs mt-1">
+            {selectedMode === 'moba'
+              ? 'WASD move | QWER abilities | LMB attack | RMB move/target | MMB camera | B shop'
+              : 'WASD move | QWER abilities | LMB/Space attack | I inventory | Scroll zoom'
+            }
+          </p>
         </div>
 
         <div className="absolute bottom-6 text-center">

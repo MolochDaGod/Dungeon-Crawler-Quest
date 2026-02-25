@@ -68,7 +68,8 @@ export default function CharacterSelect() {
     if (!selectedHero) return;
     localStorage.setItem('grudge_hero_id', String(selectedHero.id));
     localStorage.setItem('grudge_team', '0');
-    setLocation('/game');
+    const mode = localStorage.getItem('grudge_mode') || 'moba';
+    setLocation(mode === 'dungeon' ? '/dungeon' : '/game');
   };
 
   const statBar = (label: string, value: number, max: number, color: string) => (
