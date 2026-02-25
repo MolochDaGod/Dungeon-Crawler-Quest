@@ -139,30 +139,36 @@ export default function CharacterSelect() {
               return (
                 <Card
                   key={hero.id}
-                  className={`cursor-pointer transition-all p-3 bg-[#1a1a2e] border hover:border-[#c5a059]/50 ${isSelected ? 'border-[#c5a059] ring-1 ring-[#c5a059]/30' : 'border-gray-800'} ${hero.isSecret ? 'bg-gradient-to-br from-[#1a1a2e] to-[#281432]' : ''}`}
+                  className={`cursor-pointer transition-all overflow-hidden bg-[#1a1a2e] border hover:border-[#c5a059]/50 ${isSelected ? 'border-[#c5a059] ring-1 ring-[#c5a059]/30' : 'border-gray-800'} ${hero.isSecret ? 'bg-gradient-to-br from-[#1a1a2e] to-[#281432]' : ''}`}
                   onClick={() => setSelectedHero(hero)}
                   data-testid={`card-hero-${hero.id}`}
                 >
-                  {hero.isSecret && <span className="text-[10px] bg-gradient-to-r from-[#c5a059] to-amber-600 text-black px-2 py-0.5 rounded font-bold tracking-wider">SECRET</span>}
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="relative">
+                    {hero.isSecret && <span className="absolute top-1 right-1 z-10 text-[9px] bg-gradient-to-r from-[#c5a059] to-amber-600 text-black px-1.5 py-0.5 rounded font-bold tracking-wider">SECRET</span>}
                     <img
                       src={`/assets/portraits/${hero.race.toLowerCase()}_${hero.heroClass.toLowerCase()}.png`}
                       alt={hero.name}
-                      className="w-10 h-10 rounded border border-gray-700 object-cover bg-[#0a0f0a]"
+                      className="w-full h-28 rounded-t object-cover bg-[#0a0f0a]"
+                      style={{ borderBottom: `2px solid ${rarityColor}44` }}
                       data-testid={`img-hero-card-portrait-${hero.id}`}
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      onError={(e) => {
+                        const img = e.target as HTMLImageElement;
+                        img.style.height = '40px';
+                        img.style.objectFit = 'contain';
+                        img.style.opacity = '0.3';
+                      }}
                     />
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-bold truncate" style={{ color: rarityColor }}>{hero.name}</h3>
-                      <p className="text-[10px] text-gray-500 italic truncate">{hero.title}</p>
-                    </div>
                   </div>
-                  <div className="flex gap-1 mt-2 flex-wrap">
+                  <div className="px-2.5 mt-1.5">
+                    <h3 className="text-sm font-bold truncate" style={{ color: rarityColor }}>{hero.name}</h3>
+                    <p className="text-[10px] text-gray-500 italic truncate">{hero.title}</p>
+                  </div>
+                  <div className="flex gap-1 mt-1.5 flex-wrap px-2.5">
                     <span className="text-[10px] px-1.5 py-0.5 rounded border border-gray-700" style={{ color: RACE_COLORS[hero.race] }}>{hero.race}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded border border-gray-700" style={{ color: CLASS_COLORS[hero.heroClass] }}>{hero.heroClass}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded border border-gray-700" style={{ color: FACTION_COLORS[hero.faction] }}>{hero.faction}</span>
                   </div>
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-1.5 space-y-1 px-2.5 pb-2.5">
                     <div className="flex justify-between text-[10px]">
                       <span style={{ color: STAT_COLORS.hp }}>HP {hero.hp}</span>
                       <span style={{ color: STAT_COLORS.atk }}>ATK {hero.atk}</span>
