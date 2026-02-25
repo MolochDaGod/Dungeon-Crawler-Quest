@@ -185,7 +185,9 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     killFeed: [],
     terrainMap: generateTerrainMap(),
     decorations: generateDecorations(),
-    cursorMode: 'default'
+    cursorMode: 'default',
+    hoveredEntityId: null,
+    aKeyHeld: false
   };
 
   const team0Heroes = [playerHeroId];
@@ -246,8 +248,9 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     abilityCooldowns: [0, 0, 0, 0],
     autoAttackTimer: 0,
     targetId: null, moveTarget: null,
+    attackMoveTarget: null, isAttackMoving: false, stopCommand: false,
     vx: 0, vy: 0, facing: team === 0 ? -Math.PI / 4 : Math.PI * 3 / 4,
-    animState: 'idle', animTimer: 0,
+    animState: 'idle', animTimer: 0, attackAnimPhase: 0,
     respawnTimer: 0, isPlayer, dead: false,
     stunTimer: 0, buffTimer: 0, shieldHp: 0,
     lastDamagedBy: [],
@@ -318,10 +321,10 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
     const playerSpdMult = getSpeedMultiplier(player as any as CombatEntity);
     const playerRooted = isRooted(player as any as CombatEntity);
     let mx = 0, my = 0;
-    if (keys.has('w') || keys.has('arrowup')) my = -1;
-    if (keys.has('s') || keys.has('arrowdown')) my = 1;
-    if (keys.has('a') || keys.has('arrowleft')) mx = -1;
-    if (keys.has('d') || keys.has('arrowright')) mx = 1;
+    if (keys.has('arrowup')) my = -1;
+    if (keys.has('arrowdown')) my = 1;
+    if (keys.has('arrowleft')) mx = -1;
+    if (keys.has('arrowright')) mx = 1;
 
     if (!playerRooted && (mx !== 0 || my !== 0)) {
       const len = Math.sqrt(mx * mx + my * my);
@@ -330,7 +333,31 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
       player.vy = (my / len) * speed;
       player.facing = Math.atan2(my, mx);
       player.moveTarget = null;
+      player.attackMoveTarget = null;
+      player.isAttackMoving = false;
+      player.stopCommand = false;
       player.animState = 'walk';
+    } else if (!playerRooted && player.isAttackMoving && player.attackMoveTarget) {
+      const d = dist(player, player.attackMoveTarget);
+      const nearEnemy = findNearestEnemy(state, player, player.rng + 50);
+      if (nearEnemy) {
+        player.targetId = nearEnemy.id;
+        player.vx = 0;
+        player.vy = 0;
+      } else if (d < 10) {
+        player.attackMoveTarget = null;
+        player.isAttackMoving = false;
+        player.vx = 0;
+        player.vy = 0;
+        player.animState = 'idle';
+      } else {
+        const angle = angleTo(player, player.attackMoveTarget);
+        const speed = player.spd * 1.8 * playerSpdMult;
+        player.vx = Math.cos(angle) * speed;
+        player.vy = Math.sin(angle) * speed;
+        player.facing = angle;
+        player.animState = 'walk';
+      }
     } else if (!playerRooted && player.moveTarget) {
       const d = dist(player, player.moveTarget);
       if (d < 10) {
@@ -346,6 +373,19 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
         player.facing = angle;
         player.animState = 'walk';
       }
+    } else if (!player.stopCommand && player.targetId === null && !player.moveTarget && !player.isAttackMoving) {
+      const nearEnemy = findNearestEnemy(state, player, player.rng + 30);
+      if (nearEnemy) {
+        player.targetId = nearEnemy.id;
+      } else {
+        player.vx = 0;
+        player.vy = 0;
+        if (player.animState === 'walk') player.animState = 'idle';
+      }
+    } else if (player.stopCommand) {
+      player.vx = 0;
+      player.vy = 0;
+      if (player.animState === 'walk') player.animState = 'idle';
     } else {
       player.vx = 0;
       player.vy = 0;
@@ -356,6 +396,8 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
       const target = findNearestEnemy(state, player, player.rng + 30);
       if (target) player.targetId = target.id;
     }
+
+    updateHoveredEntity(state);
 
     const baseDist = dist(player, BASE_POSITIONS[player.team]);
     if (baseDist < 200) {
@@ -1082,26 +1124,54 @@ export function handlePlayerAttack(state: MobaState) {
   const target = findNearestEnemy(state, player, player.rng + 50);
   if (target) {
     player.targetId = target.id;
+    player.stopCommand = false;
+    player.isAttackMoving = false;
+    player.attackMoveTarget = null;
   }
+}
+
+export function handleAttackMoveClick(state: MobaState, worldX: number, worldY: number) {
+  const player = state.heroes[state.playerHeroIndex];
+  if (!player || player.dead) return;
+
+  const clickedUnit = findEntityAtPosition(state, worldX, worldY, player.team);
+  if (clickedUnit) {
+    player.targetId = clickedUnit.id;
+    player.moveTarget = null;
+    player.attackMoveTarget = null;
+    player.isAttackMoving = false;
+  } else {
+    player.attackMoveTarget = { x: worldX, y: worldY };
+    player.isAttackMoving = true;
+    player.targetId = null;
+    player.moveTarget = null;
+  }
+  player.stopCommand = false;
+}
+
+export function handleStopCommand(state: MobaState) {
+  const player = state.heroes[state.playerHeroIndex];
+  if (!player || player.dead) return;
+
+  player.targetId = null;
+  player.moveTarget = null;
+  player.attackMoveTarget = null;
+  player.isAttackMoving = false;
+  player.stopCommand = true;
+  player.vx = 0;
+  player.vy = 0;
+  player.animState = 'idle';
 }
 
 export function handleRightClick(state: MobaState, worldX: number, worldY: number) {
   const player = state.heroes[state.playerHeroIndex];
   if (!player || player.dead) return;
 
-  let clickedEnemy: any = null;
-  for (const h of state.heroes) {
-    if (h.team === player.team || h.dead) continue;
-    if (dist({ x: worldX, y: worldY }, h) < 30) { clickedEnemy = h; break; }
-  }
-  for (const m of state.minions) {
-    if (m.team === player.team || m.dead) continue;
-    if (dist({ x: worldX, y: worldY }, m) < 25) { clickedEnemy = m; break; }
-  }
-  for (const t of state.towers) {
-    if (t.team === player.team || t.dead) continue;
-    if (dist({ x: worldX, y: worldY }, t) < 35) { clickedEnemy = t; break; }
-  }
+  player.stopCommand = false;
+  player.isAttackMoving = false;
+  player.attackMoveTarget = null;
+
+  const clickedEnemy = findEntityAtPosition(state, worldX, worldY, player.team);
 
   if (clickedEnemy) {
     player.targetId = clickedEnemy.id;
@@ -1110,6 +1180,42 @@ export function handleRightClick(state: MobaState, worldX: number, worldY: numbe
     player.moveTarget = { x: worldX, y: worldY };
     player.targetId = null;
   }
+}
+
+export function findEntityAtPosition(state: MobaState, worldX: number, worldY: number, playerTeam: number): any {
+  let closest: any = null;
+  let closestDist = 35;
+
+  for (const h of state.heroes) {
+    if (h.team === playerTeam || h.dead) continue;
+    const d = dist({ x: worldX, y: worldY }, h);
+    if (d < closestDist) { closestDist = d; closest = h; }
+  }
+  for (const m of state.minions) {
+    if (m.team === playerTeam || m.dead) continue;
+    const d = dist({ x: worldX, y: worldY }, m);
+    if (d < closestDist) { closestDist = d; closest = m; }
+  }
+  for (const t of state.towers) {
+    if (t.team === playerTeam || t.dead) continue;
+    const d = dist({ x: worldX, y: worldY }, t);
+    if (d < closestDist) { closestDist = d; closest = t; }
+  }
+  for (const n of state.nexuses) {
+    if (n.team === playerTeam || n.dead) continue;
+    const d = dist({ x: worldX, y: worldY }, n);
+    if (d < closestDist) { closestDist = d; closest = n; }
+  }
+
+  return closest;
+}
+
+export function updateHoveredEntity(state: MobaState) {
+  const player = state.heroes[state.playerHeroIndex];
+  if (!player) { state.hoveredEntityId = null; return; }
+
+  const entity = findEntityAtPosition(state, state.mouseWorld.x, state.mouseWorld.y, player.team);
+  state.hoveredEntityId = entity ? entity.id : null;
 }
 
 export function buyItem(state: MobaState, itemId: number) {
@@ -1211,6 +1317,24 @@ export class MobaRenderer {
       if (!tower.dead) this.renderTower(ctx, tower);
     }
 
+    if (state.hoveredEntityId !== null) {
+      const hovEntity = findEntityById(state, state.hoveredEntityId);
+      if (hovEntity && !hovEntity.dead) {
+        ctx.save();
+        ctx.translate(hovEntity.x, hovEntity.y);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.005) * 0.2;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
+
     const sortedMinions = [...state.minions].sort((a, b) => a.y - b.y);
     for (const minion of sortedMinions) {
       if (!minion.dead) this.renderMinion(ctx, minion);
@@ -1273,6 +1397,26 @@ export class MobaRenderer {
       ctx.beginPath();
       ctx.arc(0, 0, 6, -t, -t + Math.PI);
       ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else if (state.cursorMode === 'attackmove') {
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-10, 0); ctx.lineTo(-4, 0);
+      ctx.moveTo(4, 0); ctx.lineTo(10, 0);
+      ctx.moveTo(0, -10); ctx.lineTo(0, -4);
+      ctx.moveTo(0, 4); ctx.lineTo(0, 10);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, 0, Math.PI * 2);
+      ctx.globalAlpha = 0.3 + Math.sin(t * 2) * 0.2;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#f97316';
+      ctx.globalAlpha = 0.15;
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, 0, Math.PI * 2);
+      ctx.fill();
       ctx.globalAlpha = 1;
     } else if (state.cursorMode === 'move') {
       ctx.strokeStyle = '#22c55e';

@@ -69,133 +69,331 @@ const DUNGEON_PALETTES: Record<DungeonTileVoxelType, { base: string[]; accent: s
   chest:    { base: ['#a16207', '#8a5506', '#7a4a05', '#b87008'], accent: ['#ffd700', '#6b4006'] },
 };
 
+interface BodyPartPose {
+  ox: number; oy: number; oz: number;
+}
+
+function getAnimPoses(heroClass: string, animState: string, animTimer: number): {
+  leftLeg: BodyPartPose; rightLeg: BodyPartPose;
+  leftArm: BodyPartPose; rightArm: BodyPartPose;
+  torso: BodyPartPose; head: BodyPartPose;
+  weapon: BodyPartPose; weaponGlow: number;
+} {
+  const t = animTimer;
+  const idle = {
+    leftLeg: { ox: 0, oy: 0, oz: 0 },
+    rightLeg: { ox: 0, oy: 0, oz: 0 },
+    leftArm: { ox: 0, oy: 0, oz: 0 },
+    rightArm: { ox: 0, oy: 0, oz: 0 },
+    torso: { ox: 0, oy: 0, oz: Math.round(Math.sin(t * 2) * 0.3) },
+    head: { ox: 0, oy: 0, oz: 0 },
+    weapon: { ox: 0, oy: 0, oz: 0 },
+    weaponGlow: 0
+  };
+
+  if (animState === 'idle') return idle;
+
+  if (animState === 'walk') {
+    const phase = Math.sin(t * 10);
+    const phase2 = Math.cos(t * 10);
+    return {
+      leftLeg: { ox: Math.round(phase * 1.2), oy: 0, oz: 0 },
+      rightLeg: { ox: Math.round(-phase * 1.2), oy: 0, oz: 0 },
+      leftArm: { ox: Math.round(-phase * 0.8), oy: 0, oz: Math.round(phase2 * 0.3) },
+      rightArm: { ox: Math.round(phase * 0.8), oy: 0, oz: Math.round(-phase2 * 0.3) },
+      torso: { ox: 0, oy: 0, oz: Math.round(Math.abs(phase) * 0.3) },
+      head: { ox: 0, oy: 0, oz: Math.round(Math.abs(phase) * 0.3) },
+      weapon: { ox: Math.round(phase * 0.5), oy: 0, oz: 0 },
+      weaponGlow: 0
+    };
+  }
+
+  if (animState === 'attack') {
+    if (heroClass === 'Warrior' || heroClass === 'Worg') {
+      const phase = t * 14;
+      const windUp = Math.max(0, Math.sin(phase) * 1.5);
+      const swing = Math.max(0, Math.sin(phase + 1.5));
+      const armExtend = Math.round(windUp > 0.5 ? -windUp : swing * 2);
+      return {
+        leftLeg: { ox: Math.round(Math.sin(phase * 0.5) * 0.5), oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(-Math.sin(phase * 0.5) * 0.5), oy: 0, oz: 0 },
+        leftArm: { ox: armExtend, oy: Math.round(swing * -1), oz: Math.round(swing * 2) },
+        rightArm: { ox: 0, oy: 0, oz: 0 },
+        torso: { ox: Math.round(swing * 0.5), oy: 0, oz: 0 },
+        head: { ox: Math.round(swing * 0.3), oy: 0, oz: 0 },
+        weapon: { ox: armExtend + Math.round(swing * 1.5), oy: Math.round(swing * -2), oz: Math.round(windUp * 3 - swing * 2) },
+        weaponGlow: swing > 0.3 ? 0.6 : 0
+      };
+    }
+    if (heroClass === 'Ranger') {
+      const drawPhase = (Math.sin(t * 8) + 1) * 0.5;
+      const release = Math.max(0, Math.sin(t * 8 + 2));
+      return {
+        leftLeg: { ox: 0, oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(drawPhase * -0.5), oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(drawPhase * -2), oy: 0, oz: Math.round(drawPhase) },
+        rightArm: { ox: Math.round(release * 2), oy: 0, oz: Math.round(drawPhase) },
+        torso: { ox: Math.round(-drawPhase * 0.3), oy: 0, oz: 0 },
+        head: { ox: Math.round(release * 0.5), oy: 0, oz: 0 },
+        weapon: { ox: Math.round(-drawPhase * 1.5), oy: 0, oz: Math.round(drawPhase * 2) },
+        weaponGlow: release > 0.5 ? 0.8 : 0
+      };
+    }
+    if (heroClass === 'Mage') {
+      const raise = (Math.sin(t * 6) + 1) * 0.5;
+      const cast = Math.max(0, Math.sin(t * 6 + 2));
+      return {
+        leftLeg: { ox: 0, oy: 0, oz: 0 },
+        rightLeg: { ox: 0, oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(cast * 2), oy: 0, oz: Math.round(raise * 3) },
+        rightArm: { ox: Math.round(cast * 1), oy: 0, oz: Math.round(raise * 2) },
+        torso: { ox: 0, oy: 0, oz: Math.round(raise * 0.5) },
+        head: { ox: 0, oy: 0, oz: Math.round(raise * 0.5) },
+        weapon: { ox: Math.round(cast * 2), oy: 0, oz: Math.round(raise * 4) },
+        weaponGlow: raise > 0.3 ? raise : 0
+      };
+    }
+    return idle;
+  }
+
+  if (animState === 'ability') {
+    const pulse = (Math.sin(t * 8) + 1) * 0.5;
+    const burst = Math.max(0, Math.sin(t * 8 + 1.5));
+    return {
+      leftLeg: { ox: Math.round(-burst * 0.5), oy: 0, oz: 0 },
+      rightLeg: { ox: Math.round(burst * 0.5), oy: 0, oz: 0 },
+      leftArm: { ox: Math.round(burst * 2), oy: Math.round(-pulse), oz: Math.round(pulse * 3) },
+      rightArm: { ox: Math.round(burst * 2), oy: Math.round(pulse), oz: Math.round(pulse * 3) },
+      torso: { ox: 0, oy: 0, oz: Math.round(pulse * 0.5) },
+      head: { ox: 0, oy: 0, oz: Math.round(pulse * 0.5) },
+      weapon: { ox: Math.round(burst * 2), oy: 0, oz: Math.round(pulse * 4) },
+      weaponGlow: pulse * 0.9
+    };
+  }
+
+  if (animState === 'death') {
+    const fall = Math.min(1, t * 2);
+    return {
+      leftLeg: { ox: Math.round(fall * 2), oy: 0, oz: Math.round(-fall * 3) },
+      rightLeg: { ox: Math.round(fall * 2), oy: 0, oz: Math.round(-fall * 3) },
+      leftArm: { ox: Math.round(fall * 3), oy: Math.round(-fall), oz: Math.round(-fall * 2) },
+      rightArm: { ox: Math.round(fall * 3), oy: Math.round(fall), oz: Math.round(-fall * 2) },
+      torso: { ox: Math.round(fall * 2), oy: 0, oz: Math.round(-fall * 4) },
+      head: { ox: Math.round(fall * 3), oy: 0, oz: Math.round(-fall * 5) },
+      weapon: { ox: Math.round(fall * 4), oy: Math.round(-fall * 2), oz: Math.round(-fall * 4) },
+      weaponGlow: 0
+    };
+  }
+
+  return idle;
+}
+
 function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number): VoxelModel {
   const skin = RACE_SKIN[race] || '#c4956a';
   const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
   const hair = race === 'Elf' ? '#e8d090' : race === 'Orc' ? '#2a2a2a' : race === 'Undead' ? '#444444' : race === 'Dwarf' ? '#a0522d' : '#3a2a1a';
   const eye = race === 'Undead' ? '#ff4444' : race === 'Orc' ? '#ffaa00' : '#2244aa';
 
+  const W = 8, D = 8, H = 14;
   const model: VoxelModel = [];
-  for (let z = 0; z < 12; z++) {
+  for (let z = 0; z < H; z++) {
     model[z] = [];
-    for (let y = 0; y < 6; y++) {
+    for (let y = 0; y < D; y++) {
       model[z][y] = [];
-      for (let x = 0; x < 6; x++) {
-        model[z][y][x] = null;
-      }
+      for (let x = 0; x < W; x++) model[z][y][x] = null;
     }
   }
 
-  const atkSwing = animState === 'attack' ? Math.sin(animTimer * 12) : 0;
-  const abPulse = animState === 'ability' ? Math.sin(animTimer * 6) * 0.5 + 0.5 : 0;
+  const poses = getAnimPoses(heroClass, animState, animTimer);
 
   const setV = (z: number, y: number, x: number, c: string) => {
-    if (z >= 0 && z < 12 && y >= 0 && y < 6 && x >= 0 && x < 6) {
-      model[z][y][x] = abPulse > 0 ? blend(c, '#ffd700', abPulse * 0.3) : c;
+    if (z >= 0 && z < H && y >= 0 && y < D && x >= 0 && x < W) {
+      if (poses.weaponGlow > 0 && animState === 'ability') {
+        c = blend(c, '#ffd700', poses.weaponGlow * 0.25);
+      }
+      model[z][y][x] = c;
     }
   };
 
-  for (let x = 1; x <= 4; x++) {
-    for (let y = 1; y <= 4; y++) {
-      setV(0, y, x, armor.primary);
-      setV(1, y, x, armor.primary);
-    }
-  }
+  const lL = poses.leftLeg, rL = poses.rightLeg;
+  setV(0 + lL.oz, 2 + lL.oy, 2 + lL.ox, armor.primary);
+  setV(0 + lL.oz, 3 + lL.oy, 2 + lL.ox, armor.primary);
+  setV(1 + lL.oz, 2 + lL.oy, 2 + lL.ox, armor.secondary);
+  setV(1 + lL.oz, 3 + lL.oy, 2 + lL.ox, armor.secondary);
 
-  const legOffset = animState === 'walk' ? Math.round(Math.sin(animTimer * 8)) : 0;
-  setV(0, 2, 1 + (legOffset > 0 ? 1 : 0), skin);
-  setV(0, 2, 4 - (legOffset > 0 ? 1 : 0), skin);
-  setV(1, 2, 1, armor.secondary);
-  setV(1, 2, 4, armor.secondary);
+  setV(0 + rL.oz, 2 + rL.oy, 5 + rL.ox, armor.primary);
+  setV(0 + rL.oz, 3 + rL.oy, 5 + rL.ox, armor.primary);
+  setV(1 + rL.oz, 2 + rL.oy, 5 + rL.ox, armor.secondary);
+  setV(1 + rL.oz, 3 + rL.oy, 5 + rL.ox, armor.secondary);
 
-  for (let x = 1; x <= 4; x++) {
-    for (let y = 1; y <= 4; y++) {
-      setV(2, y, x, armor.primary);
-      setV(3, y, x, armor.primary);
-      setV(4, y, x, armor.secondary);
+  setV(0, 2, 2, skin); setV(0, 3, 2, skin);
+  setV(0, 2, 5, skin); setV(0, 3, 5, skin);
+
+  const tP = poses.torso;
+  for (let x = 2; x <= 5; x++) {
+    for (let y = 2; y <= 4; y++) {
+      setV(2 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
+      setV(3 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
+      setV(4 + tP.oz, y + tP.oy, x + tP.ox, armor.secondary);
+      setV(5 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
     }
   }
 
   if (heroClass === 'Warrior') {
-    setV(3, 1, 0, armor.secondary);
-    setV(4, 1, 0, armor.secondary);
-  }
-
-  for (let x = 1; x <= 4; x++) {
-    for (let y = 1; y <= 4; y++) {
-      setV(5, y, x, armor.primary);
+    setV(5 + tP.oz, 2 + tP.oy, 2 + tP.ox, '#666666');
+    setV(5 + tP.oz, 4 + tP.oy, 2 + tP.ox, '#666666');
+    setV(5 + tP.oz, 2 + tP.oy, 5 + tP.ox, '#666666');
+    setV(5 + tP.oz, 4 + tP.oy, 5 + tP.ox, '#666666');
+    for (let x = 2; x <= 5; x++) {
+      setV(4 + tP.oz, 2 + tP.oy, x + tP.ox, '#555555');
     }
-  }
-
-  const armLZ = animState === 'attack' ? 4 + Math.round(atkSwing) : 3;
-  const armRZ = 3;
-  setV(armLZ, 1, 0, skin);
-  setV(armRZ, 4, 5, skin);
-  setV(4, 1, 0, armor.secondary);
-  setV(4, 4, 5, armor.secondary);
-
-  for (let x = 1; x <= 4; x++) {
-    for (let y = 1; y <= 4; y++) {
-      setV(6, y, x, skin);
-      setV(7, y, x, skin);
-    }
-  }
-  setV(7, 2, 1, eye);
-  setV(7, 2, 4, eye);
-  setV(6, 3, 1, skin);
-  setV(6, 3, 4, skin);
-
-  for (let x = 1; x <= 4; x++) {
-    for (let y = 1; y <= 2; y++) {
-      setV(8, y, x, hair);
-    }
-    setV(8, 3, x, hair);
-    setV(8, 4, x, hair);
-  }
-
-  if (heroClass === 'Warrior') {
-    for (let x = 1; x <= 4; x++) setV(9, 2, x, '#888888');
-    setV(9, 1, 2, '#888888');
-    setV(9, 1, 3, '#888888');
   }
 
   if (heroClass === 'Mage') {
-    setV(9, 2, 2, armor.secondary);
-    setV(9, 2, 3, armor.secondary);
-    setV(10, 2, 2, armor.weapon);
-    setV(10, 2, 3, armor.weapon);
-  }
-
-  if (race === 'Dwarf') {
-    setV(5, 2, 1, hair); setV(5, 2, 4, hair);
-    setV(5, 3, 2, hair); setV(5, 3, 3, hair);
-  }
-  if (race === 'Elf') { setV(7, 1, 1, skin); setV(7, 1, 4, skin); }
-  if (race === 'Orc') {
-    setV(6, 3, 0, skin); setV(6, 3, 5, skin);
-    setV(6, 2, 2, '#445522'); setV(6, 2, 3, '#445522');
-  }
-  if (race === 'Undead') {
-    if (Math.random() > 0.7) setV(6, 2, 1, '#333333');
-    setV(7, 3, 2, '#555555'); setV(7, 3, 3, '#555555');
+    for (let y = 2; y <= 4; y++) {
+      setV(2 + tP.oz, y + tP.oy, 2 + tP.ox, armor.secondary);
+      setV(2 + tP.oz, y + tP.oy, 5 + tP.ox, armor.secondary);
+    }
   }
 
   if (heroClass === 'Ranger') {
-    const weapZ = animState === 'attack' ? 5 + Math.round(atkSwing) : 5;
-    setV(weapZ, 0, 0, armor.weapon); setV(weapZ + 1, 0, 0, armor.weapon); setV(weapZ + 2, 0, 0, armor.weapon);
-    setV(3, 1, 0, '#666666');
+    setV(3 + tP.oz, 2 + tP.oy, 2 + tP.ox, '#2d4016');
+    setV(3 + tP.oz, 2 + tP.oy, 5 + tP.ox, '#2d4016');
   }
+
+  const lA = poses.leftArm;
+  setV(4 + lA.oz, 2 + lA.oy, 1 + lA.ox, armor.secondary);
+  setV(3 + lA.oz, 2 + lA.oy, 1 + lA.ox, armor.secondary);
+  setV(3 + lA.oz, 3 + lA.oy, 1 + lA.ox, armor.secondary);
+  setV(2 + lA.oz, 2 + lA.oy, 1 + lA.ox, skin);
+  setV(2 + lA.oz, 3 + lA.oy, 1 + lA.ox, skin);
+
+  const rA = poses.rightArm;
+  setV(4 + rA.oz, 2 + rA.oy, 6 + rA.ox, armor.secondary);
+  setV(3 + rA.oz, 2 + rA.oy, 6 + rA.ox, armor.secondary);
+  setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, armor.secondary);
+  setV(2 + rA.oz, 2 + rA.oy, 6 + rA.ox, skin);
+  setV(2 + rA.oz, 3 + rA.oy, 6 + rA.ox, skin);
+
+  const hP = poses.head;
+  for (let x = 2; x <= 5; x++) {
+    for (let y = 2; y <= 4; y++) {
+      setV(6 + hP.oz, y + hP.oy, x + hP.ox, skin);
+      setV(7 + hP.oz, y + hP.oy, x + hP.ox, skin);
+      setV(8 + hP.oz, y + hP.oy, x + hP.ox, skin);
+    }
+  }
+
+  setV(7 + hP.oz, 2 + hP.oy, 2 + hP.ox, eye);
+  setV(7 + hP.oz, 2 + hP.oy, 5 + hP.ox, eye);
+
+  setV(6 + hP.oz, 2 + hP.oy, 3 + hP.ox, shade(skin, 0.85));
+  setV(6 + hP.oz, 2 + hP.oy, 4 + hP.ox, shade(skin, 0.85));
+
+  for (let x = 2; x <= 5; x++) {
+    setV(9 + hP.oz, 3 + hP.oy, x + hP.ox, hair);
+    setV(9 + hP.oz, 4 + hP.oy, x + hP.ox, hair);
+    setV(8 + hP.oz, 4 + hP.oy, x + hP.ox, hair);
+  }
+  setV(9 + hP.oz, 2 + hP.oy, 2 + hP.ox, hair);
+  setV(9 + hP.oz, 2 + hP.oy, 5 + hP.ox, hair);
+
+  if (race === 'Dwarf') {
+    setV(6 + hP.oz, 2 + hP.oy, 2 + hP.ox, hair);
+    setV(6 + hP.oz, 2 + hP.oy, 5 + hP.ox, hair);
+    setV(5 + hP.oz, 2 + hP.oy, 3 + hP.ox, hair);
+    setV(5 + hP.oz, 2 + hP.oy, 4 + hP.ox, hair);
+    setV(5 + hP.oz, 3 + hP.oy, 3 + hP.ox, hair);
+  }
+  if (race === 'Elf') {
+    setV(8 + hP.oz, 1 + hP.oy, 2 + hP.ox, skin);
+    setV(8 + hP.oz, 1 + hP.oy, 5 + hP.ox, skin);
+    setV(9 + hP.oz, 1 + hP.oy, 2 + hP.ox, skin);
+    setV(9 + hP.oz, 1 + hP.oy, 5 + hP.ox, skin);
+  }
+  if (race === 'Orc') {
+    setV(7 + hP.oz, 3 + hP.oy, 1 + hP.ox, skin);
+    setV(7 + hP.oz, 3 + hP.oy, 6 + hP.ox, skin);
+    setV(6 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#445522');
+    setV(6 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#445522');
+  }
+  if (race === 'Undead') {
+    setV(7 + hP.oz, 3 + hP.oy, 3 + hP.ox, '#555555');
+    setV(7 + hP.oz, 3 + hP.oy, 4 + hP.ox, '#555555');
+    setV(8 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#3a3a3a');
+  }
+  if (race === 'Barbarian') {
+    setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, hair);
+    setV(10 + hP.oz, 3 + hP.oy, 4 + hP.ox, hair);
+    setV(9 + hP.oz, 3 + hP.oy, 2 + hP.ox, hair);
+    setV(9 + hP.oz, 3 + hP.oy, 5 + hP.ox, hair);
+  }
+
+  const wP = poses.weapon;
   if (heroClass === 'Warrior') {
-    const swordZ = animState === 'attack' ? 3 + Math.round(atkSwing * 2) : 3;
-    setV(swordZ, 0, 0, armor.weapon); setV(swordZ + 1, 0, 0, armor.weapon); setV(swordZ + 2, 0, 0, shade(armor.weapon, 0.8));
-    setV(4, 5, 5, '#aaaaaa'); setV(5, 5, 5, '#aaaaaa');
+    for (let z = 3; z <= 9; z++) {
+      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, z < 5 ? '#8a6914' : armor.weapon);
+    }
+    setV(10 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(armor.weapon, 1.3));
+    if (poses.weaponGlow > 0) {
+      setV(9 + wP.oz, 1 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow));
+    }
+
+    setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
+    setV(5 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
+    setV(5 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#aaaaaa');
+
+    setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, '#888888');
+    setV(10 + hP.oz, 3 + hP.oy, 4 + hP.ox, '#888888');
+    setV(10 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#888888');
+    setV(10 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#888888');
   }
+
   if (heroClass === 'Worg') {
-    setV(2, 0, 0, armor.weapon); setV(3, 0, 0, armor.weapon); setV(4, 0, 0, shade(armor.weapon, 0.7));
+    for (let z = 2; z <= 7; z++) {
+      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, z < 4 ? '#5a3a1a' : armor.weapon);
+    }
+    setV(8 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(armor.weapon, 0.7));
+    setV(7 + wP.oz, 0 + wP.oy, 0 + wP.ox, armor.weapon);
+    if (poses.weaponGlow > 0) {
+      setV(7 + wP.oz, 1 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ff4400', poses.weaponGlow));
+    }
   }
+
+  if (heroClass === 'Ranger') {
+    for (let z = 3; z <= 9; z++) {
+      setV(z + wP.oz, 0 + wP.oy, 0 + wP.ox, '#6b4423');
+    }
+    setV(3 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#666666');
+    setV(9 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#666666');
+    setV(6 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#999999');
+
+    setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#6b4423');
+    setV(5 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#6b4423');
+    setV(5 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#2d5016');
+    setV(4 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#2d5016');
+
+    if (poses.weaponGlow > 0) {
+      setV(6 + wP.oz, 0 + wP.oy, -1 + wP.ox, blend('#666666', '#ffff00', poses.weaponGlow));
+    }
+  }
+
   if (heroClass === 'Mage') {
-    for (let z = 2; z < 10; z++) setV(z, 0, 0, '#553300');
-    setV(10, 0, 0, armor.weapon); setV(11, 0, 0, shade(armor.weapon, 1.3));
+    for (let z = 2; z <= 11; z++) {
+      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#553322');
+    }
+    setV(12 + wP.oz, 1 + wP.oy, 0 + wP.ox, armor.weapon);
+    setV(13 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(armor.weapon, 1.4));
+    if (poses.weaponGlow > 0) {
+      setV(13 + wP.oz, 1 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow));
+      setV(12 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow * 0.5));
+      setV(12 + wP.oz, 2 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow * 0.5));
+    }
+
+    setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, armor.secondary);
+    setV(10 + hP.oz, 3 + hP.oy, 4 + hP.ox, armor.secondary);
+    setV(11 + hP.oz, 3 + hP.oy, 3 + hP.ox, armor.weapon);
+    setV(11 + hP.oz, 3 + hP.oy, 4 + hP.ox, armor.weapon);
   }
 
   return model;
@@ -392,7 +590,7 @@ export class VoxelRenderer {
     race: string
   ) {
     const model = buildHeroModel(race, heroClass, animState, animTimer);
-    this.renderVoxelModel(ctx, x, y - 16, model, this.cubeSize, facing);
+    this.renderVoxelModel(ctx, x, y - 22, model, this.cubeSize, facing);
   }
 
   drawMinionVoxel(
