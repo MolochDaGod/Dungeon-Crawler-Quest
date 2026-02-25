@@ -532,53 +532,224 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
   }
 }
 
-function runHeroAI(state: MobaState, hero: MobaHero, _dt: number) {
+function evaluateThreat(state: MobaState, hero: MobaHero): number {
+  let threat = 0;
+  for (const h of state.heroes) {
+    if (h.team === hero.team || h.dead) continue;
+    const d = dist(hero, h);
+    if (d < 400) threat += (400 - d) / 400 * (h.atk / 20);
+    if (d < 200) threat += 2;
+  }
+  for (const t of state.towers) {
+    if (t.team === hero.team || t.dead) continue;
+    if (dist(hero, t) < t.rng + 50) threat += 3;
+  }
+  return threat;
+}
+
+function countAlliesNearby(state: MobaState, hero: MobaHero, range: number): number {
+  let count = 0;
+  for (const h of state.heroes) {
+    if (h.team !== hero.team || h.dead || h.id === hero.id) continue;
+    if (dist(hero, h) < range) count++;
+  }
+  for (const m of state.minions) {
+    if (m.team !== hero.team || m.dead) continue;
+    if (dist(hero, m) < range) count++;
+  }
+  return count;
+}
+
+function findBestAbilityTarget(state: MobaState, hero: MobaHero, ability: any, abilityIndex: number): any {
+  if (ability.type === 'heal' || ability.type === 'buff') {
+    let weakestAlly: any = null;
+    let lowestHpPct = 1;
+    for (const h of state.heroes) {
+      if (h.team !== hero.team || h.dead || h.id === hero.id) continue;
+      const hpPct = h.hp / h.maxHp;
+      if (hpPct < lowestHpPct && dist(hero, h) < ability.range) {
+        lowestHpPct = hpPct;
+        weakestAlly = h;
+      }
+    }
+    if (weakestAlly && lowestHpPct < 0.6) return weakestAlly;
+    if (hero.hp / hero.maxHp < 0.5) return hero;
+    return null;
+  }
+
+  if (ability.type === 'aoe') {
+    let bestPos: any = null;
+    let bestCount = 0;
+    const enemies = getAllEnemies(state, hero.team);
+    for (const e of enemies) {
+      if (dist(hero, e) > ability.range + 50) continue;
+      let count = 0;
+      for (const e2 of enemies) {
+        if (dist(e, e2) < (ability.radius || 100)) count++;
+      }
+      if (count > bestCount) { bestCount = count; bestPos = e; }
+    }
+    return bestCount >= 2 ? bestPos : findNearestEnemy(state, hero, ability.range);
+  }
+
+  if (ability.type === 'damage' || ability.type === 'debuff') {
+    let best: any = null;
+    let bestScore = -1;
+    const enemies = getAllEnemies(state, hero.team);
+    for (const e of enemies) {
+      if (dist(hero, e) > ability.range + 50) continue;
+      let score = 0;
+      if ('heroDataId' in e) score += 5;
+      if (e.hp < ability.damage + hero.atk * 0.8) score += 10;
+      const hpPct = e.hp / (e.maxHp || 1000);
+      score += (1 - hpPct) * 3;
+      if (score > bestScore) { bestScore = score; best = e; }
+    }
+    return best;
+  }
+
+  return findNearestEnemy(state, hero, ability.range + 50);
+}
+
+function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
   const heroData = HEROES[hero.heroDataId];
   if (!heroData) return;
 
-  if (hero.hp < hero.maxHp * 0.2) {
-    const base = BASE_POSITIONS[hero.team];
+  const hpPct = hero.hp / hero.maxHp;
+  const mpPct = hero.mp / hero.maxMp;
+  const threat = evaluateThreat(state, hero);
+  const alliesNearby = countAlliesNearby(state, hero, 400);
+  const base = BASE_POSITIONS[hero.team];
+  const baseDist = dist(hero, base);
+
+  const retreatThreshold = alliesNearby >= 2 ? 0.15 : (alliesNearby >= 1 ? 0.25 : 0.35);
+
+  if (hpPct < retreatThreshold || (hpPct < 0.4 && threat > 3 && alliesNearby === 0)) {
     hero.moveTarget = { x: base.x, y: base.y };
     hero.targetId = null;
     const angle = angleTo(hero, base);
-    hero.vx = Math.cos(angle) * hero.spd * 1.8;
-    hero.vy = Math.sin(angle) * hero.spd * 1.8;
+    hero.vx = Math.cos(angle) * hero.spd * 2.0;
+    hero.vy = Math.sin(angle) * hero.spd * 2.0;
     hero.facing = angle;
+    hero.animState = 'walk';
 
-    const baseDist = dist(hero, base);
     if (baseDist < 200) {
-      hero.hp = Math.min(hero.maxHp, hero.hp + 5);
-      hero.mp = Math.min(hero.maxMp, hero.mp + 3);
+      hero.hp = Math.min(hero.maxHp, hero.hp + dt * 20);
+      hero.mp = Math.min(hero.maxMp, hero.mp + dt * 10);
     }
-    return;
-  }
 
-  for (let i = 0; i < hero.abilityCooldowns.length; i++) {
-    if (hero.abilityCooldowns[i] <= 0) {
+    if (hpPct < 0.15 && hero.abilityCooldowns.length > 0) {
       const abilities = CLASS_ABILITIES[heroData.heroClass];
-      if (abilities && abilities[i]) {
-        const ab = abilities[i];
-        if (hero.mp >= ab.manaCost) {
-          const target = findNearestEnemy(state, hero, ab.range + 100);
-          if (target && dist(hero, target) < ab.range + 50) {
-            executeAbility(state, hero, i, target);
+      if (abilities) {
+        for (let i = 0; i < abilities.length; i++) {
+          if (hero.abilityCooldowns[i] <= 0 && abilities[i].type === 'dash' && hero.mp >= abilities[i].manaCost) {
+            const awayAngle = angleTo(hero, base);
+            hero.x += Math.cos(awayAngle) * 100;
+            hero.y += Math.sin(awayAngle) * 100;
+            hero.abilityCooldowns[i] = abilities[i].cooldown;
+            hero.mp -= abilities[i].manaCost;
             break;
           }
         }
       }
     }
+    return;
+  }
+
+  if (baseDist < 250 && hpPct < 0.8) {
+    hero.hp = Math.min(hero.maxHp, hero.hp + dt * 15);
+    hero.mp = Math.min(hero.maxMp, hero.mp + dt * 8);
+    if (hpPct < 0.6) return;
+  }
+
+  const abilities = CLASS_ABILITIES[heroData.heroClass];
+  if (abilities) {
+    const isWarrior = heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg';
+    const isMage = heroData.heroClass === 'Mage';
+    const isRanger = heroData.heroClass === 'Ranger';
+
+    let bestAbility = -1;
+    let bestAbilityScore = 0;
+    let bestAbilityTarget: any = null;
+
+    for (let i = 0; i < abilities.length; i++) {
+      if (hero.abilityCooldowns[i] > 0 || hero.mp < abilities[i].manaCost) continue;
+      const ab = abilities[i];
+      const target = findBestAbilityTarget(state, hero, ab, i);
+      if (!target) continue;
+
+      let score = ab.damage * 0.5;
+      if (ab.type === 'aoe') score *= 1.5;
+      if (ab.type === 'damage' && 'heroDataId' in target && target.hp < ab.damage + hero.atk * 0.8) score += 20;
+      if (ab.type === 'heal' && target.hp / target.maxHp < 0.4) score += 15;
+      if (i === 3) score *= 1.3;
+
+      if (isMage && mpPct < 0.3 && i < 3) score *= 0.3;
+      if (isWarrior && hpPct > 0.8 && ab.type === 'heal') score = 0;
+
+      if (score > bestAbilityScore) {
+        bestAbilityScore = score;
+        bestAbility = i;
+        bestAbilityTarget = target;
+      }
+    }
+
+    if (bestAbility >= 0 && bestAbilityTarget) {
+      executeAbility(state, hero, bestAbility, bestAbilityTarget);
+    }
   }
 
   if (hero.targetId === null) {
-    const enemy = findNearestEnemy(state, hero, 500);
-    if (enemy) {
-      hero.targetId = enemy.id;
+    const aggroRange = isRooted(hero as any as CombatEntity) ? 200 : 500;
+    let bestTarget: any = null;
+    let bestScore = -1;
+
+    for (const h of state.heroes) {
+      if (h.team === hero.team || h.dead) continue;
+      const d = dist(hero, h);
+      if (d > aggroRange) continue;
+      let score = (aggroRange - d) / aggroRange * 5;
+      score += (1 - h.hp / h.maxHp) * 8;
+      if (h.hp < hero.atk * 2) score += 15;
+      if (score > bestScore) { bestScore = score; bestTarget = h; }
+    }
+
+    if (!bestTarget) {
+      for (const m of state.minions) {
+        if (m.team === hero.team || m.dead) continue;
+        const d = dist(hero, m);
+        if (d > 350) continue;
+        let score = (350 - d) / 350 * 2;
+        if (m.hp < hero.atk * 1.5) score += 5;
+        if (score > bestScore) { bestScore = score; bestTarget = m; }
+      }
+    }
+
+    if (!bestTarget) {
+      for (const t of state.towers) {
+        if (t.team === hero.team || t.dead) continue;
+        const d = dist(hero, t);
+        if (d > 400 || alliesNearby < 2) continue;
+        bestTarget = t;
+      }
+    }
+
+    if (bestTarget) {
+      hero.targetId = bestTarget.id;
     } else {
-      const lanes = [0, 1, 2];
-      const lane = lanes[hero.id % 3];
+      const lane = hero.id % 3;
       const waypoints = hero.team === 0 ? LANE_WAYPOINTS[lane] : [...LANE_WAYPOINTS[lane]].reverse();
-      const target = waypoints[waypoints.length - 1];
-      const angle = angleTo(hero, target);
+
+      let nearestWpIdx = 0;
+      let minWpDist = Infinity;
+      for (let i = 0; i < waypoints.length; i++) {
+        const d = dist(hero, waypoints[i]);
+        if (d < minWpDist) { minWpDist = d; nearestWpIdx = i; }
+      }
+
+      const targetWpIdx = Math.min(nearestWpIdx + 1, waypoints.length - 1);
+      const wp = waypoints[targetWpIdx];
+      const angle = angleTo(hero, wp);
       hero.vx = Math.cos(angle) * hero.spd * 1.5;
       hero.vy = Math.sin(angle) * hero.spd * 1.5;
       hero.facing = angle;
@@ -586,12 +757,44 @@ function runHeroAI(state: MobaState, hero: MobaHero, _dt: number) {
     }
   }
 
-  if (hero.gold >= 800) {
-    const affordable = ITEMS.filter(item => item.cost <= hero.gold).sort((a, b) => b.cost - a.cost);
-    if (affordable.length > 0) {
-      const slot = hero.items.findIndex(s => s === null);
-      if (slot !== -1) {
-        const item = affordable[0];
+  if (hero.targetId !== null && hero.targetId !== undefined) {
+    const target = findEntityById(state, hero.targetId);
+    if (target && !target.dead) {
+      const d = dist(hero, target);
+      const isRanged = heroData.heroClass === 'Ranger' || heroData.heroClass === 'Mage';
+
+      if (isRanged && d < hero.rng * 0.4 && threat > 1) {
+        const awayAngle = angleTo(target, hero);
+        hero.vx = Math.cos(awayAngle) * hero.spd * 1.5;
+        hero.vy = Math.sin(awayAngle) * hero.spd * 1.5;
+        hero.facing = angleTo(hero, target);
+        hero.animState = 'walk';
+      }
+    }
+  }
+
+  if (hero.gold >= 600) {
+    const slot = hero.items.findIndex(s => s === null);
+    if (slot !== -1) {
+      const sortedItems = [...ITEMS].filter(item => item.cost <= hero.gold).sort((a, b) => {
+        let aScore = a.atk * 2 + a.def + a.hp * 0.1 + a.spd * 3;
+        let bScore = b.atk * 2 + b.def + b.hp * 0.1 + b.spd * 3;
+        if (heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg') {
+          aScore += a.def * 2 + a.hp * 0.2;
+          bScore += b.def * 2 + b.hp * 0.2;
+        }
+        if (heroData.heroClass === 'Mage') {
+          aScore += a.atk * 1.5 + a.mp * 0.3;
+          bScore += b.atk * 1.5 + b.mp * 0.3;
+        }
+        if (heroData.heroClass === 'Ranger') {
+          aScore += a.atk * 2 + a.spd * 4;
+          bScore += b.atk * 2 + b.spd * 4;
+        }
+        return bScore - aScore;
+      });
+      if (sortedItems.length > 0) {
+        const item = sortedItems[0];
         hero.items[slot] = item;
         hero.gold -= item.cost;
         applyItemStats(hero, item);

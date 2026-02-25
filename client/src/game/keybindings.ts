@@ -89,12 +89,12 @@ export function makeMouseBind(button: number, shift = false, ctrl = false, alt =
 
 export function getDefaultBindings(): KeybindConfig {
   return {
-    [KeybindAction.MoveUp]: makeKeyBind('w'),
-    [KeybindAction.MoveDown]: makeKeyBind('s'),
-    [KeybindAction.MoveLeft]: makeKeyBind('a'),
-    [KeybindAction.MoveRight]: makeKeyBind('d'),
+    [KeybindAction.MoveUp]: makeKeyBind('arrowup'),
+    [KeybindAction.MoveDown]: makeKeyBind('arrowdown'),
+    [KeybindAction.MoveLeft]: makeKeyBind('arrowleft'),
+    [KeybindAction.MoveRight]: makeKeyBind('arrowright'),
     [KeybindAction.Ability1]: makeKeyBind('q'),
-    [KeybindAction.Ability2]: makeKeyBind('w', true),
+    [KeybindAction.Ability2]: makeKeyBind('w'),
     [KeybindAction.Ability3]: makeKeyBind('e'),
     [KeybindAction.Ability4]: makeKeyBind('r'),
     [KeybindAction.Attack]: makeMouseBind(0),
@@ -112,7 +112,7 @@ export function getDefaultBindings(): KeybindConfig {
     [KeybindAction.Item6]: makeKeyBind('6'),
     [KeybindAction.ZoomIn]: makeKeyBind('='),
     [KeybindAction.ZoomOut]: makeKeyBind('-'),
-    [KeybindAction.StopMove]: makeKeyBind(' '),
+    [KeybindAction.StopMove]: makeKeyBind('s'),
     [KeybindAction.LevelUpAbility1]: makeKeyBind('q', false, true),
     [KeybindAction.LevelUpAbility2]: makeKeyBind('w', false, true),
     [KeybindAction.LevelUpAbility3]: makeKeyBind('e', false, true),

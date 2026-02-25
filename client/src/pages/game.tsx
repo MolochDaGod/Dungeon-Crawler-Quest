@@ -11,6 +11,12 @@ import {
   handleRightClick, handleAttackMoveClick, handleStopCommand,
   buyItem
 } from '@/game/engine';
+import hudFramePath from '@assets/hud-frame.png';
+import shopPanelPath from '@assets/shop-panel.png';
+import scoreboardBgPath from '@assets/scoreboard-bg.png';
+import {
+  loadKeybindings, matchesKeyDown, KeybindAction, KeyBind
+} from '@/game/keybindings';
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
@@ -69,18 +75,21 @@ export default function GamePage() {
     };
     animId = requestAnimationFrame(gameLoop);
 
+    const bindings = loadKeybindings();
+
     const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       keysRef.current.add(key);
 
-      if (key === 'q') handlePlayerAbility(state, 0);
-      if (key === 'w') handlePlayerAbility(state, 1);
-      if (key === 'e') handlePlayerAbility(state, 2);
-      if (key === 'r') handlePlayerAbility(state, 3);
-      if (key === ' ') handlePlayerAttack(state);
-      if (key === 'b') state.showShop = !state.showShop;
-      if (key === 'tab') { e.preventDefault(); state.showScoreboard = true; }
-      if (key === 'escape') {
+      if (matchesKeyDown(bindings[KeybindAction.Ability1], e)) handlePlayerAbility(state, 0);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) handlePlayerAbility(state, 1);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) handlePlayerAbility(state, 2);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) handlePlayerAbility(state, 3);
+
+      if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handlePlayerAttack(state);
+      if (matchesKeyDown(bindings[KeybindAction.ToggleShop], e)) state.showShop = !state.showShop;
+      if (matchesKeyDown(bindings[KeybindAction.ToggleScoreboard], e)) { e.preventDefault(); state.showScoreboard = true; }
+      if (matchesKeyDown(bindings[KeybindAction.Pause], e)) {
         if (state.selectedAbility >= 0) {
           state.selectedAbility = -1;
           state.cursorMode = 'default';
@@ -90,13 +99,17 @@ export default function GamePage() {
           state.paused = !state.paused;
         }
       }
-      if (key === 'f1') {
+      if (matchesKeyDown(bindings[KeybindAction.CenterCamera], e)) {
         e.preventDefault();
         const player = state.heroes[state.playerHeroIndex];
         if (player) { state.camera.x = player.x; state.camera.y = player.y; }
       }
 
-      if (key === 's' && !e.ctrlKey) {
+      if (matchesKeyDown(bindings[KeybindAction.StopMove], e)) {
+        handleStopCommand(state);
+      }
+
+      if (key === 's' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         handleStopCommand(state);
       }
 
@@ -105,15 +118,16 @@ export default function GamePage() {
         state.cursorMode = 'attackmove';
       }
 
-      if (key >= '1' && key <= '4') {
-        handlePlayerAbility(state, parseInt(key) - 1);
-      }
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility1], e)) handlePlayerAbility(state, 0);
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility2], e)) handlePlayerAbility(state, 1);
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility3], e)) handlePlayerAbility(state, 2);
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility4], e)) handlePlayerAbility(state, 3);
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       keysRef.current.delete(key);
-      if (key === 'tab') {
+      if (matchesKeyDown(bindings[KeybindAction.ToggleScoreboard], e) || key === 'tab') {
         state.showScoreboard = false;
       }
       if (key === 'a') {
@@ -236,83 +250,129 @@ export default function GamePage() {
       {hud && (
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 9999, fontFamily: "'Oxanium', sans-serif" }}>
 
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-3 bg-black/70 px-4 py-2 rounded-b-lg border border-t-0 border-[#c5a059]/40" data-testid="panel-top-bar">
-            <span className="text-sm text-blue-400 font-bold" data-testid="text-team-score">
-              {hud.allHeroes.filter(h => h.team === 0).reduce((s, h) => s + h.kills, 0)}
-            </span>
-            <span className="text-xs text-gray-500">vs</span>
-            <span className="text-sm text-red-400 font-bold">
-              {hud.allHeroes.filter(h => h.team === 1).reduce((s, h) => s + h.kills, 0)}
-            </span>
-            <span className="text-xs text-[#c5a059] ml-2" data-testid="text-game-time">{formatTime(hud.gameTime)}</span>
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center pointer-events-auto" data-testid="panel-top-bar"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(15,10,5,0.95), rgba(10,5,0,0.85))',
+              borderBottom: '2px solid #c5a059',
+              borderLeft: '1px solid #c5a059',
+              borderRight: '1px solid #c5a059',
+              borderRadius: '0 0 12px 12px',
+              padding: '6px 20px',
+              gap: 16,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.8), inset 0 -1px 0 rgba(197,160,89,0.2)'
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full" style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', boxShadow: '0 0 8px rgba(59,130,246,0.5)' }} />
+              <span className="text-lg font-black text-blue-400" style={{ textShadow: '0 0 10px rgba(59,130,246,0.5)' }} data-testid="text-team-score">
+                {hud.allHeroes.filter(h => h.team === 0).reduce((s, h) => s + h.kills, 0)}
+              </span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] text-gray-600 uppercase tracking-widest">Time</span>
+              <span className="text-sm text-[#c5a059] font-bold" data-testid="text-game-time">{formatTime(hud.gameTime)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-black text-red-400" style={{ textShadow: '0 0 10px rgba(239,68,68,0.5)' }}>
+                {hud.allHeroes.filter(h => h.team === 1).reduce((s, h) => s + h.kills, 0)}
+              </span>
+              <div className="w-5 h-5 rounded-full" style={{ background: 'linear-gradient(135deg, #ef4444, #b91c1c)', boxShadow: '0 0 8px rgba(239,68,68,0.5)' }} />
+            </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 flex items-end p-2.5 gap-2.5 pointer-events-auto">
+          <div className="absolute bottom-0 left-0 right-0 flex items-end pointer-events-auto" style={{ padding: '0 8px 8px 8px', gap: 8 }}>
 
-            <div className="flex flex-col gap-1" style={{ width: 240 }}>
+            <div className="flex flex-col" style={{ width: 220, flexShrink: 0 }}>
               <div
-                className="p-2 flex flex-col text-xs text-gray-400 overflow-y-auto"
+                className="flex flex-col text-xs overflow-y-auto"
                 style={{
-                  height: 130,
-                  background: 'linear-gradient(to bottom, #2a2a2a, #111)',
-                  border: '2px solid #c5a059',
-                  boxShadow: 'inset 0 0 10px #000, 0 0 10px rgba(0,0,0,0.8)'
+                  height: 140,
+                  background: 'linear-gradient(to bottom, rgba(20,15,10,0.95), rgba(8,5,0,0.95))',
+                  border: '1px solid #c5a059',
+                  borderRadius: 4,
+                  padding: '8px 10px',
+                  boxShadow: '0 0 20px rgba(0,0,0,0.9), inset 0 0 15px rgba(0,0,0,0.5)'
                 }}
                 data-testid="panel-chat"
               >
-                <div style={{ color: '#c5a059' }}>[System]: MOBA battle started!</div>
-                <div style={{ color: '#c5a059' }}>[System]: Destroy the enemy nexus to win.</div>
-                {hud.killFeed.slice(-6).map((k, i) => (
-                  <div key={i} style={{ color: k.color }}>{k.text}</div>
+                <div style={{ color: '#c5a059', fontSize: 10, marginBottom: 4 }}>BATTLE LOG</div>
+                <div style={{ color: '#888', fontSize: 10 }}>Destroy the enemy nexus!</div>
+                {hud.killFeed.slice(-8).map((k, i) => (
+                  <div key={i} style={{ color: k.color, fontSize: 10, lineHeight: 1.4 }}>{k.text}</div>
                 ))}
               </div>
             </div>
 
-            <div className="flex-1 flex justify-center">
+            <div className="flex-1 flex justify-center" style={{ minWidth: 0 }}>
               <div
-                className="flex flex-col items-center gap-1 p-3"
+                className="flex flex-col items-center relative"
                 style={{
-                  background: 'linear-gradient(to bottom, #2a2a2a, #111)',
+                  background: `linear-gradient(to bottom, rgba(20,15,10,0.96), rgba(8,5,0,0.96))`,
                   border: '2px solid #c5a059',
-                  boxShadow: 'inset 0 0 10px #000, 0 0 10px rgba(0,0,0,0.8)',
-                  maxWidth: 550,
-                  position: 'relative'
+                  borderRadius: 6,
+                  padding: '10px 14px 8px 14px',
+                  maxWidth: 580,
+                  width: '100%',
+                  boxShadow: '0 -4px 30px rgba(0,0,0,0.9), inset 0 0 20px rgba(0,0,0,0.4), 0 0 1px rgba(197,160,89,0.4)',
+                  backgroundImage: `url(${hudFramePath})`,
+                  backgroundSize: '100% 100%',
+                  backgroundBlendMode: 'overlay'
                 }}
                 data-testid="panel-hotbar"
               >
-                <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-[#c5a059] border border-white/30 shadow-[0_0_3px_gold]" />
-                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#c5a059] border border-white/30 shadow-[0_0_3px_gold]" />
+                <div style={{ position: 'absolute', top: -1, left: -1, width: 6, height: 6, background: '#c5a059', borderRadius: '0 0 2px 0', boxShadow: '0 0 4px rgba(197,160,89,0.6)' }} />
+                <div style={{ position: 'absolute', top: -1, right: -1, width: 6, height: 6, background: '#c5a059', borderRadius: '0 0 0 2px', boxShadow: '0 0 4px rgba(197,160,89,0.6)' }} />
 
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-full h-2 bg-[#300] rounded-sm overflow-hidden" style={{ width: 120 }}>
-                      <div className="h-full bg-red-600 transition-all" style={{ width: `${(hud.hp / hud.maxHp) * 100}%` }} data-testid="bar-hp" />
+                <div className="flex items-center w-full mb-1.5" style={{ gap: 8 }}>
+                  <div className="flex items-center" style={{ gap: 4, flex: 1 }}>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-black"
+                      style={{
+                        background: `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
+                        border: '2px solid #c5a059',
+                        color: '#fff',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                        boxShadow: '0 0 8px rgba(0,0,0,0.6)'
+                      }}
+                    >
+                      {hud.heroClass.charAt(0)}
                     </div>
-                    <span className="text-[10px] text-red-400">{Math.floor(hud.hp)}/{hud.maxHp}</span>
-                  </div>
-                  <span className="text-sm text-[#c5a059] font-bold" data-testid="text-hero-level">Lv{hud.level}</span>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-full h-2 bg-[#003] rounded-sm overflow-hidden" style={{ width: 120 }}>
-                      <div className="h-full bg-blue-600 transition-all" style={{ width: `${(hud.mp / hud.maxMp) * 100}%` }} data-testid="bar-mp" />
+                    <div className="flex flex-col" style={{ gap: 2, flex: 1 }}>
+                      <div className="flex items-center" style={{ gap: 4 }}>
+                        <div className="h-3 rounded-sm overflow-hidden" style={{ flex: 1, background: '#200', border: '1px solid #500' }}>
+                          <div className="h-full transition-all" style={{ width: `${(hud.hp / hud.maxHp) * 100}%`, background: 'linear-gradient(to right, #b91c1c, #ef4444)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)' }} data-testid="bar-hp" />
+                        </div>
+                        <span className="text-[9px] text-red-300 w-16 text-right">{Math.floor(hud.hp)}/{hud.maxHp}</span>
+                      </div>
+                      <div className="flex items-center" style={{ gap: 4 }}>
+                        <div className="h-3 rounded-sm overflow-hidden" style={{ flex: 1, background: '#002', border: '1px solid #005' }}>
+                          <div className="h-full transition-all" style={{ width: `${(hud.mp / hud.maxMp) * 100}%`, background: 'linear-gradient(to right, #1e40af, #3b82f6)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)' }} data-testid="bar-mp" />
+                        </div>
+                        <span className="text-[9px] text-blue-300 w-16 text-right">{Math.floor(hud.mp)}/{hud.maxMp}</span>
+                      </div>
                     </div>
-                    <span className="text-[10px] text-blue-400">{Math.floor(hud.mp)}/{hud.maxMp}</span>
                   </div>
-                </div>
-
-                <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden mb-1">
-                  <div className="h-full bg-yellow-500 transition-all" style={{ width: `${(hud.xp / hud.xpToNext) * 100}%` }} data-testid="bar-xp" />
+                  <div className="flex flex-col items-center" style={{ gap: 1 }}>
+                    <span className="text-sm text-[#c5a059] font-black" data-testid="text-hero-level">Lv{hud.level}</span>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ width: 40, background: '#333' }}>
+                      <div className="h-full transition-all" style={{ width: `${(hud.xp / hud.xpToNext) * 100}%`, background: 'linear-gradient(to right, #ca8a04, #eab308)' }} data-testid="bar-xp" />
+                    </div>
+                  </div>
                 </div>
 
                 {hud.activeEffects.length > 0 && (
-                  <div className="flex gap-0.5 flex-wrap justify-center mb-1" data-testid="panel-active-effects">
+                  <div className="flex flex-wrap justify-center mb-1.5" style={{ gap: 3 }} data-testid="panel-active-effects">
                     {hud.activeEffects.map((eff, i) => (
                       <div
                         key={i}
-                        className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-bold"
+                        className="flex items-center font-bold"
                         style={{
-                          background: `${eff.color}22`,
-                          border: `1px solid ${eff.color}66`,
-                          color: eff.color
+                          background: `${eff.color}18`,
+                          border: `1px solid ${eff.color}44`,
+                          color: eff.color,
+                          padding: '1px 5px',
+                          borderRadius: 3,
+                          fontSize: 9,
+                          gap: 2
                         }}
                         title={`${eff.name} (${eff.remaining.toFixed(1)}s)`}
                         data-testid={`effect-${eff.name}-${i}`}
@@ -323,97 +383,147 @@ export default function GamePage() {
                   </div>
                 )}
 
-                <div className="flex gap-1">
+                <div className="flex items-center" style={{ gap: 4 }}>
                   {abilities.map((ab, i) => {
                     const cd = hud.abilityCooldowns[i] || 0;
                     const onCd = cd > 0;
+                    const selected = stateRef.current?.selectedAbility === i;
                     return (
                       <button
                         key={i}
-                        className="relative flex items-center justify-center font-bold text-white transition-all hover:scale-105"
+                        className="relative flex items-center justify-center font-bold text-white"
                         style={{
-                          width: 48, height: 48,
-                          background: onCd ? '#222' : CLASS_COLORS[hud.heroClass] || '#333',
-                          border: `2px solid ${onCd ? '#444' : '#c5a059'}`,
-                          boxShadow: 'inset 0 0 5px #000',
-                          opacity: onCd ? 0.5 : 1,
-                          cursor: 'pointer'
+                          width: 50, height: 50,
+                          background: onCd ? 'linear-gradient(135deg, #1a1a1a, #0a0a0a)' : `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
+                          border: `2px solid ${selected ? '#ffd700' : onCd ? '#333' : '#c5a059'}`,
+                          borderRadius: 4,
+                          boxShadow: selected ? '0 0 12px rgba(255,215,0,0.5)' : 'inset 0 0 8px rgba(0,0,0,0.6)',
+                          opacity: onCd ? 0.6 : 1,
+                          cursor: 'pointer',
+                          transition: 'all 0.1s'
                         }}
-                        onClick={() => stateRef.current && handlePlayerAbility(stateRef.current, i)}
+                        onClick={() => {
+                          if (stateRef.current) {
+                            stateRef.current.selectedAbility = i;
+                            stateRef.current.cursorMode = 'ability';
+                          }
+                        }}
                         title={`${ab.name}: ${ab.description}`}
                         data-testid={`button-ability-${i}`}
                       >
-                        <span className="absolute top-0.5 left-1 text-[10px] text-gray-400">{ab.key}</span>
-                        <span className="text-xs">{ab.name.charAt(0)}</span>
-                        {onCd && <span className="absolute text-[10px] text-white">{Math.ceil(cd)}</span>}
+                        <span className="absolute text-[9px] font-bold" style={{ top: 2, left: 4, color: selected ? '#ffd700' : '#888' }}>{ab.key}</span>
+                        <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{ab.name.substring(0, 2)}</span>
+                        {onCd && (
+                          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 2 }}>
+                            <span className="text-sm font-black text-white" style={{ textShadow: '0 0 4px #000' }}>{Math.ceil(cd)}</span>
+                          </div>
+                        )}
                       </button>
                     );
                   })}
-                  <div className="w-px bg-gray-700 mx-1" />
+
+                  <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, transparent, #c5a059, transparent)', margin: '0 4px' }} />
+
                   {hud.items.map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-center text-[9px]"
+                      className="flex items-center justify-center"
                       style={{
-                        width: 36, height: 48,
-                        background: item ? '#1a1a2e' : '#000',
-                        border: `2px solid ${item ? '#c5a059' : '#333'}`,
-                        boxShadow: 'inset 0 0 5px #000',
-                        color: item ? '#c5a059' : '#444'
+                        width: 38, height: 50,
+                        background: item ? 'linear-gradient(135deg, #1a1a2e, #0a0a15)' : 'linear-gradient(135deg, #0a0a0a, #050505)',
+                        border: `1px solid ${item ? '#c5a05980' : '#222'}`,
+                        borderRadius: 3,
+                        color: item ? '#c5a059' : '#333',
+                        fontSize: 9,
+                        fontWeight: 'bold',
+                        boxShadow: 'inset 0 0 6px rgba(0,0,0,0.5)'
                       }}
                       title={item?.name}
                       data-testid={`slot-item-${i}`}
                     >
-                      {item ? item.name.split(' ').map(w => w[0]).join('') : (i + 1)}
+                      {item ? item.name.split(' ').map(w => w[0]).join('') : ''}
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col items-end gap-1" style={{ width: 200 }}>
-              <div className="flex gap-1 mb-[-10px] z-10 pr-2">
+            <div className="flex flex-col items-end" style={{ width: 200, flexShrink: 0, gap: 6 }}>
+              <div className="flex" style={{ gap: 4, marginBottom: -4, paddingRight: 8, zIndex: 2 }}>
                 <button
-                  className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[#c5a059] border-2 border-[#c5a059] bg-gradient-to-b from-gray-700 to-black shadow-lg hover:bg-gray-600 cursor-pointer pointer-events-auto text-xs"
+                  className="flex items-center justify-center font-bold text-[#c5a059] cursor-pointer pointer-events-auto"
+                  style={{
+                    width: 30, height: 30, borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #2a2a2a, #111)',
+                    border: '2px solid #c5a059',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.6), 0 0 4px rgba(197,160,89,0.3)',
+                    fontSize: 11
+                  }}
                   onClick={() => stateRef.current && (stateRef.current.showShop = !stateRef.current.showShop)}
                   title="Shop (B)"
                   data-testid="button-shop"
                 >B</button>
                 <button
-                  className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[#c5a059] border-2 border-[#c5a059] bg-gradient-to-b from-gray-700 to-black shadow-lg hover:bg-gray-600 cursor-pointer pointer-events-auto text-xs"
+                  className="flex items-center justify-center font-bold text-[#c5a059] cursor-pointer pointer-events-auto"
+                  style={{
+                    width: 30, height: 30, borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #2a2a2a, #111)',
+                    border: '2px solid #c5a059',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.6), 0 0 4px rgba(197,160,89,0.3)',
+                    fontSize: 11
+                  }}
                   onClick={() => stateRef.current && (stateRef.current.showScoreboard = !stateRef.current.showScoreboard)}
                   title="Scoreboard (Tab)"
                   data-testid="button-scoreboard"
-                >S</button>
+                >TAB</button>
               </div>
               <div
-                className="w-full p-2 flex gap-2"
+                className="w-full flex"
                 style={{
-                  height: 110,
-                  background: 'linear-gradient(to bottom, #2a2a2a, #111)',
-                  border: '2px solid #c5a059',
-                  boxShadow: 'inset 0 0 10px #000, 0 0 10px rgba(0,0,0,0.8)',
-                  position: 'relative'
+                  background: 'linear-gradient(to bottom, rgba(20,15,10,0.95), rgba(8,5,0,0.95))',
+                  border: '1px solid #c5a059',
+                  borderRadius: 4,
+                  padding: '8px 10px',
+                  gap: 10,
+                  boxShadow: '0 0 20px rgba(0,0,0,0.9), inset 0 0 15px rgba(0,0,0,0.5)'
                 }}
                 data-testid="panel-stats"
               >
-                <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 bg-[#c5a059] border border-white/30" />
-                <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-[#c5a059] border border-white/30" />
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-10 h-10 rounded-full bg-black border border-[#c5a059] flex items-center justify-center text-xs" style={{ color: CLASS_COLORS[hud.heroClass] }}>
+                <div className="flex flex-col items-center" style={{ gap: 4 }}>
+                  <div className="rounded-lg flex items-center justify-center text-sm font-black"
+                    style={{
+                      width: 38, height: 38,
+                      background: `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, #111)`,
+                      border: '2px solid #c5a059',
+                      color: '#fff',
+                      boxShadow: '0 0 10px rgba(0,0,0,0.6), 0 0 4px rgba(197,160,89,0.2)'
+                    }}
+                  >
                     {hud.heroClass.charAt(0)}
                   </div>
-                  <span className="text-[10px] text-yellow-500 font-bold" data-testid="text-gold">{hud.gold}g</span>
+                  <span className="text-[10px] font-bold flex items-center" style={{ gap: 2 }}>
+                    <span style={{ color: '#ffd700' }}>{hud.gold}</span>
+                    <span style={{ color: '#c5a059' }}>g</span>
+                  </span>
                 </div>
-                <div className="flex-1 text-[10px] text-gray-400">
-                  <div className="border-b border-gray-700 mb-1 pb-1 text-gray-300 font-bold truncate">{hud.heroName.split(' ').pop()}</div>
-                  <div>ATK: <span className="text-yellow-400">{hud.atk}</span></div>
-                  <div>DEF: <span className="text-blue-400">{hud.def}</span></div>
-                  <div>SPD: <span className="text-green-400">{hud.spd}</span></div>
-                  <div className="mt-1 text-gray-500">
-                    <span className="text-green-400">{hud.kills}</span>/
-                    <span className="text-red-400">{hud.deaths}</span>/
-                    <span className="text-yellow-400">{hud.assists}</span> KDA
+                <div className="flex-1" style={{ fontSize: 10 }}>
+                  <div className="font-bold truncate" style={{ color: '#c5a059', fontSize: 11, marginBottom: 4, borderBottom: '1px solid #333', paddingBottom: 3 }}>{hud.heroName.split(' ').pop()}</div>
+                  <div className="flex justify-between" style={{ gap: 8 }}>
+                    <div className="flex flex-col" style={{ gap: 1 }}>
+                      <span style={{ color: '#888' }}>ATK <span className="font-bold" style={{ color: '#fbbf24' }}>{hud.atk}</span></span>
+                      <span style={{ color: '#888' }}>DEF <span className="font-bold" style={{ color: '#60a5fa' }}>{hud.def}</span></span>
+                      <span style={{ color: '#888' }}>SPD <span className="font-bold" style={{ color: '#4ade80' }}>{hud.spd}</span></span>
+                    </div>
+                    <div className="flex flex-col items-end" style={{ gap: 1 }}>
+                      <span className="font-bold" style={{ fontSize: 14, letterSpacing: 1 }}>
+                        <span style={{ color: '#4ade80' }}>{hud.kills}</span>
+                        <span style={{ color: '#555' }}>/</span>
+                        <span style={{ color: '#f87171' }}>{hud.deaths}</span>
+                        <span style={{ color: '#555' }}>/</span>
+                        <span style={{ color: '#fbbf24' }}>{hud.assists}</span>
+                      </span>
+                      <span style={{ color: '#555', fontSize: 8 }}>KDA</span>
+                    </div>
                   </div>
                 </div>
               </div>

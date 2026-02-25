@@ -9,6 +9,10 @@ import {
   DungeonRenderer, handleDungeonAbility, handleDungeonAttack
 } from '@/game/dungeon';
 import { EFFECT_COLORS, StatusEffect } from '@/game/combat';
+import {
+  loadKeybindings, matchesKeyDown, KeybindAction
+} from '@/game/keybindings';
+import hudFramePath from '@assets/hud-frame.png';
 
 export default function DungeonGamePage() {
   const [, setLocation] = useLocation();
@@ -56,18 +60,20 @@ export default function DungeonGamePage() {
     };
     animId = requestAnimationFrame(gameLoop);
 
+    const bindings = loadKeybindings();
+
     const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       keysRef.current.add(key);
 
-      if (key === 'q') handleDungeonAbility(state, 0);
-      if (key === 'w' && e.shiftKey) handleDungeonAbility(state, 1);
-      if (key === 'e') handleDungeonAbility(state, 2);
-      if (key === 'r') handleDungeonAbility(state, 3);
-      if (key === ' ') handleDungeonAttack(state);
+      if (matchesKeyDown(bindings[KeybindAction.Ability1], e)) handleDungeonAbility(state, 0);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) handleDungeonAbility(state, 1);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) handleDungeonAbility(state, 2);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) handleDungeonAbility(state, 3);
+
+      if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handleDungeonAttack(state);
       if (key === 'i') state.showInventory = !state.showInventory;
-      if (key === 'escape') { state.showInventory = false; state.paused = !state.paused; }
-      if (key >= '1' && key <= '4') handleDungeonAbility(state, parseInt(key) - 1);
+      if (matchesKeyDown(bindings[KeybindAction.Pause], e)) { state.showInventory = false; state.paused = !state.paused; }
     };
 
     const onKeyUp = (e: KeyboardEvent) => { keysRef.current.delete(e.key.toLowerCase()); };
@@ -105,12 +111,23 @@ export default function DungeonGamePage() {
       {hud && (
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 9999, fontFamily: "'Oxanium', sans-serif" }}>
 
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-3 bg-black/70 px-4 py-2 rounded-b-lg border border-t-0 border-[#c5a059]/40" data-testid="panel-dungeon-top">
-            <span className="text-sm text-[#c5a059] font-bold">Floor {hud.floor}</span>
-            <span className="text-xs text-gray-500">|</span>
-            <span className="text-xs text-gray-400">Kills: {hud.kills}</span>
-            <span className="text-xs text-gray-500">|</span>
-            <span className="text-xs text-yellow-500">{hud.gold}g</span>
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center" data-testid="panel-dungeon-top"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(15,10,5,0.95), rgba(10,5,0,0.85))',
+              borderBottom: '2px solid #c5a059',
+              borderLeft: '1px solid #c5a059',
+              borderRight: '1px solid #c5a059',
+              borderRadius: '0 0 12px 12px',
+              padding: '6px 20px',
+              gap: 16,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.8), inset 0 -1px 0 rgba(197,160,89,0.2)'
+            }}
+          >
+            <span className="text-sm text-[#c5a059] font-bold" style={{ textShadow: '0 0 10px rgba(197,160,89,0.3)' }}>Floor {hud.floor}</span>
+            <div style={{ width: 1, height: 16, background: '#c5a059', opacity: 0.3 }} />
+            <span className="text-xs text-gray-300">Kills: <span className="text-green-400 font-bold">{hud.kills}</span></span>
+            <div style={{ width: 1, height: 16, background: '#c5a059', opacity: 0.3 }} />
+            <span className="text-xs font-bold" style={{ color: '#ffd700' }}>{hud.gold}g</span>
           </div>
 
           {hud.activeEffects.length > 0 && (
@@ -129,86 +146,125 @@ export default function DungeonGamePage() {
             </div>
           )}
 
-          <div className="absolute bottom-0 left-0 right-0 flex items-end p-2.5 gap-2.5 pointer-events-auto">
+          <div className="absolute bottom-0 left-0 right-0 flex items-end pointer-events-auto" style={{ padding: '0 8px 8px 8px', gap: 8 }}>
 
-            <div className="flex flex-col gap-1" style={{ width: 220 }}>
+            <div className="flex flex-col" style={{ width: 200, flexShrink: 0 }}>
               <div
-                className="p-2 flex flex-col text-xs text-gray-400 overflow-y-auto"
-                style={{ height: 110, background: 'linear-gradient(to bottom, #2a2a2a, #111)', border: '2px solid #c5a059', boxShadow: 'inset 0 0 10px #000' }}
+                className="flex flex-col text-xs overflow-y-auto"
+                style={{
+                  height: 120,
+                  background: 'linear-gradient(to bottom, rgba(20,15,10,0.95), rgba(8,5,0,0.95))',
+                  border: '1px solid #c5a059',
+                  borderRadius: 4,
+                  padding: '8px 10px',
+                  boxShadow: '0 0 20px rgba(0,0,0,0.9), inset 0 0 15px rgba(0,0,0,0.5)'
+                }}
                 data-testid="panel-dungeon-log"
               >
-                <div style={{ color: '#c5a059' }}>[Dungeon] Floor {hud.floor}</div>
-                {hud.killFeed.slice(-5).map((k, i) => (
-                  <div key={i} style={{ color: k.color }}>{k.text}</div>
+                <div style={{ color: '#c5a059', fontSize: 10, marginBottom: 4 }}>DUNGEON LOG</div>
+                {hud.killFeed.slice(-6).map((k, i) => (
+                  <div key={i} style={{ color: k.color, fontSize: 10, lineHeight: 1.4 }}>{k.text}</div>
                 ))}
               </div>
             </div>
 
-            <div className="flex-1 flex justify-center">
+            <div className="flex-1 flex justify-center" style={{ minWidth: 0 }}>
               <div
-                className="flex flex-col items-center gap-1 p-3"
-                style={{ background: 'linear-gradient(to bottom, #2a2a2a, #111)', border: '2px solid #c5a059', boxShadow: 'inset 0 0 10px #000, 0 0 10px rgba(0,0,0,0.8)', maxWidth: 520, position: 'relative' }}
+                className="flex flex-col items-center relative"
+                style={{
+                  background: 'linear-gradient(to bottom, rgba(20,15,10,0.96), rgba(8,5,0,0.96))',
+                  border: '2px solid #c5a059',
+                  borderRadius: 6,
+                  padding: '10px 14px 8px 14px',
+                  maxWidth: 540,
+                  width: '100%',
+                  boxShadow: '0 -4px 30px rgba(0,0,0,0.9), inset 0 0 20px rgba(0,0,0,0.4), 0 0 1px rgba(197,160,89,0.4)',
+                  backgroundImage: `url(${hudFramePath})`,
+                  backgroundSize: '100% 100%',
+                  backgroundBlendMode: 'overlay'
+                }}
                 data-testid="panel-dungeon-hotbar"
               >
-                <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-[#c5a059] border border-white/30" />
-                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#c5a059] border border-white/30" />
-
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-full h-2 bg-[#300] rounded-sm overflow-hidden" style={{ width: 110 }}>
-                      <div className="h-full bg-red-600 transition-all" style={{ width: `${(hud.hp / hud.maxHp) * 100}%` }} data-testid="bar-dungeon-hp" />
+                <div className="flex items-center w-full mb-1.5" style={{ gap: 8 }}>
+                  <div className="flex items-center" style={{ gap: 4, flex: 1 }}>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-black"
+                      style={{
+                        background: `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
+                        border: '2px solid #c5a059',
+                        color: '#fff',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.8)'
+                      }}
+                    >
+                      {hud.heroClass.charAt(0)}
                     </div>
-                    <span className="text-[10px] text-red-400">{Math.floor(hud.hp)}/{hud.maxHp}</span>
+                    <div className="flex flex-col" style={{ gap: 2, flex: 1 }}>
+                      <div className="flex items-center" style={{ gap: 4 }}>
+                        <div className="h-3 rounded-sm overflow-hidden" style={{ flex: 1, background: '#200', border: '1px solid #500' }}>
+                          <div className="h-full transition-all" style={{ width: `${(hud.hp / hud.maxHp) * 100}%`, background: 'linear-gradient(to right, #b91c1c, #ef4444)' }} data-testid="bar-dungeon-hp" />
+                        </div>
+                        <span className="text-[9px] text-red-300 w-16 text-right">{Math.floor(hud.hp)}/{hud.maxHp}</span>
+                      </div>
+                      <div className="flex items-center" style={{ gap: 4 }}>
+                        <div className="h-3 rounded-sm overflow-hidden" style={{ flex: 1, background: '#002', border: '1px solid #005' }}>
+                          <div className="h-full transition-all" style={{ width: `${(hud.mp / hud.maxMp) * 100}%`, background: 'linear-gradient(to right, #1e40af, #3b82f6)' }} data-testid="bar-dungeon-mp" />
+                        </div>
+                        <span className="text-[9px] text-blue-300 w-16 text-right">{Math.floor(hud.mp)}/{hud.maxMp}</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-sm text-[#c5a059] font-bold">Lv{hud.level}</span>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-full h-2 bg-[#003] rounded-sm overflow-hidden" style={{ width: 110 }}>
-                      <div className="h-full bg-blue-600 transition-all" style={{ width: `${(hud.mp / hud.maxMp) * 100}%` }} data-testid="bar-dungeon-mp" />
+                  <div className="flex flex-col items-center" style={{ gap: 1 }}>
+                    <span className="text-sm text-[#c5a059] font-black">Lv{hud.level}</span>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ width: 40, background: '#333' }}>
+                      <div className="h-full transition-all" style={{ width: `${(hud.xp / hud.xpToNext) * 100}%`, background: 'linear-gradient(to right, #ca8a04, #eab308)' }} data-testid="bar-dungeon-xp" />
                     </div>
-                    <span className="text-[10px] text-blue-400">{Math.floor(hud.mp)}/{hud.maxMp}</span>
                   </div>
                 </div>
 
-                <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden mb-1">
-                  <div className="h-full bg-yellow-500 transition-all" style={{ width: `${(hud.xp / hud.xpToNext) * 100}%` }} data-testid="bar-dungeon-xp" />
-                </div>
-
-                <div className="flex gap-1">
+                <div className="flex items-center" style={{ gap: 4 }}>
                   {abilities.map((ab, i) => {
                     const cd = hud.abilityCooldowns[i] || 0;
                     const onCd = cd > 0;
                     return (
                       <button
                         key={i}
-                        className="relative flex items-center justify-center font-bold text-white transition-all hover:scale-105"
+                        className="relative flex items-center justify-center font-bold text-white"
                         style={{
-                          width: 46, height: 46,
-                          background: onCd ? '#222' : CLASS_COLORS[hud.heroClass] || '#333',
-                          border: `2px solid ${onCd ? '#444' : '#c5a059'}`,
-                          boxShadow: 'inset 0 0 5px #000',
-                          opacity: onCd ? 0.5 : 1, cursor: 'pointer'
+                          width: 50, height: 50,
+                          background: onCd ? 'linear-gradient(135deg, #1a1a1a, #0a0a0a)' : `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
+                          border: `2px solid ${onCd ? '#333' : '#c5a059'}`,
+                          borderRadius: 4,
+                          boxShadow: 'inset 0 0 8px rgba(0,0,0,0.6)',
+                          opacity: onCd ? 0.6 : 1,
+                          cursor: 'pointer',
+                          transition: 'all 0.1s'
                         }}
                         onClick={() => stateRef.current && handleDungeonAbility(stateRef.current, i)}
                         title={`${ab.name}: ${ab.description}`}
                         data-testid={`button-dungeon-ability-${i}`}
                       >
-                        <span className="absolute top-0.5 left-1 text-[10px] text-gray-400">{ab.key}</span>
-                        <span className="text-xs">{ab.name.charAt(0)}</span>
-                        {onCd && <span className="absolute text-[10px] text-white">{Math.ceil(cd)}</span>}
+                        <span className="absolute text-[9px] font-bold" style={{ top: 2, left: 4, color: '#888' }}>{ab.key}</span>
+                        <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{ab.name.substring(0, 2)}</span>
+                        {onCd && (
+                          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 2 }}>
+                            <span className="text-sm font-black text-white" style={{ textShadow: '0 0 4px #000' }}>{Math.ceil(cd)}</span>
+                          </div>
+                        )}
                       </button>
                     );
                   })}
-                  <div className="w-px bg-gray-700 mx-1" />
+                  <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, transparent, #c5a059, transparent)', margin: '0 4px' }} />
                   {hud.items.map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-center text-[9px]"
+                      className="flex items-center justify-center"
                       style={{
-                        width: 34, height: 46,
-                        background: item ? '#1a1a2e' : '#000',
-                        border: `2px solid ${item ? '#c5a059' : '#333'}`,
-                        boxShadow: 'inset 0 0 5px #000',
-                        color: item ? '#c5a059' : '#444'
+                        width: 38, height: 50,
+                        background: item ? 'linear-gradient(135deg, #1a1a2e, #0a0a15)' : 'linear-gradient(135deg, #0a0a0a, #050505)',
+                        border: `1px solid ${item ? '#c5a05980' : '#222'}`,
+                        borderRadius: 3,
+                        color: item ? '#c5a059' : '#333',
+                        fontSize: 9,
+                        fontWeight: 'bold'
                       }}
                       title={item?.name}
                       data-testid={`slot-dungeon-item-${i}`}
@@ -220,25 +276,37 @@ export default function DungeonGamePage() {
               </div>
             </div>
 
-            <div className="flex flex-col items-end gap-1" style={{ width: 180 }}>
+            <div className="flex flex-col items-end" style={{ width: 180, flexShrink: 0 }}>
               <div
-                className="w-full p-2 flex gap-2"
-                style={{ height: 100, background: 'linear-gradient(to bottom, #2a2a2a, #111)', border: '2px solid #c5a059', boxShadow: 'inset 0 0 10px #000', position: 'relative' }}
+                className="w-full flex"
+                style={{
+                  background: 'linear-gradient(to bottom, rgba(20,15,10,0.95), rgba(8,5,0,0.95))',
+                  border: '1px solid #c5a059',
+                  borderRadius: 4,
+                  padding: '8px 10px',
+                  gap: 10,
+                  boxShadow: '0 0 20px rgba(0,0,0,0.9), inset 0 0 15px rgba(0,0,0,0.5)'
+                }}
                 data-testid="panel-dungeon-stats"
               >
-                <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 bg-[#c5a059] border border-white/30" />
-                <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-[#c5a059] border border-white/30" />
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-10 h-10 rounded-full bg-black border border-[#c5a059] flex items-center justify-center text-xs" style={{ color: CLASS_COLORS[hud.heroClass] }}>
+                <div className="flex flex-col items-center" style={{ gap: 4 }}>
+                  <div className="rounded-lg flex items-center justify-center text-sm font-black"
+                    style={{
+                      width: 38, height: 38,
+                      background: `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, #111)`,
+                      border: '2px solid #c5a059',
+                      color: '#fff'
+                    }}
+                  >
                     {hud.heroClass.charAt(0)}
                   </div>
-                  <span className="text-[10px] text-yellow-500 font-bold">{hud.gold}g</span>
+                  <span className="text-[10px] font-bold" style={{ color: '#ffd700' }}>{hud.gold}g</span>
                 </div>
-                <div className="flex-1 text-[10px] text-gray-400">
-                  <div className="border-b border-gray-700 mb-1 pb-1 text-gray-300 font-bold truncate">{hud.heroName.split(' ').pop()}</div>
-                  <div>ATK: <span className="text-yellow-400">{hud.atk}</span></div>
-                  <div>DEF: <span className="text-blue-400">{hud.def}</span></div>
-                  <div>SPD: <span className="text-green-400">{hud.spd}</span></div>
+                <div className="flex-1" style={{ fontSize: 10 }}>
+                  <div className="font-bold truncate" style={{ color: '#c5a059', fontSize: 11, marginBottom: 4, borderBottom: '1px solid #333', paddingBottom: 3 }}>{hud.heroName.split(' ').pop()}</div>
+                  <div style={{ color: '#888' }}>ATK <span className="font-bold" style={{ color: '#fbbf24' }}>{hud.atk}</span></div>
+                  <div style={{ color: '#888' }}>DEF <span className="font-bold" style={{ color: '#60a5fa' }}>{hud.def}</span></div>
+                  <div style={{ color: '#888' }}>SPD <span className="font-bold" style={{ color: '#4ade80' }}>{hud.spd}</span></div>
                 </div>
               </div>
             </div>
