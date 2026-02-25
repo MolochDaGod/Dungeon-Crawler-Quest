@@ -101,6 +101,17 @@ export interface MobaHero extends GameEntity {
   lastDamagedBy: number[];
   activeEffects: any[];
   ccImmunityTimers: Map<string, number>;
+  dodgeCooldown: number;
+  dodgeTimer: number;
+  dodgeDir: number;
+  dashAttackCooldown: number;
+  dashAttackTimer: number;
+  comboCount: number;
+  comboTimer: number;
+  blockActive: boolean;
+  blockTimer: number;
+  blockCooldown: number;
+  iFrames: number;
 }
 
 export interface MobaMinion extends GameEntity {
@@ -156,7 +167,7 @@ export interface Particle {
   maxLife: number;
   color: string;
   size: number;
-  type: 'hit' | 'death' | 'levelup' | 'gold' | 'heal' | 'ability' | 'tower';
+  type: 'hit' | 'death' | 'levelup' | 'gold' | 'heal' | 'ability' | 'tower' | 'dodge' | 'block' | 'combo' | 'slash' | 'spark';
 }
 
 export interface FloatingText {
@@ -202,6 +213,20 @@ export interface MobaState {
   hoveredEntityId: number | null;
   aKeyHeld: boolean;
   _ambientTimer: number;
+  spellEffects: SpellEffect[];
+  screenShake: number;
+}
+
+export interface SpellEffect {
+  x: number;
+  y: number;
+  type: 'slash_arc' | 'impact_ring' | 'dash_trail' | 'shield_flash' | 'combo_burst' | 'ground_slam';
+  life: number;
+  maxLife: number;
+  radius: number;
+  color: string;
+  angle: number;
+  data?: any;
 }
 
 export interface HudState {
@@ -237,6 +262,12 @@ export interface HudState {
   dead: boolean;
   respawnTimer: number;
   activeEffects: StatusEffectDisplay[];
+  dodgeCooldown: number;
+  dashAttackCooldown: number;
+  comboCount: number;
+  comboTimer: number;
+  blockActive: boolean;
+  blockCooldown: number;
 }
 
 export const HEROES: HeroData[] = [
