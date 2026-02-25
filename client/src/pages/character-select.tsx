@@ -177,9 +177,9 @@ export default function CharacterSelect() {
                 <p className="text-sm text-gray-500 italic mb-3">{selectedHero.title}</p>
 
                 <div className="flex gap-2 mb-4">
-                  <span className="text-xs px-2 py-1 rounded" style={{ color: RACE_COLORS[selectedHero.race], borderColor: RACE_COLORS[selectedHero.race], border: '1px solid' }}>{selectedHero.race}</span>
-                  <span className="text-xs px-2 py-1 rounded" style={{ color: CLASS_COLORS[selectedHero.heroClass], borderColor: CLASS_COLORS[selectedHero.heroClass], border: '1px solid' }}>{selectedHero.heroClass}</span>
-                  <span className="text-xs px-2 py-1 rounded" style={{ color: RARITY_COLORS[selectedHero.rarity], borderColor: RARITY_COLORS[selectedHero.rarity], border: '1px solid' }}>{selectedHero.rarity}</span>
+                  <span className="text-xs px-2 py-1 rounded" style={{ color: RACE_COLORS[selectedHero.race], borderWidth: '1px', borderStyle: 'solid', borderColor: RACE_COLORS[selectedHero.race] }}>{selectedHero.race}</span>
+                  <span className="text-xs px-2 py-1 rounded" style={{ color: CLASS_COLORS[selectedHero.heroClass], borderWidth: '1px', borderStyle: 'solid', borderColor: CLASS_COLORS[selectedHero.heroClass] }}>{selectedHero.heroClass}</span>
+                  <span className="text-xs px-2 py-1 rounded" style={{ color: RARITY_COLORS[selectedHero.rarity], borderWidth: '1px', borderStyle: 'solid', borderColor: RARITY_COLORS[selectedHero.rarity] }}>{selectedHero.rarity}</span>
                 </div>
 
                 <div className="space-y-2 mb-4">

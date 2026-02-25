@@ -187,7 +187,8 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     decorations: generateDecorations(),
     cursorMode: 'default',
     hoveredEntityId: null,
-    aKeyHeld: false
+    aKeyHeld: false,
+    _ambientTimer: 0
   };
 
   const team0Heroes = [playerHeroId];
@@ -313,6 +314,33 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   if (state.gameTime >= state.nextMinionWave) {
     spawnMinionWave(state);
     state.nextMinionWave += 30;
+  }
+
+  for (const hero of state.heroes) {
+    if (!hero.dead) {
+      hero.gold += dt * 2;
+      hero.xp += dt * 1;
+      checkLevelUp(state, hero);
+    }
+  }
+
+  state._ambientTimer += dt;
+  if (state._ambientTimer > 0.5) {
+    state._ambientTimer = 0;
+    const p = state.heroes[state.playerHeroIndex];
+    if (p && !p.dead) {
+      for (let i = 0; i < 2; i++) {
+        state.particles.push({
+          x: p.x + (Math.random() - 0.5) * 300,
+          y: p.y + (Math.random() - 0.5) * 300,
+          vx: (Math.random() - 0.5) * 10,
+          vy: -Math.random() * 15 - 5,
+          life: 2.0, maxLife: 2.0,
+          color: Math.random() > 0.5 ? '#4ade80' : '#fbbf24',
+          size: 2, type: 'heal'
+        });
+      }
+    }
   }
 
   const player = state.heroes[state.playerHeroIndex];
@@ -459,7 +487,8 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
   }
 
   hero.animTimer += dt;
-  hero.mp = Math.min(hero.maxMp, hero.mp + dt * 2);
+  if (hero.attackAnimPhase > 0) hero.attackAnimPhase -= dt;
+  hero.mp = Math.min(hero.maxMp, hero.mp + dt * (2 + hero.level * 0.5));
 
   const effectResult = updateStatusEffects(hero as any as CombatEntity, dt);
   if (effectResult.damage > 0) {
@@ -510,15 +539,17 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
       if (d <= hero.rng + 30) {
         if (hero.autoAttackTimer <= 0) {
           performAutoAttack(state, hero, target);
-          hero.autoAttackTimer = 1.0;
+          hero.autoAttackTimer = Math.max(0.3, 1.2 - hero.spd * 0.008);
           hero.animState = 'attack';
+          hero.attackAnimPhase = 0.3;
           hero.facing = angleTo(hero, target);
         }
         hero.vx = 0;
         hero.vy = 0;
       } else {
         const angle = angleTo(hero, target);
-        const speed = hero.spd * 1.8;
+        const spdMult = getSpeedMultiplier(hero as any as CombatEntity);
+        const speed = hero.spd * 1.8 * spdMult;
         hero.vx = Math.cos(angle) * speed;
         hero.vy = Math.sin(angle) * speed;
         hero.facing = angle;
@@ -946,9 +977,12 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
       break;
     }
     case 'heal': {
+      const healAmt = 80 + hero.def * 3;
+      hero.hp = Math.min(hero.maxHp, hero.hp + healAmt);
       hero.shieldHp = 100 + hero.def * 2;
+      addFloatingText(state, hero.x, hero.y - 35, `+${healAmt}`, '#22c55e', 16);
       for (const eff of statusEffects) applyStatusEffect(hero as any as CombatEntity, eff);
-      spawnAbilityParticles(state, hero.x, hero.y, '#22c55e', 10);
+      spawnAbilityParticles(state, hero.x, hero.y, '#22c55e', 15);
       break;
     }
     case 'dash': {
@@ -994,6 +1028,17 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
   }
 
   target.hp -= dmg;
+
+  if ('heroDataId' in attacker && attacker.buffTimer > 0) {
+    const heroData = HEROES[(attacker as MobaHero).heroDataId];
+    if (heroData && heroData.heroClass === 'Worg') {
+      const lifestealAmt = Math.floor(dmg * 0.15);
+      (attacker as MobaHero).hp = Math.min((attacker as MobaHero).maxHp, (attacker as MobaHero).hp + lifestealAmt);
+      if (lifestealAmt > 0) {
+        addFloatingText(state, attacker.x, attacker.y - 15, `+${lifestealAmt}`, '#22c55e', 10);
+      }
+    }
+  }
 
   if ('lastDamagedBy' in target) {
     if (!target.lastDamagedBy.includes(attacker.id)) {
@@ -1153,7 +1198,7 @@ function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
   if (enemy && dist(minion, enemy) < minion.rng + 20) {
     if (minion.autoAttackTimer <= 0) {
       performAutoAttack(state, minion as any, enemy);
-      minion.autoAttackTimer = 1.2;
+      minion.autoAttackTimer = Math.max(0.5, 1.4 - minion.spd * 0.005);
       minion.facing = angleTo(minion, enemy);
     }
     return;
@@ -1207,6 +1252,16 @@ function updateTower(state: MobaState, tower: MobaTower, dt: number) {
       for (const h of state.heroes) {
         if (h.team === tower.team || h.dead) continue;
         const d = dist(tower, h);
+        if (d > tower.rng) continue;
+        let priority = false;
+        for (const ally of state.heroes) {
+          if (ally.team !== tower.team || ally.dead) continue;
+          if (dist(tower, ally) < tower.rng && ally.lastDamagedBy.includes(h.id)) {
+            priority = true;
+            break;
+          }
+        }
+        if (priority) { closest = h; break; }
         if (d < closestDist) { closestDist = d; closest = h; }
       }
     }
@@ -1348,6 +1403,15 @@ export function handleAttackMoveClick(state: MobaState, worldX: number, worldY: 
     player.isAttackMoving = true;
     player.targetId = null;
     player.moveTarget = null;
+    for (let i = 0; i < 5; i++) {
+      state.particles.push({
+        x: worldX, y: worldY,
+        vx: (Math.random() - 0.5) * 80,
+        vy: (Math.random() - 0.5) * 80 - 20,
+        life: 0.5, maxLife: 0.5,
+        color: '#f97316', size: 3, type: 'ability'
+      });
+    }
   }
   player.stopCommand = false;
 }
@@ -1382,6 +1446,15 @@ export function handleRightClick(state: MobaState, worldX: number, worldY: numbe
   } else {
     player.moveTarget = { x: worldX, y: worldY };
     player.targetId = null;
+    for (let i = 0; i < 5; i++) {
+      state.particles.push({
+        x: worldX, y: worldY,
+        vx: (Math.random() - 0.5) * 80,
+        vy: (Math.random() - 0.5) * 80 - 20,
+        life: 0.5, maxLife: 0.5,
+        color: '#22c55e', size: 3, type: 'ability'
+      });
+    }
   }
 }
 
@@ -1474,6 +1547,9 @@ export function getHudState(state: MobaState): HudState {
     atk: player?.atk ?? 0,
     def: player?.def ?? 0,
     spd: player?.spd ?? 0,
+    rng: player?.rng ?? 0,
+    dead: player?.dead ?? false,
+    respawnTimer: player?.respawnTimer ?? 0,
     activeEffects: (player?.activeEffects || []).map((e: any) => ({
       name: e.name || e.type,
       icon: e.icon || '',
@@ -1548,8 +1624,35 @@ export class MobaRenderer {
       if (!hero.dead) this.renderHero(ctx, hero, state);
     }
 
+    const player = state.heroes[state.playerHeroIndex];
+    if (player && !player.dead && state.selectedAbility >= 0) {
+      const heroData = HEROES[player.heroDataId];
+      const abilities = heroData ? CLASS_ABILITIES[heroData.heroClass] : null;
+      const ab = abilities ? abilities[state.selectedAbility] : null;
+      const range = ab ? ab.range || 300 : 300;
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.25 + Math.sin(Date.now() * 0.004) * 0.1;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, range, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(168,85,247,0.04)';
+      ctx.fill();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
+    if (player && !player.dead) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.rng + 30, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     for (const proj of state.projectiles) {
-      this.renderProjectile(ctx, proj);
+      this.renderProjectile(ctx, proj, state);
     }
 
     for (const p of state.particles) {
@@ -1750,6 +1853,11 @@ export class MobaRenderer {
     ctx.save();
     ctx.translate(tower.x, tower.y);
 
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(0, 20, 18, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     this.voxel.drawTowerVoxel(ctx, 0, 0, color, tower.tierIndex || 1);
 
     const pulse = Math.sin(Date.now() * 0.005) * 3;
@@ -1786,6 +1894,11 @@ export class MobaRenderer {
     ctx.save();
     ctx.translate(minion.x, minion.y);
 
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(0, 10, 8, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     const size = minion.minionType === 'siege' ? 10 : 7;
     this.voxel.drawMinionVoxel(ctx, 0, 0, color, size, minion.facing, minion.animTimer, minion.minionType);
 
@@ -1804,6 +1917,11 @@ export class MobaRenderer {
 
     ctx.save();
     ctx.translate(hero.x, hero.y);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(0, 18, 14, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
 
     if (isPlayer) {
       ctx.strokeStyle = '#ffd700';
@@ -1879,33 +1997,76 @@ export class MobaRenderer {
       }
     }
 
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 9px sans-serif';
+    const displayName = heroData.name.split(' ').pop() || heroData.name;
+    ctx.font = 'bold 8px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`Lv${hero.level}`, 0, -32);
+    const nameWidth = ctx.measureText(displayName).width;
+    const pillW = Math.max(nameWidth + 10, 30);
 
-    if (!isPlayer) {
-      ctx.font = '8px sans-serif';
-      ctx.fillStyle = RARITY_COLORS[heroData.rarity] || '#fff';
-      ctx.fillText(heroData.name.split(' ').pop() || '', 0, -40);
+    ctx.fillStyle = isPlayer ? 'rgba(50,40,10,0.85)' : 'rgba(0,0,0,0.65)';
+    const pillY = -42;
+    ctx.beginPath();
+    const r = 4;
+    ctx.moveTo(-pillW / 2 + r, pillY - 7);
+    ctx.arcTo(pillW / 2, pillY - 7, pillW / 2, pillY + 5, r);
+    ctx.arcTo(pillW / 2, pillY + 5, -pillW / 2, pillY + 5, r);
+    ctx.arcTo(-pillW / 2, pillY + 5, -pillW / 2, pillY - 7, r);
+    ctx.arcTo(-pillW / 2, pillY - 7, pillW / 2, pillY - 7, r);
+    ctx.fill();
+
+    if (isPlayer) {
+      ctx.strokeStyle = '#c5a059';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(-pillW / 2 + r, pillY - 7);
+      ctx.arcTo(pillW / 2, pillY - 7, pillW / 2, pillY + 5, r);
+      ctx.arcTo(pillW / 2, pillY + 5, -pillW / 2, pillY + 5, r);
+      ctx.arcTo(-pillW / 2, pillY + 5, -pillW / 2, pillY - 7, r);
+      ctx.arcTo(-pillW / 2, pillY - 7, pillW / 2, pillY - 7, r);
+      ctx.stroke();
     }
+
+    ctx.fillStyle = isPlayer ? '#ffd700' : (RARITY_COLORS[heroData.rarity] || '#ccc');
+    ctx.fillText(displayName, 0, pillY + 1);
+
+    ctx.font = 'bold 7px sans-serif';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText(`Lv${hero.level}`, 0, -32);
 
     ctx.restore();
   }
 
-  private renderProjectile(ctx: CanvasRenderingContext2D, proj: Projectile) {
+  private renderProjectile(ctx: CanvasRenderingContext2D, proj: Projectile, state: MobaState) {
+    const target = findEntityById(state, proj.targetId);
+    if (target) {
+      const angle = Math.atan2(target.y - proj.y, target.x - proj.x);
+      for (let i = 1; i <= 3; i++) {
+        ctx.fillStyle = proj.color;
+        ctx.globalAlpha = 0.3 - i * 0.08;
+        ctx.beginPath();
+        ctx.arc(
+          proj.x - Math.cos(angle) * i * 8,
+          proj.y - Math.sin(angle) * i * 8,
+          proj.size * (1 - i * 0.2),
+          0, Math.PI * 2
+        );
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
     ctx.fillStyle = proj.color;
     ctx.shadowColor = proj.color;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 10;
     ctx.beginPath();
     ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
 
     ctx.fillStyle = '#fff';
-    ctx.globalAlpha = 0.5;
+    ctx.globalAlpha = 0.6;
     ctx.beginPath();
-    ctx.arc(proj.x, proj.y, proj.size * 0.5, 0, Math.PI * 2);
+    ctx.arc(proj.x, proj.y, proj.size * 0.4, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -1921,20 +2082,30 @@ export class MobaRenderer {
   }
 
   private renderFloatingText(ctx: CanvasRenderingContext2D, ft: FloatingText) {
-    ctx.fillStyle = ft.color;
     ctx.globalAlpha = Math.min(1, ft.life * 2);
     ctx.font = `bold ${ft.size}px sans-serif`;
     ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(ft.text, ft.x, ft.y);
+    ctx.fillStyle = ft.color;
     ctx.fillText(ft.text, ft.x, ft.y);
     ctx.globalAlpha = 1;
   }
 
   private renderHealthBar(ctx: CanvasRenderingContext2D, x: number, y: number, halfWidth: number, hp: number, maxHp: number, color: string) {
     const pct = Math.max(0, hp / maxHp);
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(x - halfWidth, y, halfWidth * 2, 4);
-    ctx.fillStyle = pct > 0.5 ? color : pct > 0.25 ? '#f59e0b' : '#ef4444';
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(x - halfWidth - 1, y - 1, halfWidth * 2 + 2, 6);
+    const barColor = pct > 0.5 ? color : pct > 0.25 ? '#f59e0b' : '#ef4444';
+    ctx.fillStyle = barColor;
     ctx.fillRect(x - halfWidth, y, halfWidth * 2 * pct, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(x - halfWidth, y, halfWidth * 2 * pct, 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(x - halfWidth - 1, y - 1, halfWidth * 2 + 2, 6);
   }
 
   private renderMinimap(ctx: CanvasRenderingContext2D, state: MobaState, W: number, H: number) {
