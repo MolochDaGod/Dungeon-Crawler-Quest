@@ -2,7 +2,7 @@ import {
   HeroData, HEROES, CLASS_ABILITIES, Vec2, AbilityDef,
   heroStatsAtLevel, calcDamage, RACE_COLORS, CLASS_COLORS, ItemDef, ITEMS
 } from './types';
-import { VoxelRenderer } from './voxel';
+import { VoxelRenderer, DungeonTileVoxelType } from './voxel';
 import {
   StatusEffect, StatusEffectType, createStatusEffect, applyStatusEffect,
   updateStatusEffects, isStunned, isRooted, isSilenced, getSpeedMultiplier,
@@ -910,35 +910,35 @@ export class DungeonRenderer {
         if (!tile.revealed) continue;
 
         const x = tx * TILE_SIZE, y = ty * TILE_SIZE;
+        let voxType: DungeonTileVoxelType = 'floor';
 
-        if (tile.type === 'wall') {
-          ctx.fillStyle = '#1a1a2e';
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-          ctx.strokeStyle = '#2a2a4e';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
-        } else if (tile.type === 'floor') {
-          ctx.fillStyle = (tx + ty) % 2 === 0 ? '#2a2a1e' : '#252518';
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-          if (tile.decoration > 0) {
-            ctx.fillStyle = 'rgba(100,100,80,0.15)';
+        if (tile.type === 'wall') voxType = 'wall';
+        else if (tile.type === 'trap') voxType = 'trap';
+        else if (tile.type === 'stairs') voxType = 'stairs';
+        else if (tile.type === 'door') voxType = 'door';
+        else if (tile.type === 'chest') voxType = 'chest';
+        else voxType = 'floor';
+
+        this.voxel.drawDungeonTile(ctx, x, y, TILE_SIZE, voxType, tx, ty);
+
+        if (tile.type === 'floor' && tile.decoration > 0) {
+          const seed = (tx * 17 + ty * 31) % 100;
+          if (seed > 80) {
+            ctx.fillStyle = 'rgba(80,80,60,0.12)';
+            const cx = x + TILE_SIZE * 0.3 + (seed % 5) * 2;
+            const cy = y + TILE_SIZE * 0.3 + (seed % 7) * 2;
             ctx.beginPath();
-            ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 3, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 2, 0, Math.PI * 2);
             ctx.fill();
           }
-        } else if (tile.type === 'trap') {
-          ctx.fillStyle = '#2a1a1a';
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-          ctx.strokeStyle = '#f59e0b33';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x + 5, y + 5, TILE_SIZE - 10, TILE_SIZE - 10);
-        } else if (tile.type === 'stairs') {
-          ctx.fillStyle = '#1a2a1a';
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-          ctx.fillStyle = '#ffd700';
-          ctx.font = 'bold 16px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('▼', x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 5);
+          if (seed > 90) {
+            ctx.strokeStyle = 'rgba(60,60,40,0.1)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(x + 5, y + TILE_SIZE - 3);
+            ctx.lineTo(x + TILE_SIZE - 5, y + TILE_SIZE - 3);
+            ctx.stroke();
+          }
         }
       }
     }

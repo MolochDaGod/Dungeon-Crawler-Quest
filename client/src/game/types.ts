@@ -192,6 +192,9 @@ export interface MobaState {
   showShop: boolean;
   showScoreboard: boolean;
   killFeed: { text: string; color: string; time: number }[];
+  terrainMap: number[][];
+  decorations: { x: number; y: number; type: 'tree' | 'rock'; seed: number }[];
+  cursorMode: 'default' | 'attack' | 'ability' | 'move';
 }
 
 export interface HudState {

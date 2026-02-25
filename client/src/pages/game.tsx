@@ -108,12 +108,24 @@ export default function GamePage() {
       const sy = e.clientY - rect.top;
       const worldX = (sx - canvas.width / 2) / state.camera.zoom + state.camera.x;
       const worldY = (sy - canvas.height / 2) / state.camera.zoom + state.camera.y;
+      state.cursorMode = 'move';
       handleRightClick(state, worldX, worldY);
+      setTimeout(() => { if (state.cursorMode === 'move') state.cursorMode = 'default'; }, 300);
     };
 
     const onMouseDown = (e: MouseEvent) => {
       if (e.button === 0) {
-        handlePlayerAttack(state);
+        if (keysRef.current.has('a')) {
+          state.cursorMode = 'attack';
+          handlePlayerAttack(state);
+        } else if (state.selectedAbility >= 0) {
+          const abIdx = state.selectedAbility;
+          state.selectedAbility = -1;
+          state.cursorMode = 'default';
+          handlePlayerAbility(state, abIdx);
+        } else {
+          handlePlayerAttack(state);
+        }
       }
       if (e.button === 1) {
         e.preventDefault();
@@ -141,6 +153,14 @@ export default function GamePage() {
         const dy = (e.clientY - panRef.current.startY) / state.camera.zoom;
         state.camera.x = panRef.current.camStartX - dx;
         state.camera.y = panRef.current.camStartY - dy;
+      }
+
+      if (keysRef.current.has('a')) {
+        state.cursorMode = 'attack';
+      } else if (state.selectedAbility >= 0) {
+        state.cursorMode = 'ability';
+      } else {
+        state.cursorMode = 'default';
       }
     };
 
@@ -180,7 +200,7 @@ export default function GamePage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="game-page">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" data-testid="canvas-game" />
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'none' }} data-testid="canvas-game" />
 
       {hud && (
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 9999, fontFamily: "'Oxanium', sans-serif" }}>
