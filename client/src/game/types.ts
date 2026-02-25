@@ -28,6 +28,8 @@ export interface AbilityDef {
   type: 'damage' | 'buff' | 'debuff' | 'heal' | 'aoe' | 'dash' | 'summon';
   castType: 'targeted' | 'skillshot' | 'ground_aoe' | 'self_cast' | 'cone' | 'line';
   description: string;
+  maxCharges?: number;
+  chargeRechargeTime?: number;
 }
 
 export interface ItemDef {
@@ -114,6 +116,8 @@ export interface MobaHero extends GameEntity {
   blockCooldown: number;
   iFrames: number;
   assignedLane: number;
+  abilityCharges: number[];
+  abilityChargeTimers: number[];
 }
 
 export interface MobaMinion extends GameEntity {
@@ -177,6 +181,27 @@ export interface JungleCamp {
   respawnDelay: number;
   campType: 'small' | 'medium' | 'buff';
   allDead: boolean;
+}
+
+export interface SpellProjectile {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  speed: number;
+  damage: number;
+  radius: number;
+  team: number;
+  sourceId: number;
+  color: string;
+  trailColor: string;
+  piercing: boolean;
+  hitIds: number[];
+  life: number;
+  maxLife: number;
+  spellName: string;
+  aoeRadius: number;
 }
 
 export interface Projectile {
@@ -250,13 +275,14 @@ export interface MobaState {
   aKeyHeld: boolean;
   _ambientTimer: number;
   spellEffects: SpellEffect[];
+  spellProjectiles: SpellProjectile[];
   screenShake: number;
 }
 
 export interface SpellEffect {
   x: number;
   y: number;
-  type: 'slash_arc' | 'impact_ring' | 'dash_trail' | 'shield_flash' | 'combo_burst' | 'ground_slam';
+  type: 'slash_arc' | 'impact_ring' | 'dash_trail' | 'shield_flash' | 'combo_burst' | 'ground_slam' | 'fire_ring' | 'frost_ring' | 'meteor_shadow' | 'meteor_impact' | 'arrow_rain' | 'whirlwind_slash' | 'ground_scorch' | 'ground_frost';
   life: number;
   maxLife: number;
   radius: number;
@@ -304,6 +330,8 @@ export interface HudState {
   comboTimer: number;
   blockActive: boolean;
   blockCooldown: number;
+  abilityCharges: number[];
+  abilityMaxCharges: number[];
 }
 
 export const HEROES: HeroData[] = [
@@ -370,13 +398,13 @@ export const CLASS_ABILITIES: Record<string, AbilityDef[]> = {
     { name: "Primal Fury", key: "R", cooldown: 55, manaCost: 70, damage: 0, range: 0, radius: 0, duration: 12, type: 'buff', castType: 'self_cast', description: "Enter frenzy, +40% ATK SPD and lifesteal for 12s" }
   ],
   Mage: [
-    { name: "Fireball", key: "Q", cooldown: 4, manaCost: 25, damage: 55, range: 400, radius: 60, duration: 0, type: 'damage', castType: 'skillshot', description: "Hurl a fireball dealing AoE damage" },
+    { name: "Fireball", key: "Q", cooldown: 4, manaCost: 25, damage: 55, range: 400, radius: 60, duration: 0, type: 'damage', castType: 'skillshot', description: "Hurl a fireball dealing AoE damage", maxCharges: 2, chargeRechargeTime: 4 },
     { name: "Frost Nova", key: "W", cooldown: 12, manaCost: 35, damage: 30, range: 0, radius: 180, duration: 2, type: 'aoe', castType: 'self_cast', description: "Freeze nearby enemies, dealing damage and slowing" },
     { name: "Arcane Barrier", key: "E", cooldown: 18, manaCost: 40, damage: 0, range: 0, radius: 0, duration: 4, type: 'heal', castType: 'self_cast', description: "Create a magic shield absorbing 100 damage" },
     { name: "Meteor", key: "R", cooldown: 50, manaCost: 90, damage: 120, range: 500, radius: 150, duration: 0, type: 'aoe', castType: 'ground_aoe', description: "Call down a meteor dealing massive AoE damage" }
   ],
   Ranger: [
-    { name: "Power Shot", key: "Q", cooldown: 5, manaCost: 20, damage: 45, range: 500, radius: 0, duration: 0, type: 'damage', castType: 'line', description: "Fire a piercing shot dealing high damage" },
+    { name: "Power Shot", key: "Q", cooldown: 5, manaCost: 20, damage: 45, range: 500, radius: 0, duration: 0, type: 'damage', castType: 'line', description: "Fire a piercing shot dealing high damage", maxCharges: 3, chargeRechargeTime: 5 },
     { name: "Trap", key: "W", cooldown: 14, manaCost: 25, damage: 20, range: 300, radius: 50, duration: 2, type: 'debuff', castType: 'ground_aoe', description: "Place a trap that roots for 2s" },
     { name: "Shadow Step", key: "E", cooldown: 10, manaCost: 30, damage: 0, range: 250, radius: 0, duration: 0, type: 'dash', castType: 'ground_aoe', description: "Teleport to location, becoming invisible for 1s" },
     { name: "Storm of Arrows", key: "R", cooldown: 55, manaCost: 80, damage: 80, range: 400, radius: 200, duration: 3, type: 'aoe', castType: 'ground_aoe', description: "Rain arrows over an area for 3s" }
@@ -395,7 +423,8 @@ export const ITEMS: ItemDef[] = [
   { id: 8, name: "Shadow Cloak", cost: 750, hp: 0, atk: 10, def: 0, spd: 18, mp: 0, description: "+10 ATK +18 SPD", tier: 2 },
   { id: 9, name: "Divine Armor", cost: 1500, hp: 200, atk: 0, def: 30, spd: 0, mp: 0, description: "+30 DEF +200 HP", tier: 3 },
   { id: 10, name: "Doom Blade", cost: 1600, hp: 0, atk: 40, def: 0, spd: 5, mp: 0, description: "+40 ATK +5 SPD", tier: 3 },
-  { id: 11, name: "Staff of Ages", cost: 1400, hp: 50, atk: 30, def: 0, spd: 0, mp: 80, description: "+30 ATK +80 MP +50 HP", tier: 3 }
+  { id: 11, name: "Staff of Ages", cost: 1400, hp: 50, atk: 30, def: 0, spd: 0, mp: 80, description: "+30 ATK +80 MP +50 HP", tier: 3 },
+  { id: 12, name: "Divine Rapier", cost: 2200, hp: 0, atk: 60, def: 0, spd: 8, mp: 0, description: "+60 ATK +8 SPD. Dropped on death!", tier: 3 }
 ];
 
 export const MAP_SIZE = 4000;

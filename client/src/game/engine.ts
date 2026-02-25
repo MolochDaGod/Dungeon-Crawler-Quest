@@ -3,6 +3,7 @@ import {
   Projectile, Particle, FloatingText, HudState, Camera,
   HeroData, HEROES, ITEMS, CLASS_ABILITIES, LANE_WAYPOINTS,
   MAP_SIZE, TEAM_COLORS, TEAM_NAMES, Vec2, SpellEffect,
+  SpellProjectile,
   xpForLevel, heroStatsAtLevel, calcDamage,
   RACE_COLORS, CLASS_COLORS, RARITY_COLORS,
   JungleCamp, JungleMob
@@ -192,6 +193,7 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     aKeyHeld: false,
     _ambientTimer: 0,
     spellEffects: [],
+    spellProjectiles: [],
     screenShake: 0
   };
 
@@ -271,8 +273,16 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     comboCount: 0, comboTimer: 0,
     blockActive: false, blockTimer: 0, blockCooldown: 0,
     iFrames: 0,
-    assignedLane: 1
+    assignedLane: 1,
+    abilityCharges: initAbilityCharges(hd.heroClass),
+    abilityChargeTimers: [0, 0, 0, 0]
   };
+}
+
+function initAbilityCharges(heroClass: string): number[] {
+  const abilities = CLASS_ABILITIES[heroClass];
+  if (!abilities) return [0, 0, 0, 0];
+  return abilities.map(ab => ab.maxCharges || 0);
 }
 
 function createTower(state: MobaState, x: number, y: number, team: number, lane: number, tier: number): MobaTower {
@@ -615,6 +625,7 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
 
   updateJungleCamps(state, dt);
   updateProjectiles(state, dt);
+  updateSpellProjectiles(state, dt);
   updateParticles(state, dt);
   updateFloatingTexts(state, dt);
   updateSpellEffects(state, dt);
@@ -661,6 +672,26 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
   if (hero.dashAttackCooldown > 0) hero.dashAttackCooldown -= dt;
   if (hero.blockCooldown > 0) hero.blockCooldown -= dt;
   if (hero.iFrames > 0) hero.iFrames -= dt;
+
+  const heroData = HEROES[hero.heroDataId];
+  if (heroData) {
+    const abilities = CLASS_ABILITIES[heroData.heroClass];
+    if (abilities) {
+      for (let i = 0; i < abilities.length; i++) {
+        const ab = abilities[i];
+        if (ab.maxCharges && ab.maxCharges > 0) {
+          if (hero.abilityCharges[i] < ab.maxCharges) {
+            hero.abilityChargeTimers[i] += dt;
+            const rechargeTime = ab.chargeRechargeTime || ab.cooldown;
+            if (hero.abilityChargeTimers[i] >= rechargeTime) {
+              hero.abilityCharges[i]++;
+              hero.abilityChargeTimers[i] = 0;
+            }
+          }
+        }
+      }
+    }
+  }
   if (hero.comboTimer > 0) {
     hero.comboTimer -= dt;
     if (hero.comboTimer <= 0) hero.comboCount = 0;
@@ -1237,16 +1268,105 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   if (!abilities || !abilities[abilityIndex]) return;
 
   const ab = abilities[abilityIndex];
-  if (hero.abilityCooldowns[abilityIndex] > 0 || hero.mp < ab.manaCost) return;
+
+  if (ab.maxCharges && ab.maxCharges > 0) {
+    if (hero.abilityCharges[abilityIndex] <= 0 || hero.mp < ab.manaCost) return;
+    hero.abilityCharges[abilityIndex]--;
+    if (hero.abilityChargeTimers[abilityIndex] <= 0) {
+      hero.abilityChargeTimers[abilityIndex] = 0;
+    }
+  } else {
+    if (hero.abilityCooldowns[abilityIndex] > 0 || hero.mp < ab.manaCost) return;
+    hero.abilityCooldowns[abilityIndex] = ab.cooldown;
+  }
 
   hero.mp -= ab.manaCost;
-  hero.abilityCooldowns[abilityIndex] = ab.cooldown;
   hero.animState = 'ability';
   hero.animTimer = 0;
 
   const abilityColor = CLASS_COLORS[heroData.heroClass] || '#ffffff';
-
   const statusEffects = getAbilityStatusEffects(ab.name, hero.id, hero.atk);
+  const mouseTarget = state.mouseWorld;
+
+  if (ab.name === 'Fireball') {
+    const angle = target ? angleTo(hero, target) : angleTo(hero, mouseTarget);
+    spawnSpellProjectile(state, hero, angle, ab, '#ff6600', '#ff3300');
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Power Shot') {
+    const angle = target ? angleTo(hero, target) : angleTo(hero, mouseTarget);
+    spawnSpellProjectile(state, hero, angle, ab, '#22c55e', '#15803d', true);
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Meteor') {
+    const cx = target ? target.x : mouseTarget.x;
+    const cy = target ? target.y : mouseTarget.y;
+    state.spellEffects.push({
+      x: cx, y: cy, type: 'meteor_shadow',
+      life: 1.0, maxLife: 1.0, radius: ab.radius, color: '#ff4400', angle: 0,
+      data: { damage: ab.damage + hero.atk * 0.6, team: hero.team, sourceId: hero.id }
+    });
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Frost Nova') {
+    const entities = getAllEnemies(state, hero.team);
+    for (const e of entities) {
+      if (dist(hero, e) < ab.radius) {
+        const dmg = ab.damage + hero.atk * 0.6;
+        dealDamage(state, hero, e, dmg);
+        if (e.activeEffects) {
+          for (const eff of statusEffects) applyStatusEffect(e as any as CombatEntity, { ...eff });
+        }
+      }
+    }
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'frost_ring',
+      life: 0.6, maxLife: 0.6, radius: ab.radius, color: '#67e8f9', angle: 0
+    });
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'ground_frost',
+      life: 2.0, maxLife: 2.0, radius: ab.radius, color: '#22d3ee', angle: 0
+    });
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Whirlwind') {
+    const entities = getAllEnemies(state, hero.team);
+    for (const e of entities) {
+      if (dist(hero, e) < ab.radius) {
+        const dmg = ab.damage + hero.atk * 0.6;
+        dealDamage(state, hero, e, dmg);
+      }
+    }
+    for (let i = 0; i < 4; i++) {
+      state.spellEffects.push({
+        x: hero.x, y: hero.y, type: 'whirlwind_slash',
+        life: 0.4, maxLife: 0.4, radius: ab.radius,
+        color: '#ef4444', angle: (i / 4) * Math.PI * 2
+      });
+    }
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Storm of Arrows') {
+    const cx = target ? target.x : mouseTarget.x;
+    const cy = target ? target.y : mouseTarget.y;
+    state.spellEffects.push({
+      x: cx, y: cy, type: 'arrow_rain',
+      life: ab.duration, maxLife: ab.duration, radius: ab.radius, color: '#22c55e', angle: 0,
+      data: { damage: (ab.damage + hero.atk * 0.6) / 6, team: hero.team, sourceId: hero.id, tickTimer: 0 }
+    });
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
 
   switch (ab.type) {
     case 'damage': {
@@ -1340,6 +1460,30 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   }
 
   addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+}
+
+function spawnSpellProjectile(state: MobaState, hero: MobaHero, angle: number, ab: any, color: string, trailColor: string, piercing: boolean = false) {
+  const speed = 600;
+  state.spellProjectiles.push({
+    id: state.nextEntityId++,
+    x: hero.x + Math.cos(angle) * 20,
+    y: hero.y + Math.sin(angle) * 20,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    speed,
+    damage: ab.damage + hero.atk * 0.8,
+    radius: 15,
+    team: hero.team,
+    sourceId: hero.id,
+    color,
+    trailColor,
+    piercing,
+    hitIds: [],
+    life: ab.range / speed + 0.1,
+    maxLife: ab.range / speed + 0.1,
+    spellName: ab.name,
+    aoeRadius: ab.radius || 0
+  });
 }
 
 function getAllEnemies(state: MobaState, team: number): any[] {
