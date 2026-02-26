@@ -11,7 +11,7 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
   - `client/src/game/engine.ts` - MOBA game loop, combat, AI opponents, 2D rendering, minimap
   - `client/src/game/three-renderer.ts` - Three.js 3D renderer with lighting, terrain, entity management, health bars, camera
   - `client/src/game/model-loader.ts` - GLTFLoader/FBXLoader with caching for 3D model assets
-  - `client/src/game/prefabs.ts` - TOWER_PREFABS, HERO_PREFABS, ENV_PREFABS, WEAPON_PREFABS mapping
+  - `client/src/game/prefabs.ts` - TOWER_PREFABS, HERO_PREFABS, CREATURE_PREFABS, MINION_PREFABS, ENV_PREFABS, WEAPON_PREFABS mapping
   - `client/src/game/dungeon.ts` - Dungeon crawler engine: procedural floor generation, enemy AI, boss fights, loot, traps
   - `client/src/game/combat.ts` - Status effects system: 19 effect types (Stun/Freeze/Root/Silence/Poison/Bleed/Burn/etc), DoT ticking, CC diminishing returns, crit/armor pen/lifesteal combat math
   - `client/src/game/keybindings.ts` - Rebindable keybinding framework with LMB/RMB/MMB support, localStorage persistence
