@@ -10,14 +10,7 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use('/assets', express.static(path.join(distPath, 'assets'), {
-    maxAge: '7d',
-    immutable: true,
-  }));
-
-  app.use(express.static(distPath, {
-    maxAge: '1h',
-  }));
+  app.use(express.static(distPath));
 
   app.use("/{*path}", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
