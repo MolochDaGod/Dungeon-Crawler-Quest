@@ -102,69 +102,77 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   if (animState === 'idle') return idle;
 
   if (animState === 'walk') {
-    const phase = Math.sin(t * 10);
-    const phase2 = Math.cos(t * 10);
-    const bounce = Math.abs(Math.sin(t * 20)) * 0.7;
-    const hipSway = Math.sin(t * 10) * 0.4;
+    const freq = 10;
+    const phase = Math.sin(t * freq);
+    const phase2 = Math.cos(t * freq);
+    const stride = 1.8;
+    const liftHeight = 0.6;
+    const bounce = Math.abs(Math.sin(t * freq * 2)) * 0.4;
+    const hipSway = Math.sin(t * freq) * 0.3;
     return {
-      leftLeg: { ox: Math.round(phase * 2.2), oy: 0, oz: Math.round(Math.max(0, -phase) * 1.0) },
-      rightLeg: { ox: Math.round(-phase * 2.2), oy: 0, oz: Math.round(Math.max(0, phase) * 1.0) },
-      leftArm: { ox: Math.round(-phase * 1.5), oy: 0, oz: Math.round(phase2 * 0.6) },
-      rightArm: { ox: Math.round(phase * 1.5), oy: 0, oz: Math.round(-phase2 * 0.6) },
+      leftLeg: { ox: Math.round(phase * stride), oy: 0, oz: Math.round(Math.max(0, -phase) * liftHeight) },
+      rightLeg: { ox: Math.round(-phase * stride), oy: 0, oz: Math.round(Math.max(0, phase) * liftHeight) },
+      leftArm: { ox: Math.round(-phase * 1.2), oy: 0, oz: Math.round(phase2 * 0.4) },
+      rightArm: { ox: Math.round(phase * 1.2), oy: 0, oz: Math.round(-phase2 * 0.4) },
       torso: { ox: 0, oy: Math.round(hipSway), oz: Math.round(bounce) },
-      head: { ox: 0, oy: Math.round(Math.sin(t * 5) * 0.3), oz: Math.round(bounce * 0.9) },
-      weapon: { ox: Math.round(phase * 0.7), oy: 0, oz: Math.round(bounce * 0.3) },
+      head: { ox: 0, oy: Math.round(Math.sin(t * freq * 0.5) * 0.2), oz: Math.round(bounce * 0.8) },
+      weapon: { ox: Math.round(phase * 0.5), oy: 0, oz: Math.round(bounce * 0.2) },
       weaponGlow: 0
     };
   }
 
   if (animState === 'attack') {
+    const atkProgress = Math.min(1, t / 0.65);
     if (heroClass === 'Warrior' || heroClass === 'Worg') {
-      const phase = t * 10;
-      const windUp = Math.max(0, Math.sin(phase));
-      const swing = Math.max(0, Math.sin(phase + 1.8));
-      const armExtend = Math.round(windUp > 0.5 ? -windUp * 3.0 : swing * 3.5);
-      const lunge = Math.round(swing * 2.0);
-      const bodyLean = Math.round(swing * 0.8);
+      const windUp = atkProgress < 0.4 ? atkProgress / 0.4 : 0;
+      const swing = atkProgress >= 0.4 && atkProgress < 0.7 ? (atkProgress - 0.4) / 0.3 : 0;
+      const followThru = atkProgress >= 0.7 ? (atkProgress - 0.7) / 0.3 : 0;
+      const armExtend = Math.round(windUp > 0 ? -windUp * 3.5 : swing * 4.0 - followThru * 1.0);
+      const lunge = Math.round(swing * 2.5);
+      const bodyLean = Math.round(swing * 1.0);
+      const plantFeet = Math.round(swing * 0.5);
       return {
-        leftLeg: { ox: Math.round(swing * 2.0), oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(-swing * 0.8), oy: 0, oz: 0 },
-        leftArm: { ox: armExtend, oy: Math.round(swing * -2.5), oz: Math.round(swing * 3.5) },
-        rightArm: { ox: Math.round(-windUp * 1.2), oy: Math.round(windUp * 0.6), oz: Math.round(windUp * 1.2) },
-        torso: { ox: lunge, oy: Math.round(swing * 0.4), oz: Math.round(-bodyLean * 0.3) },
-        head: { ox: Math.round(swing * 0.7), oy: 0, oz: Math.round(-bodyLean * 0.2) },
-        weapon: { ox: armExtend + Math.round(swing * 3.0), oy: Math.round(swing * -3.5), oz: Math.round(windUp * 5 - swing * 3.5) },
-        weaponGlow: swing > 0.2 ? 0.9 : windUp > 0.3 ? 0.4 : 0
+        leftLeg: { ox: Math.round(swing * 2.0 - followThru), oy: 0, oz: plantFeet },
+        rightLeg: { ox: Math.round(-swing * 1.0 + windUp * 0.5), oy: 0, oz: 0 },
+        leftArm: { ox: armExtend, oy: Math.round(swing * -2.5), oz: Math.round(swing * 4.0 - windUp * 2.0) },
+        rightArm: { ox: Math.round(-windUp * 1.5 + followThru * 0.5), oy: Math.round(windUp * 0.8), oz: Math.round(windUp * 1.5 + swing * 0.5) },
+        torso: { ox: lunge, oy: Math.round(swing * 0.5 - windUp * 0.3), oz: Math.round(-bodyLean * 0.3) },
+        head: { ox: Math.round(swing * 0.8 - windUp * 0.3), oy: 0, oz: Math.round(-bodyLean * 0.2) },
+        weapon: { ox: armExtend + Math.round(swing * 3.5), oy: Math.round(swing * -4.0 + windUp * 1.0), oz: Math.round(windUp * 5 - swing * 4.0 + followThru * 0.5) },
+        weaponGlow: swing > 0.2 ? 0.95 : windUp > 0.5 ? 0.4 : followThru > 0 ? 0.2 : 0
       };
     }
     if (heroClass === 'Ranger') {
-      const drawPhase = (Math.sin(t * 6) + 1) * 0.5;
-      const hold = Math.min(1, drawPhase * 1.5);
-      const release = Math.max(0, Math.sin(t * 6 + 2.5));
+      const draw = atkProgress < 0.5 ? atkProgress / 0.5 : 1;
+      const hold = atkProgress >= 0.4 && atkProgress < 0.6 ? 1 : 0;
+      const release = atkProgress >= 0.6 ? Math.min(1, (atkProgress - 0.6) / 0.2) : 0;
+      const recoil = atkProgress >= 0.8 ? (atkProgress - 0.8) / 0.2 : 0;
       return {
-        leftLeg: { ox: Math.round(-hold * 0.5), oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(hold * 0.8), oy: 0, oz: 0 },
-        leftArm: { ox: Math.round(hold * -3), oy: Math.round(-hold * 0.5), oz: Math.round(hold * 2) },
-        rightArm: { ox: Math.round(release * 3), oy: 0, oz: Math.round(hold * 1.5) },
-        torso: { ox: Math.round(-hold * 0.5), oy: Math.round(-hold * 0.3), oz: 0 },
-        head: { ox: Math.round(release * 0.8), oy: 0, oz: 0 },
-        weapon: { ox: Math.round(-hold * 2 + release * 2), oy: 0, oz: Math.round(hold * 3) },
-        weaponGlow: release > 0.4 ? 1.0 : hold > 0.7 ? 0.5 : 0
+        leftLeg: { ox: Math.round(-draw * 0.6), oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(draw * 0.8), oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(draw * -3 + release * 1), oy: Math.round(-draw * 0.5), oz: Math.round(draw * 2.5) },
+        rightArm: { ox: Math.round(release * 3.5 - recoil * 1.5), oy: 0, oz: Math.round(draw * 1.5 - release * 0.5) },
+        torso: { ox: Math.round(-draw * 0.5 + release * 0.3), oy: Math.round(-draw * 0.3), oz: 0 },
+        head: { ox: Math.round(release * 0.8 - recoil * 0.3), oy: 0, oz: 0 },
+        weapon: { ox: Math.round(-draw * 2 + release * 2.5), oy: 0, oz: Math.round(draw * 3 - release) },
+        weaponGlow: release > 0.3 ? 1.0 : draw > 0.7 ? 0.6 : 0
       };
     }
     if (heroClass === 'Mage') {
-      const raise = (Math.sin(t * 5) + 1) * 0.5;
-      const cast = Math.max(0, Math.sin(t * 5 + 2));
-      const glow = Math.max(raise, cast);
+      const raise = atkProgress < 0.45 ? atkProgress / 0.45 : 1;
+      const channel = atkProgress >= 0.3 && atkProgress < 0.6 ? Math.min(1, (atkProgress - 0.3) / 0.3) : 0;
+      const cast = atkProgress >= 0.55 ? Math.min(1, (atkProgress - 0.55) / 0.2) : 0;
+      const recover = atkProgress >= 0.8 ? (atkProgress - 0.8) / 0.2 : 0;
+      const glow = Math.max(channel * 0.7, cast);
       return {
-        leftLeg: { ox: Math.round(-cast * 0.5), oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(cast * 0.5), oy: 0, oz: 0 },
-        leftArm: { ox: Math.round(cast * 3), oy: Math.round(-raise), oz: Math.round(raise * 4) },
-        rightArm: { ox: Math.round(cast * 2), oy: Math.round(raise * 0.5), oz: Math.round(raise * 3) },
-        torso: { ox: 0, oy: 0, oz: Math.round(raise) },
-        head: { ox: 0, oy: 0, oz: Math.round(raise) },
-        weapon: { ox: Math.round(cast * 3), oy: Math.round(-cast), oz: Math.round(raise * 5) },
-        weaponGlow: glow > 0.2 ? glow : 0
+        leftLeg: { ox: Math.round(-cast * 0.6), oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(cast * 0.6 - recover * 0.3), oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(cast * 3.5 - recover), oy: Math.round(-raise * 1.2), oz: Math.round(raise * 4.5 - recover * 2) },
+        rightArm: { ox: Math.round(cast * 2.5 - recover * 0.5), oy: Math.round(raise * 0.6), oz: Math.round(raise * 3.5 - recover * 1.5) },
+        torso: { ox: 0, oy: 0, oz: Math.round(raise * 0.8 - recover * 0.5) },
+        head: { ox: 0, oy: 0, oz: Math.round(raise * 0.8 - recover * 0.5) },
+        weapon: { ox: Math.round(cast * 3.5 - recover), oy: Math.round(-cast * 1.2), oz: Math.round(raise * 5 + cast * 1 - recover * 3) },
+        weaponGlow: glow > 0.1 ? glow : 0
       };
     }
     return idle;
@@ -845,9 +853,11 @@ export class VoxelRenderer {
     buffTimer?: number,
     heroItems?: ({ id: number } | null)[]
   ) {
+    const groundY = y + 6;
+
     if (heroClass === 'Worg' && buffTimer && buffTimer > 0) {
       const bearModel = buildBearModel(animState, animTimer);
-      this.renderVoxelModel(ctx, x, y - 28, bearModel, this.cubeSize, facing);
+      this.renderVoxelModel(ctx, x, groundY - 28, bearModel, this.cubeSize, facing);
       return;
     }
 
@@ -857,12 +867,12 @@ export class VoxelRenderer {
       ctx.save();
       ctx.globalAlpha = trailAlpha;
       const trailModel = buildHeroModel(race, heroClass, animState, Math.max(0, animTimer - trailOffset), heroName, heroItems);
-      this.renderVoxelModel(ctx, x, y - 22, trailModel, this.cubeSize, facing);
+      this.renderVoxelModel(ctx, x, groundY - 12, trailModel, this.cubeSize, facing);
       ctx.restore();
     }
 
     const model = buildHeroModel(race, heroClass, animState, animTimer, heroName, heroItems);
-    this.renderVoxelModel(ctx, x, y - 22, model, this.cubeSize, facing);
+    this.renderVoxelModel(ctx, x, groundY - 12, model, this.cubeSize, facing);
   }
 
   drawHeroPortrait(

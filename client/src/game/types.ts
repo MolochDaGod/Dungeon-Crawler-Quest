@@ -118,6 +118,9 @@ export interface MobaHero extends GameEntity {
   assignedLane: number;
   abilityCharges: number[];
   abilityChargeTimers: number[];
+  attackWindup: number;
+  attackBackswing: number;
+  pendingAttackTarget: number | null;
 }
 
 export interface MobaMinion extends GameEntity {
@@ -134,6 +137,9 @@ export interface MobaMinion extends GameEntity {
   animTimer: number;
   goldValue: number;
   xpValue: number;
+  attackWindup: number;
+  attackBackswing: number;
+  pendingTarget: number | null;
 }
 
 export interface MobaTower extends GameEntity {
@@ -332,6 +338,8 @@ export interface HudState {
   blockCooldown: number;
   abilityCharges: number[];
   abilityMaxCharges: number[];
+  minimapEntities: { x: number; y: number; type: 'player' | 'ally_hero' | 'enemy_hero' | 'ally_tower' | 'enemy_tower' | 'ally_nexus' | 'enemy_nexus' | 'ally_minion' | 'enemy_minion' | 'jungle_small' | 'jungle_medium' | 'jungle_buff'; dead?: boolean }[];
+  cameraViewport: { x: number; y: number; w: number; h: number };
 }
 
 export const HEROES: HeroData[] = [

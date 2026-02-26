@@ -80,6 +80,14 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - Persists to localStorage
 - Settings page with visual rebinding UI (click to rebind, press new key/mouse, ESC cancel)
 
+### Attack System (Dota 2-paced)
+- Wind-up → Damage Point → Backswing flow for all units
+- Heroes: Melee wind-up 0.35s, Ranged wind-up 0.25s, Backswing 0.3s
+- Minions: Melee wind-up 0.3s, Ranged wind-up 0.2s, Backswing 0.25s
+- Units face target during wind-up phase, stop moving during attack animation
+- MobaHero/MobaMinion types include: attackWindup, attackBackswing, pendingAttackTarget/pendingTarget
+- Voxel attack animations: phased timing (wind-up → swing → follow-through) matching actual damage point
+
 ### AI System (engine.ts)
 - Threat evaluation: weighted by enemy proximity, attack power, tower range
 - Ally awareness: counts nearby allies to determine retreat thresholds
