@@ -156,8 +156,17 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - `nexus-crystal.png` - Glowing nexus crystal sprite
 - `scoreboard-bg.png` - Ornate scoreboard panel background
 
+### Spell System
+- Spell projectiles with trail particles, piercing (20% dmg reduction per pierce), AoE explosions
+- 14 SpellEffect visual types: slash_arc, impact_ring, dash_trail, shield_flash, combo_burst, ground_slam, fire_ring, frost_ring, meteor_shadow, meteor_impact, arrow_rain, whirlwind_slash, ground_scorch, ground_frost
+- Meteor: 1s shadow buildup → impact explosion with screen shake + scorch decal
+- Arrow Rain: tick damage every 0.5s with animated arrow impacts
+- Charges system: Mage Fireball (2 charges), Ranger Power Shot (3 charges) with recharge timers
+- Charge pips visible below ability buttons in HUD
+- Divine Rapier (item id=12): unique voxel rapier weapon model (silver blade, gold cross-guard, brown handle, ruby pommel gem)
+
 ## Performance & Best Practices
-- **Server**: compression middleware, security headers (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy), 10MB body limit
+- **Server**: Express with minimal middleware
 - **Static assets**: 7-day cache with immutable for /assets, 1-hour cache for other static files
 - **Entity lookup**: O(1) Map-based entity index (`buildEntityIndex`) rebuilt per frame, replaces O(n) linear scans in `findEntityById`
 - **Model loading**: GLB/FBX cache with deduplication via `loadingPromises` Map to prevent redundant network requests
