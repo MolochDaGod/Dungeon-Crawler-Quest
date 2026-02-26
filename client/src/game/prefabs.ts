@@ -45,7 +45,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
   },
   human_worg: {
-    modelPath: '/assets/models/characters/Animated_Human.glb',
+    modelPath: '/assets/models/characters/berserker.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
@@ -57,7 +57,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
   },
   human_ranger: {
-    modelPath: '/assets/models/characters/Animated_Human.glb',
+    modelPath: '/assets/models/characters/Anne.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
@@ -69,13 +69,13 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
   },
   barbarian_worg: {
-    modelPath: '/assets/models/characters/berserker.glb',
+    modelPath: '/assets/models/characters/humandeathgiver.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
   },
   barbarian_mage: {
-    modelPath: '/assets/models/characters/Animated_Wizard.glb',
+    modelPath: '/assets/models/characters/fabledworker.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
@@ -93,19 +93,19 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
   },
   dwarf_worg: {
-    modelPath: '/assets/models/characters/dwarf_enforcer.glb',
+    modelPath: '/assets/models/characters/Character_Toon_Animated.glb',
     scale: 0.006,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
   },
   dwarf_mage: {
-    modelPath: '/assets/models/characters/Animated_Wizard.glb',
+    modelPath: '/assets/models/characters/Animated_Character_Base.glb',
     scale: 0.006,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
   },
   dwarf_ranger: {
-    modelPath: '/assets/models/characters/Animated_Character_Base.glb',
+    modelPath: '/assets/models/characters/survivealtoon.glb',
     scale: 0.006,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
@@ -117,7 +117,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
   },
   elf_worg: {
-    modelPath: '/assets/models/characters/elf_enforcer.glb',
+    modelPath: '/assets/models/characters/Animated_Woman.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
@@ -141,19 +141,19 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
   },
   orc_worg: {
-    modelPath: '/assets/models/characters/graatorc.glb',
-    scale: 0.008,
-    offset: new THREE.Vector3(0, 0, 0),
-    format: 'glb',
-  },
-  orc_mage: {
     modelPath: '/assets/models/characters/orcpeon.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
   },
+  orc_mage: {
+    modelPath: '/assets/models/characters/Animated_Zombie.glb',
+    scale: 0.008,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'glb',
+  },
   orc_ranger: {
-    modelPath: '/assets/models/characters/graatorc.glb',
+    modelPath: '/assets/models/characters/Animated_Human.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
@@ -165,7 +165,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
   },
   undead_worg: {
-    modelPath: '/assets/models/characters/Skeleton.glb',
+    modelPath: '/assets/models/characters/undeadworker.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
@@ -279,13 +279,13 @@ export const MINION_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
   },
   siege_team0: {
-    modelPath: '/assets/models/characters/siegeman.glb',
+    modelPath: '/assets/models/characters/BarbarianGlad.glb',
     scale: 0.006,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
   },
   siege_team1: {
-    modelPath: '/assets/models/characters/siegeman.glb',
+    modelPath: '/assets/models/characters/skeletong_warrior.glb',
     scale: 0.006,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
