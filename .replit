@@ -43,5 +43,5 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "NODE_ENV=development npx tsx server/index.ts 2>&1"
+args = "NODE_ENV=development npx tsx --import ./server/preload.ts server/index.ts 2>&1"
 waitForPort = 5000

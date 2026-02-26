@@ -197,7 +197,7 @@ export function calculateDamage(
   if (target.activeEffects) {
     for (const eff of target.activeEffects) {
       if (eff.type === StatusEffectType.DefDebuff) defMod -= eff.value * eff.stacks;
-      if (eff.type === StatusEffectType.AtkDebuff && target === attacker) atkMod -= eff.value * eff.stacks;
+      if (eff.type === StatusEffectType.AtkDebuff && (target as any) === (attacker as any)) atkMod -= eff.value * eff.stacks;
     }
 
     const invuln = target.activeEffects.find(e => e.type === StatusEffectType.Invulnerable);
@@ -326,7 +326,7 @@ export function updateStatusEffects(entity: CombatEntity, dt: number): TickResul
   entity.activeEffects = entity.activeEffects.filter(e => e.remaining > 0);
 
   if (entity.ccImmunityTimers) {
-    for (const [type, timer] of entity.ccImmunityTimers.entries()) {
+    for (const [type, timer] of Array.from(entity.ccImmunityTimers.entries())) {
       const newTimer = timer - dt;
       if (newTimer <= 0) entity.ccImmunityTimers.delete(type);
       else entity.ccImmunityTimers.set(type, newTimer);

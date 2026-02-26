@@ -263,6 +263,7 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     attackMoveTarget: null, isAttackMoving: false, stopCommand: false,
     vx: 0, vy: 0, facing: team === 0 ? -Math.PI / 4 : Math.PI * 3 / 4,
     animState: 'idle', animTimer: 0, attackAnimPhase: 0,
+    attackWindup: 0, attackBackswing: 0, pendingAttackTarget: null as any,
     respawnTimer: 0, isPlayer, dead: false,
     stunTimer: 0, buffTimer: 0, shieldHp: 0,
     lastDamagedBy: [],
@@ -386,16 +387,23 @@ function updateJungleCamps(state: MobaState, dt: number) {
           continue;
         }
         const d = dist(mob, target);
+        mob.facing = angleTo(mob, target);
         if (d <= mob.rng + 20) {
-          if (mob.autoAttackTimer <= 0) {
-            dealDamage(state, mob as any, target, mob.atk);
+          if ((mob as any).atkWindup > 0) {
+            (mob as any).atkWindup -= dt;
+            if ((mob as any).atkWindup <= 0) {
+              if (!target.dead && dist(mob, target) < mob.rng + 60) {
+                dealDamage(state, mob as any, target, mob.atk);
+                state.spellEffects.push({
+                  x: target.x, y: target.y, type: 'impact_ring',
+                  life: 0.15, maxLife: 0.15, radius: 15,
+                  color: mob.mobType === 'buff' ? '#a855f7' : '#65a30d', angle: 0
+                });
+              }
+            }
+          } else if (mob.autoAttackTimer <= 0) {
+            (mob as any).atkWindup = 0.4;
             mob.autoAttackTimer = 1.5;
-            mob.facing = angleTo(mob, target);
-            state.spellEffects.push({
-              x: target.x, y: target.y, type: 'impact_ring',
-              life: 0.15, maxLife: 0.15, radius: 15,
-              color: mob.mobType === 'buff' ? '#a855f7' : '#65a30d', angle: 0
-            });
           }
         } else {
           const angle = angleTo(mob, target);
@@ -476,7 +484,10 @@ function spawnMinionWave(state: MobaState) {
           animTimer: Math.random() * 10,
           dead: false,
           goldValue: isSiege ? 40 : 20,
-          xpValue: isSiege ? 50 : 25
+          xpValue: isSiege ? 50 : 25,
+          attackWindup: 0,
+          attackBackswing: 0,
+          pendingTarget: null
         });
       }
     }
@@ -782,6 +793,58 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
 
   hero.autoAttackTimer -= dt;
 
+  if (hero.attackWindup > 0) {
+    hero.attackWindup -= dt;
+    hero.vx = 0;
+    hero.vy = 0;
+    const target = hero.pendingAttackTarget ? findEntityById(state, hero.pendingAttackTarget) : null;
+    if (target && !target.dead) {
+      hero.facing = angleTo(hero, target);
+    }
+    hero.animState = 'attack';
+
+    if (hero.attackWindup <= 0) {
+      if (target && !target.dead && dist(hero, target) < hero.rng + 80) {
+        hero.comboCount = (hero.comboCount + 1);
+        hero.comboTimer = 2.0;
+        const comboMult = hero.comboCount >= 3 ? 1.5 : 1.0;
+        performAutoAttack(state, hero, target, comboMult);
+        const heroData = HEROES[hero.heroDataId];
+        if (heroData && (heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg') && dist(hero, target) < 100) {
+          const slashColor = CLASS_COLORS[heroData.heroClass] || '#ef4444';
+          state.spellEffects.push({
+            x: hero.x + Math.cos(hero.facing) * 25, y: hero.y + Math.sin(hero.facing) * 25,
+            type: 'slash_arc', life: 0.2, maxLife: 0.2, radius: 25, color: slashColor, angle: hero.facing
+          });
+        }
+        if (hero.comboCount >= 3) {
+          hero.animState = 'combo_finisher';
+          hero.animTimer = 0;
+          spawnSlashEffect(state, target.x, target.y, hero.facing, '#ffd700');
+          state.screenShake = 0.1;
+          state.spellEffects.push({
+            x: target.x, y: target.y, type: 'combo_burst',
+            life: 0.4, maxLife: 0.4, radius: 50, color: '#ffd700', angle: 0
+          });
+          addFloatingText(state, target.x, target.y - 35, `COMBO x${hero.comboCount}!`, '#ffd700', 16);
+          hero.comboCount = 0;
+        }
+      }
+      hero.attackBackswing = 0.3;
+      hero.pendingAttackTarget = null;
+    }
+  } else if (hero.attackBackswing > 0) {
+    hero.attackBackswing -= dt;
+    hero.vx *= 0.1;
+    hero.vy *= 0.1;
+    if (hero.attackBackswing <= 0) {
+      if (hero.animState === 'attack' || hero.animState === 'combo_finisher') {
+        hero.animState = 'idle';
+        hero.animTimer = 0;
+      }
+    }
+  }
+
   if (!hero.isPlayer) {
     runHeroAI(state, hero, dt);
   }
@@ -791,7 +854,7 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
   hero.x = Math.max(50, Math.min(MAP_SIZE - 50, hero.x));
   hero.y = Math.max(50, Math.min(MAP_SIZE - 50, hero.y));
 
-  if (hero.targetId !== null) {
+  if (hero.attackWindup <= 0 && hero.attackBackswing <= 0 && hero.targetId !== null) {
     const target = findEntityById(state, hero.targetId);
     if (!target || target.dead) {
       hero.targetId = null;
@@ -806,33 +869,17 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
     } else {
       const d = dist(hero, target);
       if (d <= hero.rng + 30) {
+        hero.facing = angleTo(hero, target);
         if (hero.autoAttackTimer <= 0) {
-          hero.comboCount = (hero.comboCount + 1);
-          hero.comboTimer = 2.0;
-          const comboMult = hero.comboCount >= 3 ? 1.5 : 1.0;
-          performAutoAttack(state, hero, target, comboMult);
-          hero.autoAttackTimer = Math.max(0.8, 2.2 - hero.spd * 0.008);
-          hero.animState = hero.comboCount >= 3 ? 'combo_finisher' : 'attack';
-          hero.attackAnimPhase = 0.6;
-          hero.facing = angleTo(hero, target);
           const heroData = HEROES[hero.heroDataId];
-          if (heroData && (heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg') && d < 100) {
-            const slashColor = CLASS_COLORS[heroData.heroClass] || '#ef4444';
-            state.spellEffects.push({
-              x: hero.x + Math.cos(hero.facing) * 25, y: hero.y + Math.sin(hero.facing) * 25,
-              type: 'slash_arc', life: 0.2, maxLife: 0.2, radius: 25, color: slashColor, angle: hero.facing
-            });
-          }
-          if (hero.comboCount >= 3) {
-            spawnSlashEffect(state, target.x, target.y, hero.facing, '#ffd700');
-            state.screenShake = 0.1;
-            state.spellEffects.push({
-              x: target.x, y: target.y, type: 'combo_burst',
-              life: 0.4, maxLife: 0.4, radius: 50, color: '#ffd700', angle: 0
-            });
-            addFloatingText(state, target.x, target.y - 35, `COMBO x${hero.comboCount}!`, '#ffd700', 16);
-            hero.comboCount = 0;
-          }
+          const isMelee = heroData ? isMeleeClass(heroData.heroClass) : false;
+          const windupTime = isMelee ? 0.35 : 0.25;
+          hero.attackWindup = windupTime;
+          hero.pendingAttackTarget = target.id;
+          hero.animState = 'attack';
+          hero.animTimer = 0;
+          hero.attackAnimPhase = windupTime + 0.3;
+          hero.autoAttackTimer = Math.max(0.8, 2.2 - hero.spd * 0.008);
         }
         hero.vx = 0;
         hero.vy = 0;
@@ -1740,12 +1787,34 @@ function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
   minion.animTimer += dt;
   minion.autoAttackTimer -= dt;
 
+  if (minion.attackWindup > 0) {
+    minion.attackWindup -= dt;
+    const target = minion.pendingTarget ? findEntityById(state, minion.pendingTarget) : null;
+    if (target && !target.dead) {
+      minion.facing = angleTo(minion, target);
+    }
+    if (minion.attackWindup <= 0) {
+      if (target && !target.dead && dist(minion, target) < minion.rng + 60) {
+        performAutoAttack(state, minion as any, target);
+      }
+      minion.pendingTarget = null;
+      minion.attackBackswing = 0.25;
+    }
+    return;
+  }
+
+  if (minion.attackBackswing > 0) {
+    minion.attackBackswing -= dt;
+    return;
+  }
+
   const enemy = findNearestEnemy(state, minion, 300);
   if (enemy && dist(minion, enemy) < minion.rng + 20) {
+    minion.facing = angleTo(minion, enemy);
     if (minion.autoAttackTimer <= 0) {
-      performAutoAttack(state, minion as any, enemy);
+      minion.attackWindup = minion.minionType === 'melee' ? 0.3 : 0.2;
+      minion.pendingTarget = enemy.id;
       minion.autoAttackTimer = Math.max(1.0, 2.6 - minion.spd * 0.005);
-      minion.facing = angleTo(minion, enemy);
     }
     return;
   }
@@ -2415,7 +2484,35 @@ export function getHudState(state: MobaState): HudState {
     blockActive: player?.blockActive ?? false,
     blockCooldown: player?.blockCooldown ?? 0,
     abilityCharges: player?.abilityCharges ?? [0, 0, 0, 0],
-    abilityMaxCharges: heroData ? (CLASS_ABILITIES[heroData.heroClass] || []).map(ab => ab.maxCharges || 0) : [0, 0, 0, 0]
+    abilityMaxCharges: heroData ? (CLASS_ABILITIES[heroData.heroClass] || []).map(ab => ab.maxCharges || 0) : [0, 0, 0, 0],
+    minimapEntities: [
+      ...state.heroes.filter(h => !h.dead).map(h => ({
+        x: h.x, y: h.y,
+        type: (h.isPlayer ? 'player' : h.team === (player?.team ?? 0) ? 'ally_hero' : 'enemy_hero') as any,
+      })),
+      ...state.towers.filter(t => !t.dead).map(t => ({
+        x: t.x, y: t.y,
+        type: (t.team === (player?.team ?? 0) ? 'ally_tower' : 'enemy_tower') as any,
+      })),
+      ...state.nexuses.filter(n => !n.dead).map(n => ({
+        x: n.x, y: n.y,
+        type: (n.team === (player?.team ?? 0) ? 'ally_nexus' : 'enemy_nexus') as any,
+      })),
+      ...state.minions.map(m => ({
+        x: m.x, y: m.y,
+        type: (m.team === (player?.team ?? 0) ? 'ally_minion' : 'enemy_minion') as any,
+      })),
+      ...state.jungleCamps.filter(c => !c.allDead).map(c => ({
+        x: c.x, y: c.y,
+        type: (`jungle_${c.campType}` as any),
+      })),
+    ],
+    cameraViewport: {
+      x: state.camera.x,
+      y: state.camera.y,
+      w: (typeof window !== 'undefined' ? window.innerWidth : 1920) / state.camera.zoom,
+      h: (typeof window !== 'undefined' ? window.innerHeight : 1080) / state.camera.zoom,
+    },
   };
 }
 
@@ -2946,7 +3043,7 @@ export class MobaRenderer {
 
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
-    ctx.ellipse(0, 18, 14, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 12, 14, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
     if (isPlayer) {

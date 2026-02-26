@@ -352,7 +352,7 @@ export class ThreeRenderer {
       });
       const mesh = new THREE.Mesh(capsuleGeo, mat);
       mesh.castShadow = true;
-      mesh.position.y = 0.7;
+      mesh.position.y = 0.02;
       group.add(mesh);
     }
 
@@ -784,11 +784,26 @@ export class ThreeRenderer {
       e.group.position.set(wx, 0, wz);
       e.group.rotation.y = -hero.facing + Math.PI / 2;
 
-      if (hero.animState === 'walk') {
-        e.group.children[0].position.y = 0.7 + Math.sin(time * 8) * 0.05;
-      } else if (hero.animState === 'attack' || hero.animState === 'combo_finisher') {
-        e.group.children[0].position.y = 0.7;
-        e.group.children[0].rotation.z = Math.sin(time * 20) * 0.2;
+      const mesh = e.group.children[0];
+      if (mesh) {
+        if (hero.animState === 'walk') {
+          const stride = Math.sin(time * 8);
+          mesh.position.y = 0.02 + Math.max(0, stride) * 0.06;
+          mesh.rotation.z = 0;
+          mesh.rotation.x = Math.sin(time * 8) * 0.04;
+        } else if (hero.animState === 'attack' || hero.animState === 'combo_finisher') {
+          mesh.position.y = 0.02;
+          const windupPhase = (hero as any).attackWindup > 0 ? 1 : 0;
+          mesh.rotation.z = windupPhase > 0 ? Math.sin(time * 15) * 0.05 : Math.sin(time * 25) * 0.15;
+          mesh.rotation.x = windupPhase > 0 ? -0.1 : 0.15;
+        } else if (hero.animState === 'ability') {
+          mesh.position.y = 0.02 + Math.sin(time * 6) * 0.08;
+          mesh.rotation.z = 0;
+        } else {
+          mesh.position.y = 0.02;
+          mesh.rotation.z = 0;
+          mesh.rotation.x = 0;
+        }
       }
 
       this.updateHealthBar(e, hero.hp, hero.maxHp, TEAM_COLORS[hero.team]);
@@ -808,7 +823,7 @@ export class ThreeRenderer {
       const wz = (minion.y - MAP_SIZE / 2) * WORLD_SCALE;
       e.group.position.set(wx, 0, wz);
       e.group.rotation.y = -minion.facing + Math.PI / 2;
-      e.group.children[0].position.y = (minion.minionType === 'siege' ? 0.35 : 0.2) * 0.6 + Math.sin(time * 6 + minion.id) * 0.02;
+      e.group.children[0].position.y = 0.02 + Math.max(0, Math.sin(time * 6 + minion.id)) * 0.02;
 
       this.updateHealthBar(e, minion.hp, minion.maxHp, TEAM_COLORS[minion.team]);
     }
@@ -850,7 +865,7 @@ export class ThreeRenderer {
     }
 
     const activeProjectileIds = new Set(state.projectiles.map(p => p.id));
-    for (const [id, mesh] of this.projectileMeshes) {
+    for (const [id, mesh] of Array.from(this.projectileMeshes)) {
       if (!activeProjectileIds.has(id)) {
         this.scene.remove(mesh);
         this.projectileMeshes.delete(id);
@@ -900,7 +915,7 @@ export class ThreeRenderer {
 
   private cleanupDeadEntities(state: MobaState) {
     const heroIds = new Set(state.heroes.map(h => h.id));
-    for (const [id, e] of this.heroMeshes) {
+    for (const [id, e] of Array.from(this.heroMeshes)) {
       if (!heroIds.has(id)) {
         this.scene.remove(e.group);
         this.heroMeshes.delete(id);
@@ -908,7 +923,7 @@ export class ThreeRenderer {
     }
 
     const minionIds = new Set(state.minions.filter(m => !m.dead).map(m => m.id));
-    for (const [id, e] of this.minionMeshes) {
+    for (const [id, e] of Array.from(this.minionMeshes)) {
       if (!minionIds.has(id)) {
         this.scene.remove(e.group);
         this.minionMeshes.delete(id);
