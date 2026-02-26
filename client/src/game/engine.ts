@@ -486,6 +486,7 @@ function spawnMinionWave(state: MobaState) {
 export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   if (state.paused || state.gameOver) return;
 
+  (state as any)._frame = ((state as any)._frame || 0) + 1;
   state.gameTime += dt;
 
   if (state.gameTime >= state.nextMinionWave) {
@@ -1220,15 +1221,28 @@ function findNearestEnemy(state: MobaState, entity: { x: number; y: number; team
   return nearest;
 }
 
-function findEntityById(state: MobaState, id: number): any {
-  for (const h of state.heroes) if (h.id === id) return h;
-  for (const m of state.minions) if (m.id === id) return m;
-  for (const t of state.towers) if (t.id === id) return t;
-  for (const n of state.nexuses) if (n.id === id) return n;
-  for (const camp of state.jungleCamps) {
-    for (const mob of camp.mobs) if (mob.id === id) return mob;
+let entityIndex: Map<number, any> | null = null;
+let entityIndexFrame = -1;
+
+function buildEntityIndex(state: MobaState): Map<number, any> {
+  const frame = (state as any)._frame || 0;
+  if (entityIndex && entityIndexFrame === frame) return entityIndex;
+  const map = new Map<number, any>();
+  for (let i = 0, len = state.heroes.length; i < len; i++) map.set(state.heroes[i].id, state.heroes[i]);
+  for (let i = 0, len = state.minions.length; i < len; i++) map.set(state.minions[i].id, state.minions[i]);
+  for (let i = 0, len = state.towers.length; i < len; i++) map.set(state.towers[i].id, state.towers[i]);
+  for (let i = 0, len = state.nexuses.length; i < len; i++) map.set(state.nexuses[i].id, state.nexuses[i]);
+  for (let ci = 0, clen = state.jungleCamps.length; ci < clen; ci++) {
+    const mobs = state.jungleCamps[ci].mobs;
+    for (let mi = 0, mlen = mobs.length; mi < mlen; mi++) map.set(mobs[mi].id, mobs[mi]);
   }
-  return null;
+  entityIndex = map;
+  entityIndexFrame = frame;
+  return map;
+}
+
+function findEntityById(state: MobaState, id: number): any {
+  return buildEntityIndex(state).get(id) ?? null;
 }
 
 function isMeleeClass(heroClass: string): boolean {
