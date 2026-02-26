@@ -156,6 +156,14 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - `nexus-crystal.png` - Glowing nexus crystal sprite
 - `scoreboard-bg.png` - Ornate scoreboard panel background
 
+## Performance & Best Practices
+- **Server**: compression middleware, security headers (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy), 10MB body limit
+- **Static assets**: 7-day cache with immutable for /assets, 1-hour cache for other static files
+- **Entity lookup**: O(1) Map-based entity index (`buildEntityIndex`) rebuilt per frame, replaces O(n) linear scans in `findEntityById`
+- **Model loading**: GLB/FBX cache with deduplication via `loadingPromises` Map to prevent redundant network requests
+- **React**: Game state in useRef (avoids re-renders), HUD synced to React every ~100ms via setHud, useCallback for event handlers
+- **Voxel rendering**: Tile cache system (max 500 entries) for pre-rendered terrain tiles
+
 ## Design
 - Dark fantasy theme with crimson (#ef4444), gold (#ffd700), purple (#a855f7) accent colors
 - Forced dark mode via `document.documentElement.classList.add("dark")`

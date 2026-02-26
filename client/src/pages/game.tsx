@@ -55,10 +55,17 @@ export default function GamePage() {
     let resizeHandler: (() => void) | null = null;
 
     if (renderMode === '3d' && containerRef.current) {
-      renderer3d = new ThreeRenderer(containerRef.current);
-      threeRendererRef.current = renderer3d;
-      renderer3d.loadModels(state);
-    } else if (canvasRef.current) {
+      try {
+        renderer3d = new ThreeRenderer(containerRef.current);
+        threeRendererRef.current = renderer3d;
+        renderer3d.loadModels(state);
+      } catch (e) {
+        console.warn('WebGL not available, falling back to 2D renderer:', e);
+        renderer3d = null;
+        threeRendererRef.current = null;
+      }
+    }
+    if (!renderer3d && canvasRef.current) {
       const canvas = canvasRef.current;
       resizeHandler = () => {
         canvas.width = window.innerWidth;
@@ -305,9 +312,7 @@ export default function GamePage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="game-page">
-      {renderMode === '2d' && (
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'none' }} data-testid="canvas-game" />
-      )}
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'none', display: renderMode === '2d' || !threeRendererRef.current ? 'block' : 'none' }} data-testid="canvas-game" />
       {renderMode === '3d' && (
         <div ref={containerRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'crosshair' }} data-testid="three-container" />
       )}
