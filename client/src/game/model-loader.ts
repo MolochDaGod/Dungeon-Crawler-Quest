@@ -162,6 +162,7 @@ export const MODEL_PATHS = {
     racalvinBlock: '/assets/models/heroes/racalvin/block.fbx',
     racalvinDeath: '/assets/models/heroes/racalvin/death.fbx',
     racalvinSlash: '/assets/models/heroes/racalvin/slash.fbx',
+    racalvinJump: '/assets/models/heroes/racalvin/jump.fbx',
   },
   environment: {
     castle: '/assets/models/environment/Castle.glb',

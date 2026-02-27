@@ -31,17 +31,26 @@ const WORLD_SCALE = 0.05;
 const PHYSICS_STEP = 1 / 60;
 const GRAVITY = -9.82;
 
-function mapAnimState(animState: string, dead: boolean): string {
+function mapAnimState(animState: string, dead: boolean, hasAnim?: (name: string) => boolean): string {
   if (dead) return 'death';
+  const has = hasAnim || (() => false);
   switch (animState) {
-    case 'walk': return 'run';
+    case 'walk':
+      return has('walk') ? 'walk' : 'run';
     case 'attack':
+      return 'attack';
     case 'combo_finisher':
+      return has('slash') ? 'slash' : 'attack';
+    case 'lunge_slash':
+      return has('slash') ? 'slash' : 'attack';
     case 'dash_attack':
-    case 'lunge_slash': return 'attack';
-    case 'ability': return 'attack';
+      return 'attack';
+    case 'ability':
+      return has('slash') ? 'slash' : 'attack';
     case 'dodge':
-    case 'block': return 'hit';
+      return has('jump') ? 'jump' : 'hit';
+    case 'block':
+      return has('block') ? 'block' : 'hit';
     case 'death': return 'death';
     case 'idle':
     default: return 'idle';
@@ -89,6 +98,7 @@ export class ThreeRenderer {
   private loadedModels = new Map<string, LoadedModel>();
   private modelLoadQueue = new Set<string>();
   private sharedAnimClips = new Map<string, THREE.AnimationClip>();
+  private prefabAnimClips = new Map<string, Map<string, THREE.AnimationClip>>();
   private initialized = false;
   private loadingComplete = false;
 
@@ -489,7 +499,21 @@ export class ThreeRenderer {
       if (!heroData) continue;
       const prefabKey = getHeroPrefabKey(heroData.race, heroData.heroClass, heroData.name);
       const prefab = HERO_PREFABS[prefabKey];
-      if (prefab) promises.push(this.loadModel(prefab));
+      if (prefab) {
+        promises.push(this.loadModel(prefab));
+        if (prefab.animations) {
+          const hasCustomAnims = Object.keys(prefab.animations).some(
+            k => !(k in ANIMATION_PATHS) || prefab.animations![k] !== (ANIMATION_PATHS as Record<string, string>)[k]
+          );
+          if (hasCustomAnims && !this.prefabAnimClips.has(prefabKey)) {
+            promises.push(
+              loadAnimationSet(prefab.animations).then(clips => {
+                this.prefabAnimClips.set(prefabKey, clips);
+              })
+            );
+          }
+        }
+      }
     }
 
     const minionPrefabKeys = ['melee_team0', 'melee_team1', 'ranged_team0', 'ranged_team1', 'siege_team0', 'siege_team1'];
@@ -600,6 +624,15 @@ export class ThreeRenderer {
           const action = mixer.clipAction(clip);
           const clipName = clip.name.toLowerCase();
           actions.set(clipName, action);
+        }
+      }
+      const prefabAnims = this.prefabAnimClips.get(prefabKey);
+      if (prefabAnims && prefabAnims.size > 0) {
+        for (const [name, clip] of Array.from(prefabAnims)) {
+          if (!actions.has(name)) {
+            const action = mixer.clipAction(clip);
+            actions.set(name, action);
+          }
         }
       }
       for (const [name, clip] of Array.from(this.sharedAnimClips)) {
@@ -1935,15 +1968,17 @@ export class ThreeRenderer {
       e.group.rotation.y = -hero.facing + Math.PI / 2;
 
       if (e.entity) {
-        const targetAnim = mapAnimState(hero.animState, hero.dead);
+        const hasAnim = (name: string) => e.entity!.actions.has(name);
+        const targetAnim = mapAnimState(hero.animState, hero.dead, hasAnim);
         if (e.entity.currentAction !== targetAnim) {
           playAnimation(e.entity, targetAnim, 0.15);
         }
-        if (hero.animState === 'attack' || hero.animState === 'combo_finisher') {
-          const attackAction = e.entity.actions.get('attack');
-          if (attackAction && !hero.dead) {
-            attackAction.setLoop(THREE.LoopOnce, 1);
-            attackAction.clampWhenFinished = true;
+        const isOneShot = targetAnim === 'attack' || targetAnim === 'slash' || targetAnim === 'block' || targetAnim === 'jump';
+        if (isOneShot) {
+          const oneShotAction = e.entity.actions.get(targetAnim);
+          if (oneShotAction && !hero.dead) {
+            oneShotAction.setLoop(THREE.LoopOnce, 1);
+            oneShotAction.clampWhenFinished = true;
           }
         }
         if (targetAnim === 'death') {

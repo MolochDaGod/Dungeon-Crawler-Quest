@@ -394,6 +394,18 @@ function revealAround(state: DungeonState, wx: number, wy: number, radius: numbe
   }
 }
 
+const VISION_RADIUS = 280;
+
+function isInPlayerVision(state: DungeonState, wx: number, wy: number): boolean {
+  const tx = Math.floor(wx / TILE_SIZE);
+  const ty = Math.floor(wy / TILE_SIZE);
+  if (tx < 0 || ty < 0 || tx >= state.mapWidth || ty >= state.mapHeight) return false;
+  if (!state.tiles[ty][tx].revealed) return false;
+  const dx = wx - state.player.x;
+  const dy = wy - state.player.y;
+  return dx * dx + dy * dy <= VISION_RADIUS * VISION_RADIUS;
+}
+
 function distXY(a: { x: number; y: number }, b: { x: number; y: number }): number {
   const dx = a.x - b.x, dy = a.y - b.y;
   return Math.sqrt(dx * dx + dy * dy);
@@ -884,8 +896,8 @@ export class DungeonRenderer {
     this.renderTiles(ctx, state, cam, W, H);
     this.renderChests(ctx, state);
 
-    const sorted = [...state.enemies.filter(e => !e.dead)].sort((a, b) => a.y - b.y);
-    for (const enemy of sorted) this.renderEnemy(ctx, enemy);
+    const sorted = [...state.enemies.filter(e => !e.dead && isInPlayerVision(state, e.x, e.y))].sort((a, b) => a.y - b.y);
+    for (const enemy of sorted) this.renderEnemy(ctx, enemy, state);
 
     this.renderPlayer(ctx, state);
 
@@ -904,14 +916,25 @@ export class DungeonRenderer {
     const endTX = Math.min(state.mapWidth, Math.ceil((cam.x + W / 2 / cam.zoom) / TILE_SIZE) + 1);
     const endTY = Math.min(state.mapHeight, Math.ceil((cam.y + H / 2 / cam.zoom) / TILE_SIZE) + 1);
 
+    const px = state.player.x;
+    const py = state.player.y;
+
+    const vrSq = VISION_RADIUS * VISION_RADIUS;
+
     for (let ty = startTY; ty < endTY; ty++) {
       for (let tx = startTX; tx < endTX; tx++) {
         const tile = state.tiles[ty][tx];
         if (!tile.revealed) continue;
 
         const x = tx * TILE_SIZE, y = ty * TILE_SIZE;
-        let voxType: DungeonTileVoxelType = 'floor';
+        const tileCX = x + TILE_SIZE / 2;
+        const tileCY = y + TILE_SIZE / 2;
+        const dx = tileCX - px, dy = tileCY - py;
+        const distSq = dx * dx + dy * dy;
+        const inVision = distSq <= vrSq;
+        ctx.globalAlpha = inVision ? Math.max(0.4, 1 - distSq / vrSq * 0.6) : 0.2;
 
+        let voxType: DungeonTileVoxelType = 'floor';
         if (tile.type === 'wall') voxType = 'wall';
         else if (tile.type === 'trap') voxType = 'trap';
         else if (tile.type === 'stairs') voxType = 'stairs';
@@ -923,24 +946,82 @@ export class DungeonRenderer {
 
         if (tile.type === 'floor' && tile.decoration > 0) {
           const seed = (tx * 17 + ty * 31) % 100;
-          if (seed > 80) {
-            ctx.fillStyle = 'rgba(80,80,60,0.12)';
+          if (seed > 70) {
+            ctx.fillStyle = 'rgba(80,80,60,0.15)';
             const cx = x + TILE_SIZE * 0.3 + (seed % 5) * 2;
             const cy = y + TILE_SIZE * 0.3 + (seed % 7) * 2;
             ctx.beginPath();
-            ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 1.5 + (seed % 3), 0, Math.PI * 2);
             ctx.fill();
           }
-          if (seed > 90) {
-            ctx.strokeStyle = 'rgba(60,60,40,0.1)';
+          if (seed > 85) {
+            ctx.strokeStyle = 'rgba(60,50,30,0.15)';
             ctx.lineWidth = 0.5;
+            const crackLen = 4 + (seed % 8);
+            const crackAngle = (seed * 0.17) % (Math.PI * 2);
+            const crackX = x + TILE_SIZE * 0.5 + (seed % 10) - 5;
+            const crackY = y + TILE_SIZE * 0.5 + (seed % 7) - 3;
             ctx.beginPath();
-            ctx.moveTo(x + 5, y + TILE_SIZE - 3);
-            ctx.lineTo(x + TILE_SIZE - 5, y + TILE_SIZE - 3);
+            ctx.moveTo(crackX, crackY);
+            ctx.lineTo(crackX + Math.cos(crackAngle) * crackLen, crackY + Math.sin(crackAngle) * crackLen);
             ctx.stroke();
           }
         }
       }
+    }
+    ctx.globalAlpha = 1;
+
+    this.renderTorchGlow(ctx, state);
+  }
+
+  private renderTorchGlow(ctx: CanvasRenderingContext2D, state: DungeonState) {
+    const torchPositions: { x: number; y: number }[] = [];
+    const px = state.player.x;
+    const py = state.player.y;
+
+    const torchRange = Math.ceil(VISION_RADIUS * 1.1 / TILE_SIZE);
+    const ptx = Math.floor(px / TILE_SIZE);
+    const pty = Math.floor(py / TILE_SIZE);
+    const tStartX = Math.max(0, ptx - torchRange);
+    const tStartY = Math.max(0, pty - torchRange);
+    const tEndX = Math.min(state.mapWidth, ptx + torchRange + 1);
+    const tEndY = Math.min(state.mapHeight, pty + torchRange + 1);
+
+    for (let ty = tStartY; ty < tEndY; ty++) {
+      for (let tx = tStartX; tx < tEndX; tx++) {
+        const tile = state.tiles[ty][tx];
+        if (!tile.revealed) continue;
+        if (tile.type !== 'wall') continue;
+        const hasFloorNeighbor = (
+          (tx > 0 && state.tiles[ty][tx - 1].type === 'floor') ||
+          (tx < state.mapWidth - 1 && state.tiles[ty][tx + 1].type === 'floor') ||
+          (ty > 0 && state.tiles[ty - 1][tx].type === 'floor') ||
+          (ty < state.mapHeight - 1 && state.tiles[ty + 1][tx].type === 'floor')
+        );
+        if (!hasFloorNeighbor) continue;
+        const seed = (tx * 31 + ty * 17) % 100;
+        if (seed > 75) {
+          const wx = tx * TILE_SIZE + TILE_SIZE / 2;
+          const wy = ty * TILE_SIZE + TILE_SIZE / 2;
+          const dd = (wx - px) * (wx - px) + (wy - py) * (wy - py);
+          if (dd < VISION_RADIUS * VISION_RADIUS * 1.2) {
+            torchPositions.push({ x: wx, y: wy });
+          }
+        }
+      }
+    }
+
+    const flicker = Date.now() * 0.003;
+    for (const torch of torchPositions) {
+      const r = 50 + Math.sin(flicker + torch.x * 0.1) * 10;
+      const grad = ctx.createRadialGradient(torch.x, torch.y, 0, torch.x, torch.y, r);
+      grad.addColorStop(0, 'rgba(255,160,50,0.12)');
+      grad.addColorStop(0.5, 'rgba(255,120,30,0.06)');
+      grad.addColorStop(1, 'rgba(255,80,10,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(torch.x, torch.y, r, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
@@ -960,43 +1041,29 @@ export class DungeonRenderer {
     }
   }
 
-  private renderEnemy(ctx: CanvasRenderingContext2D, enemy: DungeonEnemy) {
+  private renderEnemy(ctx: CanvasRenderingContext2D, enemy: DungeonEnemy, state: DungeonState) {
+    const dx = enemy.x - state.player.x;
+    const dy = enemy.y - state.player.y;
+    const distSq = dx * dx + dy * dy;
+    const dimFactor = Math.max(0.3, 1 - distSq / (VISION_RADIUS * VISION_RADIUS) * 0.5);
+
+    ctx.save();
+    ctx.globalAlpha = dimFactor;
+
+    this.voxel.drawEnemyVoxel(ctx, enemy.x, enemy.y, enemy.type, enemy.facing, enemy.animState, enemy.animTimer, enemy.size, enemy.isBoss);
+
+    ctx.globalAlpha = 1;
     ctx.save();
     ctx.translate(enemy.x, enemy.y);
 
-    const s = enemy.size;
-    const bob = Math.sin(enemy.animTimer * 3) * 2;
-
-    if (enemy.isBoss) {
-      ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.4 + Math.sin(Date.now() * 0.004) * 0.2;
-      ctx.beginPath();
-      ctx.arc(0, 0, s + 6, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.fillStyle = enemy.color;
-    ctx.beginPath();
-    ctx.ellipse(0, bob, s, s * 0.8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#000';
-    const eyeX = Math.cos(enemy.facing) * s * 0.3;
-    const eyeY = Math.sin(enemy.facing) * s * 0.3 + bob;
-    ctx.beginPath();
-    ctx.arc(eyeX - 2, eyeY - 2, 2, 0, Math.PI * 2);
-    ctx.arc(eyeX + 2, eyeY - 2, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    this.renderHealthBar(ctx, 0, -s - 8, s, enemy.hp, enemy.maxHp, enemy.color);
+    this.renderHealthBar(ctx, 0, -enemy.size - 8, enemy.size, enemy.hp, enemy.maxHp, enemy.color);
 
     if (enemy.activeEffects.length > 0) {
       let ox = -enemy.activeEffects.length * 5;
       for (const eff of enemy.activeEffects) {
         ctx.fillStyle = eff.color;
         ctx.globalAlpha = 0.8;
-        ctx.fillRect(ox, -s - 14, 8, 4);
+        ctx.fillRect(ox, -enemy.size - 14, 8, 4);
         ctx.globalAlpha = 1;
         ox += 10;
       }
@@ -1006,9 +1073,10 @@ export class DungeonRenderer {
       ctx.fillStyle = '#ffd700';
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(enemy.type, 0, -s - 16);
+      ctx.fillText(enemy.type, 0, -enemy.size - 16);
     }
 
+    ctx.restore();
     ctx.restore();
   }
 
@@ -1124,6 +1192,7 @@ export class DungeonRenderer {
 
     for (const enemy of state.enemies) {
       if (enemy.dead) continue;
+      if (!isInPlayerVision(state, enemy.x, enemy.y)) continue;
       ctx.fillStyle = enemy.isBoss ? '#ffd700' : enemy.color;
       ctx.fillRect(mx + enemy.x * scale - 1, my + enemy.y * scale - 1, 3, 3);
     }

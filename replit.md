@@ -114,6 +114,25 @@ The game utilizes a React frontend with a custom HTML5 Canvas 2D and Three.js 3D
 - **Lunge Slash (RMB melee)**: Right-click near enemies triggers lunge forward + sweeping slash. 3-phase animation: lunge (0-40%), slash arc (35-60%), recover (60-100%). Deals 1.8x ATK damage in 90-unit frontal cone (±108°). 1.2s cooldown. Canvas VFX: forward motion trail, triple-layered expanding slash arc (class-colored + white inner + outer echo), sparks at tip, fading follow-through ring
 - All VFX drawn as canvas overlays on top of voxel model (not part of voxel grid)
 
+## Dungeon Visibility & Voxel Enemies
+- **Fog of War**: `VISION_RADIUS=280` in dungeon.ts; `isInPlayerVision(state, x, y)` checks revealed tile + distance from player
+- **Enemy visibility**: Enemies only render when within player vision radius; minimap dots also filtered
+- **Distance dimming**: Tiles dim based on distance from player (0.4-1.0 alpha in vision, 0.2 outside)
+- **Voxel enemies**: 8 distinct types rendered via `VoxelRenderer.drawEnemyVoxel()` — Slime (green blob, squash-stretch), Skeleton (bone body, sword), Orc Grunt (green muscular, axe), Dark Mage (purple robed, floating orb), Spider (8 legs, red eyes), Golem (rocky body, glowing core), Dragon (wings, fire breath), Lich (skeletal mage, green soul-fire)
+- **Torch glow**: Flickering orange radial gradients near wall-adjacent floors, optimized to only check tiles near player
+- **Boss aura**: Golden ring pulse around boss enemies
+
+## Animation Editor
+- Route: `/animation-editor` — dev tool for previewing voxel hero animations
+- Features: race/class/hero dropdowns, animation state selector (10 states), speed slider, play/pause/step/reset, facing slider, body part pose inspector, background color picker, export pose button
+- Uses `VoxelRenderer.drawHeroVoxel()` on 480x480 canvas at 3.5x scale
+
+## Animation System (Racalvin)
+- `RACALVIN_ANIMS` in prefabs.ts: dedicated FBX clips (idle, walk, run, attack, block, death, slash, jump) at `/assets/models/heroes/racalvin/`
+- Applied to racalvin + pirate prefabs (both use Pirate_Captain.glb)
+- `mapAnimState()` in three-renderer.ts: context-aware animation mapping with `hasAnim` callback for prefab-specific fallbacks
+- `prefabAnimClips` map caches per-prefab animation clips, loaded during model loading phase
+
 ## Quality Notes
 - All TypeScript compiles cleanly (no errors)
 - AI heroes emit contextual chat messages based on situation (retreat, engage, laning, etc.)

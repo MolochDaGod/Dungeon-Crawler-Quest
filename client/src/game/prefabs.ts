@@ -87,6 +87,17 @@ const SHARED_ANIMS: Record<string, string> = {
   hit: '/assets/models/animations/Hit.fbx',
 };
 
+const RACALVIN_ANIMS: Record<string, string> = {
+  idle: '/assets/models/heroes/racalvin/idle.fbx',
+  walk: '/assets/models/heroes/racalvin/walk.fbx',
+  run: '/assets/models/heroes/racalvin/run.fbx',
+  attack: '/assets/models/heroes/racalvin/attack.fbx',
+  block: '/assets/models/heroes/racalvin/block.fbx',
+  death: '/assets/models/heroes/racalvin/death.fbx',
+  slash: '/assets/models/heroes/racalvin/slash.fbx',
+  jump: '/assets/models/heroes/racalvin/jump.fbx',
+};
+
 export const HERO_PREFABS: Record<string, PrefabConfig> = {
   human_warrior: {
     modelPath: '/assets/models/characters/crusaders_knight.glb',
@@ -261,14 +272,14 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
-    animations: SHARED_ANIMS,
+    animations: RACALVIN_ANIMS,
   },
   pirate: {
     modelPath: '/assets/models/characters/Pirate_Captain.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
-    animations: SHARED_ANIMS,
+    animations: RACALVIN_ANIMS,
   },
 };
 
