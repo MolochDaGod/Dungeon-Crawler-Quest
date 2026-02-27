@@ -106,18 +106,20 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
     const freq = 10;
     const phase = Math.sin(t * freq);
     const phase2 = Math.cos(t * freq);
-    const stride = 1.8;
-    const liftHeight = 0.6;
-    const bounce = Math.abs(Math.sin(t * freq * 2)) * 0.4;
-    const hipSway = Math.sin(t * freq) * 0.3;
+    const stride = 2.0;
+    const liftHeight = 0.8;
+    const bounce = Math.abs(Math.sin(t * freq * 2)) * 0.6;
+    const hipSway = Math.sin(t * freq) * 0.4;
+    const shoulderRock = Math.sin(t * freq) * 0.3;
+    const headBob = Math.sin(t * freq * 2 + 0.5) * 0.35;
     return {
       leftLeg: { ox: Math.round(phase * stride), oy: 0, oz: Math.round(Math.max(0, -phase) * liftHeight) },
       rightLeg: { ox: Math.round(-phase * stride), oy: 0, oz: Math.round(Math.max(0, phase) * liftHeight) },
-      leftArm: { ox: Math.round(-phase * 1.2), oy: 0, oz: Math.round(phase2 * 0.4) },
-      rightArm: { ox: Math.round(phase * 1.2), oy: 0, oz: Math.round(-phase2 * 0.4) },
+      leftArm: { ox: Math.round(-phase * 1.4), oy: Math.round(shoulderRock * 0.5), oz: Math.round(phase2 * 0.5) },
+      rightArm: { ox: Math.round(phase * 1.4), oy: Math.round(-shoulderRock * 0.5), oz: Math.round(-phase2 * 0.5) },
       torso: { ox: 0, oy: Math.round(hipSway), oz: Math.round(bounce) },
-      head: { ox: 0, oy: Math.round(Math.sin(t * freq * 0.5) * 0.2), oz: Math.round(bounce * 0.8) },
-      weapon: { ox: Math.round(phase * 0.5), oy: 0, oz: Math.round(bounce * 0.2) },
+      head: { ox: 0, oy: Math.round(Math.sin(t * freq * 0.5) * 0.25), oz: Math.round(bounce * 0.8 + headBob) },
+      weapon: { ox: Math.round(phase * 0.6), oy: Math.round(shoulderRock * 0.3), oz: Math.round(bounce * 0.3) },
       weaponGlow: 0
     };
   }
@@ -248,21 +250,23 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   }
 
   if (animState === 'combo_finisher') {
-    const phase = t * 24;
+    const phase = t * 28;
     const spin = Math.sin(phase);
     const spin2 = Math.cos(phase * 0.7);
     const power = Math.abs(Math.sin(phase * 0.5));
     const slam = Math.max(0, Math.sin(phase * 0.5 + 1.2));
-    const twist = Math.sin(phase * 1.3) * 2.0;
-    const bodyLean = Math.sin(phase * 0.8) * 1.8;
+    const twist = Math.sin(phase * 1.3) * 2.5;
+    const bodyLean = Math.sin(phase * 0.8) * 2.2;
+    const jumpPulse = Math.max(0, Math.sin(phase * 0.4)) * 1.5;
+    const windmill = Math.sin(phase * 1.8) * 1.5;
     return {
-      leftLeg: { ox: Math.round(spin * 3.5), oy: Math.round(spin2 * 1.0 + twist * 0.4), oz: Math.round(Math.max(0, -spin) * 2.0) },
-      rightLeg: { ox: Math.round(-spin * 3.5), oy: Math.round(-spin2 * 1.0 - twist * 0.4), oz: Math.round(Math.max(0, spin) * 2.0) },
-      leftArm: { ox: Math.round(spin * 6), oy: Math.round(-power * 4.5 + twist), oz: Math.round(power * 6 + slam * 3.0) },
-      rightArm: { ox: Math.round(-spin * 5), oy: Math.round(power * 2.5 - twist), oz: Math.round(power * 5 + slam * 2.0) },
-      torso: { ox: Math.round(spin * 2.5 + bodyLean), oy: Math.round(twist * 1.2), oz: Math.round(power * 1.5 - slam * 2.5) },
-      head: { ox: Math.round(spin * 1.5 + bodyLean * 0.7), oy: Math.round(twist * 0.8), oz: Math.round(power * 1.2 - slam * 2.0) },
-      weapon: { ox: Math.round(spin * 8 + power * 5), oy: Math.round(-power * 6 + slam * 3.0 + twist), oz: Math.round(power * 8 - slam * 5) },
+      leftLeg: { ox: Math.round(spin * 4.0), oy: Math.round(spin2 * 1.2 + twist * 0.5), oz: Math.round(Math.max(0, -spin) * 2.5 + jumpPulse) },
+      rightLeg: { ox: Math.round(-spin * 4.0), oy: Math.round(-spin2 * 1.2 - twist * 0.5), oz: Math.round(Math.max(0, spin) * 2.5 + jumpPulse) },
+      leftArm: { ox: Math.round(spin * 7 + windmill), oy: Math.round(-power * 5.5 + twist), oz: Math.round(power * 7 + slam * 4.0) },
+      rightArm: { ox: Math.round(-spin * 6 - windmill), oy: Math.round(power * 3.0 - twist), oz: Math.round(power * 6 + slam * 3.0) },
+      torso: { ox: Math.round(spin * 3.0 + bodyLean), oy: Math.round(twist * 1.5), oz: Math.round(power * 2.0 - slam * 3.0 + jumpPulse * 0.5) },
+      head: { ox: Math.round(spin * 2.0 + bodyLean * 0.8), oy: Math.round(twist * 1.0), oz: Math.round(power * 1.5 - slam * 2.5 + jumpPulse * 0.5) },
+      weapon: { ox: Math.round(spin * 10 + power * 6), oy: Math.round(-power * 7 + slam * 4.0 + twist), oz: Math.round(power * 10 - slam * 6) },
       weaponGlow: 1.0
     };
   }
@@ -982,23 +986,25 @@ export class VoxelRenderer {
       return;
     }
 
-    if ((animState === 'attack' || animState === 'combo_finisher') && animTimer > 0.05) {
+    if ((animState === 'attack' || animState === 'combo_finisher' || animState === 'lunge_slash' || animState === 'dash_attack') && animTimer > 0.03) {
       const isFinisher = animState === 'combo_finisher';
-      const trailAlpha = isFinisher ? 0.35 : 0.1;
-      const trailCount = isFinisher ? 3 : 1;
+      const isLunge = animState === 'lunge_slash';
+      const isDash = animState === 'dash_attack';
+      const trailAlpha = isFinisher ? 0.4 : isLunge ? 0.2 : isDash ? 0.15 : 0.12;
+      const trailCount = isFinisher ? 4 : isLunge ? 2 : isDash ? 2 : 1;
       const classTrailColors: Record<string, string> = { Warrior: '#ef4444', Mage: '#8b5cf6', Ranger: '#22c55e', Worg: '#f97316' };
       const trailTint = classTrailColors[heroClass] || '#ffffff';
       for (let ti = 0; ti < trailCount; ti++) {
-        const trailOffset = 0.08 + ti * 0.06;
+        const trailOffset = 0.05 + ti * 0.05;
         ctx.save();
-        ctx.globalAlpha = trailAlpha * (1 - ti * 0.3);
+        ctx.globalAlpha = trailAlpha * (1 - ti * 0.25);
         ctx.globalCompositeOperation = 'lighter';
         const trailModel = buildHeroModel(race, heroClass, animState, Math.max(0, animTimer - trailOffset), heroName, heroItems);
         this.renderVoxelModel(ctx, x, groundY - 12, trailModel, this.cubeSize, facing);
         ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = (isFinisher ? trailAlpha * 0.5 : trailAlpha * 0.3) * (1 - ti * 0.3);
+        ctx.globalAlpha = (isFinisher ? trailAlpha * 0.6 : trailAlpha * 0.35) * (1 - ti * 0.25);
         ctx.fillStyle = trailTint;
-        const trailSize = isFinisher ? 32 : 24;
+        const trailSize = isFinisher ? 36 : isLunge ? 28 : 24;
         ctx.fillRect(x - trailSize / 2, groundY - trailSize, trailSize, trailSize);
         ctx.restore();
       }
@@ -1018,6 +1024,9 @@ export class VoxelRenderer {
     }
     if (animState === 'lunge_slash' && animTimer > 0.02) {
       this.drawLungeSlashVFX(ctx, x, groundY, heroClass, facing, animTimer);
+    }
+    if (animState === 'combo_finisher' && animTimer > 0.02) {
+      this.drawComboFinisherVFX(ctx, x, groundY, heroClass, facing, animTimer);
     }
   }
 
@@ -1564,6 +1573,79 @@ export class VoxelRenderer {
       }
     }
 
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  private drawComboFinisherVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number) {
+    const classColor = heroClass === 'Warrior' ? '#ef4444' : heroClass === 'Mage' ? '#8b5cf6' : heroClass === 'Ranger' ? '#22c55e' : '#f97316';
+    const phase = t * 28;
+    const power = Math.abs(Math.sin(phase * 0.5));
+    const spin = Math.sin(phase);
+
+    ctx.save();
+    ctx.translate(x, y - 10);
+
+    const shockRadius = 20 + power * 18;
+    ctx.strokeStyle = classColor;
+    ctx.lineWidth = 3 + power * 2;
+    ctx.globalAlpha = 0.5 + power * 0.4;
+    ctx.shadowColor = classColor;
+    ctx.shadowBlur = 12 + power * 10;
+    const rot = t * 6;
+    ctx.beginPath();
+    ctx.arc(0, -4, shockRadius, rot, rot + Math.PI * 1.6);
+    ctx.stroke();
+
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.arc(0, -4, shockRadius + 8, rot + Math.PI * 0.5, rot + Math.PI * 1.8);
+    ctx.stroke();
+
+    const spikeCount = 8;
+    for (let s = 0; s < spikeCount; s++) {
+      const sa = (s / spikeCount) * Math.PI * 2 + rot;
+      const sLen = 6 + power * 10 + Math.sin(t * 15 + s * 2) * 3;
+      ctx.strokeStyle = s % 2 === 0 ? classColor : '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.4 + power * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(sa) * shockRadius, Math.sin(sa) * shockRadius - 4);
+      ctx.lineTo(Math.cos(sa) * (shockRadius + sLen), Math.sin(sa) * (shockRadius + sLen) - 4);
+      ctx.stroke();
+    }
+
+    if (power > 0.5) {
+      for (let s = 0; s < 6; s++) {
+        const sa = rot * 2 + s * Math.PI / 3;
+        const sr = shockRadius * 0.5 + Math.sin(t * 12 + s) * 6;
+        ctx.fillStyle = s % 2 === 0 ? '#ffffff' : classColor;
+        ctx.globalAlpha = power * 0.6;
+        ctx.beginPath();
+        ctx.arc(Math.cos(sa) * sr, Math.sin(sa) * sr - 4, 2 + Math.sin(t * 20 + s) * 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const weaponArc = facing + spin * Math.PI * 0.8;
+    const weaponDist = 28 + power * 12;
+    ctx.strokeStyle = classColor;
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = 0.7;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(0, -4, weaponDist, weaponArc - 0.8, weaponArc + 0.8);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath();
+    ctx.arc(0, -4, weaponDist - 4, weaponArc - 0.5, weaponArc + 0.5);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
     ctx.restore();
   }
