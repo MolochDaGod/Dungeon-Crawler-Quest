@@ -79,6 +79,66 @@ export function cloneModel(model: LoadedModel): LoadedModel {
   return { scene: model.scene.clone(), animations: model.animations };
 }
 
+const animClipCache = new Map<string, THREE.AnimationClip>();
+const animLoadingPromises = new Map<string, Promise<THREE.AnimationClip | null>>();
+
+export async function loadAnimationClip(path: string): Promise<THREE.AnimationClip | null> {
+  if (animClipCache.has(path)) return animClipCache.get(path)!;
+  if (animLoadingPromises.has(path)) return animLoadingPromises.get(path)!;
+
+  const promise = new Promise<THREE.AnimationClip | null>((resolve) => {
+    fbxLoader.load(path, (fbx) => {
+      if (fbx.animations && fbx.animations.length > 0) {
+        const clip = fbx.animations[0];
+        const name = path.split('/').pop()?.replace('.fbx', '').toLowerCase() || 'unknown';
+        clip.name = name;
+        animClipCache.set(path, clip);
+        animLoadingPromises.delete(path);
+        resolve(clip);
+      } else {
+        animLoadingPromises.delete(path);
+        resolve(null);
+      }
+    }, undefined, () => {
+      animLoadingPromises.delete(path);
+      resolve(null);
+    });
+  });
+  animLoadingPromises.set(path, promise);
+  return promise;
+}
+
+export async function loadAnimationSet(paths: Record<string, string>): Promise<Map<string, THREE.AnimationClip>> {
+  const result = new Map<string, THREE.AnimationClip>();
+  const entries = Object.entries(paths);
+  const promises = entries.map(async ([name, path]) => {
+    const clip = await loadAnimationClip(path);
+    if (clip) {
+      clip.name = name.toLowerCase();
+      result.set(name.toLowerCase(), clip);
+    }
+  });
+  await Promise.allSettled(promises);
+  return result;
+}
+
+export function applyAnimationsToEntity(entity: AnimatedEntity, clips: Map<string, THREE.AnimationClip>) {
+  for (const [name, clip] of Array.from(clips)) {
+    if (!entity.actions.has(name)) {
+      const action = entity.mixer.clipAction(clip);
+      entity.actions.set(name, action);
+    }
+  }
+}
+
+export const ANIMATION_PATHS = {
+  idle: '/assets/models/animations/Idle.fbx',
+  run: '/assets/models/animations/Run.fbx',
+  attack: '/assets/models/animations/Attack.fbx',
+  death: '/assets/models/animations/Death.fbx',
+  hit: '/assets/models/animations/Hit.fbx',
+};
+
 export const MODEL_PATHS = {
   towers: {
     archer1: '/assets/models/towers/archer_tower_1.fbx',
@@ -126,6 +186,23 @@ export const MODEL_PATHS = {
     portalDoor: '/assets/models/environment/PortalDoor.glb',
     chest: '/assets/models/environment/Chest.glb',
     treasureChest: '/assets/models/environment/TreasureChest.glb',
+    boat: '/assets/models/environment/Boat.fbx',
+    palmTree: '/assets/models/environment/PalmTree.fbx',
+    lantern: '/assets/models/environment/Lantern_1.fbx',
+    rowboat: '/assets/models/environment/Rowboat.fbx',
+  },
+  dungeon: {
+    armor: '/assets/models/dungeon/Armor_01_001.fbx',
+    door: '/assets/models/dungeon/Door_03_001.fbx',
+    doorFrame: '/assets/models/dungeon/DoorFrame_02_001.fbx',
+    floorCorner: '/assets/models/dungeon/Floor_Corner_01_001.fbx',
+    pillar: '/assets/models/dungeon/Pillar_03_001.fbx',
+    plinth: '/assets/models/dungeon/Plinth_Big_01_001.fbx',
+    redBanner: '/assets/models/dungeon/RedBanner_Small_01_001.fbx',
+    smallChest: '/assets/models/dungeon/SmallChest_02_001.fbx',
+    smallChestTop: '/assets/models/dungeon/SmallChest_Top_02_001.fbx',
+    torchWall: '/assets/models/dungeon/Torch_Wall_01_001.fbx',
+    wallBrick: '/assets/models/dungeon/WallBrick_Tall_01_001.fbx',
   },
   weapons: {
     sword: '/assets/models/weapons/Sword.glb',

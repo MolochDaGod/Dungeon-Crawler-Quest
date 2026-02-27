@@ -100,6 +100,29 @@ A browser-based game with two modes: MOBA (5v5, 3 lanes) and Dungeon Crawler (pr
 - Chat callouts: AI heroes post strategic messages ("push mid", "enemy missing", "going b", "need backup", "group up")
 - Base healing: AI retreats and heals at base when low, then returns to assigned lane
 
+### 3D Animation System
+- External FBX animation clips loaded from `/assets/models/animations/`: Idle, Run, Attack, Death, Hit
+- `loadAnimationSet()` and `applyAnimationsToEntity()` in model-loader.ts for loading and applying external animation clips
+- Shared animation set applied to all hero entities via prefab `animations` field
+- `mapAnimState()` in three-renderer.ts maps game animState (walk/attack/ability/dodge/death) to animation clip names (run/attack/hit/death/idle)
+- Animation cross-fading with 0.15s transitions between states
+- Attack and death animations play once (LoopOnce + clampWhenFinished)
+- Fallback to mesh position/rotation manipulation when no AnimatedEntity is available
+
+### Hero Portraits
+- 25 compressed PNG portraits (256x256) at `public/assets/portraits/`
+- Naming: `{race}_{class}.png` (e.g., `human_warrior.png`, `elf_mage.png`)
+- Special: `pirate_king.png` for Racalvin the Pirate King (secret hero)
+- `getPortraitPath(race, heroClass, heroName?)` helper in types.ts handles Pirate King mapping
+- Used in: character-select.tsx (hero cards + detail panel), game.tsx (HUD stats + scoreboard)
+- Compressed from ~1.5MB originals to ~100KB each (93% size reduction)
+
+### 3D Environment Assets
+- FreeSample pack: Boat, Bridge, Building, Chest, Lantern, PalmTree, Rock, Rowboat, Sand (FBX)
+- FreeSample2 dungeon pack: Armor, Door, DoorFrame, FloorCorner, Pillar, Plinth, RedBanner, SmallChest, TorchWall, WallBrick (FBX)
+- Dungeon textures: 4K diffuse maps for blocks, props, walls in `/assets/textures/dungeon/`
+- DUNGEON_PREFABS exported from prefabs.ts for dungeon crawler 3D mode integration
+
 ### Voxel Art System
 - Procedural isometric cube rendering, 14z×8y×8x hero grids (expanded from 12×6×6)
 - Multi-part body pose system: head, torso, arms, legs, weapon — each independently animated

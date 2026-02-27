@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import {
   MobaState, HudState, HEROES, ITEMS, CLASS_ABILITIES,
   TEAM_COLORS, TEAM_NAMES, CLASS_COLORS, RARITY_COLORS,
-  ItemDef
+  ItemDef, getPortraitPath
 } from '@/game/types';
 import {
   createInitialState, updateGame, getHudState,
@@ -694,7 +694,7 @@ export default function GamePage() {
               >
                 <div className="flex flex-col items-center" style={{ gap: 4 }}>
                   <img
-                    src={`/assets/portraits/${hud.heroRace.toLowerCase()}_${hud.heroClass.toLowerCase()}.png`}
+                    src={getPortraitPath(hud.heroRace, hud.heroClass, hud.heroName)}
                     alt={`${hud.heroRace} ${hud.heroClass}`}
                     data-testid="img-hero-portrait"
                     style={{
@@ -837,7 +837,7 @@ function Scoreboard({ hud }: { hud: HudState }) {
               {hud.allHeroes.filter(h => h.team === t).map((h, i) => (
                 <div key={i} className="flex items-center gap-2 bg-black/30 px-2 py-1 rounded text-xs" data-testid={`row-scoreboard-${t}-${i}`}>
                   <img
-                    src={`/assets/portraits/${h.heroRace.toLowerCase()}_${h.heroClass.toLowerCase()}.png`}
+                    src={getPortraitPath(h.heroRace, h.heroClass, h.name)}
                     alt={`${h.heroRace} ${h.heroClass}`}
                     data-testid={`img-scoreboard-portrait-${t}-${i}`}
                     style={{
