@@ -1097,7 +1097,14 @@ function Scoreboard({ hud }: { hud: HudState }) {
 
 function Minimap({ hud }: { hud: HudState }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const size = 200;
+  const fogCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [size] = useState(() => {
+    try {
+      const stored = localStorage.getItem('grudge_graphics_settings');
+      if (stored) return Math.max(120, Math.min(280, JSON.parse(stored).minimapSize || 200));
+    } catch {}
+    return 200;
+  });
   const scale = size / MAP_SIZE;
 
   useEffect(() => {
@@ -1110,6 +1117,56 @@ function Minimap({ hud }: { hud: HudState }) {
 
     ctx.fillStyle = '#0a0f0a';
     ctx.fillRect(0, 0, size, size);
+
+    const VISION_RADIUS = 600;
+    const TOWER_VISION = 500;
+
+    const alliedVisionSources: { x: number; y: number; radius: number }[] = [];
+    for (const ent of hud.minimapEntities) {
+      if (ent.dead) continue;
+      if (ent.type === 'player' || ent.type === 'ally_hero') {
+        alliedVisionSources.push({ x: ent.x, y: ent.y, radius: VISION_RADIUS });
+      } else if (ent.type === 'ally_tower' || ent.type === 'ally_nexus') {
+        alliedVisionSources.push({ x: ent.x, y: ent.y, radius: TOWER_VISION });
+      } else if (ent.type === 'ally_minion') {
+        alliedVisionSources.push({ x: ent.x, y: ent.y, radius: 300 });
+      }
+    }
+
+    const isVisible = (wx: number, wy: number) => {
+      for (const src of alliedVisionSources) {
+        const dx = wx - src.x;
+        const dy = wy - src.y;
+        if (dx * dx + dy * dy <= src.radius * src.radius) return true;
+      }
+      return false;
+    };
+
+    if (!fogCanvasRef.current) {
+      fogCanvasRef.current = document.createElement('canvas');
+      fogCanvasRef.current.width = size;
+      fogCanvasRef.current.height = size;
+    }
+    const fogCanvas = fogCanvasRef.current;
+    const fogCtx = fogCanvas.getContext('2d')!;
+    fogCtx.clearRect(0, 0, size, size);
+    fogCtx.fillStyle = 'rgba(0,0,0,0.7)';
+    fogCtx.fillRect(0, 0, size, size);
+    fogCtx.globalCompositeOperation = 'destination-out';
+    for (const src of alliedVisionSources) {
+      const cx = src.x * scale;
+      const cy = src.y * scale;
+      const r = src.radius * scale;
+      const grad = fogCtx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(0.7, 'rgba(0,0,0,0.8)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      fogCtx.fillStyle = grad;
+      fogCtx.beginPath();
+      fogCtx.arc(cx, cy, r, 0, Math.PI * 2);
+      fogCtx.fill();
+    }
+    fogCtx.globalCompositeOperation = 'source-over';
 
     const colorMap: Record<string, string> = {
       player: '#fff',
@@ -1143,6 +1200,8 @@ function Minimap({ hud }: { hud: HudState }) {
 
     for (const ent of hud.minimapEntities) {
       if (ent.dead) continue;
+      const isEnemy = ent.type.startsWith('enemy_');
+      if (isEnemy && !isVisible(ent.x, ent.y)) continue;
       const mx = ent.x * scale;
       const my = ent.y * scale;
       const r = sizeMap[ent.type] || 2;
@@ -1156,6 +1215,8 @@ function Minimap({ hud }: { hud: HudState }) {
       ctx.fill();
       ctx.shadowBlur = 0;
     }
+
+    ctx.drawImage(fogCanvas, 0, 0);
 
     if (hud.cameraViewport) {
       const vx = hud.cameraViewport.x * scale;
