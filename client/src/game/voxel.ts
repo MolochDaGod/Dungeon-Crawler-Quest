@@ -52,7 +52,7 @@ const CLASS_ARMOR: Record<string, { primary: string; secondary: string; weapon: 
   Ranger: { primary: '#2d5016', secondary: '#4a7c23', weapon: '#854d0e' }
 };
 
-export type TerrainType = 'grass' | 'dirt' | 'stone' | 'water' | 'lane' | 'jungle' | 'base_blue' | 'base_red' | 'river';
+export type TerrainType = 'grass' | 'dirt' | 'stone' | 'water' | 'lane' | 'jungle' | 'base_blue' | 'base_red' | 'river' | 'jungle_path';
 export type DungeonTileVoxelType = 'floor' | 'wall' | 'wall_top' | 'door' | 'trap' | 'stairs' | 'chest';
 
 const TERRAIN_PALETTES: Record<TerrainType, { base: string[]; accent: string[]; height: number }> = {
@@ -65,6 +65,7 @@ const TERRAIN_PALETTES: Record<TerrainType, { base: string[]; accent: string[]; 
   base_blue: { base: ['#1a2a5a', '#203470', '#162450', '#283e80'], accent: ['#3050a0', '#101a40'], height: 2 },
   base_red:  { base: ['#5a1a1a', '#702020', '#501616', '#802828'], accent: ['#a03030', '#401010'], height: 2 },
   river:     { base: ['#1a5a7a', '#206a8a', '#154a6a', '#207a9a'], accent: ['#3090b0', '#104060'], height: 0 },
+  jungle_path: { base: ['#3a3020', '#453828', '#2e2818', '#4a3e28'], accent: ['#5a4e38', '#252010'], height: 1 },
 };
 
 const DUNGEON_PALETTES: Record<DungeonTileVoxelType, { base: string[]; accent: string[] }> = {
@@ -1117,6 +1118,23 @@ export class VoxelRenderer {
         ctx.beginPath();
         ctx.moveTo(0, tileSize * 0.3);
         ctx.lineTo(tileSize, tileSize * 0.3);
+        ctx.stroke();
+      }
+    }
+
+    if (terrain === 'jungle_path') {
+      ctx.strokeStyle = 'rgba(80,70,50,0.12)';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < 3; i++) {
+        const px = seededRandom(tx * 50 + i, ty * 50) * tileSize;
+        const py = seededRandom(tx * 50, ty * 50 + i) * tileSize;
+        ctx.fillStyle = shade('#2a4a18', 0.7 + seededRandom(tx + i, ty + i) * 0.3);
+        ctx.fillRect(px, py, 2, 1.5);
+      }
+      if ((tx + ty) % 4 === 0) {
+        ctx.beginPath();
+        ctx.moveTo(0, tileSize * 0.5);
+        ctx.lineTo(tileSize, tileSize * 0.5);
         ctx.stroke();
       }
     }
