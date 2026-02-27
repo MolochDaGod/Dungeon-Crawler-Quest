@@ -135,8 +135,34 @@ function generateTerrainMap(): number[][] {
 
 const TERRAIN_LOOKUP: TerrainType[] = ['grass', 'dirt', 'stone', 'water', 'lane', 'jungle', 'base_blue', 'base_red', 'river', 'jungle_path'];
 
-function generateDecorations(): { x: number; y: number; type: 'tree' | 'rock'; seed: number }[] {
-  const decos: { x: number; y: number; type: 'tree' | 'rock'; seed: number }[] = [];
+function generateDecorations(): { x: number; y: number; type: string; seed: number }[] {
+  const decos: { x: number; y: number; type: string; seed: number }[] = [];
+
+  decos.push({ x: MAP_SIZE / 2, y: MAP_SIZE / 2, type: 'coliseum', seed: 9000 });
+  decos.push({ x: BASE_POSITIONS[0].x + 120, y: BASE_POSITIONS[0].y - 80, type: 'barracks', seed: 9001 });
+  decos.push({ x: BASE_POSITIONS[0].x + 200, y: BASE_POSITIONS[0].y - 30, type: 'forge', seed: 9002 });
+  decos.push({ x: BASE_POSITIONS[1].x - 120, y: BASE_POSITIONS[1].y + 80, type: 'crypt', seed: 9003 });
+  decos.push({ x: BASE_POSITIONS[1].x - 200, y: BASE_POSITIONS[1].y + 30, type: 'necropolis_walls', seed: 9004 });
+  decos.push({ x: 600, y: 600, type: 'arch', seed: 9005 });
+  decos.push({ x: 3400, y: 3400, type: 'arch', seed: 9006 });
+  decos.push({ x: 1000, y: 3200, type: 'tree_house', seed: 9007 });
+  decos.push({ x: 3200, y: 1000, type: 'hellhouse', seed: 9008 });
+  decos.push({ x: 1600, y: 2400, type: 'cabin_shed', seed: 9009 });
+  decos.push({ x: 2400, y: 1600, type: 'storage_house', seed: 9010 });
+  decos.push({ x: MAP_SIZE / 2 - 300, y: MAP_SIZE / 2 + 300, type: 'camp_fire_glb', seed: 9011 });
+  decos.push({ x: MAP_SIZE / 2 + 300, y: MAP_SIZE / 2 - 300, type: 'camp_fire_glb', seed: 9012 });
+
+  const jungleStructureTypes = ['gravestone', 'tree_lava', 'camp_fire_glb'];
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const r = 800 + seededRandom(i * 41, i * 53) * 600;
+    const x = MAP_SIZE / 2 + Math.cos(angle) * r;
+    const y = MAP_SIZE / 2 + Math.sin(angle) * r;
+    if (isOnLaneStatic(x, y)) continue;
+    const structType = jungleStructureTypes[i % jungleStructureTypes.length];
+    decos.push({ x, y, type: structType, seed: 9100 + i });
+  }
+
   for (let i = 0; i < 200; i++) {
     const x = seededRandom(i * 7, i * 13) * MAP_SIZE;
     const y = seededRandom(i * 11, i * 17) * MAP_SIZE;
@@ -3192,14 +3218,98 @@ export class MobaRenderer {
     }
 
     for (const deco of state.decorations) {
-      if (deco.x < cam.x - W / 2 / cam.zoom - 40 || deco.x > cam.x + W / 2 / cam.zoom + 40) continue;
-      if (deco.y < cam.y - H / 2 / cam.zoom - 80 || deco.y > cam.y + H / 2 / cam.zoom + 40) continue;
+      if (deco.x < cam.x - W / 2 / cam.zoom - 80 || deco.x > cam.x + W / 2 / cam.zoom + 80) continue;
+      if (deco.y < cam.y - H / 2 / cam.zoom - 120 || deco.y > cam.y + H / 2 / cam.zoom + 80) continue;
       if (deco.type === 'tree') {
         this.voxel.drawTreeVoxel(ctx, deco.x, deco.y, deco.seed);
-      } else {
+      } else if (deco.type === 'rock') {
         this.voxel.drawRockVoxel(ctx, deco.x, deco.y, deco.seed);
+      } else {
+        this.drawStructureDecoration(ctx, deco);
       }
     }
+  }
+
+  private drawStructureDecoration(ctx: CanvasRenderingContext2D, deco: { x: number; y: number; type: string; seed: number }) {
+    const structureStyles: Record<string, { color: string; accent: string; w: number; h: number; label: string }> = {
+      coliseum: { color: '#8b7355', accent: '#c5a059', w: 60, h: 50, label: 'Arena' },
+      barracks: { color: '#5c3d1e', accent: '#8b6c42', w: 40, h: 32, label: 'Barracks' },
+      forge: { color: '#4a3728', accent: '#ef4444', w: 35, h: 28, label: 'Forge' },
+      crypt: { color: '#2d2d3d', accent: '#6b21a8', w: 38, h: 34, label: 'Crypt' },
+      necropolis_walls: { color: '#1f1f2e', accent: '#4a1f6b', w: 50, h: 20, label: '' },
+      arch: { color: '#9ca3af', accent: '#c5a059', w: 24, h: 40, label: '' },
+      tree_house: { color: '#3d5c1e', accent: '#8b6c42', w: 36, h: 38, label: '' },
+      hellhouse: { color: '#3d1f1f', accent: '#dc2626', w: 38, h: 36, label: '' },
+      cabin_shed: { color: '#6b4423', accent: '#8b7355', w: 30, h: 24, label: '' },
+      storage_house: { color: '#5c4a32', accent: '#8b7355', w: 32, h: 26, label: '' },
+      camp_fire_glb: { color: '#ef4444', accent: '#f97316', w: 12, h: 12, label: '' },
+      gravestone: { color: '#6b7280', accent: '#374151', w: 10, h: 14, label: '' },
+      tree_lava: { color: '#7f1d1d', accent: '#ef4444', w: 18, h: 30, label: '' },
+    };
+    const style = structureStyles[deco.type];
+    if (!style) return;
+
+    ctx.save();
+    ctx.translate(deco.x, deco.y);
+
+    if (deco.type === 'camp_fire_glb') {
+      const flicker = Math.sin(Date.now() * 0.008 + deco.seed) * 3;
+      const grd = ctx.createRadialGradient(0, 0, 2, 0, 0, 14 + flicker);
+      grd.addColorStop(0, 'rgba(255,150,50,0.6)');
+      grd.addColorStop(1, 'rgba(255,80,0,0)');
+      ctx.fillStyle = grd;
+      ctx.fillRect(-16, -16, 32, 32);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(-3, -4, 6, 4);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(-2, -8 - flicker, 4, 6);
+    } else if (deco.type === 'gravestone') {
+      ctx.fillStyle = style.color;
+      ctx.fillRect(-4, -12, 8, 12);
+      ctx.fillRect(-5, -14, 10, 3);
+      ctx.fillStyle = style.accent;
+      ctx.fillRect(-1, -10, 2, 6);
+      ctx.fillRect(-3, -8, 6, 2);
+    } else if (deco.type === 'tree_lava') {
+      ctx.fillStyle = '#3d1f1f';
+      ctx.fillRect(-3, -4, 6, 8);
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(0, -14, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.arc(-3, -16, 5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (deco.type === 'arch') {
+      ctx.fillStyle = style.color;
+      ctx.fillRect(-12, -40, 6, 40);
+      ctx.fillRect(6, -40, 6, 40);
+      ctx.fillRect(-12, -40, 24, 6);
+      ctx.fillStyle = style.accent;
+      ctx.fillRect(-10, -38, 20, 2);
+    } else {
+      ctx.fillStyle = style.color;
+      const hw = style.w / 2, hh = style.h / 2;
+      ctx.fillRect(-hw, -hh, style.w, style.h);
+      ctx.strokeStyle = style.accent;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-hw, -hh, style.w, style.h);
+      if (style.h > 24) {
+        ctx.fillStyle = style.accent;
+        ctx.fillRect(-hw + 3, -hh, style.w - 6, 4);
+      }
+      if (style.label) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 8px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = 0.7;
+        ctx.fillText(style.label, 0, 0);
+        ctx.globalAlpha = 1;
+      }
+    }
+    ctx.restore();
   }
 
   private isOnLane(x: number, y: number): boolean {

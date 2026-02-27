@@ -64,6 +64,15 @@ The game utilizes a React frontend with a custom HTML5 Canvas 2D and Three.js 3D
 - Right-click or Escape cancels AOE targeting
 - `PhysicsWorld` (physics.ts): cannon-es wrapper with hero/projectile bodies, knockback impulse, scale factor 0.01
 
+## 3D Structure Assets (GLB)
+- **Turrets**: `public/assets/models/turrets/` — Flamethrower_Turret, Gun_Cannon_Turret, Mortar_Tower, Rail_Gun_Turret, Tower3, Castle_Tower, Cannon
+- **Structures**: `public/assets/models/structures/` — Crypt, Fantasy_Barracks, Forge, Storage_House, Hellhouse, Tree_House, Cabin_Shed, Coliseum, Necropolis_Walls, Arch
+- **Environment**: `public/assets/models/environment/` — Gravestone, Tree_Lava, Camp_Fire (new GLB variants)
+- All registered in `prefabs.ts` under TOWER_PREFABS and ENV_PREFABS
+- Map landmarks placed in `generateDecorations()`: Coliseum at center, Barracks+Forge near blue base, Crypt+Necropolis near red base, Tree House and Hellhouse in jungle, Arches near bases, Camp fires and gravestones around jungle
+- 2D renderer: custom `drawStructureDecoration()` renders animated campfires, detailed gravestones, lava trees, stone arches, and labeled buildings
+- 3D renderer: loads GLB models for structures; falls back to colored primitive boxes when models unavailable
+
 ## Quality Notes
 - All TypeScript compiles cleanly (no errors)
 - AI heroes emit contextual chat messages based on situation (retreat, engage, laning, etc.)
@@ -71,3 +80,5 @@ The game utilizes a React frontend with a custom HTML5 Canvas 2D and Three.js 3D
 - Combo finisher animation has dramatic body twist and full weapon glow
 - River tiles have animated water overlay with ripple effects
 - Area damage zones support fire/frost/poison/lightning/holy/shadow types with status effects
+- Combat state machine: mouse events (LMB/RMB) and key-up events properly forwarded to combatActor
+- blockActive properly resets when combat machine exits block state

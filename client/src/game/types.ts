@@ -276,7 +276,7 @@ export interface MobaState {
   showScoreboard: boolean;
   killFeed: { text: string; color: string; time: number }[];
   terrainMap: number[][];
-  decorations: { x: number; y: number; type: 'tree' | 'rock'; seed: number }[];
+  decorations: { x: number; y: number; type: string; seed: number }[];
   cursorMode: 'default' | 'attack' | 'ability' | 'move' | 'attackmove';
   hoveredEntityId: number | null;
   aKeyHeld: boolean;

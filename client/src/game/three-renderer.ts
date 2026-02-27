@@ -294,7 +294,12 @@ export class ThreeRenderer {
       if (prefab) promises.push(this.loadModel(prefab));
     }
 
-    const envModelsToLoad = ['tree', 'rock', 'castle', 'fortress', 'banner', 'torch', 'campfire'];
+    const envModelsToLoad = [
+      'tree', 'rock', 'castle', 'fortress', 'banner', 'torch', 'campfire',
+      'camp_fire_glb', 'gravestone', 'tree_lava',
+      'crypt', 'barracks', 'forge', 'storage_house', 'hellhouse',
+      'tree_house', 'cabin_shed', 'coliseum', 'necropolis_walls', 'arch',
+    ];
     for (const key of envModelsToLoad) {
       const prefab = ENV_PREFABS[key];
       if (prefab) promises.push(this.loadModel(prefab));
@@ -740,7 +745,15 @@ export class ThreeRenderer {
         clone.traverse(c => { if ((c as THREE.Mesh).isMesh) { c.castShadow = true; c.receiveShadow = true; } });
         group.add(clone);
       } else {
-        if (deco.type === 'tree') {
+        const envPrefab = ENV_PREFABS[deco.type];
+        const loadedModel = envPrefab ? this.loadedModels.get(envPrefab.modelPath) : null;
+        if (envPrefab && loadedModel) {
+          const clone = loadedModel.scene.clone();
+          clone.scale.setScalar(envPrefab.scale * (0.8 + Math.random() * 0.4));
+          clone.rotation.y = Math.random() * Math.PI * 2;
+          clone.traverse(c => { if ((c as THREE.Mesh).isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+          group.add(clone);
+        } else if (deco.type === 'tree') {
           const trunkGeo = new THREE.CylinderGeometry(0.08, 0.12, 0.8, 6);
           const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.9 });
           const trunk = new THREE.Mesh(trunkGeo, trunkMat);
@@ -756,7 +769,7 @@ export class ThreeRenderer {
           crown.position.y = 1.1;
           crown.scale.y = 0.8 + Math.random() * 0.4;
           group.add(crown);
-        } else {
+        } else if (deco.type === 'rock') {
           const rockGeo = new THREE.DodecahedronGeometry(0.2 + Math.random() * 0.15, 0);
           const rockMat = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.95 });
           const rock = new THREE.Mesh(rockGeo, rockMat);
@@ -764,6 +777,21 @@ export class ThreeRenderer {
           rock.position.y = 0.15;
           rock.rotation.set(Math.random(), Math.random(), Math.random());
           group.add(rock);
+        } else {
+          const structColors: Record<string, number> = {
+            coliseum: 0x8b7355, barracks: 0x5c3d1e, forge: 0x4a3728, crypt: 0x2d2d3d,
+            necropolis_walls: 0x1f1f2e, arch: 0x9ca3af, tree_house: 0x3d5c1e,
+            hellhouse: 0x3d1f1f, cabin_shed: 0x6b4423, storage_house: 0x5c4a32,
+            camp_fire_glb: 0xef4444, gravestone: 0x6b7280, tree_lava: 0x7f1d1d,
+          };
+          const col = structColors[deco.type] || 0x888888;
+          const sz = deco.type === 'coliseum' ? 1.5 : deco.type === 'camp_fire_glb' ? 0.3 : 0.6;
+          const geo = new THREE.BoxGeometry(sz, sz * 0.8, sz);
+          const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.85 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.castShadow = true;
+          mesh.position.y = sz * 0.4;
+          group.add(mesh);
         }
       }
 

@@ -35,6 +35,48 @@ export const TOWER_PREFABS: Record<string, PrefabConfig> = {
     scale: 0.025,
     offset: new THREE.Vector3(0, 0, 0),
   },
+  flamethrower: {
+    modelPath: '/assets/models/turrets/Flamethrower_Turret.glb',
+    scale: 0.4,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'glb',
+  },
+  gun_cannon: {
+    modelPath: '/assets/models/turrets/Gun_Cannon_Turret.glb',
+    scale: 0.4,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'glb',
+  },
+  mortar: {
+    modelPath: '/assets/models/turrets/Mortar_Tower.glb',
+    scale: 0.4,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'glb',
+  },
+  railgun: {
+    modelPath: '/assets/models/turrets/Rail_Gun_Turret.glb',
+    scale: 0.4,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'glb',
+  },
+  castle_tower: {
+    modelPath: '/assets/models/turrets/Castle_Tower.glb',
+    scale: 0.3,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'glb',
+  },
+  tower3: {
+    modelPath: '/assets/models/turrets/Tower3.glb',
+    scale: 0.3,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'glb',
+  },
+  cannon_glb: {
+    modelPath: '/assets/models/turrets/Cannon.glb',
+    scale: 0.3,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'glb',
+  },
 };
 
 const SHARED_ANIMS: Record<string, string> = {
@@ -353,6 +395,7 @@ export const ENV_PREFABS: Record<string, PrefabConfig> = {
   bridge: { modelPath: '/assets/models/environment/Bridge.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
   well: { modelPath: '/assets/models/environment/Well.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
   campfire: { modelPath: '/assets/models/environment/Campfire.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
+  camp_fire_glb: { modelPath: '/assets/models/environment/Camp_Fire.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
   tent: { modelPath: '/assets/models/environment/Tent.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
   shrine: { modelPath: '/assets/models/environment/Shrine.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
   banner: { modelPath: '/assets/models/environment/Banner.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
@@ -371,6 +414,18 @@ export const ENV_PREFABS: Record<string, PrefabConfig> = {
   palmTree: { modelPath: '/assets/models/environment/PalmTree.fbx', scale: 0.01, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' },
   lantern: { modelPath: '/assets/models/environment/Lantern_1.fbx', scale: 0.01, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' },
   rowboat: { modelPath: '/assets/models/environment/Rowboat.fbx', scale: 0.01, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' },
+  gravestone: { modelPath: '/assets/models/environment/Gravestone.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  tree_lava: { modelPath: '/assets/models/environment/Tree_Lava.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  crypt: { modelPath: '/assets/models/structures/Crypt.glb', scale: 0.25, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  barracks: { modelPath: '/assets/models/structures/Fantasy_Barracks.glb', scale: 0.25, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  forge: { modelPath: '/assets/models/structures/Forge.glb', scale: 0.25, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  storage_house: { modelPath: '/assets/models/structures/Storage_House.glb', scale: 0.25, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  hellhouse: { modelPath: '/assets/models/structures/Hellhouse.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  tree_house: { modelPath: '/assets/models/structures/Tree_House.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  cabin_shed: { modelPath: '/assets/models/structures/Cabin_Shed.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  coliseum: { modelPath: '/assets/models/structures/Coliseum.glb', scale: 0.3, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  necropolis_walls: { modelPath: '/assets/models/structures/Necropolis_Walls.glb', scale: 0.25, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
+  arch: { modelPath: '/assets/models/structures/Arch.glb', scale: 0.25, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
 };
 
 export const DUNGEON_PREFABS: Record<string, PrefabConfig> = {
