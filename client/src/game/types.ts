@@ -121,6 +121,7 @@ export interface MobaHero extends GameEntity {
   attackWindup: number;
   attackBackswing: number;
   pendingAttackTarget: number | null;
+  aiChatTimer: number;
 }
 
 export interface MobaMinion extends GameEntity {
@@ -283,6 +284,27 @@ export interface MobaState {
   spellEffects: SpellEffect[];
   spellProjectiles: SpellProjectile[];
   screenShake: number;
+  areaDamageZones: AreaDamageZoneState[];
+}
+
+export interface AreaDamageZoneState {
+  id: number;
+  x: number;
+  y: number;
+  radius: number;
+  damage: number;
+  team: number;
+  sourceId: number;
+  tickInterval: number;
+  tickTimer: number;
+  ticksRemaining: number;
+  life: number;
+  maxLife: number;
+  stunChance: number;
+  stunTime: number;
+  color: string;
+  hitThisTick: number[];
+  zoneType: 'fire' | 'frost' | 'poison' | 'lightning' | 'holy' | 'shadow';
 }
 
 export interface SpellEffect {

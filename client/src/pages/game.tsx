@@ -9,7 +9,8 @@ import {
   createInitialState, updateGame, getHudState,
   MobaRenderer, handlePlayerAbility, handlePlayerAttack,
   handleRightClick, handleAttackMoveClick, handleStopCommand,
-  buyItem, handleDodge, handleDashAttack, handleBlock
+  buyItem, handleDodge, handleDashAttack, handleBlock,
+  spawnAreaDamageZone
 } from '@/game/engine';
 import { ThreeRenderer } from '@/game/three-renderer';
 import { VoxelRenderer } from '@/game/voxel';
@@ -19,6 +20,9 @@ import scoreboardBgPath from '@assets/scoreboard-bg.png';
 import {
   loadKeybindings, matchesKeyDown, KeybindAction, KeyBind
 } from '@/game/keybindings';
+import { createCombatActor, CombatVFX, COMBAT_ACTION_NAMES, COMBAT_HOTKEY_LEGEND } from '@/game/combat-machine';
+import { MouseTargetingManager } from '@/game/mouse-targeting';
+import { PhysicsWorld, createPhysicsWorld } from '@/game/physics';
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
@@ -37,6 +41,10 @@ export default function GamePage() {
   const panRef = useRef<{ active: boolean; startX: number; startY: number; camStartX: number; camStartY: number }>({
     active: false, startX: 0, startY: 0, camStartX: 0, camStartY: 0
   });
+  const combatActorRef = useRef<ReturnType<typeof createCombatActor> | null>(null);
+  const mouseTargetRef = useRef<MouseTargetingManager>(new MouseTargetingManager());
+  const physicsRef = useRef<PhysicsWorld | null>(null);
+  const [combatAction, setCombatAction] = useState('');
 
   const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
   const team = parseInt(localStorage.getItem('grudge_team') || '0');
@@ -49,6 +57,14 @@ export default function GamePage() {
 
     const state = createInitialState(heroId, team);
     stateRef.current = state;
+
+    const combatActor = createCombatActor();
+    combatActor.start();
+    combatActorRef.current = combatActor;
+
+    const physics = createPhysicsWorld();
+    physicsRef.current = physics;
+    const mouseTarget = mouseTargetRef.current;
 
     let renderer2d: MobaRenderer | null = null;
     let renderer3d: ThreeRenderer | null = null;
@@ -87,6 +103,106 @@ export default function GamePage() {
       lastTime = now;
 
       updateGame(state, dt, keysRef.current);
+
+      physics.step(dt);
+
+      const player = state.heroes[state.playerHeroIndex];
+      if (player) {
+        mouseTarget.updateHeroPosition(player);
+        mouseTarget.updateMouseWorld(state.mouseWorld);
+      }
+
+      if (combatActor) {
+        combatActor.send({ type: 'TICK', dt });
+        const snap = combatActor.getSnapshot();
+        const ctx = snap.context;
+        const player = state.heroes[state.playerHeroIndex];
+        if (player && ctx.currentAction !== 'idle') {
+          if (ctx.damage > 0 && ctx.actionTimer > 0) {
+            player.animState = ctx.animState as any;
+          }
+          if (ctx.screenShake > state.screenShake) {
+            state.screenShake = ctx.screenShake;
+          }
+          player.blockActive = !!ctx.blockActive;
+          if (ctx.vfxQueue.length > 0) {
+            for (const vfx of ctx.vfxQueue) {
+              if (vfx.type === 'slash' || vfx.type === 'impact') {
+                state.spellEffects.push({
+                  x: player.x + Math.cos(player.facing) * 25,
+                  y: player.y + Math.sin(player.facing) * 25,
+                  type: vfx.type === 'slash' ? 'slash_arc' : 'impact_ring',
+                  life: vfx.duration, maxLife: vfx.duration,
+                  radius: vfx.radius, color: vfx.color,
+                  angle: vfx.angle ?? player.facing
+                });
+              } else if (vfx.type === 'burst' || vfx.type === 'energy_wave') {
+                state.spellEffects.push({
+                  x: player.x, y: player.y,
+                  type: vfx.type === 'burst' ? 'combo_burst' : 'cast_circle',
+                  life: vfx.duration, maxLife: vfx.duration,
+                  radius: vfx.radius, color: vfx.color, angle: 0
+                });
+                const count = vfx.count || 6;
+                for (let p = 0; p < count; p++) {
+                  const a = (p / count) * Math.PI * 2;
+                  state.particles.push({
+                    x: player.x, y: player.y,
+                    vx: Math.cos(a) * (50 + Math.random() * 60),
+                    vy: Math.sin(a) * (50 + Math.random() * 60) - 15,
+                    life: vfx.duration, maxLife: vfx.duration,
+                    color: vfx.color, size: 2 + Math.random() * 2, type: 'ability'
+                  });
+                }
+              } else if (vfx.type === 'ground_ring' || vfx.type === 'earthquake_ring') {
+                state.spellEffects.push({
+                  x: player.x, y: player.y,
+                  type: 'ground_slam',
+                  life: vfx.duration, maxLife: vfx.duration,
+                  radius: vfx.radius, color: vfx.color, angle: 0
+                });
+              } else if (vfx.type === 'projectile') {
+                const angle = player.facing;
+                state.spellProjectiles.push({
+                  id: state.nextEntityId++,
+                  x: player.x + Math.cos(angle) * 20,
+                  y: player.y + Math.sin(angle) * 20,
+                  vx: Math.cos(angle) * 500,
+                  vy: Math.sin(angle) * 500,
+                  speed: 500,
+                  damage: Math.floor(player.atk * ctx.damage),
+                  radius: 8,
+                  life: 1.2, maxLife: 1.2,
+                  team: player.team,
+                  sourceId: player.id,
+                  color: vfx.color, trailColor: vfx.color,
+                  aoeRadius: 0, piercing: false, hitIds: [],
+                  spellName: 'Combat Projectile'
+                });
+              } else if (vfx.type === 'uppercut_trail' || vfx.type === 'launch_trail') {
+                state.spellEffects.push({
+                  x: player.x, y: player.y,
+                  type: 'dash_trail',
+                  life: vfx.duration, maxLife: vfx.duration,
+                  radius: vfx.radius, color: vfx.color,
+                  angle: vfx.type === 'uppercut_trail' ? -Math.PI / 2 : player.facing
+                });
+              } else if (vfx.type === 'spin_trail') {
+                for (let s = 0; s < 4; s++) {
+                  state.spellEffects.push({
+                    x: player.x, y: player.y,
+                    type: 'whirlwind_slash',
+                    life: vfx.duration, maxLife: vfx.duration,
+                    radius: vfx.radius, color: vfx.color,
+                    angle: (s / 4) * Math.PI * 2
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
       if (renderer3d) {
         renderer3d.render(state);
       } else if (renderer2d) {
@@ -97,6 +213,10 @@ export default function GamePage() {
       if (hudTimer > 0.1) {
         hudTimer = 0;
         setHud(getHudState(state));
+        if (combatActor) {
+          const snap = combatActor.getSnapshot();
+          setCombatAction(snap.context.currentAction);
+        }
       }
 
       animId = requestAnimationFrame(gameLoop);
@@ -109,16 +229,35 @@ export default function GamePage() {
       const key = e.key.toLowerCase();
       keysRef.current.add(key);
 
-      if (matchesKeyDown(bindings[KeybindAction.Ability1], e)) handlePlayerAbility(state, 0);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) handlePlayerAbility(state, 1);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) handlePlayerAbility(state, 2);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) handlePlayerAbility(state, 3);
+      const tryAbility = (idx: number) => {
+        const p = state.heroes[state.playerHeroIndex];
+        if (!p) return;
+        const hd = HEROES[p.heroDataId];
+        const abilities = hd ? CLASS_ABILITIES[hd.heroClass] : null;
+        const ab = abilities?.[idx];
+        if (ab && ab.castType === 'ground_aoe') {
+          const classColors: Record<string, string> = { Mage: '#a855f7', Warrior: '#ef4444', Ranger: '#22c55e', Worg: '#f97316' };
+          mouseTarget.startAOETargeting(idx, ab.radius || 80, ab.range || 500, classColors[hd?.heroClass || ''] || '#ef4444');
+          state.selectedAbility = idx;
+          state.cursorMode = 'ability';
+          return;
+        }
+        handlePlayerAbility(state, idx);
+      };
+      if (matchesKeyDown(bindings[KeybindAction.Ability1], e)) tryAbility(0);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) tryAbility(1);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) tryAbility(2);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) tryAbility(3);
 
       if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handlePlayerAttack(state);
       if (matchesKeyDown(bindings[KeybindAction.ToggleShop], e)) state.showShop = !state.showShop;
       if (matchesKeyDown(bindings[KeybindAction.ToggleScoreboard], e)) { e.preventDefault(); state.showScoreboard = true; }
       if (matchesKeyDown(bindings[KeybindAction.Pause], e)) {
-        if (state.selectedAbility >= 0) {
+        if (mouseTarget.aoeIndicator.active) {
+          mouseTarget.cancelTargeting();
+          state.selectedAbility = -1;
+          state.cursorMode = 'default';
+        } else if (state.selectedAbility >= 0) {
           state.selectedAbility = -1;
           state.cursorMode = 'default';
         } else {
@@ -149,6 +288,7 @@ export default function GamePage() {
       if (matchesKeyDown(bindings[KeybindAction.Dodge], e)) {
         e.preventDefault();
         handleDodge(state);
+        combatActor.send({ type: 'SPACE_DOWN' });
       }
       if (matchesKeyDown(bindings[KeybindAction.DashAttack], e)) {
         handleDashAttack(state);
@@ -161,6 +301,17 @@ export default function GamePage() {
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility2], e)) handlePlayerAbility(state, 1);
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility3], e)) handlePlayerAbility(state, 2);
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility4], e)) handlePlayerAbility(state, 3);
+
+      if (key === 'shift') combatActor.send({ type: 'SHIFT_DOWN' });
+      if (key === 'r') combatActor.send({ type: 'R_DOWN' });
+      if (key === 'e') combatActor.send({ type: 'E_DOWN' });
+      if (key === ' ') combatActor.send({ type: 'SPACE_DOWN' });
+      if (key === '1') combatActor.send({ type: 'KEY_1' });
+      if (key === '2') combatActor.send({ type: 'KEY_2' });
+      if (key === '3') combatActor.send({ type: 'KEY_3' });
+      if (key === 'j') combatActor.send({ type: 'KEY_J' });
+      if (key === 'k') combatActor.send({ type: 'KEY_K' });
+      if (key === 'l') combatActor.send({ type: 'KEY_L' });
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
@@ -178,6 +329,10 @@ export default function GamePage() {
       if (matchesKeyDown(bindings[KeybindAction.Block], e)) {
         handleBlock(state, false);
       }
+      if (key === 'shift') combatActor.send({ type: 'SHIFT_UP' });
+      if (key === 'r') combatActor.send({ type: 'R_UP' });
+      if (key === 'e') combatActor.send({ type: 'E_UP' });
+      if (key === ' ') combatActor.send({ type: 'SPACE_UP' });
     };
 
     const eventTarget = renderer3d ? renderer3d.getCanvas() : (canvasRef.current || document.body);
@@ -199,6 +354,13 @@ export default function GamePage() {
 
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
+      combatActor.send({ type: 'RMB_DOWN' });
+      if (mouseTarget.aoeIndicator.active) {
+        mouseTarget.cancelTargeting();
+        state.selectedAbility = -1;
+        state.cursorMode = 'default';
+        return;
+      }
       const wp = getWorldPos(e);
       state.cursorMode = 'move';
       handleRightClick(state, wp.x, wp.y);
@@ -207,8 +369,37 @@ export default function GamePage() {
 
     const onMouseDown = (e: MouseEvent) => {
       if (e.button === 0) {
+        combatActor.send({ type: 'LMB_DOWN' });
         const wp = getWorldPos(e);
-        if (state.aKeyHeld) {
+        if (mouseTarget.aoeIndicator.active) {
+          const targetPos = mouseTarget.confirmAOETarget();
+          if (targetPos) {
+            const p = state.heroes[state.playerHeroIndex];
+            if (p) {
+              const hd = HEROES[p.heroDataId];
+              const abilities = hd ? CLASS_ABILITIES[hd.heroClass] : null;
+              const abIdx = mouseTarget.aoeIndicator.abilityIndex >= 0 ? mouseTarget.aoeIndicator.abilityIndex : state.selectedAbility;
+              const ab = abilities?.[abIdx];
+              if (ab) {
+                handlePlayerAbility(state, abIdx);
+                const zoneTypeMap: Record<string, 'fire' | 'frost' | 'poison' | 'lightning' | 'holy' | 'shadow'> = {
+                  'Mage': 'frost', 'Warrior': 'fire', 'Ranger': 'poison', 'Worg': 'shadow'
+                };
+                spawnAreaDamageZone(
+                  state, targetPos.x, targetPos.y,
+                  ab.radius || 80, ab.damage || 30,
+                  p.team, p.id,
+                  10, 1.0,
+                  0.15, 1.5,
+                  ab.type === 'aoe' ? '#ef4444' : '#a855f7',
+                  zoneTypeMap[hd?.heroClass || ''] || 'fire'
+                );
+              }
+            }
+            state.selectedAbility = -1;
+            state.cursorMode = 'default';
+          }
+        } else if (state.aKeyHeld) {
           handleAttackMoveClick(state, wp.x, wp.y);
           state.cursorMode = 'attackmove';
         } else if (state.selectedAbility >= 0) {
@@ -230,6 +421,8 @@ export default function GamePage() {
     };
 
     const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) combatActor.send({ type: 'LMB_UP' });
+      if (e.button === 2) combatActor.send({ type: 'RMB_UP' });
       if (e.button === 1) panRef.current.active = false;
     };
 
@@ -279,6 +472,8 @@ export default function GamePage() {
       eventTarget.removeEventListener('mousemove', onMouseMove);
       eventTarget.removeEventListener('wheel', onWheel);
       if (renderer3d) renderer3d.dispose();
+      if (physics) physics.clear();
+      combatActor.stop();
     };
   }, [heroId, team, setLocation, renderMode]);
 

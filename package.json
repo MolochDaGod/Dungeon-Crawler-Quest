@@ -49,6 +49,7 @@
     "2d-polygon-area": "^1.0.0",
     "adm-zip": "^0.5.16",
     "camera-2d-simple": "^3.0.0",
+    "cannon-es": "^0.20.0",
     "canvas-app": "^2.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -96,6 +97,7 @@
     "vaul": "^1.1.2",
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
+    "xstate": "^5.19.2",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0"
   },

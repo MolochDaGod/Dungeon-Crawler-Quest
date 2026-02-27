@@ -3,14 +3,14 @@ import {
   Projectile, Particle, FloatingText, HudState, Camera,
   HeroData, HEROES, ITEMS, CLASS_ABILITIES, LANE_WAYPOINTS,
   MAP_SIZE, TEAM_COLORS, TEAM_NAMES, Vec2, SpellEffect,
-  SpellProjectile,
+  SpellProjectile, AreaDamageZoneState,
   xpForLevel, heroStatsAtLevel, calcDamage,
   RACE_COLORS, CLASS_COLORS, RARITY_COLORS,
   JungleCamp, JungleMob
 } from './types';
 import { VoxelRenderer, TerrainType } from './voxel';
 import {
-  StatusEffect, updateStatusEffects, applyStatusEffect,
+  StatusEffect, StatusEffectType, updateStatusEffects, applyStatusEffect,
   isStunned, isRooted, isSilenced, getSpeedMultiplier,
   hasLifesteal, getAbilityStatusEffects,
   CombatEntity, calculateDamage as combatCalcDamage,
@@ -194,7 +194,8 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     _ambientTimer: 0,
     spellEffects: [],
     spellProjectiles: [],
-    screenShake: 0
+    screenShake: 0,
+    areaDamageZones: []
   };
 
   const team0Heroes = [playerHeroId];
@@ -276,7 +277,8 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     iFrames: 0,
     assignedLane: 1,
     abilityCharges: initAbilityCharges(hd.heroClass),
-    abilityChargeTimers: [0, 0, 0, 0]
+    abilityChargeTimers: [0, 0, 0, 0],
+    aiChatTimer: 5 + Math.random() * 20
   };
 }
 
@@ -638,6 +640,7 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   updateJungleCamps(state, dt);
   updateProjectiles(state, dt);
   updateSpellProjectiles(state, dt);
+  updateAreaDamageZones(state, dt);
   updateParticles(state, dt);
   updateFloatingTexts(state, dt);
   updateSpellEffects(state, dt);
@@ -2367,6 +2370,114 @@ function updateSpellEffects(state: MobaState, dt: number) {
   if (state.screenShake > 0) state.screenShake -= dt;
 }
 
+function updateAreaDamageZones(state: MobaState, dt: number) {
+  for (let i = state.areaDamageZones.length - 1; i >= 0; i--) {
+    const zone = state.areaDamageZones[i];
+    zone.life -= dt;
+    zone.tickTimer += dt;
+
+    if (zone.tickTimer >= zone.tickInterval && zone.ticksRemaining > 0) {
+      zone.tickTimer = 0;
+      zone.ticksRemaining--;
+      zone.hitThisTick = [];
+
+      const enemies = getAllEnemies(state, zone.team);
+      const attacker = findEntityById(state, zone.sourceId);
+      for (const e of enemies) {
+        if (dist(zone, e) < zone.radius) {
+          if (attacker) dealDamage(state, attacker, e, zone.damage);
+          zone.hitThisTick.push(e.id);
+
+          if (zone.stunChance > 0 && Math.random() < zone.stunChance) {
+            if ('stunTimer' in e) {
+              (e as any).stunTimer = Math.max((e as any).stunTimer || 0, zone.stunTime);
+            }
+          }
+
+          const zoneTypeEffects: Record<string, () => void> = {
+            frost: () => {
+              if ('spd' in e) {
+                applyStatusEffect(e as any, {
+                  id: state.nextEntityId++, type: StatusEffectType.Slow, name: 'Frost Zone', duration: 1.5,
+                  icon: '❄', color: '#60a5fa', remaining: 1.5,
+                  stacks: 1, maxStacks: 1, value: 0.6,
+                  tickRate: 0, tickTimer: 0, tickDamage: 0, sourceId: zone.sourceId,
+                });
+              }
+            },
+            poison: () => {
+              if ('activeEffects' in e) {
+                applyStatusEffect(e as any, {
+                  id: state.nextEntityId++, type: StatusEffectType.Poison, name: 'Poison', duration: 3,
+                  icon: '☠', color: '#22c55e', remaining: 3,
+                  stacks: 1, maxStacks: 3, value: 0,
+                  tickRate: 0.5, tickTimer: 0, tickDamage: Math.floor(zone.damage * 0.3), sourceId: zone.sourceId,
+                });
+              }
+            },
+          };
+          if (zoneTypeEffects[zone.zoneType]) zoneTypeEffects[zone.zoneType]();
+        }
+      }
+
+      for (let p = 0; p < 4; p++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.random() * zone.radius;
+        state.particles.push({
+          x: zone.x + Math.cos(a) * r, y: zone.y + Math.sin(a) * r,
+          vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 40,
+          life: 0.5, maxLife: 0.5,
+          color: zone.color, size: 2 + Math.random() * 2, type: 'ability'
+        });
+      }
+    }
+
+    if (zone.life <= 0 || zone.ticksRemaining <= 0) {
+      state.areaDamageZones.splice(i, 1);
+    }
+  }
+}
+
+export function spawnAreaDamageZone(
+  state: MobaState,
+  x: number, y: number,
+  radius: number, damage: number,
+  team: number, sourceId: number,
+  ticks: number, tickInterval: number,
+  stunChance: number, stunTime: number,
+  color: string,
+  zoneType: AreaDamageZoneState['zoneType']
+) {
+  state.areaDamageZones.push({
+    id: state.nextEntityId++,
+    x, y, radius, damage, team, sourceId,
+    tickInterval, tickTimer: 0,
+    ticksRemaining: ticks,
+    life: ticks * tickInterval,
+    maxLife: ticks * tickInterval,
+    stunChance, stunTime, color,
+    hitThisTick: [],
+    zoneType,
+  });
+
+  state.spellEffects.push({
+    x, y, type: 'cast_circle',
+    life: 0.5, maxLife: 0.5,
+    radius: radius, color, angle: 0
+  });
+
+  for (let p = 0; p < 12; p++) {
+    const a = (p / 12) * Math.PI * 2;
+    state.particles.push({
+      x: x + Math.cos(a) * radius * 0.5,
+      y: y + Math.sin(a) * radius * 0.5,
+      vx: Math.cos(a) * 40, vy: Math.sin(a) * 40 - 30,
+      life: 0.4, maxLife: 0.4,
+      color, size: 3, type: 'ability'
+    });
+  }
+}
+
 export function handleDodge(state: MobaState) {
   const player = state.heroes[state.playerHeroIndex];
   if (!player || player.dead) return;
@@ -2700,6 +2811,7 @@ export class MobaRenderer {
   private ctx: CanvasRenderingContext2D;
   private voxel: VoxelRenderer;
   private grabCursorImg: HTMLImageElement | null = null;
+  private fogCanvas: HTMLCanvasElement | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -2945,6 +3057,10 @@ export class MobaRenderer {
       this.renderFloatingText(ctx, ft);
     }
 
+    for (const zone of state.areaDamageZones) {
+      this.renderAreaDamageZone(ctx, zone, state.gameTime);
+    }
+
     for (const se of state.spellEffects) {
       this.renderSpellEffect(ctx, se);
     }
@@ -3049,11 +3165,29 @@ export class MobaRenderer {
     const endTX = Math.min(TILE_GRID, Math.ceil((cam.x + W / 2 / cam.zoom) / 80) + 1);
     const endTY = Math.min(TILE_GRID, Math.ceil((cam.y + H / 2 / cam.zoom) / 80) + 1);
 
+    const animTime = state.gameTime;
     for (let ty = startTY; ty < endTY; ty++) {
       for (let tx = startTX; tx < endTX; tx++) {
         const terrainIdx = state.terrainMap[ty]?.[tx] ?? 0;
         const terrain = TERRAIN_LOOKUP[terrainIdx] || 'grass';
         this.voxel.drawTerrainTile(ctx, tx * 80, ty * 80, 80, terrain, tx, ty);
+
+        if (terrain === 'river' || terrain === 'water') {
+          ctx.save();
+          const wave = Math.sin(animTime * 2 + tx * 0.8 + ty * 0.6) * 0.08 + 0.06;
+          ctx.globalAlpha = wave;
+          ctx.fillStyle = '#67e8f9';
+          ctx.fillRect(tx * 80, ty * 80, 80, 80);
+          const rippleX = tx * 80 + 40 + Math.sin(animTime * 3 + tx * 2) * 20;
+          const rippleY = ty * 80 + 40 + Math.cos(animTime * 2.5 + ty * 2) * 20;
+          ctx.globalAlpha = 0.12 + Math.sin(animTime * 4 + tx + ty) * 0.06;
+          ctx.strokeStyle = '#a5f3fc';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(rippleX, rippleY, 8 + Math.sin(animTime * 5) * 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
       }
     }
 
@@ -3812,6 +3946,96 @@ export class MobaRenderer {
     ctx.globalAlpha = 1;
   }
 
+  private renderAreaDamageZone(ctx: CanvasRenderingContext2D, zone: AreaDamageZoneState, gameTime: number) {
+    ctx.save();
+    ctx.translate(zone.x, zone.y);
+    const lifeRatio = zone.life / zone.maxLife;
+    const t = gameTime;
+
+    const zoneVisuals: Record<string, { fill: string; stroke: string }> = {
+      fire: { fill: 'rgba(239,68,68,0.12)', stroke: '#ef4444' },
+      frost: { fill: 'rgba(96,165,250,0.12)', stroke: '#60a5fa' },
+      poison: { fill: 'rgba(34,197,94,0.1)', stroke: '#22c55e' },
+      lightning: { fill: 'rgba(250,204,21,0.12)', stroke: '#facc15' },
+      holy: { fill: 'rgba(251,191,36,0.12)', stroke: '#fbbf24' },
+      shadow: { fill: 'rgba(139,92,246,0.12)', stroke: '#8b5cf6' },
+    };
+    const vis = zoneVisuals[zone.zoneType] || zoneVisuals.fire;
+
+    ctx.globalAlpha = lifeRatio * 0.6;
+    ctx.fillStyle = vis.fill;
+    ctx.beginPath();
+    ctx.arc(0, 0, zone.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = vis.stroke;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = lifeRatio * 0.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, zone.radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const innerPulse = 0.5 + Math.sin(t * 4) * 0.2;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = lifeRatio * innerPulse * 0.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, zone.radius * (0.4 + Math.sin(t * 3) * 0.1), 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (zone.zoneType === 'fire') {
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + t * 0.5;
+        const r = zone.radius * (0.3 + 0.5 * ((i * 7 + 3) % 5) / 5);
+        ctx.globalAlpha = lifeRatio * 0.3;
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * r, Math.sin(a) * r, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (zone.zoneType === 'frost') {
+      ctx.globalAlpha = lifeRatio * 0.15;
+      ctx.strokeStyle = '#93c5fd';
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + t * 0.1;
+        const r = zone.radius * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        ctx.stroke();
+      }
+    } else if (zone.zoneType === 'lightning') {
+      if (Math.random() < 0.1) {
+        ctx.globalAlpha = 0.8;
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 2;
+        const a = Math.random() * Math.PI * 2;
+        const r = zone.radius * Math.random();
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3);
+        for (let s = 0; s < 4; s++) {
+          ctx.lineTo(
+            Math.cos(a + (Math.random() - 0.5) * 0.5) * r * (0.4 + s * 0.2),
+            Math.sin(a + (Math.random() - 0.5) * 0.5) * r * (0.4 + s * 0.2)
+          );
+        }
+        ctx.stroke();
+      }
+    }
+
+    if (zone.tickTimer < 0.15 && zone.ticksRemaining < zone.maxLife / zone.tickInterval) {
+      const flashAlpha = (0.15 - zone.tickTimer) / 0.15;
+      ctx.globalAlpha = flashAlpha * 0.5;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, zone.radius * (zone.tickTimer / 0.15), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
   private renderHealthBar(ctx: CanvasRenderingContext2D, x: number, y: number, halfWidth: number, hp: number, maxHp: number, color: string) {
     const pct = Math.max(0, hp / maxHp);
     ctx.fillStyle = 'rgba(0,0,0,0.8)';
@@ -3830,6 +4054,28 @@ export class MobaRenderer {
     const mw = 200, mh = 200;
     const mx = W - mw - 10, my = H - mh - 10;
     const scale = mw / MAP_SIZE;
+    const player = state.heroes[state.playerHeroIndex];
+    const playerTeam = player?.team ?? 0;
+    const VISION_RANGE = 800;
+
+    const visionSources: Vec2[] = [];
+    for (const h of state.heroes) {
+      if (h.team === playerTeam && !h.dead) visionSources.push(h);
+    }
+    for (const t of state.towers) {
+      if (t.team === playerTeam && !t.dead) visionSources.push(t);
+    }
+    for (const m of state.minions) {
+      if (m.team === playerTeam) visionSources.push(m);
+    }
+
+    const isVisible = (pos: Vec2) => {
+      for (const src of visionSources) {
+        const dx = pos.x - src.x, dy = pos.y - src.y;
+        if (dx * dx + dy * dy < VISION_RANGE * VISION_RANGE) return true;
+      }
+      return false;
+    };
 
     ctx.fillStyle = 'rgba(10,15,10,0.85)';
     ctx.strokeStyle = '#c5a059';
@@ -3850,6 +4096,7 @@ export class MobaRenderer {
 
     for (const tower of state.towers) {
       if (tower.dead) continue;
+      if (tower.team !== playerTeam && !isVisible(tower)) continue;
       ctx.fillStyle = TEAM_COLORS[tower.team];
       ctx.fillRect(mx + tower.x * scale - 2, my + tower.y * scale - 2, 4, 4);
     }
@@ -3864,6 +4111,7 @@ export class MobaRenderer {
 
     for (const camp of state.jungleCamps) {
       if (camp.allDead) continue;
+      if (!isVisible(camp)) continue;
       const campColors: Record<string, string> = { small: '#65a30d', medium: '#3b82f6', buff: '#a855f7' };
       ctx.fillStyle = campColors[camp.campType] || '#65a30d';
       ctx.globalAlpha = 0.7;
@@ -3873,6 +4121,7 @@ export class MobaRenderer {
     }
 
     for (const minion of state.minions) {
+      if (minion.team !== playerTeam && !isVisible(minion)) continue;
       ctx.fillStyle = TEAM_COLORS[minion.team];
       ctx.globalAlpha = 0.5;
       ctx.fillRect(mx + minion.x * scale - 1, my + minion.y * scale - 1, 2, 2);
@@ -3881,13 +4130,39 @@ export class MobaRenderer {
 
     for (const hero of state.heroes) {
       if (hero.dead) continue;
+      if (hero.team !== playerTeam && !hero.isPlayer && !isVisible(hero)) continue;
       ctx.fillStyle = hero.isPlayer ? '#ffd700' : TEAM_COLORS[hero.team];
       ctx.beginPath();
       ctx.arc(mx + hero.x * scale, my + hero.y * scale, hero.isPlayer ? 4 : 3, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    const player = state.heroes[state.playerHeroIndex];
+    if (!this.fogCanvas) {
+      this.fogCanvas = document.createElement('canvas');
+      this.fogCanvas.width = mw;
+      this.fogCanvas.height = mh;
+    }
+    const fogCtx = this.fogCanvas.getContext('2d')!;
+    fogCtx.clearRect(0, 0, mw, mh);
+    fogCtx.fillStyle = 'rgba(0,0,0,0.55)';
+    fogCtx.fillRect(0, 0, mw, mh);
+    fogCtx.globalCompositeOperation = 'destination-out';
+    for (const src of visionSources) {
+      const sx = src.x * scale;
+      const sy = src.y * scale;
+      const sr = VISION_RANGE * scale;
+      const grad = fogCtx.createRadialGradient(sx, sy, sr * 0.3, sx, sy, sr);
+      grad.addColorStop(0, 'rgba(0,0,0,0.9)');
+      grad.addColorStop(0.7, 'rgba(0,0,0,0.5)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      fogCtx.fillStyle = grad;
+      fogCtx.beginPath();
+      fogCtx.arc(sx, sy, sr, 0, Math.PI * 2);
+      fogCtx.fill();
+    }
+    fogCtx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(this.fogCanvas, mx, my);
+
     if (player) {
       const vw = (W / state.camera.zoom) * scale;
       const vh = (H / state.camera.zoom) * scale;
