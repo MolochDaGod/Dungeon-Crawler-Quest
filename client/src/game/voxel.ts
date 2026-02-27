@@ -1838,6 +1838,312 @@ export class VoxelRenderer {
     ctx.drawImage(cached, x, y + yOff);
   }
 
+  drawEnemyVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, enemyType: string, facing: number, animState: string, animTimer: number, size: number, isBoss: boolean) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    const t = animTimer;
+    const bob = Math.sin(t * 3) * 2;
+    const isAttacking = animState === 'attack';
+    const atkPhase = isAttacking ? Math.min(1, (t % 0.8) / 0.8) : 0;
+    const facingFlip = Math.cos(facing) < 0 ? -1 : 1;
+    const scale = size / 12;
+
+    const setV = (px: number, py: number, w: number, h: number, color: string) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(px * scale, py * scale + bob, w * scale, h * scale);
+    };
+
+    if (isBoss) {
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.4 + Math.sin(t * 4) * 0.2;
+      ctx.beginPath();
+      ctx.arc(0, bob, size + 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.scale(facingFlip, 1);
+
+    switch (enemyType) {
+      case 'Slime': {
+        const squash = 1 + Math.sin(t * 5) * 0.15;
+        const stretch = 1 / squash;
+        ctx.scale(squash, stretch);
+        setV(-6, -4, 12, 8, '#22c55e');
+        setV(-5, -6, 10, 3, '#2dd460');
+        setV(-4, -7, 8, 2, '#34d968');
+        setV(-2, 3, 8, 2, '#1a9e48');
+        setV(-7, 0, 2, 3, '#1a9e48');
+        setV(5, 0, 2, 3, '#1a9e48');
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(-2, -2 + bob, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3, -2 + bob, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(-2, -1.5 + bob, 1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3, -1.5 + bob, 1, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(-3, -5, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        break;
+      }
+      case 'Skeleton': {
+        const walk = Math.sin(t * 4) * 3;
+        setV(-2, -12, 4, 4, '#e8e0d4');
+        setV(-3, -13, 6, 2, '#d4ccc0');
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect((-1) * scale, (-11) * scale + bob, 1 * scale, 1 * scale);
+        ctx.fillRect((2) * scale, (-11) * scale + bob, 1 * scale, 1 * scale);
+        setV(-3, -8, 6, 6, '#d4ccc0');
+        setV(-2, -7, 4, 1, '#c0b8ac');
+        setV(-1, -5, 2, 1, '#c0b8ac');
+        setV(-4, -8, 2, 4, '#c8c0b4');
+        setV(2, -8, 2, 4, '#c8c0b4');
+        const armSwing = isAttacking ? Math.sin(atkPhase * Math.PI) * 6 : walk * 0.5;
+        setV(-5, -8 + armSwing, 1, 5, '#c0b8ac');
+        setV(4, -8 - armSwing, 1, 5, '#c0b8ac');
+        setV(-1, -2, 1, 6, '#c0b8ac');
+        setV(1, -2, 1, 6, '#c0b8ac');
+        if (isAttacking) {
+          setV(4 + atkPhase * 4, -10, 2, 8, '#a0a0a0');
+        } else {
+          setV(5, -6, 1, 6, '#a0a0a0');
+        }
+        break;
+      }
+      case 'Orc Grunt': {
+        const walk = Math.sin(t * 3.5) * 2;
+        setV(-3, -14, 6, 6, '#5a8a2a');
+        setV(-4, -15, 8, 3, '#4a7a1a');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect((-2) * scale, (-13) * scale + bob, 2 * scale, 1 * scale);
+        ctx.fillRect((1) * scale, (-13) * scale + bob, 2 * scale, 1 * scale);
+        setV(-1, -9, 1, 2, '#e0d0a0');
+        setV(1, -9, 1, 2, '#e0d0a0');
+        setV(-4, -8, 8, 7, '#6b4423');
+        setV(-5, -7, 10, 5, '#7a5533');
+        const armSwing = isAttacking ? Math.sin(atkPhase * Math.PI) * 8 : walk;
+        setV(-6, -8 + armSwing, 2, 6, '#5a8a2a');
+        setV(4, -8 - armSwing, 2, 6, '#5a8a2a');
+        setV(-2, -1, 2, 6, '#5a8a2a');
+        setV(1, -1, 2, 6, '#5a8a2a');
+        if (isAttacking) {
+          setV(6, -14 + atkPhase * 4, 2, 10, '#a0a0a0');
+          setV(5, -14 + atkPhase * 4, 1, 3, '#7a5533');
+        } else {
+          setV(6, -8, 2, 8, '#a0a0a0');
+        }
+        break;
+      }
+      case 'Dark Mage': {
+        const hover = Math.sin(t * 2) * 3;
+        const orbGlow = 0.5 + Math.sin(t * 6) * 0.3;
+        ctx.save();
+        ctx.translate(0, hover);
+        setV(-3, -14, 6, 4, '#2d1b4e');
+        setV(-4, -16, 8, 4, '#3d2b5e');
+        setV(-5, -17, 10, 2, '#4d3b6e');
+        ctx.fillStyle = '#a855f7';
+        ctx.fillRect((-1) * scale, (-13) * scale + bob, 1 * scale, 1 * scale);
+        ctx.fillRect((2) * scale, (-13) * scale + bob, 1 * scale, 1 * scale);
+        setV(-5, -10, 10, 10, '#2d1b4e');
+        setV(-6, -8, 12, 6, '#3d2b5e');
+        setV(-4, 0, 8, 4, '#2d1b4e');
+        const armSwing = isAttacking ? Math.sin(atkPhase * Math.PI) * 6 : Math.sin(t * 2) * 2;
+        setV(-7, -10 + armSwing, 2, 5, '#3d2b5e');
+        setV(5, -10 - armSwing, 2, 5, '#3d2b5e');
+        ctx.globalAlpha = orbGlow;
+        ctx.fillStyle = '#c084fc';
+        ctx.shadowColor = '#a855f7';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(6 * scale, (-12 + armSwing) * scale + bob, 3 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        setV(6, -10 - armSwing, 1, 12, '#5a3a1a');
+        ctx.restore();
+        break;
+      }
+      case 'Spider': {
+        const scuttle = Math.sin(t * 8) * 1.5;
+        setV(-4, -4, 8, 6, '#44403c');
+        setV(-3, -6, 6, 3, '#57534e');
+        setV(-2, -2, 4, 4, '#3a3632');
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath(); ctx.arc(-2 * scale, -5 * scale + bob, 1.2 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(2 * scale, -5 * scale + bob, 1.2 * scale, 0, Math.PI * 2); ctx.fill();
+        for (let leg = 0; leg < 4; leg++) {
+          const legAngle = (leg / 4) * Math.PI * 0.6 + 0.3;
+          const legBob = Math.sin(t * 8 + leg * 1.5) * 2;
+          const lx = Math.cos(legAngle) * 8;
+          const ly = Math.sin(legAngle) * 3 + legBob;
+          ctx.strokeStyle = '#57534e';
+          ctx.lineWidth = 1.5 * scale;
+          ctx.beginPath();
+          ctx.moveTo(-3 * scale, (-2 + ly * 0.3) * scale + bob);
+          ctx.quadraticCurveTo((-3 - lx * 0.5) * scale, (-4 + ly * 0.5) * scale + bob, (-3 - lx) * scale, (ly) * scale + bob);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(3 * scale, (-2 + ly * 0.3) * scale + bob);
+          ctx.quadraticCurveTo((3 + lx * 0.5) * scale, (-4 + ly * 0.5) * scale + bob, (3 + lx) * scale, (ly) * scale + bob);
+          ctx.stroke();
+        }
+        break;
+      }
+      case 'Golem': {
+        const rumble = Math.sin(t * 2.5) * 1;
+        const armSwing = isAttacking ? Math.sin(atkPhase * Math.PI) * 10 : rumble;
+        setV(-5, -16, 10, 8, '#92714a');
+        setV(-6, -18, 12, 5, '#7a5e3a');
+        ctx.fillStyle = '#f59e0b';
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = 6;
+        ctx.beginPath(); ctx.arc(-2 * scale, -15 * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3 * scale, -15 * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        setV(-7, -8, 14, 10, '#a3845a');
+        setV(-6, -6, 12, 6, '#92714a');
+        ctx.fillStyle = '#f59e0b';
+        ctx.globalAlpha = 0.6 + Math.sin(t * 4) * 0.2;
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(0, -3 * scale + bob, 3 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        setV(-9, -8 + armSwing, 3, 8, '#7a5e3a');
+        setV(6, -8 - armSwing, 3, 8, '#7a5e3a');
+        setV(-4, 2, 3, 8, '#7a5e3a');
+        setV(2, 2, 3, 8, '#7a5e3a');
+        setV(-5, 2, 10, 2, '#666048');
+        break;
+      }
+      case 'Dragon': {
+        const wingFlap = Math.sin(t * 3) * 15;
+        const breathPhase = isAttacking ? atkPhase : 0;
+        setV(-4, -20, 8, 6, '#b91c1c');
+        setV(-5, -22, 10, 4, '#991b1b');
+        setV(-3, -23, 2, 2, '#ef4444');
+        setV(2, -23, 2, 2, '#ef4444');
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath(); ctx.arc(-2 * scale, -19 * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3 * scale, -19 * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(-1.5 * scale, -19 * scale + bob, 0.7 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3.5 * scale, -19 * scale + bob, 0.7 * scale, 0, Math.PI * 2); ctx.fill();
+        setV(-6, -14, 12, 10, '#dc2626');
+        setV(-5, -12, 10, 6, '#b91c1c');
+        setV(-4, -4, 8, 5, '#991b1b');
+        ctx.save();
+        ctx.translate(-6 * scale, -14 * scale + bob);
+        ctx.rotate(-wingFlap * Math.PI / 180);
+        ctx.fillStyle = '#991b1b';
+        ctx.fillRect(-12 * scale, -2 * scale, 12 * scale, 4 * scale);
+        ctx.fillStyle = '#b91c1c';
+        ctx.fillRect(-10 * scale, 0, 8 * scale, 3 * scale);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(6 * scale, -14 * scale + bob);
+        ctx.rotate(wingFlap * Math.PI / 180);
+        ctx.fillStyle = '#991b1b';
+        ctx.fillRect(0, -2 * scale, 12 * scale, 4 * scale);
+        ctx.fillStyle = '#b91c1c';
+        ctx.fillRect(2 * scale, 0, 8 * scale, 3 * scale);
+        ctx.restore();
+        setV(-3, 1, 2, 5, '#991b1b');
+        setV(2, 1, 2, 5, '#991b1b');
+        ctx.save();
+        ctx.translate(0, -4 * scale + bob);
+        ctx.rotate(Math.sin(t * 2) * 0.3);
+        ctx.fillStyle = '#991b1b';
+        ctx.fillRect(-1 * scale, 0, 2 * scale, 10 * scale);
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.moveTo(-3 * scale, 10 * scale);
+        ctx.lineTo(0, 12 * scale);
+        ctx.lineTo(3 * scale, 10 * scale);
+        ctx.fill();
+        ctx.restore();
+        if (breathPhase > 0.2) {
+          ctx.globalAlpha = breathPhase;
+          ctx.fillStyle = '#ff6600';
+          ctx.shadowColor = '#ff4400';
+          ctx.shadowBlur = 12;
+          for (let fi = 0; fi < 5; fi++) {
+            const fd = 5 + fi * 4 * breathPhase;
+            const fs = 2 + fi * 1.5 * breathPhase;
+            ctx.beginPath();
+            ctx.arc((5 + fd) * scale * facingFlip, (-18 + Math.random() * 4) * scale + bob, fs * scale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        }
+        break;
+      }
+      case 'Lich': {
+        const hover = Math.sin(t * 2.5) * 4;
+        const soulFlicker = 0.6 + Math.sin(t * 8) * 0.3;
+        ctx.save();
+        ctx.translate(0, hover);
+        setV(-3, -18, 6, 5, '#d4ccc0');
+        setV(-4, -20, 8, 4, '#c0b8ac');
+        ctx.fillStyle = `rgba(34,197,94,${soulFlicker})`;
+        ctx.shadowColor = '#22c55e';
+        ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(-1 * scale, -17 * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(2 * scale, -17 * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        setV(-5, -13, 10, 12, '#1a0a2e');
+        setV(-6, -10, 12, 8, '#2a1a3e');
+        setV(-4, -1, 8, 4, '#1a0a2e');
+        const staffSwing = isAttacking ? Math.sin(atkPhase * Math.PI) * 8 : Math.sin(t * 1.5) * 2;
+        setV(-7, -13 + staffSwing, 2, 5, '#2a1a3e');
+        setV(5, -13 - staffSwing, 2, 5, '#2a1a3e');
+        setV(7, -16 - staffSwing, 1, 16, '#4a3a2a');
+        ctx.fillStyle = `rgba(34,197,94,${soulFlicker})`;
+        ctx.shadowColor = '#22c55e';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(7.5 * scale, (-18 - staffSwing) * scale + bob, 2.5 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        if (isAttacking && atkPhase > 0.4) {
+          ctx.globalAlpha = atkPhase * 0.8;
+          for (let si = 0; si < 4; si++) {
+            const sa = t * 3 + si * Math.PI / 2;
+            const sr = 8 + si * 3;
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.arc(Math.cos(sa) * sr * scale, (Math.sin(sa) * sr - 5) * scale + bob, 1.5 * scale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+        break;
+      }
+      default: {
+        ctx.fillStyle = '#888';
+        ctx.beginPath();
+        ctx.ellipse(0, bob, size, size * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(-2, -2 + bob, 2, 0, Math.PI * 2);
+        ctx.arc(2, -2 + bob, 2, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+    }
+
+    ctx.restore();
+  }
+
   private getCachedTile(key: string, builder: () => HTMLCanvasElement): HTMLCanvasElement {
     let cached = this.tileCache.get(key);
     if (!cached) {
