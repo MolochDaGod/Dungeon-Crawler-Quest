@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   HEROES, HeroData, RACE_COLORS, CLASS_COLORS, FACTION_COLORS,
-  RARITY_COLORS, STAT_COLORS, CLASS_ABILITIES
+  RARITY_COLORS, STAT_COLORS, CLASS_ABILITIES, getPortraitPath
 } from '@/game/types';
 import { VoxelRenderer } from '@/game/voxel';
 
@@ -146,7 +146,7 @@ export default function CharacterSelect() {
                   <div className="relative">
                     {hero.isSecret && <span className="absolute top-1 right-1 z-10 text-[9px] bg-gradient-to-r from-[#c5a059] to-amber-600 text-black px-1.5 py-0.5 rounded font-bold tracking-wider">SECRET</span>}
                     <img
-                      src={`/assets/portraits/${hero.race.toLowerCase()}_${hero.heroClass.toLowerCase()}.png`}
+                      src={getPortraitPath(hero.race, hero.heroClass, hero.name)}
                       alt={hero.name}
                       className="w-full h-28 rounded-t object-cover bg-[#0a0f0a]"
                       style={{ borderBottom: `2px solid ${rarityColor}44` }}
@@ -185,7 +185,7 @@ export default function CharacterSelect() {
               <div className="sticky top-20 bg-[#1a1a2e] border border-gray-800 rounded-xl p-4" data-testid="hero-detail-panel">
                 <div className="flex gap-3 mb-4 items-start">
                   <img
-                    src={`/assets/portraits/${selectedHero.race.toLowerCase()}_${selectedHero.heroClass.toLowerCase()}.png`}
+                    src={getPortraitPath(selectedHero.race, selectedHero.heroClass, selectedHero.name)}
                     alt={selectedHero.name}
                     className="w-16 h-16 rounded-lg border-2 border-[#c5a059]/40 object-cover bg-[#0a0f0a] shrink-0"
                     data-testid="img-detail-portrait"

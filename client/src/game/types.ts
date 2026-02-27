@@ -467,3 +467,10 @@ export function calcDamage(atk: number, def: number): number {
   const raw = atk * (1 + Math.random() * 0.2 - 0.1);
   return Math.max(1, Math.floor(raw * (1 - reduction)));
 }
+
+export function getPortraitPath(race: string, heroClass: string, heroName?: string): string {
+  if (heroName && (heroName.includes('Racalvin') || heroName.includes('Pirate King'))) {
+    return '/assets/portraits/pirate_king.png';
+  }
+  return `/assets/portraits/${race.toLowerCase()}_${heroClass.toLowerCase()}.png`;
+}

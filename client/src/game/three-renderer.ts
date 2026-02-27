@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { loadGLB, loadFBX, LoadedModel, createAnimatedEntity, playAnimation, AnimatedEntity } from './model-loader';
+import { loadGLB, loadFBX, LoadedModel, createAnimatedEntity, playAnimation, AnimatedEntity, loadAnimationSet, applyAnimationsToEntity, ANIMATION_PATHS } from './model-loader';
 import { TOWER_PREFABS, HERO_PREFABS, ENV_PREFABS, CREATURE_PREFABS, MINION_PREFABS, getTowerPrefab, getHeroPrefabKey, getMinionPrefabKey, getJungleMobPrefab, getWeaponForClass, WEAPON_PREFABS } from './prefabs';
 import { MobaState, MobaHero, MobaMinion, MobaTower, MobaNexus, HEROES, MAP_SIZE, TEAM_COLORS, LANE_WAYPOINTS, CLASS_COLORS, Projectile, Particle, FloatingText, SpellEffect, JungleCamp, JungleMob } from './types';
 
@@ -14,6 +14,22 @@ interface Entity3D {
 }
 
 const WORLD_SCALE = 0.05;
+
+function mapAnimState(animState: string, dead: boolean): string {
+  if (dead) return 'death';
+  switch (animState) {
+    case 'walk': return 'run';
+    case 'attack':
+    case 'combo_finisher':
+    case 'dash_attack': return 'attack';
+    case 'ability': return 'attack';
+    case 'dodge':
+    case 'block': return 'hit';
+    case 'death': return 'death';
+    case 'idle':
+    default: return 'idle';
+  }
+}
 
 function gameToWorld(x: number, y: number, z: number = 0): THREE.Vector3 {
   return new THREE.Vector3(x * WORLD_SCALE, z * WORLD_SCALE, y * WORLD_SCALE);
@@ -39,6 +55,7 @@ export class ThreeRenderer {
   private envObjects: THREE.Group[] = [];
   private loadedModels = new Map<string, LoadedModel>();
   private modelLoadQueue = new Set<string>();
+  private sharedAnimClips = new Map<string, THREE.AnimationClip>();
   private initialized = false;
   private loadingComplete = false;
 
@@ -283,6 +300,12 @@ export class ThreeRenderer {
       if (prefab) promises.push(this.loadModel(prefab));
     }
 
+    promises.push(
+      loadAnimationSet(ANIMATION_PATHS).then(clips => {
+        this.sharedAnimClips = clips;
+      })
+    );
+
     await Promise.allSettled(promises);
     this.loadingComplete = true;
   }
@@ -326,23 +349,32 @@ export class ThreeRenderer {
       });
       group.add(clone);
 
+      mixer = new THREE.AnimationMixer(clone);
+      const actions = new Map<string, THREE.AnimationAction>();
       if (model.animations && model.animations.length > 0) {
-        mixer = new THREE.AnimationMixer(clone);
-        const actions = new Map<string, THREE.AnimationAction>();
         for (const clip of model.animations) {
           const action = mixer.clipAction(clip);
           const clipName = clip.name.toLowerCase();
           actions.set(clipName, action);
-          if (clipName.includes('idle') || clipName.includes('tpose') || clipName.includes('t-pose')) {
-            action.play();
-          }
         }
-        if (actions.size > 0 && !Array.from(actions.values()).some(a => a.isRunning())) {
-          const firstAction = actions.values().next().value;
-          if (firstAction) firstAction.play();
-        }
-        entity = { group: clone, mixer, actions, currentAction: '' };
       }
+      for (const [name, clip] of Array.from(this.sharedAnimClips)) {
+        if (!actions.has(name)) {
+          const action = mixer.clipAction(clip);
+          actions.set(name, action);
+        }
+      }
+      const idleAction = actions.get('idle') || Array.from(actions.values()).find(a => {
+        const name = (a as any)._clip?.name?.toLowerCase() || '';
+        return name.includes('idle') || name.includes('tpose');
+      });
+      if (idleAction) {
+        idleAction.play();
+      } else if (actions.size > 0) {
+        const firstAction = actions.values().next().value;
+        if (firstAction) firstAction.play();
+      }
+      entity = { group: clone, mixer, actions, currentAction: 'idle' };
     } else {
       const capsuleGeo = new THREE.CapsuleGeometry(0.3, 0.8, 8, 16);
       const color = new THREE.Color(CLASS_COLORS[heroData.heroClass] || '#888');
@@ -784,25 +816,46 @@ export class ThreeRenderer {
       e.group.position.set(wx, 0, wz);
       e.group.rotation.y = -hero.facing + Math.PI / 2;
 
-      const mesh = e.group.children[0];
-      if (mesh) {
-        if (hero.animState === 'walk') {
-          const stride = Math.sin(time * 8);
-          mesh.position.y = 0.02 + Math.max(0, stride) * 0.06;
-          mesh.rotation.z = 0;
-          mesh.rotation.x = Math.sin(time * 8) * 0.04;
-        } else if (hero.animState === 'attack' || hero.animState === 'combo_finisher') {
-          mesh.position.y = 0.02;
-          const windupPhase = (hero as any).attackWindup > 0 ? 1 : 0;
-          mesh.rotation.z = windupPhase > 0 ? Math.sin(time * 15) * 0.05 : Math.sin(time * 25) * 0.15;
-          mesh.rotation.x = windupPhase > 0 ? -0.1 : 0.15;
-        } else if (hero.animState === 'ability') {
-          mesh.position.y = 0.02 + Math.sin(time * 6) * 0.08;
-          mesh.rotation.z = 0;
-        } else {
-          mesh.position.y = 0.02;
-          mesh.rotation.z = 0;
-          mesh.rotation.x = 0;
+      if (e.entity) {
+        const targetAnim = mapAnimState(hero.animState, hero.dead);
+        if (e.entity.currentAction !== targetAnim) {
+          playAnimation(e.entity, targetAnim, 0.15);
+        }
+        if (hero.animState === 'attack' || hero.animState === 'combo_finisher') {
+          const attackAction = e.entity.actions.get('attack');
+          if (attackAction && !hero.dead) {
+            attackAction.setLoop(THREE.LoopOnce, 1);
+            attackAction.clampWhenFinished = true;
+          }
+        }
+        if (targetAnim === 'death') {
+          const deathAction = e.entity.actions.get('death');
+          if (deathAction) {
+            deathAction.setLoop(THREE.LoopOnce, 1);
+            deathAction.clampWhenFinished = true;
+          }
+        }
+      } else {
+        const mesh = e.group.children[0];
+        if (mesh) {
+          if (hero.animState === 'walk') {
+            const stride = Math.sin(time * 8);
+            mesh.position.y = 0.02 + Math.max(0, stride) * 0.06;
+            mesh.rotation.z = 0;
+            mesh.rotation.x = Math.sin(time * 8) * 0.04;
+          } else if (hero.animState === 'attack' || hero.animState === 'combo_finisher') {
+            mesh.position.y = 0.02;
+            const windupPhase = hero.attackWindup > 0 ? 1 : 0;
+            mesh.rotation.z = windupPhase > 0 ? Math.sin(time * 15) * 0.05 : Math.sin(time * 25) * 0.15;
+            mesh.rotation.x = windupPhase > 0 ? -0.1 : 0.15;
+          } else if (hero.animState === 'ability') {
+            mesh.position.y = 0.02 + Math.sin(time * 6) * 0.08;
+            mesh.rotation.z = 0;
+          } else {
+            mesh.position.y = 0.02;
+            mesh.rotation.z = 0;
+            mesh.rotation.x = 0;
+          }
         }
       }
 

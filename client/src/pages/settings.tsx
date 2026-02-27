@@ -23,7 +23,7 @@ function loadGraphicsSettings(): GraphicsSettings {
     const stored = localStorage.getItem(GRAPHICS_STORAGE_KEY);
     if (stored) return JSON.parse(stored);
   } catch {}
-  return { particleQuality: 'medium', screenShake: true, minimapSize: 180, masterVolume: 80, sfxVolume: 100, musicVolume: 60 };
+  return { particleQuality: 'medium', screenShake: true, minimapSize: 200, masterVolume: 80, sfxVolume: 100, musicVolume: 60 };
 }
 
 function saveGraphicsSettings(settings: GraphicsSettings): void {

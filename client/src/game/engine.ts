@@ -3565,7 +3565,7 @@ export class MobaRenderer {
   }
 
   private renderMinimap(ctx: CanvasRenderingContext2D, state: MobaState, W: number, H: number) {
-    const mw = 180, mh = 180;
+    const mw = 200, mh = 200;
     const mx = W - mw - 10, my = H - mh - 10;
     const scale = mw / MAP_SIZE;
 
