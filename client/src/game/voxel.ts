@@ -1034,44 +1034,54 @@ export class VoxelRenderer {
     const atkProgress = Math.min(1, t / 0.65);
 
     if (heroClass === 'Warrior' || heroClass === 'Worg') {
-      const swing = atkProgress >= 0.35 && atkProgress < 0.65 ? (atkProgress - 0.35) / 0.3 : 0;
-      const followThru = atkProgress >= 0.65 ? Math.min(1, (atkProgress - 0.65) / 0.2) : 0;
+      const swing = atkProgress >= 0.3 && atkProgress < 0.6 ? (atkProgress - 0.3) / 0.3 : 0;
+      const followThru = atkProgress >= 0.6 ? Math.min(1, (atkProgress - 0.6) / 0.25) : 0;
+      const primaryColor = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
+      const secondaryColor = heroClass === 'Warrior' ? '#fca5a5' : '#fdba74';
 
       if (swing > 0.05) {
         ctx.save();
         ctx.translate(x, y - 10);
 
-        const arcStart = facing - Math.PI * 0.6;
-        const arcEnd = facing + Math.PI * 0.4;
+        const arcStart = facing - Math.PI * 0.75;
+        const arcEnd = facing + Math.PI * 0.55;
         const arcAngle = arcStart + (arcEnd - arcStart) * swing;
-        const reachDist = 22 + swing * 18;
+        const reachDist = 24 + swing * 20;
 
-        ctx.strokeStyle = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
-        ctx.lineWidth = 3 + swing * 2;
-        ctx.globalAlpha = 0.7 + swing * 0.3;
-        ctx.shadowColor = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
-        ctx.shadowBlur = 8 + swing * 6;
+        ctx.strokeStyle = primaryColor;
+        ctx.lineWidth = 4 + swing * 3;
+        ctx.globalAlpha = 0.8 + swing * 0.2;
+        ctx.shadowColor = primaryColor;
+        ctx.shadowBlur = 12 + swing * 10;
         ctx.beginPath();
         ctx.arc(0, 0, reachDist, arcStart, arcAngle);
         ctx.stroke();
 
-        ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = secondaryColor;
+        ctx.lineWidth = 2.5;
+        ctx.globalAlpha = 0.5;
         ctx.beginPath();
-        ctx.arc(0, 0, reachDist + 6, arcStart + 0.1, arcAngle - 0.1);
+        ctx.arc(0, 0, reachDist + 5, arcStart + 0.05, arcAngle - 0.05);
         ctx.stroke();
 
-        if (swing > 0.6) {
-          const sparkCount = 3;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.3 + swing * 0.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, reachDist + 10, arcStart + 0.15, arcAngle - 0.15);
+        ctx.stroke();
+
+        if (swing > 0.5) {
+          const sparkCount = 6;
           for (let s = 0; s < sparkCount; s++) {
-            const sa = arcAngle - s * 0.15;
-            const sr = reachDist + (Math.random() - 0.5) * 8;
+            const sa = arcAngle - s * 0.12;
+            const sr = reachDist + (Math.random() - 0.5) * 12;
             const sx = Math.cos(sa) * sr;
             const sy = Math.sin(sa) * sr;
-            ctx.fillStyle = '#ffffff';
-            ctx.globalAlpha = (1 - swing) * 2;
+            ctx.fillStyle = s % 2 === 0 ? '#ffffff' : secondaryColor;
+            ctx.globalAlpha = (1 - swing) * 2.5;
             ctx.beginPath();
-            ctx.arc(sx, sy, 1.5 + Math.random(), 0, Math.PI * 2);
+            ctx.arc(sx, sy, 1.5 + Math.random() * 1.5, 0, Math.PI * 2);
             ctx.fill();
           }
         }
@@ -1081,20 +1091,40 @@ export class VoxelRenderer {
         ctx.restore();
       }
 
-      if (followThru > 0 && followThru < 0.6) {
+      if (followThru > 0 && followThru < 0.7) {
         ctx.save();
         ctx.translate(x, y - 10);
-        const trailColor = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
-        ctx.strokeStyle = trailColor;
-        ctx.lineWidth = 2;
-        ctx.globalAlpha = (0.6 - followThru) * 1.5;
-        ctx.shadowColor = trailColor;
-        ctx.shadowBlur = 4;
-        const fullArcStart = facing - Math.PI * 0.6;
-        const fullArcEnd = facing + Math.PI * 0.4;
+        const fadeAlpha = Math.max(0, (0.7 - followThru) * 1.8);
+
+        ctx.strokeStyle = primaryColor;
+        ctx.lineWidth = 2.5;
+        ctx.globalAlpha = fadeAlpha * 0.6;
+        ctx.shadowColor = primaryColor;
+        ctx.shadowBlur = 6;
+        const fullArcStart = facing - Math.PI * 0.75;
+        const fullArcEnd = facing + Math.PI * 0.55;
         ctx.beginPath();
-        ctx.arc(0, 0, 36, fullArcStart, fullArcEnd);
+        ctx.arc(0, 0, 38 + followThru * 8, fullArcStart, fullArcEnd);
         ctx.stroke();
+
+        const shockRadius = 10 + followThru * 30;
+        ctx.strokeStyle = secondaryColor;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = fadeAlpha * 0.35;
+        ctx.beginPath();
+        ctx.arc(Math.cos(facing) * 20, Math.sin(facing) * 20, shockRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        for (let i = 0; i < 4; i++) {
+          const sparkAngle = facing + (Math.random() - 0.5) * 1.2;
+          const sparkDist = 20 + followThru * 25 + Math.random() * 10;
+          ctx.fillStyle = '#fde68a';
+          ctx.globalAlpha = fadeAlpha * 0.5;
+          ctx.beginPath();
+          ctx.arc(Math.cos(sparkAngle) * sparkDist, Math.sin(sparkAngle) * sparkDist, 1 + Math.random(), 0, Math.PI * 2);
+          ctx.fill();
+        }
+
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
         ctx.restore();
@@ -1158,29 +1188,57 @@ export class VoxelRenderer {
       }
 
       if (release > 0) {
-        const arrowDist = release * 45 + recoil * 20;
+        const arrowDist = release * 55 + recoil * 25;
         const arrowX = Math.cos(facing) * (14 + arrowDist);
         const arrowY = Math.sin(facing) * (14 + arrowDist);
-        const fadeAlpha = Math.max(0, 1 - recoil * 1.5);
+        const fadeAlpha = Math.max(0, 1 - recoil * 1.3);
 
         if (fadeAlpha > 0) {
-          ctx.strokeStyle = '#22c55e';
-          ctx.lineWidth = 2.5;
-          ctx.globalAlpha = fadeAlpha;
-          ctx.shadowColor = '#22c55e';
-          ctx.shadowBlur = 6;
-          const trailLen = 10 + release * 8;
-          ctx.beginPath();
-          ctx.moveTo(arrowX - Math.cos(facing) * trailLen, arrowY - Math.sin(facing) * trailLen);
-          ctx.lineTo(arrowX, arrowY);
-          ctx.stroke();
+          const trailLen = 14 + release * 16;
+          for (let trail = 0; trail < 3; trail++) {
+            const trailOffset = trail * 3;
+            const trailAlpha = fadeAlpha * (1 - trail * 0.25);
+            ctx.strokeStyle = trail === 0 ? '#22c55e' : trail === 1 ? '#4ade80' : '#86efac';
+            ctx.lineWidth = 3 - trail * 0.7;
+            ctx.globalAlpha = trailAlpha;
+            ctx.shadowColor = '#22c55e';
+            ctx.shadowBlur = 8 - trail * 2;
+            ctx.beginPath();
+            ctx.moveTo(arrowX - Math.cos(facing) * (trailLen + trailOffset), arrowY - Math.sin(facing) * (trailLen + trailOffset));
+            ctx.lineTo(arrowX, arrowY);
+            ctx.stroke();
+          }
 
           ctx.fillStyle = '#ffffff';
+          ctx.globalAlpha = fadeAlpha;
+          ctx.shadowColor = '#22c55e';
+          ctx.shadowBlur = 10;
           ctx.beginPath();
-          ctx.moveTo(arrowX + Math.cos(facing) * 4, arrowY + Math.sin(facing) * 4);
-          ctx.lineTo(arrowX + Math.cos(facing - 0.5) * -3, arrowY + Math.sin(facing - 0.5) * -3);
-          ctx.lineTo(arrowX + Math.cos(facing + 0.5) * -3, arrowY + Math.sin(facing + 0.5) * -3);
+          ctx.moveTo(arrowX + Math.cos(facing) * 5, arrowY + Math.sin(facing) * 5);
+          ctx.lineTo(arrowX + Math.cos(facing - 0.5) * -4, arrowY + Math.sin(facing - 0.5) * -4);
+          ctx.lineTo(arrowX + Math.cos(facing + 0.5) * -4, arrowY + Math.sin(facing + 0.5) * -4);
           ctx.fill();
+
+          if (recoil > 0.3 && recoil < 0.8) {
+            const impactProgress = (recoil - 0.3) / 0.5;
+            const impactRadius = 5 + impactProgress * 15;
+            ctx.strokeStyle = '#4ade80';
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = (1 - impactProgress) * 0.6;
+            ctx.beginPath();
+            ctx.arc(arrowX, arrowY, impactRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            for (let s = 0; s < 4; s++) {
+              const sa = facing + (s - 1.5) * 0.6;
+              const sd = impactRadius + Math.random() * 5;
+              ctx.fillStyle = '#bbf7d0';
+              ctx.globalAlpha = (1 - impactProgress) * 0.5;
+              ctx.beginPath();
+              ctx.arc(arrowX + Math.cos(sa) * sd, arrowY + Math.sin(sa) * sd, 1 + Math.random(), 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
 
           ctx.shadowBlur = 0;
         }
@@ -1230,54 +1288,96 @@ export class VoxelRenderer {
         ctx.shadowBlur = 0;
 
         if (channel > 0.3) {
-          const runeRadius = 10 + channel * 6;
+          const runeRadius = 12 + channel * 8;
           ctx.strokeStyle = '#a855f7';
-          ctx.lineWidth = 1;
-          ctx.globalAlpha = channel * 0.5;
+          ctx.lineWidth = 1.2;
+          ctx.globalAlpha = channel * 0.6;
           const runeRot = t * 8;
           ctx.beginPath();
           ctx.arc(orbX, orbY, runeRadius, runeRot, runeRot + Math.PI * 1.5);
           ctx.stroke();
           ctx.beginPath();
-          ctx.arc(orbX, orbY, runeRadius * 0.6, runeRot + Math.PI, runeRot + Math.PI * 2.2);
+          ctx.arc(orbX, orbY, runeRadius * 0.65, runeRot + Math.PI, runeRot + Math.PI * 2.2);
+          ctx.stroke();
+          ctx.strokeStyle = '#c084fc';
+          ctx.lineWidth = 0.8;
+          ctx.globalAlpha = channel * 0.35;
+          ctx.beginPath();
+          ctx.arc(orbX, orbY, runeRadius * 1.3, -runeRot * 0.7, -runeRot * 0.7 + Math.PI * 1.2);
           ctx.stroke();
         }
 
-        const sparkCount = Math.floor(channel * 4 + cast * 3);
+        const orbCount = Math.floor(channel * 3);
+        for (let o = 0; o < orbCount; o++) {
+          const orbAngle = t * 5 + o * (Math.PI * 2 / Math.max(1, orbCount));
+          const orbDist = 8 + channel * 6;
+          const ox = orbX + Math.cos(orbAngle) * orbDist;
+          const oy = orbY + Math.sin(orbAngle) * orbDist;
+          ctx.fillStyle = '#c084fc';
+          ctx.globalAlpha = 0.7;
+          ctx.shadowColor = '#a855f7';
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          ctx.arc(ox, oy, 2 + channel, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        const sparkCount = Math.floor(channel * 5 + cast * 4);
         for (let s = 0; s < sparkCount; s++) {
           const sa = t * 6 + s * (Math.PI * 2 / Math.max(1, sparkCount));
-          const sr = orbRadius + 2 + Math.sin(t * 12 + s) * 4;
+          const sr = orbRadius + 2 + Math.sin(t * 12 + s) * 5;
           ctx.fillStyle = s % 2 === 0 ? '#e9d5ff' : '#a855f7';
-          ctx.globalAlpha = 0.4 + Math.sin(t * 10 + s * 2) * 0.3;
+          ctx.globalAlpha = 0.5 + Math.sin(t * 10 + s * 2) * 0.3;
           ctx.beginPath();
-          ctx.arc(orbX + Math.cos(sa) * sr, orbY + Math.sin(sa) * sr, 1 + Math.random() * 0.5, 0, Math.PI * 2);
+          ctx.arc(orbX + Math.cos(sa) * sr, orbY + Math.sin(sa) * sr, 1.2 + Math.random() * 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
       }
 
-      if (cast > 0.3 && recover < 0.5) {
-        const castDist = (cast - 0.3) * 1.4 * 35;
+      if (cast > 0.3 && recover < 0.6) {
+        const castDist = (cast - 0.3) * 1.4 * 40;
         const castX = orbX + Math.cos(facing) * castDist;
         const castY = orbY + Math.sin(facing) * castDist;
-        const castAlpha = Math.max(0, 1 - recover * 2);
+        const castAlpha = Math.max(0, 1 - recover * 1.8);
 
         if (castAlpha > 0) {
           ctx.strokeStyle = '#a855f7';
           ctx.lineWidth = 2;
-          ctx.globalAlpha = castAlpha * 0.6;
+          ctx.globalAlpha = castAlpha * 0.7;
           ctx.shadowColor = '#9333ea';
-          ctx.shadowBlur = 8;
+          ctx.shadowBlur = 10;
 
-          const burstRadius = 4 + cast * 8;
+          const burstRadius = 5 + cast * 12;
           ctx.beginPath();
           ctx.arc(castX, castY, burstRadius, 0, Math.PI * 2);
           ctx.stroke();
 
-          ctx.fillStyle = '#e9d5ff';
-          ctx.globalAlpha = castAlpha * 0.8;
+          const waveRadius = burstRadius + 4 + recover * 20;
+          ctx.strokeStyle = '#c084fc';
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = castAlpha * 0.4;
           ctx.beginPath();
-          ctx.arc(castX, castY, 2, 0, Math.PI * 2);
+          ctx.arc(castX, castY, waveRadius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.globalAlpha = castAlpha * 0.9;
+          ctx.beginPath();
+          ctx.arc(castX, castY, 3, 0, Math.PI * 2);
           ctx.fill();
+
+          for (let r = 0; r < 6; r++) {
+            const rayAngle = (Math.PI * 2 / 6) * r + t * 4;
+            const rayLen = burstRadius * 0.8;
+            ctx.strokeStyle = '#e9d5ff';
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = castAlpha * 0.35;
+            ctx.beginPath();
+            ctx.moveTo(castX, castY);
+            ctx.lineTo(castX + Math.cos(rayAngle) * rayLen, castY + Math.sin(rayAngle) * rayLen);
+            ctx.stroke();
+          }
 
           ctx.shadowBlur = 0;
         }
@@ -1579,6 +1679,7 @@ export class VoxelRenderer {
 
   private drawComboFinisherVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number) {
     const classColor = heroClass === 'Warrior' ? '#ef4444' : heroClass === 'Mage' ? '#8b5cf6' : heroClass === 'Ranger' ? '#22c55e' : '#f97316';
+    const secondaryColor = heroClass === 'Warrior' ? '#fca5a5' : heroClass === 'Mage' ? '#c4b5fd' : heroClass === 'Ranger' ? '#86efac' : '#fdba74';
     const phase = t * 28;
     const power = Math.abs(Math.sin(phase * 0.5));
     const spin = Math.sin(phase);
@@ -1586,63 +1687,101 @@ export class VoxelRenderer {
     ctx.save();
     ctx.translate(x, y - 10);
 
-    const shockRadius = 20 + power * 18;
+    const crackCount = 6;
+    const crackProgress = Math.min(1, t * 3);
+    if (crackProgress > 0.1) {
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = (1 - crackProgress * 0.6) * 0.6;
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 4;
+      for (let c = 0; c < crackCount; c++) {
+        const ca = (c / crackCount) * Math.PI * 2 + 0.3;
+        const cLen = 10 + crackProgress * 25 + Math.sin(c * 1.7) * 8;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        const midX = Math.cos(ca) * cLen * 0.5 + Math.sin(c * 3.1) * 3;
+        const midY = Math.sin(ca) * cLen * 0.5 + Math.cos(c * 2.7) * 3;
+        ctx.lineTo(midX, midY);
+        ctx.lineTo(Math.cos(ca) * cLen, Math.sin(ca) * cLen);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    const shockRadius = 22 + power * 22;
     ctx.strokeStyle = classColor;
-    ctx.lineWidth = 3 + power * 2;
-    ctx.globalAlpha = 0.5 + power * 0.4;
+    ctx.lineWidth = 3.5 + power * 2.5;
+    ctx.globalAlpha = 0.6 + power * 0.4;
     ctx.shadowColor = classColor;
-    ctx.shadowBlur = 12 + power * 10;
+    ctx.shadowBlur = 14 + power * 12;
     const rot = t * 6;
     ctx.beginPath();
     ctx.arc(0, -4, shockRadius, rot, rot + Math.PI * 1.6);
     ctx.stroke();
 
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = secondaryColor;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.35;
     ctx.beginPath();
-    ctx.arc(0, -4, shockRadius + 8, rot + Math.PI * 0.5, rot + Math.PI * 1.8);
+    ctx.arc(0, -4, shockRadius + 10, rot + Math.PI * 0.4, rot + Math.PI * 1.9);
     ctx.stroke();
 
-    const spikeCount = 8;
+    const waveRadius = shockRadius + 15 + power * 10;
+    ctx.strokeStyle = classColor;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.2 + power * 0.15;
+    ctx.beginPath();
+    ctx.arc(0, -4, waveRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const spikeCount = 10;
     for (let s = 0; s < spikeCount; s++) {
       const sa = (s / spikeCount) * Math.PI * 2 + rot;
-      const sLen = 6 + power * 10 + Math.sin(t * 15 + s * 2) * 3;
-      ctx.strokeStyle = s % 2 === 0 ? classColor : '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.4 + power * 0.4;
+      const sLen = 8 + power * 14 + Math.sin(t * 15 + s * 2) * 4;
+      ctx.strokeStyle = s % 3 === 0 ? '#ffd700' : s % 2 === 0 ? classColor : '#ffffff';
+      ctx.lineWidth = s % 3 === 0 ? 2.5 : 1.5;
+      ctx.globalAlpha = 0.4 + power * 0.5;
       ctx.beginPath();
       ctx.moveTo(Math.cos(sa) * shockRadius, Math.sin(sa) * shockRadius - 4);
       ctx.lineTo(Math.cos(sa) * (shockRadius + sLen), Math.sin(sa) * (shockRadius + sLen) - 4);
       ctx.stroke();
     }
 
-    if (power > 0.5) {
-      for (let s = 0; s < 6; s++) {
-        const sa = rot * 2 + s * Math.PI / 3;
-        const sr = shockRadius * 0.5 + Math.sin(t * 12 + s) * 6;
-        ctx.fillStyle = s % 2 === 0 ? '#ffffff' : classColor;
-        ctx.globalAlpha = power * 0.6;
+    if (power > 0.4) {
+      for (let s = 0; s < 8; s++) {
+        const sa = rot * 2 + s * Math.PI / 4;
+        const sr = shockRadius * 0.5 + Math.sin(t * 12 + s) * 8;
+        ctx.fillStyle = s % 3 === 0 ? '#ffd700' : s % 2 === 0 ? '#ffffff' : classColor;
+        ctx.globalAlpha = power * 0.7;
         ctx.beginPath();
-        ctx.arc(Math.cos(sa) * sr, Math.sin(sa) * sr - 4, 2 + Math.sin(t * 20 + s) * 1, 0, Math.PI * 2);
+        ctx.arc(Math.cos(sa) * sr, Math.sin(sa) * sr - 4, 2 + Math.sin(t * 20 + s) * 1.2, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    const weaponArc = facing + spin * Math.PI * 0.8;
-    const weaponDist = 28 + power * 12;
+    const weaponArc = facing + spin * Math.PI * 0.9;
+    const weaponDist = 30 + power * 14;
     ctx.strokeStyle = classColor;
-    ctx.lineWidth = 4;
-    ctx.globalAlpha = 0.7;
-    ctx.shadowBlur = 10;
+    ctx.lineWidth = 5;
+    ctx.globalAlpha = 0.8;
+    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.arc(0, -4, weaponDist, weaponArc - 0.8, weaponArc + 0.8);
+    ctx.arc(0, -4, weaponDist, weaponArc - 0.9, weaponArc + 0.9);
     ctx.stroke();
 
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.5;
     ctx.beginPath();
-    ctx.arc(0, -4, weaponDist - 4, weaponArc - 0.5, weaponArc + 0.5);
+    ctx.arc(0, -4, weaponDist - 4, weaponArc - 0.6, weaponArc + 0.6);
+    ctx.stroke();
+
+    ctx.strokeStyle = secondaryColor;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.arc(0, -4, weaponDist + 6, weaponArc - 0.7, weaponArc + 0.7);
     ctx.stroke();
 
     ctx.shadowBlur = 0;

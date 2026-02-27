@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import {
   MobaState, HudState, HEROES, ITEMS, CLASS_ABILITIES,
   TEAM_COLORS, TEAM_NAMES, CLASS_COLORS, RARITY_COLORS,
-  ItemDef, getPortraitPath, MAP_SIZE
+  ItemDef, getPortraitPath, MAP_SIZE, TargetInfo
 } from '@/game/types';
 import {
   createInitialState, updateGame, getHudState,
@@ -24,6 +24,135 @@ import {
 import { createCombatActor, CombatVFX, COMBAT_ACTION_NAMES, COMBAT_HOTKEY_LEGEND } from '@/game/combat-machine';
 import { MouseTargetingManager } from '@/game/mouse-targeting';
 import { PhysicsWorld, createPhysicsWorld } from '@/game/physics';
+
+function TargetInfoPanel({ target }: { target: TargetInfo }) {
+  const hpPercent = target.maxHp > 0 ? (target.hp / target.maxHp) * 100 : 0;
+  const frameColor = target.isAlly ? '#4ade80' : target.team === -1 ? '#fbbf24' : '#ef4444';
+  const hpBarColor = target.isAlly
+    ? 'linear-gradient(to right, #166534, #4ade80)'
+    : target.team === -1
+    ? 'linear-gradient(to right, #92400e, #fbbf24)'
+    : 'linear-gradient(to right, #991b1b, #ef4444)';
+
+  const entityTypeLabel = target.entityType === 'hero'
+    ? (target.heroClass ? `${target.heroRace} ${target.heroClass}` : 'Hero')
+    : target.entityType === 'minion'
+    ? 'Minion'
+    : target.entityType === 'tower'
+    ? 'Structure'
+    : target.entityType === 'nexus'
+    ? 'Nexus'
+    : 'Jungle';
+
+  return (
+    <div
+      className="absolute top-12 left-1/2 -translate-x-1/2 pointer-events-none"
+      style={{ zIndex: 10 }}
+      data-testid="panel-target-info"
+    >
+      <div
+        className="flex items-center"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(15,10,5,0.95), rgba(10,5,0,0.9))',
+          border: `1px solid ${frameColor}80`,
+          borderRadius: 6,
+          padding: '6px 12px',
+          gap: 10,
+          minWidth: 220,
+          boxShadow: `0 4px 16px rgba(0,0,0,0.8), 0 0 8px ${frameColor}22`,
+        }}
+      >
+        <div className="flex flex-col" style={{ gap: 2, flex: 1 }}>
+          <div className="flex items-center flex-wrap" style={{ gap: 6 }}>
+            <span
+              className="text-xs font-black truncate"
+              style={{ color: frameColor, maxWidth: 140 }}
+              data-testid="text-target-name"
+            >
+              {target.name}
+            </span>
+            <span
+              className="text-[9px] font-bold"
+              style={{ color: '#c5a059' }}
+              data-testid="text-target-level"
+            >
+              Lv{target.level}
+            </span>
+            <span className="text-[8px]" style={{ color: '#888' }}>
+              {entityTypeLabel}
+            </span>
+          </div>
+
+          <div className="flex items-center" style={{ gap: 4 }}>
+            <div
+              className="h-2.5 rounded-sm overflow-hidden"
+              style={{
+                flex: 1,
+                background: '#1a0a0a',
+                border: `1px solid ${frameColor}44`,
+              }}
+            >
+              <div
+                className="h-full transition-all"
+                style={{
+                  width: `${hpPercent}%`,
+                  background: hpBarColor,
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
+                }}
+                data-testid="bar-target-hp"
+              />
+            </div>
+            <span
+              className="text-[9px] font-bold w-20 text-right"
+              style={{ color: frameColor }}
+              data-testid="text-target-hp"
+            >
+              {Math.floor(target.hp)}/{target.maxHp}
+            </span>
+          </div>
+
+          {(target.atk !== undefined || target.def !== undefined) && (
+            <div className="flex" style={{ gap: 8 }}>
+              {target.atk !== undefined && (
+                <span className="text-[8px]" style={{ color: '#888' }}>
+                  ATK <span className="font-bold" style={{ color: '#fbbf24' }}>{target.atk}</span>
+                </span>
+              )}
+              {target.def !== undefined && (
+                <span className="text-[8px]" style={{ color: '#888' }}>
+                  DEF <span className="font-bold" style={{ color: '#60a5fa' }}>{target.def}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {target.activeEffects.length > 0 && (
+            <div className="flex flex-wrap" style={{ gap: 2, marginTop: 1 }}>
+              {target.activeEffects.map((eff, i) => (
+                <div
+                  key={i}
+                  className="flex items-center font-bold"
+                  style={{
+                    background: `${eff.color}18`,
+                    border: `1px solid ${eff.color}33`,
+                    color: eff.color,
+                    padding: '0px 3px',
+                    borderRadius: 2,
+                    fontSize: 8,
+                    gap: 1,
+                  }}
+                  data-testid={`target-effect-${eff.name}-${i}`}
+                >
+                  {eff.name}{eff.stacks > 1 ? ` x${eff.stacks}` : ''}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
@@ -564,6 +693,10 @@ export default function GamePage() {
               {renderMode === '3d' ? '3D' : '2D'}
             </button>
           </div>
+
+          {hud.targetInfo && (
+            <TargetInfoPanel target={hud.targetInfo} />
+          )}
 
           <div className="absolute bottom-0 left-0 right-0 flex items-end pointer-events-auto" style={{ padding: '0 8px 8px 8px', gap: 8, maxHeight: '45vh' }}>
 
