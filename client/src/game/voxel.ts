@@ -226,20 +226,21 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   }
 
   if (animState === 'combo_finisher') {
-    const phase = t * 20;
+    const phase = t * 22;
     const spin = Math.sin(phase);
     const spin2 = Math.cos(phase * 0.7);
     const power = Math.abs(Math.sin(phase * 0.5));
     const slam = Math.max(0, Math.sin(phase * 0.5 + 1.2));
+    const twist = Math.sin(phase * 1.3) * 1.5;
     return {
-      leftLeg: { ox: Math.round(spin * 2.5), oy: Math.round(spin2 * 0.5), oz: Math.round(Math.max(0, -spin) * 1.2) },
-      rightLeg: { ox: Math.round(-spin * 2.5), oy: Math.round(-spin2 * 0.5), oz: Math.round(Math.max(0, spin) * 1.2) },
-      leftArm: { ox: Math.round(spin * 4), oy: Math.round(-power * 3), oz: Math.round(power * 4 + slam * 2) },
-      rightArm: { ox: Math.round(-spin * 3), oy: Math.round(power * 1.5), oz: Math.round(power * 3 + slam) },
-      torso: { ox: Math.round(spin * 1.5), oy: Math.round(spin2 * 0.5), oz: Math.round(power * 1.0 - slam * 1.5) },
-      head: { ox: Math.round(spin * 0.8), oy: Math.round(spin2 * 0.3), oz: Math.round(power * 0.8 - slam) },
-      weapon: { ox: Math.round(spin * 5 + power * 3), oy: Math.round(-power * 4 + slam * 2), oz: Math.round(power * 5 - slam * 3) },
-      weaponGlow: power > 0.3 ? 1.0 : 0.5
+      leftLeg: { ox: Math.round(spin * 3.0), oy: Math.round(spin2 * 0.8 + twist * 0.3), oz: Math.round(Math.max(0, -spin) * 1.5) },
+      rightLeg: { ox: Math.round(-spin * 3.0), oy: Math.round(-spin2 * 0.8 - twist * 0.3), oz: Math.round(Math.max(0, spin) * 1.5) },
+      leftArm: { ox: Math.round(spin * 5), oy: Math.round(-power * 3.5 + twist), oz: Math.round(power * 5 + slam * 2.5) },
+      rightArm: { ox: Math.round(-spin * 4), oy: Math.round(power * 2 - twist), oz: Math.round(power * 4 + slam * 1.5) },
+      torso: { ox: Math.round(spin * 2.0), oy: Math.round(twist), oz: Math.round(power * 1.2 - slam * 2.0) },
+      head: { ox: Math.round(spin * 1.2), oy: Math.round(twist * 0.6), oz: Math.round(power * 1.0 - slam * 1.5) },
+      weapon: { ox: Math.round(spin * 6 + power * 4), oy: Math.round(-power * 5 + slam * 2.5 + twist), oz: Math.round(power * 6 - slam * 4) },
+      weaponGlow: 1.0
     };
   }
 
@@ -863,13 +864,23 @@ export class VoxelRenderer {
     }
 
     if ((animState === 'attack' || animState === 'combo_finisher') && animTimer > 0.05) {
-      const trailAlpha = animState === 'combo_finisher' ? 0.15 : 0.1;
-      const trailOffset = 0.08;
-      ctx.save();
-      ctx.globalAlpha = trailAlpha;
-      const trailModel = buildHeroModel(race, heroClass, animState, Math.max(0, animTimer - trailOffset), heroName, heroItems);
-      this.renderVoxelModel(ctx, x, groundY - 12, trailModel, this.cubeSize, facing);
-      ctx.restore();
+      const trailAlpha = animState === 'combo_finisher' ? 0.2 : 0.1;
+      const trailCount = animState === 'combo_finisher' ? 2 : 1;
+      const classTrailColors: Record<string, string> = { Warrior: '#ef4444', Mage: '#a855f7', Ranger: '#22c55e', Worg: '#f97316' };
+      const trailTint = classTrailColors[heroClass] || '#ffffff';
+      for (let ti = 0; ti < trailCount; ti++) {
+        const trailOffset = 0.08 + ti * 0.06;
+        ctx.save();
+        ctx.globalAlpha = trailAlpha * (1 - ti * 0.4);
+        ctx.globalCompositeOperation = 'lighter';
+        const trailModel = buildHeroModel(race, heroClass, animState, Math.max(0, animTimer - trailOffset), heroName, heroItems);
+        this.renderVoxelModel(ctx, x, groundY - 12, trailModel, this.cubeSize, facing);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = trailAlpha * 0.3 * (1 - ti * 0.5);
+        ctx.fillStyle = trailTint;
+        ctx.fillRect(x - 12, groundY - 24, 24, 24);
+        ctx.restore();
+      }
     }
 
     const model = buildHeroModel(race, heroClass, animState, animTimer, heroName, heroItems);

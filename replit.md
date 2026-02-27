@@ -54,4 +54,20 @@ The game utilizes a React frontend with a custom HTML5 Canvas 2D and Three.js 3D
 - **3D Rendering:** Three.js
 - **Model Loading:** GLTFLoader/FBXLoader (from Three.js)
 - **Animation:** GSAP 3.12.5 (tweening/easing library)
+- **Physics:** cannon-es (3D physics for knockback/launch effects)
+- **State Machines:** XState (combat combo system)
 - **Backend (minimal):** Express.js (for serving static files)
+
+## Mouse Targeting & AOE System
+- `MouseTargetingManager` class (mouse-targeting.ts): handles AOE ground targeting with circle indicator, max range ring, valid/invalid color pulsing
+- AOE abilities: press ability key → shows targeting circle → left-click confirms → spawns AreaDamageZone
+- Right-click or Escape cancels AOE targeting
+- `PhysicsWorld` (physics.ts): cannon-es wrapper with hero/projectile bodies, knockback impulse, scale factor 0.01
+
+## Quality Notes
+- All TypeScript compiles cleanly (no errors)
+- AI heroes emit contextual chat messages based on situation (retreat, engage, laning, etc.)
+- Weapon trails use class-specific tint colors (red/purple/green/orange)
+- Combo finisher animation has dramatic body twist and full weapon glow
+- River tiles have animated water overlay with ripple effects
+- Area damage zones support fire/frost/poison/lightning/holy/shadow types with status effects
