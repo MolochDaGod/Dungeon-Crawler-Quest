@@ -1,12 +1,47 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   HEROES, HeroData, RACE_COLORS, CLASS_COLORS, FACTION_COLORS,
-  RARITY_COLORS, STAT_COLORS, CLASS_ABILITIES, getPortraitPath
+  RARITY_COLORS, STAT_COLORS, CLASS_ABILITIES
 } from '@/game/types';
 import { VoxelRenderer } from '@/game/voxel';
+
+const sharedVoxel = new VoxelRenderer();
+
+function HeroPortraitCanvas({ hero, width, height, className, style, testId }: {
+  hero: HeroData; width: number; height: number; className?: string; style?: React.CSSProperties; testId?: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.fillStyle = '#0a0f0a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const raceColor = RACE_COLORS[hero.race] || '#888';
+    ctx.fillStyle = raceColor + '08';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    sharedVoxel.drawHeroPortrait(ctx, 0, 0, canvas.width, canvas.height, hero.race, hero.heroClass, hero.name);
+  }, [hero.id, hero.race, hero.heroClass, hero.name]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={width}
+      height={height}
+      className={className}
+      style={style}
+      data-testid={testId}
+    />
+  );
+}
 
 const RACES = ['All', 'Human', 'Barbarian', 'Dwarf', 'Elf', 'Orc', 'Undead'];
 const CLASSES = ['All', 'Warrior', 'Worg', 'Mage', 'Ranger'];
@@ -145,18 +180,13 @@ export default function CharacterSelect() {
                 >
                   <div className="relative">
                     {hero.isSecret && <span className="absolute top-1 right-1 z-10 text-[9px] bg-gradient-to-r from-[#c5a059] to-amber-600 text-black px-1.5 py-0.5 rounded font-bold tracking-wider">SECRET</span>}
-                    <img
-                      src={getPortraitPath(hero.race, hero.heroClass, hero.name)}
-                      alt={hero.name}
-                      className="w-full h-28 rounded-t object-cover bg-[#0a0f0a]"
+                    <HeroPortraitCanvas
+                      hero={hero}
+                      width={160}
+                      height={112}
+                      className="w-full h-28 rounded-t"
                       style={{ borderBottom: `2px solid ${rarityColor}44` }}
-                      data-testid={`img-hero-card-portrait-${hero.id}`}
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        img.style.height = '40px';
-                        img.style.objectFit = 'contain';
-                        img.style.opacity = '0.3';
-                      }}
+                      testId={`img-hero-card-portrait-${hero.id}`}
                     />
                   </div>
                   <div className="px-2.5 mt-1.5">
@@ -184,12 +214,13 @@ export default function CharacterSelect() {
             {selectedHero ? (
               <div className="sticky top-20 bg-[#1a1a2e] border border-gray-800 rounded-xl p-4" data-testid="hero-detail-panel">
                 <div className="flex gap-3 mb-4 items-start">
-                  <img
-                    src={getPortraitPath(selectedHero.race, selectedHero.heroClass, selectedHero.name)}
-                    alt={selectedHero.name}
-                    className="w-16 h-16 rounded-lg border-2 border-[#c5a059]/40 object-cover bg-[#0a0f0a] shrink-0"
-                    data-testid="img-detail-portrait"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  <HeroPortraitCanvas
+                    hero={selectedHero}
+                    width={64}
+                    height={64}
+                    className="w-16 h-16 rounded-lg shrink-0"
+                    style={{ border: '2px solid rgba(197,160,89,0.4)' }}
+                    testId="img-detail-portrait"
                   />
                   <canvas ref={previewRef} width={200} height={160} className="rounded-lg bg-[#0a0f0a] flex-1" data-testid="canvas-hero-preview" />
                 </div>
