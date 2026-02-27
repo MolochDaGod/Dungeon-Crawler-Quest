@@ -11,6 +11,7 @@ import DungeonGamePage from "@/pages/dungeon-game";
 import SettingsPage from "@/pages/settings";
 import OpenWorldPage from "@/pages/open-world";
 import AnimationEditorPage from "@/pages/animation-editor";
+import AdminPage from "@/pages/admin";
 import { useEffect } from "react";
 
 function Router() {
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/open-world" component={OpenWorldPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/animation-editor" component={AnimationEditorPage} />
+      <Route path="/admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>
   );

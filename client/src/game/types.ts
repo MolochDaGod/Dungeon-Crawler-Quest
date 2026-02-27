@@ -287,6 +287,7 @@ export interface MobaState {
   spellProjectiles: SpellProjectile[];
   screenShake: number;
   areaDamageZones: AreaDamageZoneState[];
+  pendingSpriteEffects: { type: string; x: number; y: number; scale: number; duration: number }[];
 }
 
 export interface AreaDamageZoneState {
@@ -365,6 +366,22 @@ export interface HudState {
   abilityMaxCharges: number[];
   minimapEntities: { x: number; y: number; type: 'player' | 'ally_hero' | 'enemy_hero' | 'ally_tower' | 'enemy_tower' | 'ally_nexus' | 'enemy_nexus' | 'ally_minion' | 'enemy_minion' | 'jungle_small' | 'jungle_medium' | 'jungle_buff'; dead?: boolean }[];
   cameraViewport: { x: number; y: number; w: number; h: number };
+  targetInfo: TargetInfo | null;
+}
+
+export interface TargetInfo {
+  name: string;
+  entityType: 'hero' | 'minion' | 'tower' | 'nexus' | 'jungle_mob';
+  hp: number;
+  maxHp: number;
+  level: number;
+  team: number;
+  isAlly: boolean;
+  heroClass?: string;
+  heroRace?: string;
+  atk?: number;
+  def?: number;
+  activeEffects: StatusEffectDisplay[];
 }
 
 export const HEROES: HeroData[] = [
