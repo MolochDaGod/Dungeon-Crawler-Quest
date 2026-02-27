@@ -133,7 +133,7 @@ function generateTerrainMap(): number[][] {
   return grid;
 }
 
-const TERRAIN_LOOKUP: TerrainType[] = ['grass', 'dirt', 'stone', 'water', 'lane', 'jungle', 'base_blue', 'base_red', 'river'];
+const TERRAIN_LOOKUP: TerrainType[] = ['grass', 'dirt', 'stone', 'water', 'lane', 'jungle', 'base_blue', 'base_red', 'river', 'jungle_path'];
 
 function generateDecorations(): { x: number; y: number; type: 'tree' | 'rock'; seed: number }[] {
   const decos: { x: number; y: number; type: 'tree' | 'rock'; seed: number }[] = [];
@@ -804,7 +804,8 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
     hero.animState = 'attack';
 
     if (hero.attackWindup <= 0) {
-      if (target && !target.dead && dist(hero, target) < hero.rng + 80) {
+      const connectRange = isMeleeClass(HEROES[hero.heroDataId]?.heroClass || '') ? hero.rng + 60 : hero.rng + 80;
+      if (target && !target.dead && dist(hero, target) < connectRange) {
         hero.comboCount = (hero.comboCount + 1);
         hero.comboTimer = 2.0;
         const comboMult = hero.comboCount >= 3 ? 1.5 : 1.0;
@@ -1212,11 +1213,18 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     }
   }
 
-  if (Math.random() < 0.001 * dt) {
-    const msgs = ['push ' + ['top', 'mid', 'bot'][hero.assignedLane], 'enemy missing', 'group up', 'need backup', 'going b', 'care'];
-    if (hpPct < 0.3) addAiChat(state, hero, heroData, 'going b');
-    else if (threat > 3 && alliesNearby === 0) addAiChat(state, hero, heroData, 'need backup');
-    else addAiChat(state, hero, heroData, msgs[Math.floor(Math.random() * msgs.length)]);
+  if (Math.random() < 0.0012 * dt) {
+    const laneName = ['top', 'mid', 'bot'][hero.assignedLane];
+    const contextMsgs: string[] = [];
+    if (hpPct < 0.3) contextMsgs.push('going b', 'need heal', 'low hp retreating');
+    else if (hpPct < 0.5 && threat > 2) contextMsgs.push('playing safe', 'backing off', 'careful ' + laneName);
+    else if (threat > 3 && alliesNearby === 0) contextMsgs.push('need backup ' + laneName, 'help ' + laneName, 'enemy ganking');
+    else if (hero.kills > 2 && hero.deaths === 0) contextMsgs.push('lets go', 'feeling strong', 'push ' + laneName);
+    else if (hero.deaths > hero.kills + 2) contextMsgs.push('they are fed', 'play safe team', 'need to farm');
+    else if (alliesNearby >= 3) contextMsgs.push('group push', 'all in', 'fight here', 'lets teamfight');
+    else if (hero.gold > 1500) contextMsgs.push('need to shop', 'saving for item');
+    else contextMsgs.push('push ' + laneName, 'enemy missing', 'group up', 'care', 'ward here', 'on my way', 'well played', 'focus carry');
+    addAiChat(state, hero, heroData, contextMsgs[Math.floor(Math.random() * contextMsgs.length)]);
   }
 }
 
@@ -1309,19 +1317,47 @@ function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, ta
     isMelee = (attacker as MobaMinion).minionType === 'melee';
   }
 
-  if (isMelee && dist(attacker, target) < 120) {
+  const meleeRange = 'rng' in attacker ? (attacker as any).rng + 40 : 120;
+  if (isMelee && dist(attacker, target) < meleeRange) {
     dealDamage(state, attacker, target, dmg);
     const slashAngle = angleTo(attacker, target);
     state.spellEffects.push({
       x: target.x, y: target.y,
-      type: 'slash_arc', life: 0.15, maxLife: 0.15,
-      radius: 20, color: comboMult > 1 ? '#ffd700' : color, angle: slashAngle
+      type: 'slash_arc', life: 0.2, maxLife: 0.2,
+      radius: 28, color: comboMult > 1 ? '#ffd700' : color, angle: slashAngle
+    });
+    for (let i = 0; i < 5; i++) {
+      const a = Math.random() * Math.PI * 2;
+      state.particles.push({
+        x: target.x + Math.cos(a) * 10,
+        y: target.y + Math.sin(a) * 10,
+        vx: Math.cos(a) * (40 + Math.random() * 40), vy: Math.sin(a) * (40 + Math.random() * 40) - 20,
+        life: 0.3, maxLife: 0.3, color, size: 2 + Math.random(), type: 'hit'
+      });
+    }
+    state.spellEffects.push({
+      x: (attacker.x + target.x) / 2, y: (attacker.y + target.y) / 2,
+      type: 'impact_ring', life: 0.15, maxLife: 0.15,
+      radius: 18, color: comboMult > 1 ? '#ffd700' : color, angle: 0
+    });
+  } else if (isMelee && dist(attacker, target) < meleeRange + 40) {
+    const lungeAngle = angleTo(attacker, target);
+    const lungeDist = Math.min(dist(attacker, target) - meleeRange + 20, 40);
+    if (lungeDist > 0) {
+      attacker.x += Math.cos(lungeAngle) * lungeDist;
+      attacker.y += Math.sin(lungeAngle) * lungeDist;
+    }
+    dealDamage(state, attacker, target, dmg);
+    state.spellEffects.push({
+      x: target.x, y: target.y,
+      type: 'slash_arc', life: 0.2, maxLife: 0.2,
+      radius: 25, color: comboMult > 1 ? '#ffd700' : color, angle: lungeAngle
     });
     for (let i = 0; i < 3; i++) {
       state.particles.push({
-        x: target.x + (Math.random() - 0.5) * 20,
-        y: target.y + (Math.random() - 0.5) * 20,
-        vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60,
+        x: target.x + (Math.random() - 0.5) * 15,
+        y: target.y + (Math.random() - 0.5) * 15,
+        vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 50,
         life: 0.25, maxLife: 0.25, color, size: 2, type: 'hit'
       });
     }
@@ -1377,6 +1413,11 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   if (ab.name === 'Fireball') {
     const angle = target ? angleTo(hero, target) : angleTo(hero, mouseTarget);
     spawnSpellProjectile(state, hero, angle, ab, '#ff6600', '#ff3300');
+    spawnCastBurst(state, hero.x, hero.y, '#ff6600', 12);
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'cast_circle',
+      life: 0.3, maxLife: 0.3, radius: 30, color: '#ff6600', angle: 0
+    });
     addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
     return;
   }
@@ -1384,6 +1425,11 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   if (ab.name === 'Power Shot') {
     const angle = target ? angleTo(hero, target) : angleTo(hero, mouseTarget);
     spawnSpellProjectile(state, hero, angle, ab, '#22c55e', '#15803d', true);
+    spawnCastBurst(state, hero.x, hero.y, '#22c55e', 10);
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'cast_circle',
+      life: 0.25, maxLife: 0.25, radius: 25, color: '#22c55e', angle: 0
+    });
     addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
     return;
   }
@@ -1393,9 +1439,14 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
     const cy = target ? target.y : mouseTarget.y;
     state.spellEffects.push({
       x: cx, y: cy, type: 'meteor_shadow',
-      life: 1.0, maxLife: 1.0, radius: ab.radius, color: '#ff4400', angle: 0,
+      life: 1.2, maxLife: 1.2, radius: ab.radius, color: '#ff4400', angle: 0,
       data: { damage: ab.damage + hero.atk * 0.6, team: hero.team, sourceId: hero.id }
     });
+    state.spellEffects.push({
+      x: cx, y: cy, type: 'telegraph_circle',
+      life: 1.2, maxLife: 1.2, radius: ab.radius, color: '#ff4400', angle: 0
+    });
+    spawnCastBurst(state, hero.x, hero.y, '#ff4400', 15);
     addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
     return;
   }
@@ -1409,16 +1460,30 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
         if (e.activeEffects) {
           for (const eff of statusEffects) applyStatusEffect(e as any as CombatEntity, { ...eff });
         }
+        for (let p = 0; p < 6; p++) {
+          const a = Math.random() * Math.PI * 2;
+          state.particles.push({
+            x: e.x, y: e.y,
+            vx: Math.cos(a) * 60, vy: Math.sin(a) * 60 - 30,
+            life: 0.5, maxLife: 0.5, color: '#67e8f9', size: 3, type: 'ability'
+          });
+        }
       }
     }
     state.spellEffects.push({
       x: hero.x, y: hero.y, type: 'frost_ring',
-      life: 0.6, maxLife: 0.6, radius: ab.radius, color: '#67e8f9', angle: 0
+      life: 0.8, maxLife: 0.8, radius: ab.radius, color: '#67e8f9', angle: 0
+    });
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'frost_ring',
+      life: 0.5, maxLife: 0.5, radius: ab.radius * 0.6, color: '#22d3ee', angle: 0
     });
     state.spellEffects.push({
       x: hero.x, y: hero.y, type: 'ground_frost',
-      life: 2.0, maxLife: 2.0, radius: ab.radius, color: '#22d3ee', angle: 0
+      life: 3.0, maxLife: 3.0, radius: ab.radius, color: '#22d3ee', angle: 0
     });
+    state.screenShake = 0.15;
+    spawnCastBurst(state, hero.x, hero.y, '#67e8f9', 20);
     addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
     return;
   }
@@ -1431,13 +1496,19 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
         dealDamage(state, hero, e, dmg);
       }
     }
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       state.spellEffects.push({
         x: hero.x, y: hero.y, type: 'whirlwind_slash',
-        life: 0.4, maxLife: 0.4, radius: ab.radius,
-        color: '#ef4444', angle: (i / 4) * Math.PI * 2
+        life: 0.5, maxLife: 0.5, radius: ab.radius,
+        color: '#ef4444', angle: (i / 6) * Math.PI * 2
       });
     }
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'impact_ring',
+      life: 0.3, maxLife: 0.3, radius: ab.radius * 0.8, color: '#ef4444', angle: 0
+    });
+    state.screenShake = 0.1;
+    spawnCastBurst(state, hero.x, hero.y, '#ef4444', 16);
     addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
     return;
   }
@@ -1450,16 +1521,46 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
       life: ab.duration, maxLife: ab.duration, radius: ab.radius, color: '#22c55e', angle: 0,
       data: { damage: (ab.damage + hero.atk * 0.6) / 6, team: hero.team, sourceId: hero.id, tickTimer: 0 }
     });
+    state.spellEffects.push({
+      x: cx, y: cy, type: 'telegraph_circle',
+      life: 0.5, maxLife: 0.5, radius: ab.radius, color: '#22c55e', angle: 0
+    });
+    spawnCastBurst(state, hero.x, hero.y, '#22c55e', 12);
     addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
     return;
   }
+
+  const isMeleeHero = isMeleeClass(heroData.heroClass);
 
   switch (ab.type) {
     case 'damage': {
       if (target) {
         const dmg = ab.damage + hero.atk * 0.8;
+        if (isMeleeHero && dist(hero, target) > hero.rng + 30) {
+          const lungeAngle = angleTo(hero, target);
+          const lungeDist = Math.min(dist(hero, target) - 40, 80);
+          hero.x += Math.cos(lungeAngle) * lungeDist;
+          hero.y += Math.sin(lungeAngle) * lungeDist;
+          state.spellEffects.push({
+            x: hero.x, y: hero.y, type: 'dash_trail',
+            life: 0.2, maxLife: 0.2, radius: 8, color: abilityColor, angle: lungeAngle
+          });
+        }
         dealDamage(state, hero, target, dmg);
-        spawnAbilityParticles(state, target.x, target.y, abilityColor, 8);
+        if (isMeleeHero) {
+          const slashAngle = angleTo(hero, target);
+          state.spellEffects.push({
+            x: target.x, y: target.y, type: 'slash_arc',
+            life: 0.25, maxLife: 0.25, radius: 30, color: abilityColor, angle: slashAngle
+          });
+          state.spellEffects.push({
+            x: target.x, y: target.y, type: 'impact_ring',
+            life: 0.2, maxLife: 0.2, radius: 22, color: '#ffffff', angle: 0
+          });
+          state.screenShake = 0.06;
+        }
+        spawnAbilityParticles(state, target.x, target.y, abilityColor, isMeleeHero ? 12 : 8);
+        spawnCastBurst(state, target.x, target.y, abilityColor, 8);
         if (target.activeEffects) {
           for (const eff of statusEffects) applyStatusEffect(target as any as CombatEntity, eff);
         } else if (ab.duration > 0 && 'stunTimer' in target) {
@@ -1472,16 +1573,28 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
       const cx = target ? target.x : hero.x;
       const cy = target ? target.y : hero.y;
       const entities = getAllEnemies(state, hero.team);
+      let hitCount = 0;
       for (const e of entities) {
         if (dist({ x: cx, y: cy }, e) < ab.radius) {
           const dmg = ab.damage + hero.atk * 0.6;
           dealDamage(state, hero, e, dmg);
+          hitCount++;
           if (e.activeEffects) {
             for (const eff of statusEffects) applyStatusEffect(e as any as CombatEntity, { ...eff });
           }
         }
       }
-      spawnAbilityParticles(state, cx, cy, abilityColor, 20);
+      spawnAbilityParticles(state, cx, cy, abilityColor, 25);
+      spawnCastBurst(state, cx, cy, abilityColor, 14);
+      state.spellEffects.push({
+        x: cx, y: cy, type: 'impact_ring',
+        life: 0.4, maxLife: 0.4, radius: ab.radius, color: abilityColor, angle: 0
+      });
+      state.spellEffects.push({
+        x: cx, y: cy, type: 'ground_scorch',
+        life: 1.5, maxLife: 1.5, radius: ab.radius * 0.5, color: abilityColor, angle: 0
+      });
+      if (hitCount >= 2) state.screenShake = 0.12;
       break;
     }
     case 'buff': {
@@ -1492,8 +1605,14 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
         hero.maxHp += buffHp;
         hero.hp += buffHp;
         setTimeout(() => { hero.maxHp -= buffHp; hero.hp = Math.min(hero.hp, hero.maxHp); }, ab.duration * 1000);
+        state.screenShake = 0.15;
       }
-      spawnAbilityParticles(state, hero.x, hero.y, '#ffd700', 15);
+      spawnAbilityParticles(state, hero.x, hero.y, '#ffd700', 20);
+      spawnCastBurst(state, hero.x, hero.y, '#ffd700', 12);
+      state.spellEffects.push({
+        x: hero.x, y: hero.y, type: 'cast_circle',
+        life: 0.4, maxLife: 0.4, radius: 40, color: '#ffd700', angle: 0
+      });
       break;
     }
     case 'debuff': {
@@ -1512,7 +1631,12 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
           if (ab.damage > 0) dealDamage(state, hero, e, ab.damage);
         }
       }
-      spawnAbilityParticles(state, hero.x, hero.y, '#06b6d4', 12);
+      spawnAbilityParticles(state, hero.x, hero.y, '#06b6d4', 16);
+      spawnCastBurst(state, hero.x, hero.y, '#06b6d4', 10);
+      state.spellEffects.push({
+        x: hero.x, y: hero.y, type: 'impact_ring',
+        life: 0.35, maxLife: 0.35, radius: ab.radius * 0.7, color: '#06b6d4', angle: 0
+      });
       break;
     }
     case 'heal': {
@@ -1521,7 +1645,19 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
       hero.shieldHp = 100 + hero.def * 2;
       addFloatingText(state, hero.x, hero.y - 35, `+${healAmt}`, '#22c55e', 16);
       for (const eff of statusEffects) applyStatusEffect(hero as any as CombatEntity, eff);
-      spawnAbilityParticles(state, hero.x, hero.y, '#22c55e', 15);
+      spawnAbilityParticles(state, hero.x, hero.y, '#22c55e', 18);
+      spawnCastBurst(state, hero.x, hero.y, '#22c55e', 10);
+      state.spellEffects.push({
+        x: hero.x, y: hero.y, type: 'cast_circle',
+        life: 0.5, maxLife: 0.5, radius: 35, color: '#22c55e', angle: 0
+      });
+      for (let i = 0; i < 6; i++) {
+        state.particles.push({
+          x: hero.x + (Math.random() - 0.5) * 30, y: hero.y,
+          vx: (Math.random() - 0.5) * 20, vy: -50 - Math.random() * 40,
+          life: 0.8, maxLife: 0.8, color: '#4ade80', size: 2, type: 'ability'
+        });
+      }
       break;
     }
     case 'dash': {
@@ -1531,7 +1667,7 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
         hero.x += Math.cos(angle) * dashDist;
         hero.y += Math.sin(angle) * dashDist;
         if (ab.damage > 0) dealDamage(state, hero, target, ab.damage + hero.atk * 0.5);
-        spawnAbilityParticles(state, hero.x, hero.y, abilityColor, 8);
+        spawnAbilityParticles(state, hero.x, hero.y, abilityColor, 12);
       } else {
         const dashDist = ab.range;
         hero.x += Math.cos(hero.facing) * dashDist;
@@ -2028,6 +2164,27 @@ function spawnAbilityParticles(state: MobaState, x: number, y: number, color: st
   }
 }
 
+function spawnCastBurst(state: MobaState, x: number, y: number, color: string, count: number) {
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const speed = 40 + Math.random() * 80;
+    state.particles.push({
+      x: x + Math.cos(angle) * 8, y: y + Math.sin(angle) * 8,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 20,
+      life: 0.4 + Math.random() * 0.3, maxLife: 0.7,
+      color, size: 2 + Math.random() * 2, type: 'ability'
+    });
+  }
+  for (let i = 0; i < 4; i++) {
+    state.particles.push({
+      x, y: y - 10,
+      vx: (Math.random() - 0.5) * 40, vy: -60 - Math.random() * 40,
+      life: 0.5, maxLife: 0.5,
+      color: '#ffffff', size: 2, type: 'ability'
+    });
+  }
+}
+
 function spawnSlashEffect(state: MobaState, x: number, y: number, angle: number, color: string) {
   state.spellEffects.push({
     x, y, type: 'slash_arc',
@@ -2096,14 +2253,30 @@ function updateSpellProjectiles(state: MobaState, dt: number) {
           if (sp.aoeRadius > 0) {
             state.spellEffects.push({
               x: sp.x, y: sp.y, type: 'fire_ring',
-              life: 0.4, maxLife: 0.4, radius: sp.aoeRadius,
+              life: 0.5, maxLife: 0.5, radius: sp.aoeRadius,
               color: sp.color, angle: 0
             });
             state.spellEffects.push({
+              x: sp.x, y: sp.y, type: 'impact_ring',
+              life: 0.35, maxLife: 0.35, radius: sp.aoeRadius * 0.7,
+              color: '#ffffff', angle: 0
+            });
+            state.spellEffects.push({
               x: sp.x, y: sp.y, type: 'ground_scorch',
-              life: 1.0, maxLife: 1.0, radius: sp.aoeRadius * 0.6,
+              life: 1.5, maxLife: 1.5, radius: sp.aoeRadius * 0.6,
               color: '#332200', angle: 0
             });
+            state.screenShake = 0.12;
+            for (let p2 = 0; p2 < 12; p2++) {
+              const a = (p2 / 12) * Math.PI * 2;
+              state.particles.push({
+                x: sp.x, y: sp.y,
+                vx: Math.cos(a) * (60 + Math.random() * 80),
+                vy: Math.sin(a) * (60 + Math.random() * 80) - 20,
+                life: 0.5, maxLife: 0.5,
+                color: sp.color, size: 3 + Math.random() * 2, type: 'ability'
+              });
+            }
             for (const ae of enemies) {
               if (ae.id === e.id) continue;
               if (dist(sp, ae) < sp.aoeRadius) {
@@ -2131,15 +2304,20 @@ function updateSpellEffects(state: MobaState, dt: number) {
     if (eff.type === 'meteor_shadow' && eff.life <= 0 && eff.data) {
       state.spellEffects.push({
         x: eff.x, y: eff.y, type: 'meteor_impact',
-        life: 0.5, maxLife: 0.5, radius: eff.radius,
+        life: 0.7, maxLife: 0.7, radius: eff.radius * 1.2,
         color: '#ff6600', angle: 0
       });
       state.spellEffects.push({
+        x: eff.x, y: eff.y, type: 'fire_ring',
+        life: 0.4, maxLife: 0.4, radius: eff.radius * 0.9,
+        color: '#ff4400', angle: 0
+      });
+      state.spellEffects.push({
         x: eff.x, y: eff.y, type: 'ground_scorch',
-        life: 2.0, maxLife: 2.0, radius: eff.radius * 0.7,
+        life: 3.0, maxLife: 3.0, radius: eff.radius * 0.8,
         color: '#331100', angle: 0
       });
-      state.screenShake = 0.3;
+      state.screenShake = 0.4;
 
       const enemies = getAllEnemies(state, eff.data.team);
       const attacker = findEntityById(state, eff.data.sourceId);
@@ -2148,14 +2326,15 @@ function updateSpellEffects(state: MobaState, dt: number) {
           if (attacker) dealDamage(state, attacker, e, eff.data.damage);
         }
       }
-      for (let p = 0; p < 20; p++) {
+      for (let p = 0; p < 30; p++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 80 + Math.random() * 150;
+        const speed = 60 + Math.random() * 200;
+        const colors = ['#ff6600', '#ff3300', '#ff8800', '#ffaa00', '#ffffff'];
         state.particles.push({
-          x: eff.x, y: eff.y,
-          vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-          life: 0.5, maxLife: 0.5,
-          color: Math.random() > 0.5 ? '#ff6600' : '#ff3300', size: 4, type: 'ability'
+          x: eff.x + (Math.random() - 0.5) * 20, y: eff.y + (Math.random() - 0.5) * 20,
+          vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 40,
+          life: 0.4 + Math.random() * 0.4, maxLife: 0.8,
+          color: colors[Math.floor(Math.random() * colors.length)], size: 3 + Math.random() * 3, type: 'ability'
         });
       }
     }
@@ -2171,12 +2350,12 @@ function updateSpellEffects(state: MobaState, dt: number) {
             if (attacker) dealDamage(state, attacker, e, eff.data.damage);
           }
         }
-        for (let p = 0; p < 6; p++) {
+        for (let p = 0; p < 10; p++) {
           const ax = eff.x + (Math.random() - 0.5) * eff.radius * 2;
           const ay = eff.y + (Math.random() - 0.5) * eff.radius * 2;
           state.particles.push({
-            x: ax, y: ay, vx: 0, vy: 40,
-            life: 0.3, maxLife: 0.3,
+            x: ax, y: ay - 30, vx: (Math.random() - 0.5) * 10, vy: 80 + Math.random() * 40,
+            life: 0.35, maxLife: 0.35,
             color: '#22c55e', size: 2, type: 'ability'
           });
         }
@@ -2520,11 +2699,15 @@ export class MobaRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private voxel: VoxelRenderer;
+  private grabCursorImg: HTMLImageElement | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.voxel = new VoxelRenderer();
+    const img = new Image();
+    img.src = '/assets/cursor-grab.png';
+    img.onload = () => { this.grabCursorImg = img; };
   }
 
   render(state: MobaState) {
@@ -2704,22 +2887,53 @@ export class MobaRenderer {
     for (const sp of state.spellProjectiles) {
       ctx.save();
       ctx.translate(sp.x, sp.y);
+
+      const outerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 30);
+      outerGlow.addColorStop(0, sp.color + '44');
+      outerGlow.addColorStop(0.5, sp.trailColor + '22');
+      outerGlow.addColorStop(1, 'transparent');
+      ctx.fillStyle = outerGlow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 30, 0, Math.PI * 2);
+      ctx.fill();
+
       const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 18);
-      glow.addColorStop(0, sp.color);
-      glow.addColorStop(0.5, sp.trailColor + '88');
+      glow.addColorStop(0, '#ffffff');
+      glow.addColorStop(0.3, sp.color);
+      glow.addColorStop(0.7, sp.trailColor + '88');
       glow.addColorStop(1, 'transparent');
       ctx.fillStyle = glow;
       ctx.beginPath();
       ctx.arc(0, 0, 18, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(0, 0, 4, 0, Math.PI * 2);
-      ctx.fill();
+
       ctx.fillStyle = sp.color;
       ctx.beginPath();
       ctx.arc(0, 0, 8, 0, Math.PI * 2);
       ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      const projAngle = Math.atan2(sp.vy, sp.vx);
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = sp.trailColor;
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-Math.cos(projAngle) * 20, -Math.sin(projAngle) * 20);
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.15;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-Math.cos(projAngle) * 35, -Math.sin(projAngle) * 35);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
       ctx.restore();
     }
 
@@ -2807,6 +3021,10 @@ export class MobaRenderer {
       ctx.lineTo(-2, -3); ctx.lineTo(-5, -3);
       ctx.closePath();
       ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else if (state.hoveredEntityId !== null && this.grabCursorImg) {
+      ctx.globalAlpha = 0.9;
+      ctx.drawImage(this.grabCursorImg, -12, -12, 24, 24);
       ctx.globalAlpha = 1;
     } else {
       ctx.strokeStyle = '#c5a059';
@@ -3536,14 +3754,58 @@ export class MobaRenderer {
       ctx.fill();
       ctx.strokeStyle = 'rgba(103,232,249,0.3)';
       ctx.lineWidth = 1;
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
-        const r = se.radius * (0.3 + Math.random() * 0.5);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + progress * 0.3;
+        const r = se.radius * (0.3 + (((i * 37 + 13) % 17) / 17) * 0.5);
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
         ctx.stroke();
+        const branchA = a + 0.4;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r * 0.5, Math.sin(a) * r * 0.5);
+        ctx.lineTo(Math.cos(branchA) * r * 0.7, Math.sin(branchA) * r * 0.7);
+        ctx.stroke();
       }
+    } else if (se.type === 'cast_circle') {
+      const r = se.radius * (0.5 + progress * 0.5);
+      ctx.globalAlpha = (1 - progress) * 0.6;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 2 * (1 - progress);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, `${se.color}40`);
+      grad.addColorStop(1, `${se.color}00`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (se.type === 'telegraph_circle') {
+      const pulsePhase = Math.sin((se.maxLife - se.life) * 12) * 0.15;
+      ctx.globalAlpha = 0.15 + pulsePhase + progress * 0.2;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, se.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, se.radius);
+      grad.addColorStop(0, `${se.color}08`);
+      grad.addColorStop(0.8, `${se.color}15`);
+      grad.addColorStop(1, `${se.color}00`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, se.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.3 + progress * 0.3;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, se.radius * progress, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
     ctx.restore();

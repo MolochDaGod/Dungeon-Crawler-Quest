@@ -288,7 +288,7 @@ export interface MobaState {
 export interface SpellEffect {
   x: number;
   y: number;
-  type: 'slash_arc' | 'impact_ring' | 'dash_trail' | 'shield_flash' | 'combo_burst' | 'ground_slam' | 'fire_ring' | 'frost_ring' | 'meteor_shadow' | 'meteor_impact' | 'arrow_rain' | 'whirlwind_slash' | 'ground_scorch' | 'ground_frost';
+  type: 'slash_arc' | 'impact_ring' | 'dash_trail' | 'shield_flash' | 'combo_burst' | 'ground_slam' | 'fire_ring' | 'frost_ring' | 'meteor_shadow' | 'meteor_impact' | 'arrow_rain' | 'whirlwind_slash' | 'ground_scorch' | 'ground_frost' | 'cast_circle' | 'telegraph_circle';
   life: number;
   maxLife: number;
   radius: number;

@@ -279,6 +279,24 @@ export const CREATURE_PREFABS: Record<string, PrefabConfig> = {
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
   },
+  neutral_minion_01: {
+    modelPath: '/assets/models/neutrals/neutral_minion_01.fbx',
+    scale: 0.01,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'fbx',
+  },
+  neutral_minion_02: {
+    modelPath: '/assets/models/neutrals/neutral_minion_02.fbx',
+    scale: 0.01,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'fbx',
+  },
+  neutral_minion_03: {
+    modelPath: '/assets/models/neutrals/neutral_minion_03.fbx',
+    scale: 0.01,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'fbx',
+  },
   skullgoon: {
     modelPath: '/assets/models/creatures/skullgoon.glb',
     scale: 0.006,
