@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import {
   MobaState, HudState, HEROES, ITEMS, CLASS_ABILITIES,
   TEAM_COLORS, TEAM_NAMES, CLASS_COLORS, RARITY_COLORS,
-  ItemDef, getPortraitPath
+  ItemDef, getPortraitPath, MAP_SIZE
 } from '@/game/types';
 import {
   createInitialState, updateGame, getHudState,
@@ -17,6 +17,7 @@ import { VoxelRenderer } from '@/game/voxel';
 import hudFramePath from '@assets/hud-frame.png';
 import shopPanelPath from '@assets/shop-panel.png';
 import scoreboardBgPath from '@assets/scoreboard-bg.png';
+import minimapBgPath from '@assets/minimap-bg.png';
 import {
   loadKeybindings, matchesKeyDown, KeybindAction, KeyBind
 } from '@/game/keybindings';
@@ -847,6 +848,7 @@ export default function GamePage() {
             </div>
 
             <div className="flex flex-col items-end" style={{ width: 200, flexShrink: 0, gap: 6 }}>
+              <Minimap hud={hud} />
               <div className="flex" style={{ gap: 4, marginBottom: -4, paddingRight: 8, zIndex: 2 }}>
                 <button
                   className="flex items-center justify-center font-bold text-[#c5a059] cursor-pointer pointer-events-auto"
@@ -1083,6 +1085,105 @@ function Scoreboard({ hud }: { hud: HudState }) {
         ))}
         <p className="text-center text-[10px] text-gray-600 mt-2">Hold TAB to view</p>
       </div>
+    </div>
+  );
+}
+
+function Minimap({ hud }: { hud: HudState }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const size = 200;
+  const scale = size / MAP_SIZE;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, size, size);
+
+    ctx.fillStyle = '#0a0f0a';
+    ctx.fillRect(0, 0, size, size);
+
+    const colorMap: Record<string, string> = {
+      player: '#fff',
+      ally_hero: '#3b82f6',
+      enemy_hero: '#ef4444',
+      ally_tower: '#60a5fa',
+      enemy_tower: '#f87171',
+      ally_nexus: '#93c5fd',
+      enemy_nexus: '#fca5a5',
+      ally_minion: '#1d4ed8',
+      enemy_minion: '#b91c1c',
+      jungle_small: '#a3a3a3',
+      jungle_medium: '#d4d4d4',
+      jungle_buff: '#fbbf24',
+    };
+
+    const sizeMap: Record<string, number> = {
+      player: 4,
+      ally_hero: 3,
+      enemy_hero: 3,
+      ally_tower: 4,
+      enemy_tower: 4,
+      ally_nexus: 5,
+      enemy_nexus: 5,
+      ally_minion: 1.5,
+      enemy_minion: 1.5,
+      jungle_small: 2,
+      jungle_medium: 2.5,
+      jungle_buff: 3,
+    };
+
+    for (const ent of hud.minimapEntities) {
+      if (ent.dead) continue;
+      const mx = ent.x * scale;
+      const my = ent.y * scale;
+      const r = sizeMap[ent.type] || 2;
+      ctx.fillStyle = colorMap[ent.type] || '#888';
+      if (ent.type === 'player') {
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 6;
+      }
+      ctx.beginPath();
+      ctx.arc(mx, my, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    if (hud.cameraViewport) {
+      const vx = hud.cameraViewport.x * scale;
+      const vy = hud.cameraViewport.y * scale;
+      const vw = hud.cameraViewport.w * scale;
+      const vh = hud.cameraViewport.h * scale;
+      ctx.strokeStyle = 'rgba(197,160,89,0.5)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(vx - vw / 2, vy - vh / 2, vw, vh);
+    }
+  }, [hud.minimapEntities, hud.cameraViewport]);
+
+  return (
+    <div
+      className="relative"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 4,
+        border: '1px solid #c5a059',
+        overflow: 'hidden',
+        boxShadow: '0 0 20px rgba(0,0,0,0.9), inset 0 0 15px rgba(0,0,0,0.5)',
+        backgroundImage: `url(${minimapBgPath})`,
+        backgroundSize: '100% 100%',
+      }}
+      data-testid="panel-minimap"
+    >
+      <canvas
+        ref={canvasRef}
+        width={size}
+        height={size}
+        style={{ width: size, height: size, opacity: 0.85 }}
+        data-testid="canvas-minimap"
+      />
     </div>
   );
 }

@@ -21,13 +21,20 @@ const GRAPHICS_STORAGE_KEY = 'grudge_graphics_settings';
 function loadGraphicsSettings(): GraphicsSettings {
   try {
     const stored = localStorage.getItem(GRAPHICS_STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      localStorage.setItem('grudge_volume', String(parsed.masterVolume ?? 50));
+      return parsed;
+    }
   } catch {}
-  return { particleQuality: 'medium', screenShake: true, minimapSize: 200, masterVolume: 80, sfxVolume: 100, musicVolume: 60 };
+  const defaults = { particleQuality: 'medium' as const, screenShake: true, minimapSize: 200, masterVolume: 50, sfxVolume: 100, musicVolume: 60 };
+  localStorage.setItem('grudge_volume', String(defaults.masterVolume));
+  return defaults;
 }
 
 function saveGraphicsSettings(settings: GraphicsSettings): void {
   localStorage.setItem(GRAPHICS_STORAGE_KEY, JSON.stringify(settings));
+  localStorage.setItem('grudge_volume', String(settings.masterVolume));
 }
 
 const MOBA_CATEGORIES = ['Movement', 'Combat', 'Abilities', 'Level Up', 'Items', 'Camera', 'UI'];

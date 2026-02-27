@@ -462,20 +462,43 @@ function updateJungleCamps(state: MobaState, dt: number) {
 
       if (mob.hp <= 0) {
         mob.dead = true;
-        const killer = mob.targetId !== null ? findEntityById(state, mob.targetId) : null;
-        if (!killer) {
+        let creditHero: MobaHero | null = null;
+        if (mob.targetId !== null) {
+          const targetEntity = findEntityById(state, mob.targetId);
+          if (targetEntity && 'heroDataId' in targetEntity && !(targetEntity as MobaHero).dead) {
+            creditHero = targetEntity as MobaHero;
+          }
+        }
+        if (!creditHero) {
+          let closestDist = 500;
           for (const h of state.heroes) {
             if (h.dead) continue;
-            if (dist(mob, h) < 400) {
-              (h as MobaHero).gold += mob.goldValue;
-              (h as MobaHero).xp += mob.xpValue;
-              checkLevelUp(state, h as MobaHero);
-              addFloatingText(state, mob.x, mob.y - 10, `+${mob.goldValue}g`, '#ffd700', 12);
-              break;
+            const d = dist(mob, h);
+            if (d < closestDist) {
+              closestDist = d;
+              creditHero = h;
             }
           }
         }
+        if (creditHero) {
+          creditHero.gold += mob.goldValue;
+          creditHero.xp += mob.xpValue;
+          checkLevelUp(state, creditHero);
+          addFloatingText(state, mob.x, mob.y - 10, `+${mob.goldValue}g`, '#ffd700', 14);
+          addFloatingText(state, mob.x, mob.y - 25, `+${mob.xpValue}xp`, '#a78bfa', 11);
+          if (mob.mobType === 'buff' && creditHero.isPlayer) {
+            state.killFeed.push({
+              text: 'You slew the Jungle Boss!',
+              color: '#a855f7',
+              time: state.gameTime
+            });
+          }
+        }
         spawnDeathParticles(state, mob.x, mob.y, mob.mobType === 'buff' ? '#a855f7' : '#65a30d');
+        if (mob.mobType === 'buff') {
+          spawnAbilityParticles(state, mob.x, mob.y, '#a855f7', 25);
+          state.screenShake = 0.15;
+        }
       }
     }
 
@@ -1244,15 +1267,21 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
 
   if (Math.random() < 0.0012 * dt) {
     const laneName = ['top', 'mid', 'bot'][hero.assignedLane];
+    const enemiesNearbyChat = countEnemiesNearby(state, hero, 500);
+    const gamePhase = state.gameTime < 300 ? 'early' : state.gameTime < 600 ? 'mid' : 'late';
     const contextMsgs: string[] = [];
-    if (hpPct < 0.3) contextMsgs.push('going b', 'need heal', 'low hp retreating');
-    else if (hpPct < 0.5 && threat > 2) contextMsgs.push('playing safe', 'backing off', 'careful ' + laneName);
-    else if (threat > 3 && alliesNearby === 0) contextMsgs.push('need backup ' + laneName, 'help ' + laneName, 'enemy ganking');
-    else if (hero.kills > 2 && hero.deaths === 0) contextMsgs.push('lets go', 'feeling strong', 'push ' + laneName);
-    else if (hero.deaths > hero.kills + 2) contextMsgs.push('they are fed', 'play safe team', 'need to farm');
-    else if (alliesNearby >= 3) contextMsgs.push('group push', 'all in', 'fight here', 'lets teamfight');
-    else if (hero.gold > 1500) contextMsgs.push('need to shop', 'saving for item');
-    else contextMsgs.push('push ' + laneName, 'enemy missing', 'group up', 'care', 'ward here', 'on my way', 'well played', 'focus carry');
+    if (hpPct < 0.3) contextMsgs.push('going b', 'need heal', 'low hp retreating', 'brb base');
+    else if (hpPct < 0.5 && threat > 2) contextMsgs.push('playing safe', 'backing off', 'careful ' + laneName, 'they have kill pressure');
+    else if (threat > 3 && alliesNearby === 0) contextMsgs.push('need backup ' + laneName, 'help ' + laneName, 'enemy ganking', 'missing enemy ' + laneName);
+    else if (hero.kills > 2 && hero.deaths === 0) contextMsgs.push('lets go', 'feeling strong', 'push ' + laneName, 'I\'m fed lets fight');
+    else if (hero.deaths > hero.kills + 2) contextMsgs.push('they are fed', 'play safe team', 'need to farm', 'farming under tower');
+    else if (alliesNearby >= 3 && enemiesNearbyChat >= 2) contextMsgs.push('group push', 'all in', 'fight here', 'lets teamfight', 'GO GO GO');
+    else if (alliesNearby >= 3) contextMsgs.push('push ' + laneName + ' together', 'group up', 'lets take tower');
+    else if (hero.gold > 1500) contextMsgs.push('need to shop', 'saving for item', 'b for items');
+    else if (gamePhase === 'late' && enemiesNearbyChat === 0) contextMsgs.push('we need to end', 'push for nexus', 'group for final push');
+    else if (gamePhase === 'mid' && hero.level >= 6) contextMsgs.push('roaming ' + laneName, 'gank incoming', 'ult ready lets fight', 'push mid together');
+    else if (gamePhase === 'early') contextMsgs.push('farming ' + laneName, 'cs is good', 'stay safe early', 'scaling');
+    else contextMsgs.push('push ' + laneName, 'enemy missing', 'group up', 'care', 'on my way', 'well played', 'focus carry', 'target their mage');
     addAiChat(state, hero, heroData, contextMsgs[Math.floor(Math.random() * contextMsgs.length)]);
   }
 }
@@ -1300,6 +1329,13 @@ function findNearestEnemy(state: MobaState, entity: { x: number; y: number; team
     if (n.team === entity.team || n.dead) continue;
     const d = dist(entity, n);
     if (d < nearestDist) { nearestDist = d; nearest = n; }
+  }
+  for (const camp of state.jungleCamps) {
+    for (const mob of camp.mobs) {
+      if (mob.dead) continue;
+      const d = dist(entity, mob);
+      if (d < nearestDist) { nearestDist = d; nearest = mob; }
+    }
   }
 
   return nearest;
@@ -1409,6 +1445,24 @@ function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, ta
     const heroData = HEROES[(attacker as MobaHero).heroDataId];
     const atkColor = CLASS_COLORS[heroData?.heroClass || 'Warrior'] || '#ef4444';
     spawnSlashEffect(state, attacker.x + Math.cos((attacker as MobaHero).facing) * 30, attacker.y + Math.sin((attacker as MobaHero).facing) * 30, (attacker as MobaHero).facing, atkColor);
+  }
+
+  if ('heroDataId' in attacker && isMelee) {
+    const heroData = HEROES[(attacker as MobaHero).heroDataId];
+    const trailColor = CLASS_COLORS[heroData?.heroClass || 'Warrior'] || '#ef4444';
+    const facing = (attacker as MobaHero).facing;
+    for (let t = 0; t < 4; t++) {
+      const d = 10 + t * 8;
+      const spread = (Math.random() - 0.5) * 0.6;
+      state.particles.push({
+        x: attacker.x + Math.cos(facing + spread) * d,
+        y: attacker.y + Math.sin(facing + spread) * d,
+        vx: Math.cos(facing + spread) * 15,
+        vy: Math.sin(facing + spread) * 15,
+        life: 0.15 + Math.random() * 0.05, maxLife: 0.2,
+        color: trailColor, size: 2 + Math.random(), type: 'slash'
+      });
+    }
   }
 }
 
@@ -1742,6 +1796,11 @@ function getAllEnemies(state: MobaState, team: number): any[] {
   for (const h of state.heroes) if (h.team !== team && !h.dead) enemies.push(h);
   for (const m of state.minions) if (m.team !== team && !m.dead) enemies.push(m);
   for (const t of state.towers) if (t.team !== team && !t.dead) enemies.push(t);
+  for (const camp of state.jungleCamps) {
+    for (const mob of camp.mobs) {
+      if (!mob.dead) enemies.push(mob);
+    }
+  }
   return enemies;
 }
 
@@ -2718,6 +2777,13 @@ export function findEntityAtPosition(state: MobaState, worldX: number, worldY: n
     const d = dist({ x: worldX, y: worldY }, n);
     if (d < closestDist) { closestDist = d; closest = n; }
   }
+  for (const camp of state.jungleCamps) {
+    for (const mob of camp.mobs) {
+      if (mob.dead) continue;
+      const d = dist({ x: worldX, y: worldY }, mob);
+      if (d < closestDist) { closestDist = d; closest = mob; }
+    }
+  }
 
   return closest;
 }
@@ -3441,53 +3507,33 @@ export class MobaRenderer {
     ctx.restore();
   }
 
-  private renderJungleMob(ctx: CanvasRenderingContext2D, mob: JungleMob, camp: JungleCamp) {
+  private renderJungleMob(ctx: CanvasRenderingContext2D, mob: JungleMob, _camp: JungleCamp) {
     const colors: Record<string, string> = { small: '#65a30d', medium: '#3b82f6', buff: '#a855f7' };
     const color = colors[mob.mobType] || '#65a30d';
-    const size = mob.mobType === 'small' ? 8 : mob.mobType === 'medium' ? 12 : 18;
+    const size = mob.mobType === 'small' ? 10 : mob.mobType === 'medium' ? 14 : 22;
 
     ctx.save();
     ctx.translate(mob.x, mob.y);
 
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
-    ctx.ellipse(0, size * 0.6, size * 0.7, size * 0.25, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, size * 0.5, size * 0.7, size * 0.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const bob = Math.sin(mob.animTimer * 2) * 2;
-    ctx.fillStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = mob.mobType === 'buff' ? 8 : 3;
-    ctx.beginPath();
-    if (mob.mobType === 'buff') {
-      ctx.save();
-      ctx.translate(0, bob - 4);
-      for (let i = 0; i < 5; i++) {
-        const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-        const px = Math.cos(a) * size;
-        const py = Math.sin(a) * size;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-        const ia = ((i + 0.5) / 5) * Math.PI * 2 - Math.PI / 2;
-        ctx.lineTo(Math.cos(ia) * size * 0.5, Math.sin(ia) * size * 0.5);
-      }
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    } else {
-      ctx.arc(0, bob, size, 0, Math.PI * 2);
-      ctx.fill();
+    this.voxel.drawJungleMobVoxel(ctx, 0, 0, mob.mobType, mob.facing, mob.animTimer);
 
-      ctx.fillStyle = '#000';
-      const eyeOff = size * 0.3;
+    const barY = mob.mobType === 'buff' ? -32 : mob.mobType === 'medium' ? -22 : -14;
+    this.renderHealthBar(ctx, 0, barY, size + 8, mob.hp, mob.maxHp, color);
+
+    if (mob.targetId !== null) {
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.5 + Math.sin(mob.animTimer * 6) * 0.3;
       ctx.beginPath();
-      ctx.arc(-eyeOff, bob - 2, 2, 0, Math.PI * 2);
-      ctx.arc(eyeOff, bob - 2, 2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.arc(0, 0, size + 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
     }
-    ctx.shadowBlur = 0;
-
-    this.renderHealthBar(ctx, 0, -size - 10, size + 6, mob.hp, mob.maxHp, color);
 
     ctx.restore();
   }

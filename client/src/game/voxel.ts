@@ -125,55 +125,58 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   if (animState === 'attack') {
     const atkProgress = Math.min(1, t / 0.65);
     if (heroClass === 'Warrior' || heroClass === 'Worg') {
-      const windUp = atkProgress < 0.4 ? atkProgress / 0.4 : 0;
-      const swing = atkProgress >= 0.4 && atkProgress < 0.7 ? (atkProgress - 0.4) / 0.3 : 0;
-      const followThru = atkProgress >= 0.7 ? (atkProgress - 0.7) / 0.3 : 0;
-      const armExtend = Math.round(windUp > 0 ? -windUp * 3.5 : swing * 4.0 - followThru * 1.0);
-      const lunge = Math.round(swing * 2.5);
-      const bodyLean = Math.round(swing * 1.0);
-      const plantFeet = Math.round(swing * 0.5);
+      const windUp = atkProgress < 0.35 ? atkProgress / 0.35 : 0;
+      const swing = atkProgress >= 0.35 && atkProgress < 0.65 ? (atkProgress - 0.35) / 0.3 : 0;
+      const followThru = atkProgress >= 0.65 ? (atkProgress - 0.65) / 0.35 : 0;
+      const armExtend = Math.round(windUp > 0 ? -windUp * 4.0 : swing * 5.5 - followThru * 1.5);
+      const lunge = Math.round(swing * 3.5);
+      const bodyLean = Math.round(swing * 1.5);
+      const plantFeet = Math.round(swing * 0.8);
+      const shoulderTwist = Math.round(swing * 1.2 - windUp * 0.6);
       return {
-        leftLeg: { ox: Math.round(swing * 2.0 - followThru), oy: 0, oz: plantFeet },
-        rightLeg: { ox: Math.round(-swing * 1.0 + windUp * 0.5), oy: 0, oz: 0 },
-        leftArm: { ox: armExtend, oy: Math.round(swing * -2.5), oz: Math.round(swing * 4.0 - windUp * 2.0) },
-        rightArm: { ox: Math.round(-windUp * 1.5 + followThru * 0.5), oy: Math.round(windUp * 0.8), oz: Math.round(windUp * 1.5 + swing * 0.5) },
-        torso: { ox: lunge, oy: Math.round(swing * 0.5 - windUp * 0.3), oz: Math.round(-bodyLean * 0.3) },
-        head: { ox: Math.round(swing * 0.8 - windUp * 0.3), oy: 0, oz: Math.round(-bodyLean * 0.2) },
-        weapon: { ox: armExtend + Math.round(swing * 3.5), oy: Math.round(swing * -4.0 + windUp * 1.0), oz: Math.round(windUp * 5 - swing * 4.0 + followThru * 0.5) },
-        weaponGlow: swing > 0.2 ? 0.95 : windUp > 0.5 ? 0.4 : followThru > 0 ? 0.2 : 0
+        leftLeg: { ox: Math.round(swing * 2.5 - followThru * 0.8), oy: 0, oz: plantFeet },
+        rightLeg: { ox: Math.round(-swing * 1.5 + windUp * 0.8), oy: 0, oz: 0 },
+        leftArm: { ox: armExtend, oy: Math.round(swing * -3.5 + shoulderTwist), oz: Math.round(swing * 5.0 - windUp * 3.0) },
+        rightArm: { ox: Math.round(-windUp * 2.0 + followThru * 0.8), oy: Math.round(windUp * 1.0), oz: Math.round(windUp * 2.0 + swing * 0.5) },
+        torso: { ox: lunge, oy: Math.round(swing * 0.8 - windUp * 0.5), oz: Math.round(-bodyLean * 0.4) },
+        head: { ox: Math.round(swing * 1.2 - windUp * 0.5), oy: Math.round(shoulderTwist * 0.3), oz: Math.round(-bodyLean * 0.3) },
+        weapon: { ox: armExtend + Math.round(swing * 5.0), oy: Math.round(swing * -5.5 + windUp * 1.5), oz: Math.round(windUp * 6 - swing * 5.5 + followThru * 0.5) },
+        weaponGlow: swing > 0.15 ? 1.0 : windUp > 0.5 ? 0.5 : followThru > 0 ? 0.3 : 0
       };
     }
     if (heroClass === 'Ranger') {
-      const draw = atkProgress < 0.5 ? atkProgress / 0.5 : 1;
-      const hold = atkProgress >= 0.4 && atkProgress < 0.6 ? 1 : 0;
-      const release = atkProgress >= 0.6 ? Math.min(1, (atkProgress - 0.6) / 0.2) : 0;
-      const recoil = atkProgress >= 0.8 ? (atkProgress - 0.8) / 0.2 : 0;
+      const draw = atkProgress < 0.45 ? atkProgress / 0.45 : 1;
+      const hold = atkProgress >= 0.4 && atkProgress < 0.55 ? 1 : 0;
+      const release = atkProgress >= 0.55 ? Math.min(1, (atkProgress - 0.55) / 0.15) : 0;
+      const recoil = atkProgress >= 0.7 ? (atkProgress - 0.7) / 0.3 : 0;
+      const stringTension = draw * (1 - release);
       return {
-        leftLeg: { ox: Math.round(-draw * 0.6), oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(draw * 0.8), oy: 0, oz: 0 },
-        leftArm: { ox: Math.round(draw * -3 + release * 1), oy: Math.round(-draw * 0.5), oz: Math.round(draw * 2.5) },
-        rightArm: { ox: Math.round(release * 3.5 - recoil * 1.5), oy: 0, oz: Math.round(draw * 1.5 - release * 0.5) },
-        torso: { ox: Math.round(-draw * 0.5 + release * 0.3), oy: Math.round(-draw * 0.3), oz: 0 },
-        head: { ox: Math.round(release * 0.8 - recoil * 0.3), oy: 0, oz: 0 },
-        weapon: { ox: Math.round(-draw * 2 + release * 2.5), oy: 0, oz: Math.round(draw * 3 - release) },
-        weaponGlow: release > 0.3 ? 1.0 : draw > 0.7 ? 0.6 : 0
+        leftLeg: { ox: Math.round(-draw * 1.0), oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(draw * 1.2 - recoil * 0.5), oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(draw * 3.5 - release * 0.5 - recoil * 1.0), oy: Math.round(-draw * 0.8), oz: Math.round(draw * 3.0) },
+        rightArm: { ox: Math.round(-draw * 3.0 + release * 5.0 - recoil * 2.0), oy: Math.round(draw * 0.3), oz: Math.round(draw * 2.0 + release * 1.0 - recoil * 0.5) },
+        torso: { ox: Math.round(-draw * 0.8 + release * 0.5), oy: Math.round(-draw * 0.5 + release * 0.3), oz: Math.round(release * -0.3) },
+        head: { ox: Math.round(draw * 0.5 + release * 1.0 - recoil * 0.5), oy: Math.round(-draw * 0.3), oz: 0 },
+        weapon: { ox: Math.round(draw * 3.0 - release * 0.5), oy: Math.round(-draw * 0.5), oz: Math.round(draw * 4.0 - release * 0.5) },
+        weaponGlow: release > 0.2 ? 1.0 : stringTension > 0.6 ? 0.7 : draw > 0.3 ? 0.3 : 0
       };
     }
     if (heroClass === 'Mage') {
-      const raise = atkProgress < 0.45 ? atkProgress / 0.45 : 1;
-      const channel = atkProgress >= 0.3 && atkProgress < 0.6 ? Math.min(1, (atkProgress - 0.3) / 0.3) : 0;
-      const cast = atkProgress >= 0.55 ? Math.min(1, (atkProgress - 0.55) / 0.2) : 0;
-      const recover = atkProgress >= 0.8 ? (atkProgress - 0.8) / 0.2 : 0;
-      const glow = Math.max(channel * 0.7, cast);
+      const raise = atkProgress < 0.4 ? atkProgress / 0.4 : 1;
+      const channel = atkProgress >= 0.25 && atkProgress < 0.55 ? Math.min(1, (atkProgress - 0.25) / 0.3) : 0;
+      const cast = atkProgress >= 0.5 ? Math.min(1, (atkProgress - 0.5) / 0.15) : 0;
+      const recover = atkProgress >= 0.75 ? (atkProgress - 0.75) / 0.25 : 0;
+      const glow = Math.max(channel * 0.8, cast);
+      const orbPulse = Math.sin(t * 20) * 0.3;
       return {
-        leftLeg: { ox: Math.round(-cast * 0.6), oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(cast * 0.6 - recover * 0.3), oy: 0, oz: 0 },
-        leftArm: { ox: Math.round(cast * 3.5 - recover), oy: Math.round(-raise * 1.2), oz: Math.round(raise * 4.5 - recover * 2) },
-        rightArm: { ox: Math.round(cast * 2.5 - recover * 0.5), oy: Math.round(raise * 0.6), oz: Math.round(raise * 3.5 - recover * 1.5) },
-        torso: { ox: 0, oy: 0, oz: Math.round(raise * 0.8 - recover * 0.5) },
-        head: { ox: 0, oy: 0, oz: Math.round(raise * 0.8 - recover * 0.5) },
-        weapon: { ox: Math.round(cast * 3.5 - recover), oy: Math.round(-cast * 1.2), oz: Math.round(raise * 5 + cast * 1 - recover * 3) },
-        weaponGlow: glow > 0.1 ? glow : 0
+        leftLeg: { ox: Math.round(-cast * 0.8 + recover * 0.3), oy: 0, oz: 0 },
+        rightLeg: { ox: Math.round(cast * 0.8 - recover * 0.4), oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(cast * 4.5 - recover * 1.5), oy: Math.round(-raise * 1.5 + orbPulse), oz: Math.round(raise * 5.5 + cast * 1.0 - recover * 3) },
+        rightArm: { ox: Math.round(cast * 3.0 - recover * 0.8), oy: Math.round(raise * 1.0 - orbPulse), oz: Math.round(raise * 4.5 + channel * 1.0 - recover * 2) },
+        torso: { ox: Math.round(cast * 0.5), oy: 0, oz: Math.round(raise * 1.0 + channel * 0.5 - recover * 0.8) },
+        head: { ox: Math.round(cast * 0.5), oy: 0, oz: Math.round(raise * 1.2 + channel * 0.5 - recover * 0.8) },
+        weapon: { ox: Math.round(cast * 4.5 - recover * 1.5), oy: Math.round(-cast * 1.5 + orbPulse * 0.5), oz: Math.round(raise * 6 + cast * 2 - recover * 4) },
+        weaponGlow: glow > 0.1 ? Math.min(1, glow + orbPulse * 0.2) : 0
       };
     }
     return idle;
@@ -226,20 +229,21 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
   }
 
   if (animState === 'combo_finisher') {
-    const phase = t * 22;
+    const phase = t * 24;
     const spin = Math.sin(phase);
     const spin2 = Math.cos(phase * 0.7);
     const power = Math.abs(Math.sin(phase * 0.5));
     const slam = Math.max(0, Math.sin(phase * 0.5 + 1.2));
-    const twist = Math.sin(phase * 1.3) * 1.5;
+    const twist = Math.sin(phase * 1.3) * 2.0;
+    const bodyLean = Math.sin(phase * 0.8) * 1.8;
     return {
-      leftLeg: { ox: Math.round(spin * 3.0), oy: Math.round(spin2 * 0.8 + twist * 0.3), oz: Math.round(Math.max(0, -spin) * 1.5) },
-      rightLeg: { ox: Math.round(-spin * 3.0), oy: Math.round(-spin2 * 0.8 - twist * 0.3), oz: Math.round(Math.max(0, spin) * 1.5) },
-      leftArm: { ox: Math.round(spin * 5), oy: Math.round(-power * 3.5 + twist), oz: Math.round(power * 5 + slam * 2.5) },
-      rightArm: { ox: Math.round(-spin * 4), oy: Math.round(power * 2 - twist), oz: Math.round(power * 4 + slam * 1.5) },
-      torso: { ox: Math.round(spin * 2.0), oy: Math.round(twist), oz: Math.round(power * 1.2 - slam * 2.0) },
-      head: { ox: Math.round(spin * 1.2), oy: Math.round(twist * 0.6), oz: Math.round(power * 1.0 - slam * 1.5) },
-      weapon: { ox: Math.round(spin * 6 + power * 4), oy: Math.round(-power * 5 + slam * 2.5 + twist), oz: Math.round(power * 6 - slam * 4) },
+      leftLeg: { ox: Math.round(spin * 3.5), oy: Math.round(spin2 * 1.0 + twist * 0.4), oz: Math.round(Math.max(0, -spin) * 2.0) },
+      rightLeg: { ox: Math.round(-spin * 3.5), oy: Math.round(-spin2 * 1.0 - twist * 0.4), oz: Math.round(Math.max(0, spin) * 2.0) },
+      leftArm: { ox: Math.round(spin * 6), oy: Math.round(-power * 4.5 + twist), oz: Math.round(power * 6 + slam * 3.0) },
+      rightArm: { ox: Math.round(-spin * 5), oy: Math.round(power * 2.5 - twist), oz: Math.round(power * 5 + slam * 2.0) },
+      torso: { ox: Math.round(spin * 2.5 + bodyLean), oy: Math.round(twist * 1.2), oz: Math.round(power * 1.5 - slam * 2.5) },
+      head: { ox: Math.round(spin * 1.5 + bodyLean * 0.7), oy: Math.round(twist * 0.8), oz: Math.round(power * 1.2 - slam * 2.0) },
+      weapon: { ox: Math.round(spin * 8 + power * 5), oy: Math.round(-power * 6 + slam * 3.0 + twist), oz: Math.round(power * 8 - slam * 5) },
       weaponGlow: 1.0
     };
   }
@@ -579,13 +583,19 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   if (hasRapier) {
     buildRapierWeapon(wP, setV, poses.weaponGlow);
   } else if (heroClass === 'Warrior') {
-    for (let z = 3; z <= 9; z++) {
-      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, z < 5 ? '#8a6914' : armor.weapon);
+    setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c5a059');
+    for (let z = 3; z <= 4; z++) {
+      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#8a6914');
     }
-    setV(10 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(armor.weapon, 1.3));
-    if (poses.weaponGlow > 0) {
-      setV(9 + wP.oz, 1 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow));
+    setV(5 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#999999');
+    setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#999999');
+    setV(5 + wP.oz, 2 + wP.oy, 0 + wP.ox, '#999999');
+    for (let z = 6; z <= 11; z++) {
+      const bladeShade = z > 9 ? 1.3 : z > 7 ? 1.1 : 1.0;
+      const bladeColor = poses.weaponGlow > 0 ? blend(armor.weapon, '#ffffff', poses.weaponGlow * (z - 5) * 0.1) : shade(armor.weapon, bladeShade);
+      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, bladeColor);
     }
+    setV(12 + wP.oz, 1 + wP.oy, 0 + wP.ox, poses.weaponGlow > 0 ? blend('#ffffff', armor.weapon, 0.3) : shade(armor.weapon, 1.4));
 
     setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
     setV(5 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
@@ -598,13 +608,17 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   }
 
   if (!hasRapier && heroClass === 'Worg') {
-    for (let z = 2; z <= 7; z++) {
-      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, z < 4 ? '#5a3a1a' : armor.weapon);
+    setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#3a2a12');
+    setV(3 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#5a3a1a');
+    for (let z = 4; z <= 8; z++) {
+      const clawColor = poses.weaponGlow > 0 ? blend(armor.weapon, '#ff4400', poses.weaponGlow * 0.5) : armor.weapon;
+      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, clawColor);
     }
-    setV(8 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(armor.weapon, 0.7));
-    setV(7 + wP.oz, 0 + wP.oy, 0 + wP.ox, armor.weapon);
+    setV(9 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(armor.weapon, 0.7));
+    setV(8 + wP.oz, 0 + wP.oy, 0 + wP.ox, armor.weapon);
+    setV(7 + wP.oz, 0 + wP.oy, 0 + wP.ox, shade(armor.weapon, 0.8));
     if (poses.weaponGlow > 0) {
-      setV(7 + wP.oz, 1 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ff4400', poses.weaponGlow));
+      setV(9 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ff4400', poses.weaponGlow));
     }
   }
 
@@ -624,12 +638,15 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
       setV(9 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend('#ff4400', '#ffff00', poses.weaponGlow * 0.5));
     }
   } else if (!hasRapier && heroClass === 'Ranger') {
-    for (let z = 3; z <= 9; z++) {
-      setV(z + wP.oz, 0 + wP.oy, 0 + wP.ox, '#6b4423');
+    for (let z = 2; z <= 10; z++) {
+      const bowColor = (z === 2 || z === 10) ? shade('#6b4423', 0.8) : '#6b4423';
+      setV(z + wP.oz, 0 + wP.oy, 0 + wP.ox, bowColor);
     }
-    setV(3 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#666666');
-    setV(9 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#666666');
+    setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#555555');
+    setV(10 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#555555');
     setV(6 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#999999');
+    setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#888888');
+    setV(7 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#888888');
 
     setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#6b4423');
     setV(5 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#6b4423');
@@ -637,20 +654,27 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     setV(4 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#2d5016');
 
     if (poses.weaponGlow > 0) {
-      setV(6 + wP.oz, 0 + wP.oy, -1 + wP.ox, blend('#666666', '#ffff00', poses.weaponGlow));
+      setV(6 + wP.oz, 0 + wP.oy, -1 + wP.ox, blend('#22c55e', '#ffff00', poses.weaponGlow));
+      setV(6 + wP.oz, 0 + wP.oy, 1 + wP.ox, blend('#22c55e', '#ffff00', poses.weaponGlow * 0.5));
     }
   }
 
   if (!hasRapier && heroClass === 'Mage') {
-    for (let z = 2; z <= 11; z++) {
+    setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#3a2215');
+    for (let z = 3; z <= 11; z++) {
       setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#553322');
     }
+    setV(12 + wP.oz, 0 + wP.oy, 0 + wP.ox, shade(armor.weapon, 0.8));
     setV(12 + wP.oz, 1 + wP.oy, 0 + wP.ox, armor.weapon);
+    setV(12 + wP.oz, 2 + wP.oy, 0 + wP.ox, shade(armor.weapon, 0.8));
     setV(13 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(armor.weapon, 1.4));
     if (poses.weaponGlow > 0) {
-      setV(13 + wP.oz, 1 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow));
-      setV(12 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow * 0.5));
-      setV(12 + wP.oz, 2 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow * 0.5));
+      const orbColor = blend(armor.weapon, '#ffffff', poses.weaponGlow);
+      setV(13 + wP.oz, 1 + wP.oy, 0 + wP.ox, orbColor);
+      setV(13 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow * 0.6));
+      setV(13 + wP.oz, 2 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow * 0.6));
+      setV(12 + wP.oz, 0 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow * 0.4));
+      setV(12 + wP.oz, 2 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow * 0.4));
     }
 
     setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, armor.secondary);
@@ -663,53 +687,129 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
 }
 
 function buildMinionModel(color: string, minionType: string, animTimer: number): VoxelModel {
-  const model: VoxelModel = [];
-  const h = minionType === 'siege' ? 6 : 4;
-  const w = minionType === 'siege' ? 5 : 3;
-
-  for (let z = 0; z < h; z++) {
-    model[z] = [];
-    for (let y = 0; y < w; y++) {
-      model[z][y] = [];
-      for (let x = 0; x < w; x++) {
-        model[z][y][x] = null;
-      }
-    }
-  }
-
   const dark = shade(color, 0.6);
+  const mid = shade(color, 0.85);
   const light = shade(color, 1.2);
+  const bright = shade(color, 1.4);
   const bob = Math.sin(animTimer * 6);
+  const walk = Math.sin(animTimer * 8);
 
-  if (minionType === 'siege') {
-    for (let x = 0; x < w; x++) {
-      for (let y = 0; y < w; y++) {
-        model[0][y][x] = dark;
-        model[1][y][x] = color;
-        model[2][y][x] = color;
-        model[3][y][x] = color;
-      }
+  if (minionType === 'siege' || minionType === 'super') {
+    const model: VoxelModel = [];
+    const h = 8; const w = 5;
+    for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+    const legOff = Math.round(walk * 0.5);
+    model[0][1][0 + (legOff > 0 ? 1 : 0)] = dark;
+    model[0][1][4 - (legOff > 0 ? 1 : 0)] = dark;
+    model[0][3][0 - (legOff > 0 ? 0 : -1)] = dark;
+    model[0][3][4 + (legOff > 0 ? 0 : -1)] = dark;
+    for (let x = 1; x <= 3; x++) for (let y = 1; y <= 3; y++) { model[1][y][x] = dark; model[2][y][x] = mid; }
+    for (let x = 0; x <= 4; x++) for (let y = 0; y <= 4; y++) {
+      if (x === 0 || x === 4 || y === 0 || y === 4) { if ((x + y) % 2 === 0) model[3][y][x] = mid; }
+      else { model[3][y][x] = color; model[4][y][x] = color; }
     }
-    model[4][1][1] = light;
-    model[4][2][2] = light;
-    model[5][1][1] = shade(light, 1.2);
-  } else {
-    const center = Math.floor(w / 2);
-    model[0][center][0] = dark;
-    model[0][center][w - 1] = dark;
-    model[1][center][center] = color;
-    for (let x = 0; x < w; x++) {
-      for (let y = 0; y < w; y++) {
-        if (Math.abs(x - center) + Math.abs(y - center) <= 1) model[2][y][x] = color;
-      }
-    }
-    model[3][center][center] = light;
-    if (bob > 0) {
-      model[0][center][0] = null;
-      model[0][center - 1 >= 0 ? center - 1 : 0][0] = dark;
-    }
+    for (let x = 1; x <= 3; x++) for (let y = 1; y <= 3; y++) model[5][y][x] = color;
+    model[6][2][1] = light; model[6][2][3] = light; model[6][2][2] = bright;
+    model[7][2][2] = bright;
+    const weaponColor = '#888888';
+    model[3][0][2] = weaponColor; model[4][0][2] = weaponColor; model[5][0][2] = shade(weaponColor, 1.3);
+    return model;
   }
 
+  if (minionType === 'ranged') {
+    const model: VoxelModel = [];
+    const h = 7; const w = 3;
+    for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+    const legOff = Math.round(walk * 0.5);
+    model[0][1][0 + (legOff > 0 ? 1 : 0)] = dark;
+    model[0][1][2 - (legOff > 0 ? 1 : 0)] = dark;
+    model[1][1][1] = mid;
+    for (let x = 0; x < w; x++) for (let y = 0; y < w; y++) {
+      if (Math.abs(x - 1) + Math.abs(y - 1) <= 1) model[2][y][x] = color;
+    }
+    model[3][1][1] = color; model[3][0][1] = mid; model[3][2][1] = mid;
+    model[4][1][0] = shade('#8b6c42', 0.8); model[4][1][2] = shade('#8b6c42', 0.8);
+    model[5][1][1] = light;
+    model[6][1][1] = bright;
+    model[3][0][0] = shade('#6b4423', 0.9); model[4][0][0] = shade('#6b4423', 0.9); model[5][0][0] = shade('#6b4423', 1.1);
+    return model;
+  }
+
+  const model: VoxelModel = [];
+  const h = 6; const w = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const legOff = Math.round(walk * 0.5);
+  model[0][1][0 + (legOff > 0 ? 1 : 0)] = dark;
+  model[0][1][2 - (legOff > 0 ? 1 : 0)] = dark;
+  model[1][1][1] = mid;
+  for (let x = 0; x < w; x++) for (let y = 0; y < w; y++) {
+    if (Math.abs(x - 1) + Math.abs(y - 1) <= 1) model[2][y][x] = color;
+  }
+  model[3][1][1] = color; model[3][0][1] = mid;
+  model[4][1][1] = light;
+  model[5][1][1] = bright;
+  const swordColor = '#a0a0a0';
+  model[2][0][0] = swordColor; model[3][0][0] = shade(swordColor, 1.2);
+  if (bob > 0.3) model[4][0][0] = shade(swordColor, 1.4);
+  return model;
+}
+
+function buildJungleMobModel(mobType: string, animTimer: number): VoxelModel {
+  const bob = Math.sin(animTimer * 3);
+  const walk = Math.sin(animTimer * 5);
+
+  if (mobType === 'buff') {
+    const model: VoxelModel = [];
+    const h = 10; const w = 7;
+    for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+    const body = '#6b21a8'; const belly = '#9333ea'; const dark = shade(body, 0.6); const horn = '#c5a059';
+    const legOff = Math.round(walk * 0.5);
+    model[0][2][1 + (legOff > 0 ? 1 : 0)] = dark; model[0][2][5 - (legOff > 0 ? 1 : 0)] = dark;
+    model[0][4][1 - (legOff > 0 ? 0 : -1)] = dark; model[0][4][5 + (legOff > 0 ? 0 : -1)] = dark;
+    for (let x = 1; x <= 5; x++) for (let y = 1; y <= 5; y++) { model[1][y][x] = dark; }
+    for (let x = 0; x <= 6; x++) for (let y = 0; y <= 6; y++) {
+      if (x >= 1 && x <= 5 && y >= 1 && y <= 5) { model[2][y][x] = body; model[3][y][x] = body; model[4][y][x] = body; }
+    }
+    for (let x = 2; x <= 4; x++) for (let y = 2; y <= 4; y++) { model[2][y][x] = belly; model[3][y][x] = belly; }
+    for (let x = 1; x <= 5; x++) for (let y = 1; y <= 5; y++) { model[5][y][x] = body; }
+    for (let x = 2; x <= 4; x++) for (let y = 2; y <= 4; y++) { model[6][y][x] = shade(body, 1.1); }
+    model[7][3][2] = '#dc2626'; model[7][3][4] = '#dc2626';
+    model[7][3][3] = shade(body, 1.2);
+    model[8][3][2] = horn; model[8][3][4] = horn;
+    model[9][3][2] = shade(horn, 1.3); model[9][3][4] = shade(horn, 1.3);
+    model[5][0][3] = '#1f1f2e'; model[6][0][3] = '#1f1f2e';
+    return model;
+  }
+
+  if (mobType === 'medium') {
+    const model: VoxelModel = [];
+    const h = 6; const w = 5;
+    for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+    const fur = '#3b82f6'; const darkFur = shade(fur, 0.7); const belly = shade(fur, 1.3);
+    const legOff = Math.round(walk * 0.5);
+    model[0][1][0 + (legOff > 0 ? 1 : 0)] = darkFur; model[0][1][4 - (legOff > 0 ? 1 : 0)] = darkFur;
+    model[0][3][1] = darkFur; model[0][3][3] = darkFur;
+    for (let x = 1; x <= 3; x++) for (let y = 1; y <= 3; y++) { model[1][y][x] = fur; model[2][y][x] = fur; }
+    model[2][2][2] = belly;
+    for (let x = 1; x <= 3; x++) model[3][2][x] = fur;
+    model[4][2][1] = '#ef4444'; model[4][2][3] = '#ef4444';
+    model[4][2][2] = shade(fur, 1.1);
+    model[5][2][2] = shade(fur, 1.2);
+    model[3][0][2] = fur; model[4][0][2] = shade(fur, 0.8);
+    return model;
+  }
+
+  const model: VoxelModel = [];
+  const h = 4; const w = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const skin = '#65a30d'; const darkSkin = shade(skin, 0.7);
+  model[0][1][0] = darkSkin; model[0][1][2] = darkSkin;
+  model[1][1][1] = skin;
+  for (let x = 0; x < w; x++) for (let y = 0; y < w; y++) {
+    if (Math.abs(x - 1) + Math.abs(y - 1) <= 1) model[2][y][x] = skin;
+  }
+  model[3][1][1] = shade(skin, 1.2);
+  model[2][0][1] = shade(skin, 0.8);
   return model;
 }
 
@@ -864,27 +964,478 @@ export class VoxelRenderer {
     }
 
     if ((animState === 'attack' || animState === 'combo_finisher') && animTimer > 0.05) {
-      const trailAlpha = animState === 'combo_finisher' ? 0.2 : 0.1;
-      const trailCount = animState === 'combo_finisher' ? 2 : 1;
-      const classTrailColors: Record<string, string> = { Warrior: '#ef4444', Mage: '#a855f7', Ranger: '#22c55e', Worg: '#f97316' };
+      const isFinisher = animState === 'combo_finisher';
+      const trailAlpha = isFinisher ? 0.35 : 0.1;
+      const trailCount = isFinisher ? 3 : 1;
+      const classTrailColors: Record<string, string> = { Warrior: '#ef4444', Mage: '#8b5cf6', Ranger: '#22c55e', Worg: '#f97316' };
       const trailTint = classTrailColors[heroClass] || '#ffffff';
       for (let ti = 0; ti < trailCount; ti++) {
         const trailOffset = 0.08 + ti * 0.06;
         ctx.save();
-        ctx.globalAlpha = trailAlpha * (1 - ti * 0.4);
+        ctx.globalAlpha = trailAlpha * (1 - ti * 0.3);
         ctx.globalCompositeOperation = 'lighter';
         const trailModel = buildHeroModel(race, heroClass, animState, Math.max(0, animTimer - trailOffset), heroName, heroItems);
         this.renderVoxelModel(ctx, x, groundY - 12, trailModel, this.cubeSize, facing);
         ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = trailAlpha * 0.3 * (1 - ti * 0.5);
+        ctx.globalAlpha = (isFinisher ? trailAlpha * 0.5 : trailAlpha * 0.3) * (1 - ti * 0.3);
         ctx.fillStyle = trailTint;
-        ctx.fillRect(x - 12, groundY - 24, 24, 24);
+        const trailSize = isFinisher ? 32 : 24;
+        ctx.fillRect(x - trailSize / 2, groundY - trailSize, trailSize, trailSize);
         ctx.restore();
       }
     }
 
     const model = buildHeroModel(race, heroClass, animState, animTimer, heroName, heroItems);
     this.renderVoxelModel(ctx, x, groundY - 12, model, this.cubeSize, facing);
+
+    if (animState === 'attack' && animTimer > 0.02) {
+      this.drawAttackVFX(ctx, x, groundY, heroClass, facing, animTimer);
+    }
+    if (animState === 'ability' && animTimer > 0.02) {
+      this.drawAbilityVFX(ctx, x, groundY, heroClass, facing, animTimer);
+    }
+    if (animState === 'dash_attack' && animTimer > 0.02) {
+      this.drawDashVFX(ctx, x, groundY, heroClass, facing, animTimer);
+    }
+  }
+
+  private drawAttackVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number) {
+    const atkProgress = Math.min(1, t / 0.65);
+
+    if (heroClass === 'Warrior' || heroClass === 'Worg') {
+      const swing = atkProgress >= 0.35 && atkProgress < 0.65 ? (atkProgress - 0.35) / 0.3 : 0;
+      const followThru = atkProgress >= 0.65 ? Math.min(1, (atkProgress - 0.65) / 0.2) : 0;
+
+      if (swing > 0.05) {
+        ctx.save();
+        ctx.translate(x, y - 10);
+
+        const arcStart = facing - Math.PI * 0.6;
+        const arcEnd = facing + Math.PI * 0.4;
+        const arcAngle = arcStart + (arcEnd - arcStart) * swing;
+        const reachDist = 22 + swing * 18;
+
+        ctx.strokeStyle = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
+        ctx.lineWidth = 3 + swing * 2;
+        ctx.globalAlpha = 0.7 + swing * 0.3;
+        ctx.shadowColor = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
+        ctx.shadowBlur = 8 + swing * 6;
+        ctx.beginPath();
+        ctx.arc(0, 0, reachDist, arcStart, arcAngle);
+        ctx.stroke();
+
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.arc(0, 0, reachDist + 6, arcStart + 0.1, arcAngle - 0.1);
+        ctx.stroke();
+
+        if (swing > 0.6) {
+          const sparkCount = 3;
+          for (let s = 0; s < sparkCount; s++) {
+            const sa = arcAngle - s * 0.15;
+            const sr = reachDist + (Math.random() - 0.5) * 8;
+            const sx = Math.cos(sa) * sr;
+            const sy = Math.sin(sa) * sr;
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = (1 - swing) * 2;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 1.5 + Math.random(), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      if (followThru > 0 && followThru < 0.6) {
+        ctx.save();
+        ctx.translate(x, y - 10);
+        const trailColor = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
+        ctx.strokeStyle = trailColor;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = (0.6 - followThru) * 1.5;
+        ctx.shadowColor = trailColor;
+        ctx.shadowBlur = 4;
+        const fullArcStart = facing - Math.PI * 0.6;
+        const fullArcEnd = facing + Math.PI * 0.4;
+        ctx.beginPath();
+        ctx.arc(0, 0, 36, fullArcStart, fullArcEnd);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
+
+    if (heroClass === 'Ranger') {
+      const draw = atkProgress < 0.45 ? atkProgress / 0.45 : 1;
+      const release = atkProgress >= 0.55 ? Math.min(1, (atkProgress - 0.55) / 0.15) : 0;
+      const recoil = atkProgress >= 0.7 ? (atkProgress - 0.7) / 0.3 : 0;
+
+      ctx.save();
+      ctx.translate(x, y - 8);
+
+      if (draw > 0.1 && release < 0.5) {
+        const drawBack = draw * 8;
+        const stringColor = draw > 0.7 ? '#ffd700' : '#aaaaaa';
+        ctx.strokeStyle = stringColor;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.8;
+        const bowCx = Math.cos(facing) * 10;
+        const bowCy = Math.sin(facing) * 10;
+        const pullX = bowCx - Math.cos(facing) * drawBack;
+        const pullY = bowCy - Math.sin(facing) * drawBack;
+        ctx.beginPath();
+        ctx.moveTo(bowCx + Math.cos(facing + Math.PI / 2) * 8, bowCy + Math.sin(facing + Math.PI / 2) * 8);
+        ctx.lineTo(pullX, pullY);
+        ctx.lineTo(bowCx + Math.cos(facing - Math.PI / 2) * 8, bowCy + Math.sin(facing - Math.PI / 2) * 8);
+        ctx.stroke();
+
+        if (draw > 0.3) {
+          ctx.strokeStyle = '#c5a059';
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = draw * 0.9;
+          const arrowLen = 12;
+          const arrowTip = bowCx + Math.cos(facing) * arrowLen;
+          const arrowTipY = bowCy + Math.sin(facing) * arrowLen;
+          ctx.beginPath();
+          ctx.moveTo(pullX - Math.cos(facing) * 3, pullY - Math.sin(facing) * 3);
+          ctx.lineTo(arrowTip, arrowTipY);
+          ctx.stroke();
+
+          ctx.fillStyle = '#888888';
+          ctx.beginPath();
+          ctx.moveTo(arrowTip, arrowTipY);
+          ctx.lineTo(arrowTip - Math.cos(facing - 0.4) * 4, arrowTipY - Math.sin(facing - 0.4) * 4);
+          ctx.lineTo(arrowTip - Math.cos(facing + 0.4) * 4, arrowTipY - Math.sin(facing + 0.4) * 4);
+          ctx.fill();
+        }
+
+        if (draw > 0.8) {
+          ctx.fillStyle = '#ffd700';
+          ctx.globalAlpha = (draw - 0.8) * 5 * (0.5 + Math.sin(t * 30) * 0.5);
+          ctx.shadowColor = '#ffd700';
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          ctx.arc(bowCx + Math.cos(facing) * 12, bowCy + Math.sin(facing) * 12, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      if (release > 0) {
+        const arrowDist = release * 45 + recoil * 20;
+        const arrowX = Math.cos(facing) * (14 + arrowDist);
+        const arrowY = Math.sin(facing) * (14 + arrowDist);
+        const fadeAlpha = Math.max(0, 1 - recoil * 1.5);
+
+        if (fadeAlpha > 0) {
+          ctx.strokeStyle = '#22c55e';
+          ctx.lineWidth = 2.5;
+          ctx.globalAlpha = fadeAlpha;
+          ctx.shadowColor = '#22c55e';
+          ctx.shadowBlur = 6;
+          const trailLen = 10 + release * 8;
+          ctx.beginPath();
+          ctx.moveTo(arrowX - Math.cos(facing) * trailLen, arrowY - Math.sin(facing) * trailLen);
+          ctx.lineTo(arrowX, arrowY);
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.moveTo(arrowX + Math.cos(facing) * 4, arrowY + Math.sin(facing) * 4);
+          ctx.lineTo(arrowX + Math.cos(facing - 0.5) * -3, arrowY + Math.sin(facing - 0.5) * -3);
+          ctx.lineTo(arrowX + Math.cos(facing + 0.5) * -3, arrowY + Math.sin(facing + 0.5) * -3);
+          ctx.fill();
+
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    if (heroClass === 'Mage') {
+      const raise = atkProgress < 0.4 ? atkProgress / 0.4 : 1;
+      const channel = atkProgress >= 0.25 && atkProgress < 0.55 ? Math.min(1, (atkProgress - 0.25) / 0.3) : 0;
+      const cast = atkProgress >= 0.5 ? Math.min(1, (atkProgress - 0.5) / 0.15) : 0;
+      const recover = atkProgress >= 0.75 ? (atkProgress - 0.75) / 0.25 : 0;
+
+      ctx.save();
+      ctx.translate(x, y - 14);
+
+      const orbX = Math.cos(facing) * (8 + cast * 6);
+      const orbY = Math.sin(facing) * (8 + cast * 6) - 12 - raise * 8;
+
+      if (channel > 0.1 || cast > 0) {
+        const orbGlow = Math.max(channel, cast);
+        const orbRadius = 3 + orbGlow * 4;
+        const orbColor = '#9333ea';
+
+        const grd = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, orbRadius + 4);
+        grd.addColorStop(0, 'rgba(147,51,234,0.8)');
+        grd.addColorStop(0.5, 'rgba(147,51,234,0.3)');
+        grd.addColorStop(1, 'rgba(147,51,234,0)');
+        ctx.fillStyle = grd;
+        ctx.globalAlpha = orbGlow;
+        ctx.fillRect(orbX - orbRadius - 4, orbY - orbRadius - 4, (orbRadius + 4) * 2, (orbRadius + 4) * 2);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = orbGlow * 0.9;
+        ctx.shadowColor = orbColor;
+        ctx.shadowBlur = 10 + orbGlow * 8;
+        ctx.beginPath();
+        ctx.arc(orbX, orbY, orbRadius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = orbColor;
+        ctx.beginPath();
+        ctx.arc(orbX, orbY, orbRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (channel > 0.3) {
+          const runeRadius = 10 + channel * 6;
+          ctx.strokeStyle = '#a855f7';
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = channel * 0.5;
+          const runeRot = t * 8;
+          ctx.beginPath();
+          ctx.arc(orbX, orbY, runeRadius, runeRot, runeRot + Math.PI * 1.5);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(orbX, orbY, runeRadius * 0.6, runeRot + Math.PI, runeRot + Math.PI * 2.2);
+          ctx.stroke();
+        }
+
+        const sparkCount = Math.floor(channel * 4 + cast * 3);
+        for (let s = 0; s < sparkCount; s++) {
+          const sa = t * 6 + s * (Math.PI * 2 / Math.max(1, sparkCount));
+          const sr = orbRadius + 2 + Math.sin(t * 12 + s) * 4;
+          ctx.fillStyle = s % 2 === 0 ? '#e9d5ff' : '#a855f7';
+          ctx.globalAlpha = 0.4 + Math.sin(t * 10 + s * 2) * 0.3;
+          ctx.beginPath();
+          ctx.arc(orbX + Math.cos(sa) * sr, orbY + Math.sin(sa) * sr, 1 + Math.random() * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      if (cast > 0.3 && recover < 0.5) {
+        const castDist = (cast - 0.3) * 1.4 * 35;
+        const castX = orbX + Math.cos(facing) * castDist;
+        const castY = orbY + Math.sin(facing) * castDist;
+        const castAlpha = Math.max(0, 1 - recover * 2);
+
+        if (castAlpha > 0) {
+          ctx.strokeStyle = '#a855f7';
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = castAlpha * 0.6;
+          ctx.shadowColor = '#9333ea';
+          ctx.shadowBlur = 8;
+
+          const burstRadius = 4 + cast * 8;
+          ctx.beginPath();
+          ctx.arc(castX, castY, burstRadius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = '#e9d5ff';
+          ctx.globalAlpha = castAlpha * 0.8;
+          ctx.beginPath();
+          ctx.arc(castX, castY, 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+
+  private drawAbilityVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number) {
+    const pulse = (Math.sin(t * 8) + 1) * 0.5;
+    const channel = Math.min(1, t * 4);
+
+    ctx.save();
+    ctx.translate(x, y - 6);
+
+    if (heroClass === 'Warrior' || heroClass === 'Worg') {
+      const auraColor = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
+      const auraRadius = 14 + pulse * 8 + channel * 4;
+      ctx.strokeStyle = auraColor;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.3 + pulse * 0.3;
+      ctx.shadowColor = auraColor;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(0, -4, auraRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      if (channel > 0.5) {
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = (channel - 0.5) * 0.6;
+        ctx.beginPath();
+        ctx.arc(0, -4, auraRadius + 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      const spikeCount = 6;
+      for (let s = 0; s < spikeCount; s++) {
+        const sa = (s / spikeCount) * Math.PI * 2 + t * 3;
+        const sLen = 4 + pulse * 6;
+        ctx.strokeStyle = auraColor;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.4 + pulse * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(sa) * auraRadius, Math.sin(sa) * auraRadius - 4);
+        ctx.lineTo(Math.cos(sa) * (auraRadius + sLen), Math.sin(sa) * (auraRadius + sLen) - 4);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    if (heroClass === 'Ranger') {
+      const trapRadius = 8 + channel * 10;
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.4 + pulse * 0.3;
+      ctx.shadowColor = '#22c55e';
+      ctx.shadowBlur = 4;
+
+      const rot = t * 4;
+      for (let i = 0; i < 3; i++) {
+        const a = rot + i * (Math.PI * 2 / 3);
+        ctx.beginPath();
+        ctx.arc(0, 0, trapRadius, a, a + Math.PI * 0.4);
+        ctx.stroke();
+      }
+
+      if (pulse > 0.5) {
+        for (let i = 0; i < 4; i++) {
+          const sa = t * 5 + i * Math.PI * 0.5;
+          const sr = trapRadius * 0.6;
+          ctx.fillStyle = '#4ade80';
+          ctx.globalAlpha = (pulse - 0.5) * 0.8;
+          ctx.beginPath();
+          ctx.arc(Math.cos(sa) * sr, Math.sin(sa) * sr, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    if (heroClass === 'Mage') {
+      const runeRadius = 16 + channel * 10;
+      const rot = t * 3;
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.3 + channel * 0.4;
+      ctx.shadowColor = '#9333ea';
+      ctx.shadowBlur = 8;
+
+      ctx.beginPath();
+      ctx.arc(0, 0, runeRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, runeRadius * 0.6, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const glyphCount = 6;
+      for (let g = 0; g < glyphCount; g++) {
+        const ga = rot + g * (Math.PI * 2 / glyphCount);
+        const gx = Math.cos(ga) * runeRadius;
+        const gy = Math.sin(ga) * runeRadius;
+        ctx.fillStyle = '#e9d5ff';
+        ctx.globalAlpha = 0.5 + Math.sin(t * 8 + g * 1.5) * 0.3;
+        ctx.beginPath();
+        ctx.arc(gx, gy, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const innerRot = -rot * 1.5;
+      const sides = 5;
+      ctx.strokeStyle = '#c084fc';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.3 + pulse * 0.4;
+      ctx.beginPath();
+      for (let s = 0; s <= sides; s++) {
+        const pa = innerRot + s * (Math.PI * 2 / sides);
+        const pr = runeRadius * 0.4;
+        if (s === 0) ctx.moveTo(Math.cos(pa) * pr, Math.sin(pa) * pr);
+        else ctx.lineTo(Math.cos(pa) * pr, Math.sin(pa) * pr);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      const castOrbX = Math.cos(facing) * (8 + channel * 4);
+      const castOrbY = Math.sin(facing) * (8 + channel * 4) - 16;
+      const orbSize = 3 + pulse * 3;
+      const grd = ctx.createRadialGradient(castOrbX, castOrbY, 0, castOrbX, castOrbY, orbSize + 3);
+      grd.addColorStop(0, 'rgba(255,255,255,0.8)');
+      grd.addColorStop(0.4, 'rgba(168,85,247,0.5)');
+      grd.addColorStop(1, 'rgba(147,51,234,0)');
+      ctx.fillStyle = grd;
+      ctx.globalAlpha = channel * 0.8;
+      ctx.fillRect(castOrbX - orbSize - 3, castOrbY - orbSize - 3, (orbSize + 3) * 2, (orbSize + 3) * 2);
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  private drawDashVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number) {
+    const thrust = Math.min(1, t * 6);
+    const extend = Math.sin(thrust * Math.PI);
+
+    if (extend < 0.1) return;
+
+    ctx.save();
+    ctx.translate(x, y - 8);
+
+    const trailColor = heroClass === 'Warrior' ? '#ef4444' : heroClass === 'Mage' ? '#8b5cf6' : heroClass === 'Ranger' ? '#22c55e' : '#f97316';
+    const trailLen = extend * 25;
+    const trailX = Math.cos(facing) * trailLen;
+    const trailY = Math.sin(facing) * trailLen;
+
+    ctx.strokeStyle = trailColor;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = extend * 0.6;
+    ctx.shadowColor = trailColor;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(-Math.cos(facing) * 5, -Math.sin(facing) * 5);
+    ctx.lineTo(trailX, trailY);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = extend * 0.4;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(trailX * 0.7, trailY * 0.7);
+    ctx.stroke();
+
+    const sparkAngle = facing + Math.PI;
+    for (let i = 0; i < 3; i++) {
+      const sa = sparkAngle + (Math.random() - 0.5) * 1.2;
+      const sd = 3 + Math.random() * 8;
+      ctx.fillStyle = trailColor;
+      ctx.globalAlpha = (1 - thrust) * 0.5;
+      ctx.beginPath();
+      ctx.arc(Math.cos(sa) * sd, Math.sin(sa) * sd, 1 + Math.random(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   drawHeroPortrait(
@@ -994,7 +1545,20 @@ export class VoxelRenderer {
     minionType: string
   ) {
     const model = buildMinionModel(color, minionType, animTimer);
-    this.renderVoxelModel(ctx, x, y - 6, model, 3, facing);
+    const scale = minionType === 'siege' || minionType === 'super' ? 3 : 3;
+    this.renderVoxelModel(ctx, x, y - 6, model, scale, facing);
+  }
+
+  drawJungleMobVoxel(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number,
+    mobType: string,
+    facing: number, animTimer: number
+  ) {
+    const model = buildJungleMobModel(mobType, animTimer);
+    const scale = mobType === 'buff' ? 3 : mobType === 'medium' ? 3 : 3;
+    const yOff = mobType === 'buff' ? -16 : mobType === 'medium' ? -8 : -4;
+    this.renderVoxelModel(ctx, x, y + yOff, model, scale, facing);
   }
 
   drawTowerVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, teamColor: string, tier: number) {
