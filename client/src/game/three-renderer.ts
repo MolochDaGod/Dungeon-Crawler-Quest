@@ -37,7 +37,8 @@ function mapAnimState(animState: string, dead: boolean): string {
     case 'walk': return 'run';
     case 'attack':
     case 'combo_finisher':
-    case 'dash_attack': return 'attack';
+    case 'dash_attack':
+    case 'lunge_slash': return 'attack';
     case 'ability': return 'attack';
     case 'dodge':
     case 'block': return 'hit';
@@ -836,7 +837,7 @@ export class ThreeRenderer {
       }
       if (head) head.position.y = 1.25 + Math.abs(Math.sin(time * speed * 2)) * 0.02;
 
-    } else if (hero.animState === 'attack' || hero.animState === 'combo_finisher' || hero.animState === 'dash_attack') {
+    } else if (hero.animState === 'attack' || hero.animState === 'combo_finisher' || hero.animState === 'dash_attack' || hero.animState === 'lunge_slash') {
       const attackPhase = hero.animTimer * 12;
       const swingPower = hero.animState === 'combo_finisher' ? 1.5 : 1.0;
 

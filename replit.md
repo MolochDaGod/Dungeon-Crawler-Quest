@@ -111,6 +111,7 @@ The game utilizes a React frontend with a custom HTML5 Canvas 2D and Three.js 3D
 - **Mage attack**: Radial glow orb at staff tip, orbiting runic circles during channel, spark particles, purple cast projectile burst on release; staff orb enlarged (3-voxel cross pattern + glow halo)
 - **Ability VFX**: Warrior=red aura ring with energy spikes, Ranger=green rotating arc segments with sparkles, Mage=full rune circle with inner pentagram + glowing orb + orbiting glyphs
 - **Dash attack VFX**: Class-colored motion streak with white core trail and rear sparks
+- **Lunge Slash (RMB melee)**: Right-click near enemies triggers lunge forward + sweeping slash. 3-phase animation: lunge (0-40%), slash arc (35-60%), recover (60-100%). Deals 1.8x ATK damage in 90-unit frontal cone (±108°). 1.2s cooldown. Canvas VFX: forward motion trail, triple-layered expanding slash arc (class-colored + white inner + outer echo), sparks at tip, fading follow-through ring
 - All VFX drawn as canvas overlays on top of voxel model (not part of voxel grid)
 
 ## Quality Notes

@@ -109,6 +109,8 @@ export interface MobaHero extends GameEntity {
   dodgeDir: number;
   dashAttackCooldown: number;
   dashAttackTimer: number;
+  lungeSlashTimer: number;
+  lungeSlashCooldown: number;
   comboCount: number;
   comboTimer: number;
   blockActive: boolean;
@@ -354,6 +356,7 @@ export interface HudState {
   activeEffects: StatusEffectDisplay[];
   dodgeCooldown: number;
   dashAttackCooldown: number;
+  lungeSlashCooldown: number;
   comboCount: number;
   comboTimer: number;
   blockActive: boolean;
