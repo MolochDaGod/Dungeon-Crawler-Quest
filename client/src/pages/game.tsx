@@ -10,7 +10,7 @@ import {
   MobaRenderer, handlePlayerAbility, handlePlayerAttack,
   handleRightClick, handleAttackMoveClick, handleStopCommand,
   buyItem, handleDodge, handleDashAttack, handleBlock,
-  spawnAreaDamageZone
+  spawnAreaDamageZone, handleRmbMelee
 } from '@/game/engine';
 import { ThreeRenderer } from '@/game/three-renderer';
 import { VoxelRenderer } from '@/game/voxel';
@@ -363,6 +363,12 @@ export default function GamePage() {
         return;
       }
       const wp = getWorldPos(e);
+      const lungeTriggered = handleRmbMelee(state, wp.x, wp.y);
+      if (lungeTriggered) {
+        state.cursorMode = 'attack';
+        setTimeout(() => { if (state.cursorMode === 'attack') state.cursorMode = 'default'; }, 400);
+        return;
+      }
       state.cursorMode = 'move';
       handleRightClick(state, wp.x, wp.y);
       setTimeout(() => { if (state.cursorMode === 'move') state.cursorMode = 'default'; }, 250);

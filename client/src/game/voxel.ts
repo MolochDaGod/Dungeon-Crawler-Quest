@@ -213,6 +213,25 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
     };
   }
 
+  if (animState === 'lunge_slash') {
+    const progress = Math.min(1, t / 0.4);
+    const lunge = progress < 0.4 ? progress / 0.4 : 1;
+    const slash = progress >= 0.35 && progress < 0.6 ? (progress - 0.35) / 0.25 : 0;
+    const recover = progress >= 0.6 ? (progress - 0.6) / 0.4 : 0;
+    const lungeFwd = lunge * (1 - recover * 0.5);
+    const slashArc = Math.sin(slash * Math.PI);
+    return {
+      leftLeg: { ox: Math.round(lungeFwd * 4 - recover * 2), oy: 0, oz: Math.round(Math.max(0, slash - 0.5) * 2) },
+      rightLeg: { ox: Math.round(-lungeFwd * 2 + recover), oy: 0, oz: 0 },
+      leftArm: { ox: Math.round(lungeFwd * 5 + slashArc * 3 - recover * 3), oy: Math.round(-slashArc * 4), oz: Math.round(lungeFwd * 3 + slashArc * 5 - recover * 4) },
+      rightArm: { ox: Math.round(lungeFwd * 2 - recover), oy: Math.round(slashArc * 1.5), oz: Math.round(lungeFwd * 2 + slashArc * 2 - recover * 2) },
+      torso: { ox: Math.round(lungeFwd * 3.5 - recover * 1.5), oy: Math.round(slashArc * 0.8), oz: Math.round(-slashArc * 0.5 + lungeFwd * 0.5) },
+      head: { ox: Math.round(lungeFwd * 2.5 + slashArc * 0.5 - recover), oy: Math.round(slashArc * 0.5), oz: Math.round(lungeFwd * 0.5 - slashArc * 0.3) },
+      weapon: { ox: Math.round(lungeFwd * 6 + slashArc * 4 - recover * 3), oy: Math.round(-slashArc * 6 + recover * 2), oz: Math.round(lungeFwd * 4 + slashArc * 6 - recover * 5) },
+      weaponGlow: slash > 0.1 ? 1.0 : lungeFwd > 0.7 ? 0.6 : recover > 0 ? 0.3 : 0
+    };
+  }
+
   if (animState === 'dash_attack') {
     const thrust = Math.min(1, t * 6);
     const extend = Math.sin(thrust * Math.PI);
@@ -997,6 +1016,9 @@ export class VoxelRenderer {
     if (animState === 'dash_attack' && animTimer > 0.02) {
       this.drawDashVFX(ctx, x, groundY, heroClass, facing, animTimer);
     }
+    if (animState === 'lunge_slash' && animTimer > 0.02) {
+      this.drawLungeSlashVFX(ctx, x, groundY, heroClass, facing, animTimer);
+    }
   }
 
   private drawAttackVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number) {
@@ -1434,6 +1456,114 @@ export class VoxelRenderer {
     }
 
     ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  private drawLungeSlashVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number) {
+    const progress = Math.min(1, t / 0.4);
+    const lunge = progress < 0.4 ? progress / 0.4 : 1;
+    const slash = progress >= 0.35 && progress < 0.6 ? (progress - 0.35) / 0.25 : 0;
+    const recover = progress >= 0.6 ? (progress - 0.6) / 0.4 : 0;
+
+    const classColor = heroClass === 'Warrior' ? '#ef4444' : heroClass === 'Mage' ? '#8b5cf6' : heroClass === 'Ranger' ? '#22c55e' : '#f97316';
+
+    ctx.save();
+    ctx.translate(x, y - 8);
+
+    if (lunge > 0.2 && recover < 0.5) {
+      const trailLen = lunge * 30;
+      ctx.strokeStyle = classColor;
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = (1 - recover * 2) * 0.5;
+      ctx.shadowColor = classColor;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.moveTo(-Math.cos(facing) * 8, -Math.sin(facing) * 8);
+      ctx.lineTo(Math.cos(facing) * trailLen, Math.sin(facing) * trailLen);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = lunge * 0.3 * (1 - recover * 2);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(facing) * trailLen * 0.6, Math.sin(facing) * trailLen * 0.6);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    if (slash > 0.05) {
+      const slashDist = 20 + slash * 25;
+      const arcStart = facing - Math.PI * 0.7;
+      const arcEnd = facing + Math.PI * 0.5;
+      const arcAngle = arcStart + (arcEnd - arcStart) * slash;
+
+      ctx.strokeStyle = classColor;
+      ctx.lineWidth = 4;
+      ctx.globalAlpha = 0.8 + slash * 0.2;
+      ctx.shadowColor = classColor;
+      ctx.shadowBlur = 10 + slash * 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, slashDist, arcStart, arcAngle);
+      ctx.stroke();
+
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, slashDist + 8, arcStart + 0.15, arcAngle - 0.1);
+      ctx.stroke();
+
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#ffffff';
+      ctx.globalAlpha = slash * 0.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, slashDist - 4, arcStart + 0.3, arcAngle - 0.2);
+      ctx.stroke();
+
+      if (slash > 0.4) {
+        for (let s = 0; s < 5; s++) {
+          const sa = arcAngle - s * 0.12;
+          const sr = slashDist + (Math.random() - 0.5) * 12;
+          ctx.fillStyle = s % 2 === 0 ? '#ffffff' : classColor;
+          ctx.globalAlpha = (1 - slash) * 1.5;
+          ctx.shadowBlur = 3;
+          ctx.beginPath();
+          ctx.arc(Math.cos(sa) * sr, Math.sin(sa) * sr, 1.5 + Math.random(), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    if (recover > 0 && recover < 0.7) {
+      const fadeAlpha = (0.7 - recover) * 1.4;
+      const fullArcStart = facing - Math.PI * 0.7;
+      const fullArcEnd = facing + Math.PI * 0.5;
+      ctx.strokeStyle = classColor;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = fadeAlpha * 0.4;
+      ctx.shadowColor = classColor;
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, 48, fullArcStart, fullArcEnd);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    const sparkAngle = facing + Math.PI;
+    if (lunge > 0.3 && recover < 0.3) {
+      for (let i = 0; i < 3; i++) {
+        const sa = sparkAngle + (Math.random() - 0.5) * 1.0;
+        const sd = 4 + Math.random() * 10;
+        ctx.fillStyle = classColor;
+        ctx.globalAlpha = (1 - progress) * 0.6;
+        ctx.beginPath();
+        ctx.arc(Math.cos(sa) * sd, Math.sin(sa) * sd, 1 + Math.random() * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     ctx.globalAlpha = 1;
     ctx.restore();
   }

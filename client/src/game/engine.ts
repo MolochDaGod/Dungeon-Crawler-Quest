@@ -298,6 +298,7 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     ccImmunityTimers: new Map(),
     dodgeCooldown: 0, dodgeTimer: 0, dodgeDir: 0,
     dashAttackCooldown: 0, dashAttackTimer: 0,
+    lungeSlashTimer: 0, lungeSlashCooldown: 0,
     comboCount: 0, comboTimer: 0,
     blockActive: false, blockTimer: 0, blockCooldown: 0,
     iFrames: 0,
@@ -734,6 +735,7 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
   if (hero.attackAnimPhase > 0) hero.attackAnimPhase -= dt;
   if (hero.dodgeCooldown > 0) hero.dodgeCooldown -= dt;
   if (hero.dashAttackCooldown > 0) hero.dashAttackCooldown -= dt;
+  if (hero.lungeSlashCooldown > 0) hero.lungeSlashCooldown -= dt;
   if (hero.blockCooldown > 0) hero.blockCooldown -= dt;
   if (hero.iFrames > 0) hero.iFrames -= dt;
 
@@ -797,6 +799,53 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
     if (hero.dashAttackTimer <= 0) {
       hero.vx = 0;
       hero.vy = 0;
+    }
+  }
+
+  if (hero.lungeSlashTimer > 0) {
+    hero.lungeSlashTimer -= dt;
+    const lungeProgress = 1 - (hero.lungeSlashTimer / 0.4);
+    hero.animState = 'lunge_slash';
+
+    if (lungeProgress < 0.4) {
+      const lungeSpeed = hero.spd * 4.5;
+      hero.vx = Math.cos(hero.facing) * lungeSpeed;
+      hero.vy = Math.sin(hero.facing) * lungeSpeed;
+    } else if (lungeProgress < 0.55) {
+      hero.vx *= 0.15;
+      hero.vy *= 0.15;
+
+      if (!(hero as any)._lungeHasHit) {
+        (hero as any)._lungeHasHit = true;
+        const enemies = getAllEnemies(state, hero.team);
+        let hitAny = false;
+        for (const e of enemies) {
+          if (dist(hero, e) < 90) {
+            let angleDiff = angleTo(hero, e) - hero.facing;
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            if (Math.abs(angleDiff) < Math.PI * 0.6) {
+              const dmg = hero.atk * 1.8;
+              dealDamage(state, hero, e, dmg);
+              spawnSlashEffect(state, e.x, e.y, hero.facing, CLASS_COLORS[HEROES[hero.heroDataId]?.heroClass || 'Warrior'] || '#ef4444');
+              hitAny = true;
+            }
+          }
+        }
+        if (hitAny) {
+          state.screenShake = 0.12;
+        }
+      }
+    } else {
+      hero.vx *= 0.3;
+      hero.vy *= 0.3;
+    }
+
+    if (hero.lungeSlashTimer <= 0) {
+      hero.vx = 0;
+      hero.vy = 0;
+      hero.animState = 'idle';
+      (hero as any)._lungeHasHit = false;
     }
   }
 
@@ -2635,6 +2684,68 @@ export function handleDashAttack(state: MobaState) {
   addFloatingText(state, player.x, player.y - 25, 'DASH!', '#f97316', 14);
 }
 
+export function handleRmbMelee(state: MobaState, worldX: number, worldY: number) {
+  const player = state.heroes[state.playerHeroIndex];
+  if (!player || player.dead) return false;
+  if (player.lungeSlashCooldown > 0) return false;
+  if (player.lungeSlashTimer > 0 || player.dashAttackTimer > 0 || player.dodgeTimer > 0) return false;
+
+  const clickedEnemy = findEntityAtPosition(state, worldX, worldY, player.team);
+
+  let targetX = worldX;
+  let targetY = worldY;
+
+  if (clickedEnemy && dist(player, clickedEnemy) < 200) {
+    targetX = clickedEnemy.x;
+    targetY = clickedEnemy.y;
+    player.targetId = clickedEnemy.id;
+  } else {
+    const enemies = getAllEnemies(state, player.team);
+    let closest: any = null;
+    let closestDist = 200;
+    for (const e of enemies) {
+      const d = dist(player, e);
+      if (d < closestDist) {
+        closestDist = d;
+        closest = e;
+      }
+    }
+    if (!closest) return false;
+    targetX = closest.x;
+    targetY = closest.y;
+  }
+
+  player.facing = Math.atan2(targetY - player.y, targetX - player.x);
+  player.lungeSlashTimer = 0.4;
+  player.lungeSlashCooldown = 1.2;
+  player.animState = 'lunge_slash';
+  player.animTimer = 0;
+  player.moveTarget = null;
+  player.stopCommand = true;
+  player.pendingAttackTarget = null;
+  player.isAttackMoving = false;
+  player.attackMoveTarget = null;
+
+  const heroClass = HEROES[player.heroDataId]?.heroClass || 'Warrior';
+  const slashColor = CLASS_COLORS[heroClass] || '#ef4444';
+
+  for (let i = 0; i < 4; i++) {
+    const angle = player.facing + (Math.random() - 0.5) * 0.6;
+    state.particles.push({
+      x: player.x, y: player.y,
+      vx: Math.cos(angle) * (80 + Math.random() * 60),
+      vy: Math.sin(angle) * (80 + Math.random() * 60),
+      life: 0.25, maxLife: 0.25, color: slashColor, size: 3, type: 'slash'
+    });
+  }
+  state.spellEffects.push({
+    x: player.x, y: player.y, type: 'dash_trail',
+    life: 0.3, maxLife: 0.3, radius: 12, color: slashColor, angle: player.facing
+  });
+  addFloatingText(state, player.x, player.y - 25, 'LUNGE!', slashColor, 13);
+  return true;
+}
+
 export function handleBlock(state: MobaState, active: boolean) {
   const player = state.heroes[state.playerHeroIndex];
   if (!player || player.dead) return;
@@ -2861,6 +2972,7 @@ export function getHudState(state: MobaState): HudState {
     })),
     dodgeCooldown: player?.dodgeCooldown ?? 0,
     dashAttackCooldown: player?.dashAttackCooldown ?? 0,
+    lungeSlashCooldown: player?.lungeSlashCooldown ?? 0,
     comboCount: player?.comboCount ?? 0,
     comboTimer: player?.comboTimer ?? 0,
     blockActive: player?.blockActive ?? false,
