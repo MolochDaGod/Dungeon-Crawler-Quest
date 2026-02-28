@@ -26,7 +26,7 @@ The game's architecture centers on a React frontend with a custom HTML5 Canvas 2
 - **Ability Leveling System:** Heroes gain ability points on level up. Each ability (Q/W/E/R) can be leveled up to 4 times (R up to 3 times at levels 6/11/16). Ability damage scales +25% per level.
 
 **Features:**
-- **Heroes:** 26 unique heroes across 6 races and 4 classes, each with 4 abilities.
+- **Heroes:** 26 unique heroes across 6 races and 4 classes, each with 4 abilities. Race-specific warrior kits: Human (Sword & Shield), Orc (Heavy Axe), Elf (Spear/Glaive), Barbarian (War Hammer), Dwarf (Axe & Shield), Undead (Greatsword).
 - **MOBA Mode:** 4000x4000 map, 3 lanes, towers, Nexus objective, minion waves, jungle camps, hero leveling (1-18), item shop, gold economy, and KDA scoring.
 - **Dungeon Crawler Mode:** 10 procedural floors, various enemy types, boss fights, traps, chests, and an inventory system.
 - **Targeting System:** `MouseTargetingManager` handles AOE ground targeting with visual indicators.

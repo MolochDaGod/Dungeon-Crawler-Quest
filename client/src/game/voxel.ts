@@ -1,3 +1,5 @@
+import { getHeroWeapon, type WeaponType } from './types';
+
 type VoxelModel = (string | null)[][][];
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -82,7 +84,7 @@ interface BodyPartPose {
   ox: number; oy: number; oz: number;
 }
 
-function getAnimPoses(heroClass: string, animState: string, animTimer: number): {
+function getAnimPoses(heroClass: string, animState: string, animTimer: number, weaponType?: WeaponType): {
   leftLeg: BodyPartPose; rightLeg: BodyPartPose;
   leftArm: BodyPartPose; rightArm: BodyPartPose;
   torso: BodyPartPose; head: BodyPartPose;
@@ -126,6 +128,63 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number): 
 
   if (animState === 'attack') {
     const atkProgress = Math.min(1, t / 0.65);
+
+    if (weaponType === 'heavy_axe' && (heroClass === 'Warrior' || heroClass === 'Worg')) {
+      const windUp = atkProgress < 0.4 ? atkProgress / 0.4 : 0;
+      const chop = atkProgress >= 0.4 && atkProgress < 0.65 ? (atkProgress - 0.4) / 0.25 : 0;
+      const followThru = atkProgress >= 0.65 ? (atkProgress - 0.65) / 0.35 : 0;
+      const raisedArm = Math.round(windUp * 6.0);
+      const slamDown = Math.round(chop * 8.0);
+      const bodyDip = Math.round(chop * 2.5);
+      return {
+        leftLeg: { ox: Math.round(chop * 2.0 - followThru * 0.5), oy: 0, oz: Math.round(chop * 1.0) },
+        rightLeg: { ox: Math.round(-chop * 1.0 + windUp * 0.5), oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(chop * 3.0 - windUp * 1.0), oy: Math.round(-chop * 2.0), oz: Math.round(raisedArm - slamDown + followThru * 1.0) },
+        rightArm: { ox: Math.round(-windUp * 1.5 + followThru * 0.5), oy: Math.round(windUp * 0.8), oz: Math.round(windUp * 3.0 - chop * 1.5) },
+        torso: { ox: Math.round(chop * 1.5 - followThru * 0.5), oy: 0, oz: Math.round(-bodyDip + followThru * 1.0) },
+        head: { ox: Math.round(chop * 1.0 - windUp * 0.3), oy: 0, oz: Math.round(-bodyDip * 0.5 + windUp * 1.0) },
+        weapon: { ox: Math.round(chop * 4.0 - windUp * 1.5), oy: Math.round(-chop * 3.0 + windUp * 0.5), oz: Math.round(raisedArm * 1.2 - slamDown * 1.5 + followThru * 0.5) },
+        weaponGlow: chop > 0.2 ? 1.0 : windUp > 0.6 ? 0.6 : followThru > 0 ? 0.3 : 0
+      };
+    }
+
+    if (weaponType === 'spear' && (heroClass === 'Warrior' || heroClass === 'Worg')) {
+      const draw = atkProgress < 0.3 ? atkProgress / 0.3 : 0;
+      const thrust = atkProgress >= 0.3 && atkProgress < 0.55 ? (atkProgress - 0.3) / 0.25 : 0;
+      const retract = atkProgress >= 0.55 ? (atkProgress - 0.55) / 0.45 : 0;
+      const pullBack = Math.round(draw * 3.0);
+      const pushFwd = Math.round(thrust * 7.0);
+      return {
+        leftLeg: { ox: Math.round(thrust * 3.5 - retract * 1.5), oy: 0, oz: Math.round(thrust * 0.5) },
+        rightLeg: { ox: Math.round(-thrust * 1.5 + draw * 1.0), oy: 0, oz: 0 },
+        leftArm: { ox: Math.round(-pullBack + pushFwd - retract * 2.0), oy: Math.round(-thrust * 1.5), oz: Math.round(thrust * 2.0 + draw * 1.0) },
+        rightArm: { ox: Math.round(-draw * 1.0 + retract * 0.5), oy: Math.round(draw * 0.5), oz: Math.round(draw * 1.5) },
+        torso: { ox: Math.round(-pullBack * 0.4 + pushFwd * 0.5 - retract * 0.3), oy: Math.round(thrust * 0.5), oz: Math.round(-thrust * 0.3) },
+        head: { ox: Math.round(thrust * 1.5 - draw * 0.5), oy: Math.round(thrust * 0.3), oz: 0 },
+        weapon: { ox: Math.round(-pullBack * 1.5 + pushFwd * 1.5 - retract * 3.0), oy: Math.round(-thrust * 2.0), oz: Math.round(thrust * 3.0 + draw * 2.0 - retract * 1.0) },
+        weaponGlow: thrust > 0.15 ? 1.0 : draw > 0.5 ? 0.4 : retract > 0 ? 0.2 : 0
+      };
+    }
+
+    if (weaponType === 'war_hammer' && (heroClass === 'Warrior' || heroClass === 'Worg')) {
+      const windUp = atkProgress < 0.45 ? atkProgress / 0.45 : 0;
+      const slam = atkProgress >= 0.45 && atkProgress < 0.65 ? (atkProgress - 0.45) / 0.2 : 0;
+      const followThru = atkProgress >= 0.65 ? (atkProgress - 0.65) / 0.35 : 0;
+      const raise = Math.round(windUp * 7.0);
+      const smash = Math.round(slam * 10.0);
+      const bodySquat = Math.round(slam * 3.0);
+      return {
+        leftLeg: { ox: Math.round(slam * 1.5), oy: Math.round(-slam * 0.5), oz: Math.round(slam * 1.5) },
+        rightLeg: { ox: Math.round(-slam * 1.5), oy: Math.round(slam * 0.5), oz: Math.round(slam * 1.5) },
+        leftArm: { ox: Math.round(slam * 2.0), oy: Math.round(-slam * 2.5), oz: Math.round(raise - smash + followThru * 2.0) },
+        rightArm: { ox: Math.round(slam * 1.5), oy: Math.round(-slam * 1.5), oz: Math.round(raise * 0.8 - smash * 0.6 + followThru * 1.0) },
+        torso: { ox: Math.round(slam * 0.5), oy: 0, oz: Math.round(-bodySquat + followThru * 1.5) },
+        head: { ox: Math.round(slam * 0.5 - windUp * 0.3), oy: 0, oz: Math.round(-bodySquat * 0.6 + windUp * 1.5) },
+        weapon: { ox: Math.round(slam * 3.0), oy: Math.round(-slam * 4.0 + windUp * 0.5), oz: Math.round(raise * 1.5 - smash * 2.0 + followThru * 1.0) },
+        weaponGlow: slam > 0.1 ? 1.0 : windUp > 0.6 ? 0.5 : followThru > 0 ? 0.4 : 0
+      };
+    }
+
     if (heroClass === 'Warrior' || heroClass === 'Worg') {
       const windUp = atkProgress < 0.35 ? atkProgress / 0.35 : 0;
       const swing = atkProgress >= 0.35 && atkProgress < 0.65 ? (atkProgress - 0.35) / 0.3 : 0;
@@ -426,12 +485,147 @@ function buildRapierWeapon(wP: BodyPartPose, setV: (z: number, y: number, x: num
   }
 }
 
+function buildAxeWeapon(wP: BodyPartPose, setV: (z: number, y: number, x: number, c: string) => void, weaponGlow: number, armorWeapon: string) {
+  const handle = '#5a3a1a';
+  const handleDark = '#3a2812';
+  const axeHead = '#8a8a8a';
+  const axeEdge = '#c0c0c0';
+
+  setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, handleDark);
+  setV(3 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(4 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(6 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(7 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+
+  const headColor = weaponGlow > 0 ? blend(axeHead, '#ff4400', weaponGlow * 0.5) : axeHead;
+  const edgeColor = weaponGlow > 0 ? blend(axeEdge, '#ffffff', weaponGlow * 0.6) : axeEdge;
+  setV(8 + wP.oz, 1 + wP.oy, 0 + wP.ox, headColor);
+  setV(9 + wP.oz, 1 + wP.oy, 0 + wP.ox, headColor);
+  setV(10 + wP.oz, 1 + wP.oy, 0 + wP.ox, headColor);
+  setV(8 + wP.oz, 0 + wP.oy, 0 + wP.ox, edgeColor);
+  setV(9 + wP.oz, 0 + wP.oy, 0 + wP.ox, edgeColor);
+  setV(10 + wP.oz, 0 + wP.oy, 0 + wP.ox, edgeColor);
+  setV(11 + wP.oz, 0 + wP.oy, 0 + wP.ox, weaponGlow > 0 ? blend(edgeColor, '#ffffff', weaponGlow) : shade(edgeColor, 1.2));
+  setV(9 + wP.oz, 2 + wP.oy, 0 + wP.ox, headColor);
+}
+
+function buildSpearWeapon(wP: BodyPartPose, setV: (z: number, y: number, x: number, c: string) => void, weaponGlow: number, armorWeapon: string) {
+  const shaft = '#6b4423';
+  const shaftLight = '#8a5a33';
+  const spearHead = '#c0c0c0';
+
+  setV(1 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(shaft, 0.7));
+  for (let z = 2; z <= 9; z++) {
+    setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, z % 3 === 0 ? shaftLight : shaft);
+  }
+
+  const tipColor = weaponGlow > 0 ? blend(spearHead, '#ffffff', weaponGlow * 0.6) : spearHead;
+  setV(10 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(spearHead, 0.8));
+  setV(11 + wP.oz, 1 + wP.oy, 0 + wP.ox, tipColor);
+  setV(12 + wP.oz, 1 + wP.oy, 0 + wP.ox, weaponGlow > 0 ? blend('#ffffff', spearHead, 0.3) : shade(spearHead, 1.3));
+  setV(10 + wP.oz, 0 + wP.oy, 0 + wP.ox, shade(spearHead, 0.7));
+  setV(10 + wP.oz, 2 + wP.oy, 0 + wP.ox, shade(spearHead, 0.7));
+}
+
+function buildHammerWeapon(wP: BodyPartPose, setV: (z: number, y: number, x: number, c: string) => void, weaponGlow: number, armorWeapon: string) {
+  const handle = '#5a3a1a';
+  const handleWrap = '#8a6914';
+  const hammerHead = '#777777';
+  const hammerFace = '#999999';
+
+  setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(handle, 0.7));
+  setV(3 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(4 + wP.oz, 1 + wP.oy, 0 + wP.ox, handleWrap);
+  setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(6 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(7 + wP.oz, 1 + wP.oy, 0 + wP.ox, handleWrap);
+
+  const headColor = weaponGlow > 0 ? blend(hammerHead, '#ffd700', weaponGlow * 0.5) : hammerHead;
+  const faceColor = weaponGlow > 0 ? blend(hammerFace, '#ffffff', weaponGlow * 0.6) : hammerFace;
+  setV(8 + wP.oz, 0 + wP.oy, 0 + wP.ox, headColor);
+  setV(8 + wP.oz, 1 + wP.oy, 0 + wP.ox, headColor);
+  setV(8 + wP.oz, 2 + wP.oy, 0 + wP.ox, headColor);
+  setV(9 + wP.oz, 0 + wP.oy, 0 + wP.ox, faceColor);
+  setV(9 + wP.oz, 1 + wP.oy, 0 + wP.ox, faceColor);
+  setV(9 + wP.oz, 2 + wP.oy, 0 + wP.ox, faceColor);
+  setV(10 + wP.oz, 0 + wP.oy, 0 + wP.ox, headColor);
+  setV(10 + wP.oz, 1 + wP.oy, 0 + wP.ox, headColor);
+  setV(10 + wP.oz, 2 + wP.oy, 0 + wP.ox, headColor);
+  if (weaponGlow > 0) {
+    setV(11 + wP.oz, 1 + wP.oy, 0 + wP.ox, blend(faceColor, '#ffffff', weaponGlow));
+  }
+}
+
+function buildSwordShieldWeapon(wP: BodyPartPose, rA: BodyPartPose, setV: (z: number, y: number, x: number, c: string) => void, weaponGlow: number, armorWeapon: string) {
+  setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c5a059');
+  for (let z = 3; z <= 4; z++) {
+    setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#8a6914');
+  }
+  setV(5 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#999999');
+  setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#999999');
+  setV(5 + wP.oz, 2 + wP.oy, 0 + wP.ox, '#999999');
+  for (let z = 6; z <= 11; z++) {
+    const bladeShade = z > 9 ? 1.3 : z > 7 ? 1.1 : 1.0;
+    const bladeColor = weaponGlow > 0 ? blend(armorWeapon, '#ffffff', weaponGlow * (z - 5) * 0.1) : shade(armorWeapon, bladeShade);
+    setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, bladeColor);
+  }
+  setV(12 + wP.oz, 1 + wP.oy, 0 + wP.ox, weaponGlow > 0 ? blend('#ffffff', armorWeapon, 0.3) : shade(armorWeapon, 1.4));
+
+  setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
+  setV(5 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
+  setV(5 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#aaaaaa');
+  setV(4 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#888888');
+  setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#888888');
+  setV(3 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#777777');
+}
+
+function buildGreatswordWeapon(wP: BodyPartPose, setV: (z: number, y: number, x: number, c: string) => void, weaponGlow: number, armorWeapon: string) {
+  setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c5a059');
+  setV(3 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#5a3a1a');
+  setV(4 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#5a3a1a');
+  setV(5 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#999999');
+  setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#888888');
+  setV(5 + wP.oz, 2 + wP.oy, 0 + wP.ox, '#999999');
+  for (let z = 6; z <= 13; z++) {
+    const bladeShade = z > 11 ? 1.3 : z > 8 ? 1.1 : 1.0;
+    const bladeColor = weaponGlow > 0 ? blend(armorWeapon, '#ffffff', weaponGlow * (z - 5) * 0.08) : shade(armorWeapon, bladeShade);
+    setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, bladeColor);
+  }
+  if (weaponGlow > 0) {
+    setV(13 + wP.oz, 1 + wP.oy, 0 + wP.ox, blend('#ffffff', armorWeapon, weaponGlow * 0.5));
+  }
+}
+
+function buildAxeShieldWeapon(wP: BodyPartPose, rA: BodyPartPose, setV: (z: number, y: number, x: number, c: string) => void, weaponGlow: number, armorWeapon: string) {
+  const handle = '#5a3a1a';
+  const axeHead = '#8a8a8a';
+  setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, shade(handle, 0.7));
+  setV(3 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(4 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, handle);
+  const headColor = weaponGlow > 0 ? blend(axeHead, '#ff4400', weaponGlow * 0.4) : axeHead;
+  setV(6 + wP.oz, 1 + wP.oy, 0 + wP.ox, headColor);
+  setV(7 + wP.oz, 1 + wP.oy, 0 + wP.ox, headColor);
+  setV(8 + wP.oz, 1 + wP.oy, 0 + wP.ox, headColor);
+  setV(6 + wP.oz, 0 + wP.oy, 0 + wP.ox, shade(axeHead, 1.2));
+  setV(7 + wP.oz, 0 + wP.oy, 0 + wP.ox, shade(axeHead, 1.3));
+  setV(8 + wP.oz, 0 + wP.oy, 0 + wP.ox, shade(axeHead, 1.2));
+
+  setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
+  setV(5 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
+  setV(5 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#888888');
+  setV(4 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#888888');
+  setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#777777');
+}
+
 function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number, heroName?: string, heroItems?: ({ id: number } | null)[]): VoxelModel {
   const isPirate = heroName?.includes('Racalvin') || heroName?.includes('Pirate King');
   const skin = RACE_SKIN[race] || '#c4956a';
   const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
   const hair = race === 'Elf' ? '#e8d090' : race === 'Orc' ? '#2a2a2a' : race === 'Undead' ? '#444444' : race === 'Dwarf' ? '#a0522d' : '#3a2a1a';
   const eye = race === 'Undead' ? '#ff4444' : race === 'Orc' ? '#ffaa00' : '#2244aa';
+  const weaponType = getHeroWeapon(race, heroClass);
 
   const W = 8, D = 8, H = 14;
   const model: VoxelModel = [];
@@ -443,7 +637,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     }
   }
 
-  const poses = getAnimPoses(heroClass, animState, animTimer);
+  const poses = getAnimPoses(heroClass, animState, animTimer, weaponType);
 
   const setV = (z: number, y: number, x: number, c: string) => {
     if (z >= 0 && z < H && y >= 0 && y < D && x >= 0 && x < W) {
@@ -454,19 +648,20 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     }
   };
 
+  const bootColor = shade(armor.primary, 0.7);
+  const bootAccent = shade(armor.primary, 0.85);
   const lL = poses.leftLeg, rL = poses.rightLeg;
-  setV(0 + lL.oz, 2 + lL.oy, 2 + lL.ox, armor.primary);
-  setV(0 + lL.oz, 3 + lL.oy, 2 + lL.ox, armor.primary);
+  setV(0 + lL.oz, 2 + lL.oy, 2 + lL.ox, bootColor);
+  setV(0 + lL.oz, 3 + lL.oy, 2 + lL.ox, bootColor);
+  setV(0 + lL.oz, 2 + lL.oy, 3 + lL.ox, bootAccent);
   setV(1 + lL.oz, 2 + lL.oy, 2 + lL.ox, armor.secondary);
   setV(1 + lL.oz, 3 + lL.oy, 2 + lL.ox, armor.secondary);
 
-  setV(0 + rL.oz, 2 + rL.oy, 5 + rL.ox, armor.primary);
-  setV(0 + rL.oz, 3 + rL.oy, 5 + rL.ox, armor.primary);
+  setV(0 + rL.oz, 2 + rL.oy, 5 + rL.ox, bootColor);
+  setV(0 + rL.oz, 3 + rL.oy, 5 + rL.ox, bootColor);
+  setV(0 + rL.oz, 2 + rL.oy, 4 + rL.ox, bootAccent);
   setV(1 + rL.oz, 2 + rL.oy, 5 + rL.ox, armor.secondary);
   setV(1 + rL.oz, 3 + rL.oy, 5 + rL.ox, armor.secondary);
-
-  setV(0, 2, 2, skin); setV(0, 3, 2, skin);
-  setV(0, 2, 5, skin); setV(0, 3, 5, skin);
 
   const tP = poses.torso;
   for (let x = 2; x <= 5; x++) {
@@ -477,6 +672,12 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
       setV(5 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
     }
   }
+  for (let y = 2; y <= 4; y++) {
+    setV(3 + tP.oz, y + tP.oy, 1 + tP.ox, shade(armor.primary, 0.9));
+    setV(3 + tP.oz, y + tP.oy, 6 + tP.ox, shade(armor.primary, 0.9));
+  }
+  setV(4 + tP.oz, 3 + tP.oy, 3 + tP.ox, shade(armor.secondary, 1.1));
+  setV(4 + tP.oz, 3 + tP.oy, 4 + tP.ox, shade(armor.secondary, 1.1));
 
   if (heroClass === 'Warrior') {
     setV(5 + tP.oz, 2 + tP.oy, 2 + tP.ox, '#666666');
@@ -486,6 +687,10 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     for (let x = 2; x <= 5; x++) {
       setV(4 + tP.oz, 2 + tP.oy, x + tP.ox, '#555555');
     }
+    setV(5 + tP.oz, 3 + tP.oy, 1 + tP.ox, shade(armor.secondary, 0.8));
+    setV(5 + tP.oz, 3 + tP.oy, 6 + tP.ox, shade(armor.secondary, 0.8));
+    setV(5 + tP.oz, 2 + tP.oy, 1 + tP.ox, shade(armor.secondary, 0.7));
+    setV(5 + tP.oz, 2 + tP.oy, 6 + tP.ox, shade(armor.secondary, 0.7));
   }
 
   if (heroClass === 'Mage') {
@@ -501,6 +706,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   }
 
   const lA = poses.leftArm;
+  setV(5 + lA.oz, 2 + lA.oy, 1 + lA.ox, shade(armor.secondary, 0.9));
   setV(4 + lA.oz, 2 + lA.oy, 1 + lA.ox, armor.secondary);
   setV(3 + lA.oz, 2 + lA.oy, 1 + lA.ox, armor.secondary);
   setV(3 + lA.oz, 3 + lA.oy, 1 + lA.ox, armor.secondary);
@@ -508,6 +714,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   setV(2 + lA.oz, 3 + lA.oy, 1 + lA.ox, skin);
 
   const rA = poses.rightArm;
+  setV(5 + rA.oz, 2 + rA.oy, 6 + rA.ox, shade(armor.secondary, 0.9));
   setV(4 + rA.oz, 2 + rA.oy, 6 + rA.ox, armor.secondary);
   setV(3 + rA.oz, 2 + rA.oy, 6 + rA.ox, armor.secondary);
   setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, armor.secondary);
@@ -606,28 +813,26 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   if (hasRapier) {
     buildRapierWeapon(wP, setV, poses.weaponGlow);
   } else if (heroClass === 'Warrior') {
-    setV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c5a059');
-    for (let z = 3; z <= 4; z++) {
-      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#8a6914');
+    if (weaponType === 'heavy_axe') {
+      buildAxeWeapon(wP, setV, poses.weaponGlow, armor.weapon);
+    } else if (weaponType === 'spear') {
+      buildSpearWeapon(wP, setV, poses.weaponGlow, armor.weapon);
+    } else if (weaponType === 'war_hammer') {
+      buildHammerWeapon(wP, setV, poses.weaponGlow, armor.weapon);
+    } else if (weaponType === 'greatsword') {
+      buildGreatswordWeapon(wP, setV, poses.weaponGlow, armor.weapon);
+    } else if (weaponType === 'axe_shield') {
+      buildAxeShieldWeapon(wP, rA, setV, poses.weaponGlow, armor.weapon);
+    } else {
+      buildSwordShieldWeapon(wP, rA, setV, poses.weaponGlow, armor.weapon);
     }
-    setV(5 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#999999');
-    setV(5 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#999999');
-    setV(5 + wP.oz, 2 + wP.oy, 0 + wP.ox, '#999999');
-    for (let z = 6; z <= 11; z++) {
-      const bladeShade = z > 9 ? 1.3 : z > 7 ? 1.1 : 1.0;
-      const bladeColor = poses.weaponGlow > 0 ? blend(armor.weapon, '#ffffff', poses.weaponGlow * (z - 5) * 0.1) : shade(armor.weapon, bladeShade);
-      setV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, bladeColor);
+
+    if (weaponType === 'sword_shield' || weaponType === 'axe_shield') {
+      setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, '#888888');
+      setV(10 + hP.oz, 3 + hP.oy, 4 + hP.ox, '#888888');
+      setV(10 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#888888');
+      setV(10 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#888888');
     }
-    setV(12 + wP.oz, 1 + wP.oy, 0 + wP.ox, poses.weaponGlow > 0 ? blend('#ffffff', armor.weapon, 0.3) : shade(armor.weapon, 1.4));
-
-    setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
-    setV(5 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#aaaaaa');
-    setV(5 + rA.oz, 4 + rA.oy, 6 + rA.ox, '#aaaaaa');
-
-    setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, '#888888');
-    setV(10 + hP.oz, 3 + hP.oy, 4 + hP.ox, '#888888');
-    setV(10 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#888888');
-    setV(10 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#888888');
   }
 
   if (!hasRapier && heroClass === 'Worg') {
@@ -1014,7 +1219,7 @@ export class VoxelRenderer {
     this.renderVoxelModel(ctx, x, groundY - 12, model, this.cubeSize, facing);
 
     if (animState === 'attack' && animTimer > 0.02) {
-      this.drawAttackVFX(ctx, x, groundY, heroClass, facing, animTimer);
+      this.drawAttackVFX(ctx, x, groundY, heroClass, facing, animTimer, race);
     }
     if (animState === 'ability' && animTimer > 0.02) {
       this.drawAbilityVFX(ctx, x, groundY, heroClass, facing, animTimer);
@@ -1030,10 +1235,211 @@ export class VoxelRenderer {
     }
   }
 
-  private drawAttackVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number) {
+  private drawAttackVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number, race?: string) {
     const atkProgress = Math.min(1, t / 0.65);
+    const weaponType = race ? getHeroWeapon(race, heroClass) : 'sword_shield';
 
     if (heroClass === 'Warrior' || heroClass === 'Worg') {
+      if (weaponType === 'heavy_axe') {
+        const chop = atkProgress >= 0.4 && atkProgress < 0.65 ? (atkProgress - 0.4) / 0.25 : 0;
+        const followThru = atkProgress >= 0.65 ? Math.min(1, (atkProgress - 0.65) / 0.25) : 0;
+
+        if (chop > 0.05) {
+          ctx.save();
+          ctx.translate(x, y - 10);
+          const chopDist = 20 + chop * 25;
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 5 + chop * 4;
+          ctx.globalAlpha = 0.8 + chop * 0.2;
+          ctx.shadowColor = '#ef4444';
+          ctx.shadowBlur = 14 + chop * 12;
+          const chopAngle = facing;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(chopAngle) * 5, Math.sin(chopAngle) * 5 - 15 + chop * 15);
+          ctx.lineTo(Math.cos(chopAngle) * chopDist, Math.sin(chopAngle) * chopDist + chop * 10);
+          ctx.stroke();
+
+          ctx.strokeStyle = '#fca5a5';
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(chopAngle - 0.2) * 8, Math.sin(chopAngle - 0.2) * 8 - 12 + chop * 12);
+          ctx.lineTo(Math.cos(chopAngle - 0.1) * (chopDist - 5), Math.sin(chopAngle - 0.1) * (chopDist - 5) + chop * 8);
+          ctx.stroke();
+
+          if (chop > 0.7) {
+            const impactX = Math.cos(chopAngle) * chopDist;
+            const impactY = Math.sin(chopAngle) * chopDist;
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = (1 - chop) * 3;
+            ctx.beginPath();
+            ctx.arc(impactX, impactY + chop * 10, 8 + chop * 12, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+
+        if (followThru > 0 && followThru < 0.7) {
+          ctx.save();
+          ctx.translate(x, y - 5);
+          const fadeAlpha = Math.max(0, (0.7 - followThru) * 1.8);
+          const impactX = Math.cos(facing) * 30;
+          const impactY = Math.sin(facing) * 30;
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = fadeAlpha * 0.5;
+          ctx.shadowColor = '#ef4444';
+          ctx.shadowBlur = 8;
+          const shockRadius = 8 + followThru * 25;
+          ctx.beginPath();
+          ctx.arc(impactX, impactY, shockRadius, 0, Math.PI * 2);
+          ctx.stroke();
+          for (let i = 0; i < 5; i++) {
+            const sa = Math.random() * Math.PI * 2;
+            const sd = shockRadius * 0.5 + Math.random() * shockRadius * 0.5;
+            ctx.fillStyle = i % 2 === 0 ? '#ffd700' : '#ef4444';
+            ctx.globalAlpha = fadeAlpha * 0.4;
+            ctx.beginPath();
+            ctx.arc(impactX + Math.cos(sa) * sd, impactY + Math.sin(sa) * sd, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+      } else if (weaponType === 'spear') {
+        const thrust = atkProgress >= 0.3 && atkProgress < 0.55 ? (atkProgress - 0.3) / 0.25 : 0;
+        const retract = atkProgress >= 0.55 ? Math.min(1, (atkProgress - 0.55) / 0.3) : 0;
+
+        if (thrust > 0.05) {
+          ctx.save();
+          ctx.translate(x, y - 10);
+          const thrustDist = 15 + thrust * 35;
+          ctx.strokeStyle = '#22d3ee';
+          ctx.lineWidth = 3 + thrust * 3;
+          ctx.globalAlpha = 0.7 + thrust * 0.3;
+          ctx.shadowColor = '#22d3ee';
+          ctx.shadowBlur = 10 + thrust * 8;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(facing) * 5, Math.sin(facing) * 5);
+          ctx.lineTo(Math.cos(facing) * thrustDist, Math.sin(facing) * thrustDist);
+          ctx.stroke();
+
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = thrust * 0.5;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(facing) * 8, Math.sin(facing) * 8);
+          ctx.lineTo(Math.cos(facing) * (thrustDist - 3), Math.sin(facing) * (thrustDist - 3));
+          ctx.stroke();
+
+          if (thrust > 0.6) {
+            const tipX = Math.cos(facing) * thrustDist;
+            const tipY = Math.sin(facing) * thrustDist;
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = (thrust - 0.6) * 2.5;
+            ctx.shadowColor = '#22d3ee';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(tipX, tipY, 3 + thrust * 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+
+        if (retract > 0 && retract < 0.6) {
+          ctx.save();
+          ctx.translate(x, y - 10);
+          const fadeAlpha = Math.max(0, (0.6 - retract) * 2);
+          const tipX = Math.cos(facing) * 45;
+          const tipY = Math.sin(facing) * 45;
+          ctx.strokeStyle = '#22d3ee';
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = fadeAlpha * 0.4;
+          ctx.beginPath();
+          ctx.arc(tipX, tipY, 5 + retract * 15, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+      } else if (weaponType === 'war_hammer') {
+        const slam = atkProgress >= 0.45 && atkProgress < 0.65 ? (atkProgress - 0.45) / 0.2 : 0;
+        const followThru = atkProgress >= 0.65 ? Math.min(1, (atkProgress - 0.65) / 0.25) : 0;
+
+        if (slam > 0.3) {
+          ctx.save();
+          ctx.translate(x, y - 5);
+          const impactX = Math.cos(facing) * (15 + slam * 20);
+          const impactY = Math.sin(facing) * (15 + slam * 20);
+
+          ctx.strokeStyle = '#ffd700';
+          ctx.lineWidth = 4 + slam * 4;
+          ctx.globalAlpha = slam * 0.9;
+          ctx.shadowColor = '#ffd700';
+          ctx.shadowBlur = 15 + slam * 10;
+          ctx.beginPath();
+          ctx.moveTo(0, -10 + slam * 10);
+          ctx.lineTo(impactX, impactY);
+          ctx.stroke();
+
+          if (slam > 0.7) {
+            const shockRadius = (slam - 0.7) * 60;
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = (1 - slam) * 3;
+            ctx.beginPath();
+            ctx.arc(impactX, impactY, shockRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = (1 - slam) * 2;
+            ctx.beginPath();
+            ctx.arc(impactX, impactY, shockRadius * 1.5, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+
+        if (followThru > 0 && followThru < 0.8) {
+          ctx.save();
+          ctx.translate(x, y - 2);
+          const fadeAlpha = Math.max(0, (0.8 - followThru) * 1.5);
+          const impactX = Math.cos(facing) * 35;
+          const impactY = Math.sin(facing) * 35;
+          const waveRadius = 15 + followThru * 40;
+          ctx.strokeStyle = '#ffd700';
+          ctx.lineWidth = 2.5;
+          ctx.globalAlpha = fadeAlpha * 0.5;
+          ctx.shadowColor = '#f59e0b';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(impactX, impactY, waveRadius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          for (let c = 0; c < 6; c++) {
+            const ca = (c / 6) * Math.PI * 2;
+            const cLen = 8 + followThru * 20;
+            ctx.strokeStyle = '#fde68a';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = fadeAlpha * 0.3;
+            ctx.beginPath();
+            ctx.moveTo(impactX, impactY);
+            ctx.lineTo(impactX + Math.cos(ca) * cLen, impactY + Math.sin(ca) * cLen);
+            ctx.stroke();
+          }
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+      } else {
       const swing = atkProgress >= 0.3 && atkProgress < 0.6 ? (atkProgress - 0.3) / 0.3 : 0;
       const followThru = atkProgress >= 0.6 ? Math.min(1, (atkProgress - 0.6) / 0.25) : 0;
       const primaryColor = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
@@ -1128,6 +1534,7 @@ export class VoxelRenderer {
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
         ctx.restore();
+      }
       }
     }
 
