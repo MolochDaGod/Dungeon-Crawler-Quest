@@ -22,7 +22,8 @@ The game's architecture centers on a React frontend with a custom HTML5 Canvas 2
 - **RPG UI Overlay:** In-game HUD with ability hotbar (with level indicators and level-up buttons), item slots, buff/debuff display, KDA, scoreboard, and custom cursor.
 - **Spell VFX System:** Comprehensive system with 16 visual effect types, multi-layered impact VFX, projectiles with trails, screen shake, and charge systems.
 - **Keybinding System:** Fully rebindable actions persisted in localStorage. Ctrl+Q/W/E/R to level abilities.
-- **Fog of War:** Full fog of war on both main 2D canvas and minimap. Vision sources: heroes (600px), towers (500px), minions (300px). Explored-but-not-visible areas shown dimly. Enemy entities hidden outside vision.
+- **Fog of War (MOBA):** Full fog of war on both main 2D canvas and minimap. Vision sources: heroes (600px), towers (500px), minions (300px). Explored-but-not-visible areas shown dimly. Enemy entities hidden outside vision.
+- **Dungeon Line of Sight:** Recursive shadowcasting algorithm (8-octant) computes true LOS from player position. Walls block vision — no seeing through walls or around corners. 7-tile vision radius with distance falloff. Revealed-but-not-visible tiles shown at 0.15 opacity. Enemies, chests, projectiles, particles all hidden outside LOS. Cached per player tile position for performance.
 - **Ability Leveling System:** Heroes gain ability points on level up. Each ability (Q/W/E/R) can be leveled up to 4 times (R up to 3 times at levels 6/11/16). Ability damage scales +25% per level.
 
 **Features:**

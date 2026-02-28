@@ -119,6 +119,9 @@ export interface DungeonState {
   showInventory: boolean;
   killFeed: { text: string; color: string; time: number }[];
   gameTime: number;
+  visibleTiles: Set<number>;
+  lastVisTileX: number;
+  lastVisTileY: number;
 }
 
 export interface DungeonHudState {
@@ -209,6 +212,9 @@ export function createDungeonState(heroId: number): DungeonState {
     showInventory: false,
     killFeed: [],
     gameTime: 0,
+    visibleTiles: new Set<number>(),
+    lastVisTileX: -1,
+    lastVisTileY: -1,
   };
 
   generateFloor(state);
@@ -378,32 +384,118 @@ function createEnemy(
   };
 }
 
-function revealAround(state: DungeonState, wx: number, wy: number, radius: number) {
-  const tx = Math.floor(wx / TILE_SIZE);
-  const ty = Math.floor(wy / TILE_SIZE);
-  for (let dy = -radius; dy <= radius; dy++) {
-    for (let dx = -radius; dx <= radius; dx++) {
-      const nx = tx + dx;
-      const ny = ty + dy;
-      if (nx >= 0 && nx < state.mapWidth && ny >= 0 && ny < state.mapHeight) {
-        if (dx * dx + dy * dy <= radius * radius) {
-          state.tiles[ny][nx].revealed = true;
+const VISION_TILE_RADIUS = 7;
+const VISION_RADIUS = VISION_TILE_RADIUS * TILE_SIZE;
+
+function tileKey(tx: number, ty: number, mapW: number): number {
+  return ty * mapW + tx;
+}
+
+function isOpaque(state: DungeonState, tx: number, ty: number): boolean {
+  if (tx < 0 || ty < 0 || tx >= state.mapWidth || ty >= state.mapHeight) return true;
+  return state.tiles[ty][tx].type === 'wall';
+}
+
+function castLight(
+  state: DungeonState, visible: Set<number>,
+  cx: number, cy: number, maxRadius: number,
+  row: number, startSlope: number, endSlope: number,
+  xx: number, xy: number, yx: number, yy: number
+) {
+  if (startSlope < endSlope) return;
+  const mapW = state.mapWidth;
+  const rSq = maxRadius * maxRadius;
+
+  let nextStart = startSlope;
+  for (let i = row; i <= maxRadius; i++) {
+    let blocked = false;
+    for (let dx = -i, dy = -i; dx <= 0; dx++) {
+      const mx = cx + dx * xx + dy * xy;
+      const my = cy + dx * yx + dy * yy;
+
+      const lSlope = (dx - 0.5) / (dy + 0.5);
+      const rSlope = (dx + 0.5) / (dy - 0.5);
+
+      if (startSlope < rSlope) continue;
+      if (endSlope > lSlope) break;
+
+      if (mx >= 0 && my >= 0 && mx < state.mapWidth && my < state.mapHeight) {
+        if (dx * dx + dy * dy <= rSq) {
+          visible.add(tileKey(mx, my, mapW));
         }
       }
+
+      if (blocked) {
+        if (isOpaque(state, mx, my)) {
+          nextStart = rSlope;
+          continue;
+        } else {
+          blocked = false;
+          startSlope = nextStart;
+        }
+      } else if (isOpaque(state, mx, my) && i < maxRadius) {
+        blocked = true;
+        castLight(state, visible, cx, cy, maxRadius, i + 1, nextStart, rSlope, xx, xy, yx, yy);
+        nextStart = rSlope;
+      }
     }
+    if (blocked) break;
   }
 }
 
-const VISION_RADIUS = 280;
+function computeVisibility(state: DungeonState) {
+  const ptx = Math.floor(state.player.x / TILE_SIZE);
+  const pty = Math.floor(state.player.y / TILE_SIZE);
+
+  if (ptx === state.lastVisTileX && pty === state.lastVisTileY) return;
+  state.lastVisTileX = ptx;
+  state.lastVisTileY = pty;
+
+  const mapW = state.mapWidth;
+  const visible = new Set<number>();
+  visible.add(tileKey(ptx, pty, mapW));
+
+  const multipliers = [
+    [1,  0,  0,  1],
+    [0,  1,  1,  0],
+    [0, -1,  1,  0],
+    [-1,  0,  0,  1],
+    [-1,  0,  0, -1],
+    [0, -1, -1,  0],
+    [0,  1, -1,  0],
+    [1,  0,  0, -1],
+  ];
+
+  for (const m of multipliers) {
+    castLight(state, visible, ptx, pty, VISION_TILE_RADIUS, 1, 1.0, 0.0, m[0], m[1], m[2], m[3]);
+  }
+
+  state.visibleTiles = visible;
+
+  visible.forEach((key) => {
+    const ty = Math.floor(key / mapW);
+    const tx = key % mapW;
+    if (tx >= 0 && tx < state.mapWidth && ty >= 0 && ty < state.mapHeight) {
+      state.tiles[ty][tx].revealed = true;
+    }
+  });
+}
+
+function forceVisibilityRefresh(state: DungeonState) {
+  state.lastVisTileX = -1;
+  state.lastVisTileY = -1;
+  computeVisibility(state);
+}
+
+function revealAround(state: DungeonState, _wx: number, _wy: number, _radius: number) {
+  computeVisibility(state);
+}
 
 function isInPlayerVision(state: DungeonState, wx: number, wy: number): boolean {
   const tx = Math.floor(wx / TILE_SIZE);
   const ty = Math.floor(wy / TILE_SIZE);
   if (tx < 0 || ty < 0 || tx >= state.mapWidth || ty >= state.mapHeight) return false;
-  if (!state.tiles[ty][tx].revealed) return false;
-  const dx = wx - state.player.x;
-  const dy = wy - state.player.y;
-  return dx * dx + dy * dy <= VISION_RADIUS * VISION_RADIUS;
+  return state.visibleTiles.has(tileKey(tx, ty, state.mapWidth));
 }
 
 function distXY(a: { x: number; y: number }, b: { x: number; y: number }): number {
@@ -881,6 +973,7 @@ export class DungeonRenderer {
   }
 
   render(state: DungeonState) {
+    computeVisibility(state);
     const { ctx, canvas } = this;
     const W = canvas.width, H = canvas.height;
     const cam = state.camera;
@@ -901,9 +994,15 @@ export class DungeonRenderer {
 
     this.renderPlayer(ctx, state);
 
-    for (const proj of state.projectiles) this.renderProjectile(ctx, proj);
-    for (const pt of state.particles) this.renderParticle(ctx, pt);
-    for (const ft of state.floatingTexts) this.renderFloatingText(ctx, ft);
+    for (const proj of state.projectiles) {
+      if (isInPlayerVision(state, proj.x, proj.y)) this.renderProjectile(ctx, proj);
+    }
+    for (const pt of state.particles) {
+      if (isInPlayerVision(state, pt.x, pt.y)) this.renderParticle(ctx, pt);
+    }
+    for (const ft of state.floatingTexts) {
+      if (isInPlayerVision(state, ft.x, ft.y)) this.renderFloatingText(ctx, ft);
+    }
 
     ctx.restore();
 
@@ -918,7 +1017,6 @@ export class DungeonRenderer {
 
     const px = state.player.x;
     const py = state.player.y;
-
     const vrSq = VISION_RADIUS * VISION_RADIUS;
 
     for (let ty = startTY; ty < endTY; ty++) {
@@ -931,8 +1029,8 @@ export class DungeonRenderer {
         const tileCY = y + TILE_SIZE / 2;
         const dx = tileCX - px, dy = tileCY - py;
         const distSq = dx * dx + dy * dy;
-        const inVision = distSq <= vrSq;
-        ctx.globalAlpha = inVision ? Math.max(0.4, 1 - distSq / vrSq * 0.6) : 0.2;
+        const inVision = state.visibleTiles.has(tileKey(tx, ty, state.mapWidth));
+        ctx.globalAlpha = inVision ? Math.max(0.4, 1 - distSq / vrSq * 0.6) : 0.15;
 
         let voxType: DungeonTileVoxelType = 'floor';
         if (tile.type === 'wall') voxType = 'wall';
@@ -990,7 +1088,7 @@ export class DungeonRenderer {
     for (let ty = tStartY; ty < tEndY; ty++) {
       for (let tx = tStartX; tx < tEndX; tx++) {
         const tile = state.tiles[ty][tx];
-        if (!tile.revealed) continue;
+        if (!state.visibleTiles.has(tileKey(tx, ty, state.mapWidth))) continue;
         if (tile.type !== 'wall') continue;
         const hasFloorNeighbor = (
           (tx > 0 && state.tiles[ty][tx - 1].type === 'floor') ||
@@ -1003,10 +1101,7 @@ export class DungeonRenderer {
         if (seed > 75) {
           const wx = tx * TILE_SIZE + TILE_SIZE / 2;
           const wy = ty * TILE_SIZE + TILE_SIZE / 2;
-          const dd = (wx - px) * (wx - px) + (wy - py) * (wy - py);
-          if (dd < VISION_RADIUS * VISION_RADIUS * 1.2) {
-            torchPositions.push({ x: wx, y: wy });
-          }
+          torchPositions.push({ x: wx, y: wy });
         }
       }
     }
@@ -1028,6 +1123,7 @@ export class DungeonRenderer {
   private renderChests(ctx: CanvasRenderingContext2D, state: DungeonState) {
     for (const chest of state.chests) {
       if (chest.opened) continue;
+      if (!isInPlayerVision(state, chest.x, chest.y)) continue;
       ctx.save();
       ctx.translate(chest.x, chest.y);
       ctx.fillStyle = '#a16207';
