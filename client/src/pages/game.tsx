@@ -10,7 +10,7 @@ import {
   MobaRenderer, handlePlayerAbility, handlePlayerAttack,
   handleRightClick, handleAttackMoveClick, handleStopCommand,
   buyItem, handleDodge, handleDashAttack, handleBlock,
-  spawnAreaDamageZone, handleRmbMelee
+  spawnAreaDamageZone, handleRmbMelee, handleLevelUpAbility
 } from '@/game/engine';
 import { ThreeRenderer } from '@/game/three-renderer';
 import { VoxelRenderer } from '@/game/voxel';
@@ -406,10 +406,6 @@ export default function GamePage() {
         handleStopCommand(state);
       }
 
-      if (key === 's' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-        handleStopCommand(state);
-      }
-
       if (key === 'a') {
         state.aKeyHeld = true;
         state.cursorMode = 'attackmove';
@@ -427,10 +423,10 @@ export default function GamePage() {
         handleBlock(state, true);
       }
 
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility1], e)) handlePlayerAbility(state, 0);
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility2], e)) handlePlayerAbility(state, 1);
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility3], e)) handlePlayerAbility(state, 2);
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility4], e)) handlePlayerAbility(state, 3);
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility1], e)) { e.preventDefault(); handleLevelUpAbility(state, 0); }
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility2], e)) { e.preventDefault(); handleLevelUpAbility(state, 1); }
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility3], e)) { e.preventDefault(); handleLevelUpAbility(state, 2); }
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility4], e)) { e.preventDefault(); handleLevelUpAbility(state, 3); }
 
       if (key === 'shift') combatActor.send({ type: 'SHIFT_DOWN' });
       if (key === 'r') combatActor.send({ type: 'R_DOWN' });
@@ -830,9 +826,10 @@ export default function GamePage() {
                               <span style={{ color: '#60a5fa' }}>Mana: {ab.manaCost}</span>
                               <span style={{ color: '#fbbf24' }}>CD: {ab.cooldown}s</span>
                             </div>
-                            {ab.damage > 0 && <div className="text-[9px] mt-0.5" style={{ color: '#f87171' }}>Damage: {ab.damage}</div>}
+                            {ab.damage > 0 && <div className="text-[9px] mt-0.5" style={{ color: '#f87171' }}>Damage: {ab.damage}{(hud.abilityLevels?.[i] || 0) > 1 ? ` (x${(1 + ((hud.abilityLevels[i] - 1) * 0.25)).toFixed(2)})` : ''}</div>}
                             {ab.range > 0 && <div className="text-[9px]" style={{ color: '#4ade80' }}>Range: {ab.range}</div>}
                             {hasCharges && <div className="text-[9px] mt-0.5" style={{ color: '#a78bfa' }}>Charges: {charges}/{maxCharges}</div>}
+                            <div className="text-[9px] mt-0.5" style={{ color: '#ffd700' }}>Level: {hud.abilityLevels?.[i] || 0}/{i === 3 ? 3 : 4}</div>
                           </div>
                         </div>
                         <button
@@ -887,6 +884,39 @@ export default function GamePage() {
                             </div>
                           )}
                         </div>
+                        <div className="flex" style={{ gap: 1 }} data-testid={`pips-ability-level-${i}`}>
+                          {Array.from({ length: i === 3 ? 3 : 4 }).map((_, li) => (
+                            <div
+                              key={li}
+                              style={{
+                                width: 6, height: 3,
+                                borderRadius: 1,
+                                background: li < (hud.abilityLevels?.[i] || 0) ? '#ffd700' : '#333',
+                                boxShadow: li < (hud.abilityLevels?.[i] || 0) ? '0 0 3px rgba(255,215,0,0.5)' : 'none',
+                              }}
+                            />
+                          ))}
+                        </div>
+                        {(hud.abilityPoints || 0) > 0 && (hud.abilityLevels?.[i] || 0) < (i === 3 ? 3 : 4) && (
+                          <button
+                            className="text-[7px] font-black cursor-pointer"
+                            style={{
+                              color: '#ffd700',
+                              background: 'rgba(255,215,0,0.15)',
+                              border: '1px solid rgba(255,215,0,0.4)',
+                              borderRadius: 2,
+                              padding: '0 3px',
+                              lineHeight: '12px',
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (stateRef.current) handleLevelUpAbility(stateRef.current, i);
+                            }}
+                            data-testid={`button-levelup-ability-${i}`}
+                          >
+                            +
+                          </button>
+                        )}
                       </div>
                     );
                   })}

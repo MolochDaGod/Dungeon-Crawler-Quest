@@ -223,7 +223,8 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     spellProjectiles: [],
     screenShake: 0,
     areaDamageZones: [],
-    pendingSpriteEffects: []
+    pendingSpriteEffects: [],
+    firstBloodClaimed: false
   };
 
   const team0Heroes = [playerHeroId];
@@ -307,7 +308,10 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     assignedLane: 1,
     abilityCharges: initAbilityCharges(hd.heroClass),
     abilityChargeTimers: [0, 0, 0, 0],
-    aiChatTimer: 5 + Math.random() * 20
+    abilityLevels: [0, 0, 0, 0],
+    abilityPoints: 1,
+    aiChatTimer: 5 + Math.random() * 20,
+    killStreak: 0
   };
 }
 
@@ -524,11 +528,11 @@ function spawnMinionWave(state: MobaState) {
           x: base.x + offsets[lane].x + (Math.random() - 0.5) * 30,
           y: base.y + offsets[lane].y + (Math.random() - 0.5) * 30,
           team, lane,
-          hp: isSiege ? 300 : 200 + Math.floor(state.gameTime / 60) * 15,
-          maxHp: isSiege ? 300 : 200 + Math.floor(state.gameTime / 60) * 15,
+          hp: isSiege ? 300 : 200 + Math.floor(state.gameTime / 60) * 15 + Math.floor(state.gameTime / 300) * 20,
+          maxHp: isSiege ? 300 : 200 + Math.floor(state.gameTime / 60) * 15 + Math.floor(state.gameTime / 300) * 20,
           waypointIndex: 0,
           targetId: null,
-          atk: isSiege ? 35 : 18 + Math.floor(state.gameTime / 60) * 2,
+          atk: isSiege ? 35 : 18 + Math.floor(state.gameTime / 60) * 2 + Math.floor(state.gameTime / 300) * 3,
           def: isSiege ? 10 : 3,
           spd: isSiege ? 60 : 80,
           rng: isSiege ? 250 : 80,
@@ -561,8 +565,9 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
 
   for (const hero of state.heroes) {
     if (!hero.dead) {
-      hero.gold += dt * 2;
+      hero.gold += dt * 1;
       hero.xp += dt * 1;
+      hero.mp = Math.min(hero.maxMp, hero.mp + dt * (1 + hero.level * 0.3));
       checkLevelUp(state, hero);
     }
   }
@@ -1100,6 +1105,94 @@ function findBestAbilityTarget(state: MobaState, hero: MobaHero, ability: any, a
   return findNearestEnemy(state, hero, ability.range + 50);
 }
 
+function getGamePhase(gameTime: number): 'laning' | 'midgame' | 'lategame' {
+  if (gameTime < 600) return 'laning';
+  if (gameTime < 1500) return 'midgame';
+  return 'lategame';
+}
+
+function countAlliedMinionsNearby(state: MobaState, hero: MobaHero, range: number): number {
+  let count = 0;
+  for (const m of state.minions) {
+    if (m.team !== hero.team || m.dead) continue;
+    if (dist(hero, m) < range) count++;
+  }
+  return count;
+}
+
+function countAlliedHeroesNearby(state: MobaState, hero: MobaHero, range: number): number {
+  let count = 0;
+  for (const h of state.heroes) {
+    if (h.team !== hero.team || h.dead || h.id === hero.id) continue;
+    if (dist(hero, h) < range) count++;
+  }
+  return count;
+}
+
+function isNearEnemyTower(state: MobaState, entity: { x: number; y: number; team: number }): boolean {
+  for (const t of state.towers) {
+    if (t.team === entity.team || t.dead) continue;
+    if (dist(entity, t) < t.rng + 80) return true;
+  }
+  return false;
+}
+
+function hasAlliedMinionAhead(state: MobaState, hero: MobaHero, target: { x: number; y: number }): boolean {
+  const heroDistToTarget = dist(hero, target);
+  for (const m of state.minions) {
+    if (m.team !== hero.team || m.dead) continue;
+    const minionDistToTarget = dist(m, target);
+    if (minionDistToTarget < heroDistToTarget && dist(hero, m) < 400) return true;
+  }
+  return false;
+}
+
+function getFocusFireTarget(state: MobaState, hero: MobaHero): MobaHero | null {
+  for (const ally of state.heroes) {
+    if (ally.team !== hero.team || ally.dead || ally.id === hero.id) continue;
+    if (ally.targetId !== null) {
+      const allyTarget = findEntityById(state, ally.targetId);
+      if (allyTarget && !allyTarget.dead && 'heroDataId' in allyTarget && allyTarget.team !== hero.team) {
+        if (dist(hero, allyTarget) < 600) return allyTarget as MobaHero;
+      }
+    }
+  }
+  return null;
+}
+
+function aiLevelUpAbilities(state: MobaState, hero: MobaHero, heroData: HeroData) {
+  if (hero.abilityPoints <= 0) return;
+
+  const priorityMap: Record<string, number[]> = {
+    Warrior: [3, 0, 1, 2],
+    Mage: [3, 0, 2, 1],
+    Ranger: [3, 0, 1, 2],
+    Worg: [3, 1, 0, 2]
+  };
+  const priority = priorityMap[heroData.heroClass] || [3, 0, 1, 2];
+
+  while (hero.abilityPoints > 0) {
+    let leveled = false;
+    for (const idx of priority) {
+      const maxLevel = idx === 3 ? 3 : 4;
+      if (hero.abilityLevels[idx] >= maxLevel) continue;
+
+      if (idx === 3) {
+        const requiredHeroLevels = [6, 11, 16];
+        const currentAbLevel = hero.abilityLevels[idx];
+        if (currentAbLevel >= requiredHeroLevels.length) continue;
+        if (hero.level < requiredHeroLevels[currentAbLevel]) continue;
+      }
+
+      hero.abilityLevels[idx]++;
+      hero.abilityPoints--;
+      leveled = true;
+      break;
+    }
+    if (!leveled) break;
+  }
+}
+
 function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
   const heroData = HEROES[hero.heroDataId];
   if (!heroData) return;
@@ -1110,6 +1203,12 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
   const alliesNearby = countAlliesNearby(state, hero, 400);
   const base = BASE_POSITIONS[hero.team];
   const baseDist = dist(hero, base);
+  const phase = getGamePhase(state.gameTime);
+  const isRanged = heroData.heroClass === 'Ranger' || heroData.heroClass === 'Mage';
+  const alliedHeroesNearby = countAlliedHeroesNearby(state, hero, 600);
+  const enemiesNearby = countEnemiesNearby(state, hero, 500);
+
+  aiLevelUpAbilities(state, hero, heroData);
 
   const retreatThreshold = alliesNearby >= 2 ? 0.15 : (alliesNearby >= 1 ? 0.25 : 0.35);
 
@@ -1153,15 +1252,12 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
 
   const abilities = CLASS_ABILITIES[heroData.heroClass];
   if (abilities) {
-    const isWarrior = heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg';
+    const isWarriorClass = heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg';
     const isMage = heroData.heroClass === 'Mage';
-    const isRanger = heroData.heroClass === 'Ranger';
 
     let bestAbility = -1;
     let bestAbilityScore = 0;
     let bestAbilityTarget: any = null;
-
-    const enemiesNearby = countEnemiesNearby(state, hero, 500);
 
     for (let i = 0; i < abilities.length; i++) {
       const ab = abilities[i];
@@ -1170,6 +1266,9 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
       } else {
         if (hero.abilityCooldowns[i] > 0 || hero.mp < ab.manaCost) continue;
       }
+
+      if (hero.abilityLevels[i] <= 0) continue;
+
       const target = findBestAbilityTarget(state, hero, ab, i);
       if (!target) continue;
 
@@ -1182,15 +1281,25 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
       if (isCC) score += 12;
 
       if (i === 3) {
-        if (enemiesNearby >= 2 || ('heroDataId' in target && target.hp < ab.damage + hero.atk)) {
+        if (phase === 'lategame' && ab.type === 'aoe' && enemiesNearby >= 2) {
+          score *= 3.0;
+        } else if (enemiesNearby >= 2 || ('heroDataId' in target && target.hp < ab.damage + hero.atk)) {
           score *= 2.0;
         } else {
           score = 0;
         }
       }
 
+      if (phase === 'laning') {
+        if (i === 3) score *= 0.5;
+        if ('heroDataId' in target) score *= 0.7;
+      }
+      if (phase === 'midgame' && i === 3 && hero.abilityCooldowns[3] <= 0) {
+        score *= 1.5;
+      }
+
       if (isMage && mpPct < 0.3 && i < 3) score *= 0.3;
-      if (isWarrior && hpPct > 0.8 && ab.type === 'heal') score = 0;
+      if (isWarriorClass && hpPct > 0.8 && ab.type === 'heal') score = 0;
 
       if (score > bestAbilityScore) {
         bestAbilityScore = score;
@@ -1209,18 +1318,7 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     let bestTarget: any = null;
     let bestScore = -1;
 
-    for (const h of state.heroes) {
-      if (h.team === hero.team || h.dead) continue;
-      const d = dist(hero, h);
-      if (d > aggroRange) continue;
-      if (!hasLineOfSight(state, hero, h, hero.team)) continue;
-      let score = (aggroRange - d) / aggroRange * 5;
-      score += (1 - h.hp / h.maxHp) * 8;
-      if (h.hp < hero.atk * 2) score += 15;
-      if (score > bestScore) { bestScore = score; bestTarget = h; }
-    }
-
-    if (!bestTarget) {
+    if (phase === 'laning') {
       let lastHitTarget: any = null;
       let lastHitScore = -1;
       for (const m of state.minions) {
@@ -1228,36 +1326,166 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
         const d = dist(hero, m);
         if (d > 350) continue;
         if (m.hp <= hero.atk * 1.2 + 5) {
-          const sc = 20 + (350 - d) / 350 * 5;
+          const sc = 30 + (350 - d) / 350 * 5;
           if (sc > lastHitScore) { lastHitScore = sc; lastHitTarget = m; }
         }
       }
       if (lastHitTarget) {
         bestTarget = lastHitTarget;
         bestScore = lastHitScore;
-      } else {
+      }
+
+      if (!bestTarget) {
+        for (const h of state.heroes) {
+          if (h.team === hero.team || h.dead) continue;
+          const d = dist(hero, h);
+          if (d > aggroRange) continue;
+          if (!hasLineOfSight(state, hero, h, hero.team)) continue;
+          if (alliesNearby >= enemiesNearby && hpPct > 0.5) {
+            let score = (aggroRange - d) / aggroRange * 3;
+            score += (1 - h.hp / h.maxHp) * 5;
+            if (h.hp < hero.atk * 2) score += 10;
+            if (score > bestScore) { bestScore = score; bestTarget = h; }
+          }
+        }
+      }
+
+      if (!bestTarget) {
+        const ownTower = state.towers.find(t => t.team === hero.team && !t.dead && t.lane === hero.assignedLane);
+        const nearOwnMinions = countAlliedMinionsNearby(state, hero, 300);
+        if (nearOwnMinions > 0 || (ownTower && dist(hero, ownTower) < 400)) {
+          hero.vx *= 0.3;
+          hero.vy *= 0.3;
+          hero.animState = 'idle';
+        }
+      }
+    } else {
+      const focusTarget = getFocusFireTarget(state, hero);
+
+      for (const h of state.heroes) {
+        if (h.team === hero.team || h.dead) continue;
+        const d = dist(hero, h);
+        if (d > aggroRange) continue;
+        if (!hasLineOfSight(state, hero, h, hero.team)) continue;
+        let score = (aggroRange - d) / aggroRange * 5;
+        score += (1 - h.hp / h.maxHp) * 8;
+
+        if (h.hp < hero.atk * 2) score += 20;
+
+        const targetData = HEROES[h.heroDataId];
+        if (targetData) {
+          if (targetData.heroClass === 'Mage' || targetData.heroClass === 'Ranger') score += 5;
+        }
+
+        if (focusTarget && h.id === focusTarget.id) score += 10;
+
+        if (isNearEnemyTower(state, hero) && !hasAlliedMinionAhead(state, hero, h)) {
+          score -= 25;
+        }
+
+        if (score > bestScore) { bestScore = score; bestTarget = h; }
+      }
+
+      if (!bestTarget) {
+        let lastHitTarget: any = null;
+        let lastHitScore = -1;
         for (const m of state.minions) {
           if (m.team === hero.team || m.dead) continue;
           const d = dist(hero, m);
           if (d > 350) continue;
-          let score = (350 - d) / 350 * 2;
-          if (score > bestScore) { bestScore = score; bestTarget = m; }
+          if (m.hp <= hero.atk * 1.2 + 5) {
+            const sc = 20 + (350 - d) / 350 * 5;
+            if (sc > lastHitScore) { lastHitScore = sc; lastHitTarget = m; }
+          }
+        }
+        if (lastHitTarget) {
+          bestTarget = lastHitTarget;
+          bestScore = lastHitScore;
+        } else {
+          for (const m of state.minions) {
+            if (m.team === hero.team || m.dead) continue;
+            const d = dist(hero, m);
+            if (d > 350) continue;
+            let score = (350 - d) / 350 * 2;
+            if (score > bestScore) { bestScore = score; bestTarget = m; }
+          }
         }
       }
     }
 
     if (!bestTarget) {
+      const minAlliesForTower = phase === 'lategame' ? 3 : 2;
       for (const t of state.towers) {
         if (t.team === hero.team || t.dead) continue;
         const d = dist(hero, t);
-        if (d > 400 || alliesNearby < 2) continue;
+        if (d > 400) continue;
+        if (alliedHeroesNearby < minAlliesForTower - 1) continue;
+        if (!hasAlliedMinionAhead(state, hero, t)) continue;
         bestTarget = t;
+      }
+    }
+
+    if (!bestTarget && phase === 'midgame') {
+      if (hero.abilityCooldowns[3] <= 0 && hero.abilityLevels[3] > 0) {
+        const otherLanes = [0, 1, 2].filter(l => l !== hero.assignedLane);
+        const gankLane = otherLanes[Math.floor(seededRandom(hero.id, Math.floor(state.gameTime / 30)) * otherLanes.length)];
+        const waypoints = hero.team === 0 ? LANE_WAYPOINTS[gankLane] : [...LANE_WAYPOINTS[gankLane]].reverse();
+        const midPoint = waypoints[Math.floor(waypoints.length / 2)];
+        const angle = angleTo(hero, midPoint);
+        hero.vx = Math.cos(angle) * hero.spd * 1.6;
+        hero.vy = Math.sin(angle) * hero.spd * 1.6;
+        hero.facing = angle;
+        hero.animState = 'walk';
+        bestTarget = null;
+      }
+
+      if (!bestTarget) {
+        const wavesPushed = !state.minions.some(m => m.team !== hero.team && !m.dead && m.lane === hero.assignedLane && dist(hero, m) < 600);
+        if (wavesPushed) {
+          let nearestCamp: JungleCamp | null = null;
+          let nearestCampDist = 800;
+          for (const camp of state.jungleCamps) {
+            if (camp.allDead) continue;
+            const d = dist(hero, camp);
+            if (d < nearestCampDist) { nearestCampDist = d; nearestCamp = camp; }
+          }
+          if (nearestCamp) {
+            const angle = angleTo(hero, nearestCamp);
+            hero.vx = Math.cos(angle) * hero.spd * 1.5;
+            hero.vy = Math.sin(angle) * hero.spd * 1.5;
+            hero.facing = angle;
+            hero.animState = 'walk';
+            const nearestMob = nearestCamp.mobs.find(m => !m.dead);
+            if (nearestMob && dist(hero, nearestMob) < 200) {
+              bestTarget = nearestMob;
+            }
+          }
+        }
+      }
+    }
+
+    if (!bestTarget && phase === 'lategame') {
+      if (alliedHeroesNearby < 3) {
+        let closestAlly: MobaHero | null = null;
+        let closestAllyDist = 1500;
+        for (const h of state.heroes) {
+          if (h.team !== hero.team || h.dead || h.id === hero.id) continue;
+          const d = dist(hero, h);
+          if (d < closestAllyDist) { closestAllyDist = d; closestAlly = h; }
+        }
+        if (closestAlly && closestAllyDist > 300) {
+          const angle = angleTo(hero, closestAlly);
+          hero.vx = Math.cos(angle) * hero.spd * 1.6;
+          hero.vy = Math.sin(angle) * hero.spd * 1.6;
+          hero.facing = angle;
+          hero.animState = 'walk';
+        }
       }
     }
 
     if (bestTarget) {
       hero.targetId = bestTarget.id;
-    } else {
+    } else if (hero.vx === 0 && hero.vy === 0) {
       const lane = hero.assignedLane;
       const waypoints = hero.team === 0 ? LANE_WAYPOINTS[lane] : [...LANE_WAYPOINTS[lane]].reverse();
 
@@ -1270,11 +1498,23 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
 
       const targetWpIdx = Math.min(nearestWpIdx + 1, waypoints.length - 1);
       const wp = waypoints[targetWpIdx];
-      const angle = angleTo(hero, wp);
-      hero.vx = Math.cos(angle) * hero.spd * 1.5;
-      hero.vy = Math.sin(angle) * hero.spd * 1.5;
-      hero.facing = angle;
-      hero.animState = 'walk';
+
+      if (phase === 'laning') {
+        const nearOwnMinions = countAlliedMinionsNearby(state, hero, 400);
+        if (nearOwnMinions === 0) {
+          const angle = angleTo(hero, wp);
+          hero.vx = Math.cos(angle) * hero.spd * 1.2;
+          hero.vy = Math.sin(angle) * hero.spd * 1.2;
+          hero.facing = angle;
+          hero.animState = 'walk';
+        }
+      } else {
+        const angle = angleTo(hero, wp);
+        hero.vx = Math.cos(angle) * hero.spd * 1.5;
+        hero.vy = Math.sin(angle) * hero.spd * 1.5;
+        hero.facing = angle;
+        hero.animState = 'walk';
+      }
     }
   }
 
@@ -1282,14 +1522,42 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     const target = findEntityById(state, hero.targetId);
     if (target && !target.dead) {
       const d = dist(hero, target);
-      const isRanged = heroData.heroClass === 'Ranger' || heroData.heroClass === 'Mage';
 
-      if (isRanged && d < hero.rng * 0.4 && threat > 1) {
+      if (isRanged && d < hero.rng * 0.5) {
+        if ((hero as any)._orbWalkTimer === undefined) (hero as any)._orbWalkTimer = 0;
+        (hero as any)._orbWalkTimer += dt;
+
+        if (hero.autoAttackTimer > 0.3) {
+          const enemyAngle = angleTo(target, hero);
+          const perpAngle = enemyAngle + (Math.random() > 0.5 ? Math.PI / 2 : -Math.PI / 2);
+          const strafeWeight = 0.6;
+          const finalAngle = enemyAngle * (1 - strafeWeight) + perpAngle * strafeWeight;
+          hero.vx = Math.cos(finalAngle) * hero.spd * 1.6;
+          hero.vy = Math.sin(finalAngle) * hero.spd * 1.6;
+          hero.facing = angleTo(hero, target);
+          hero.animState = 'walk';
+        } else {
+          hero.vx = 0;
+          hero.vy = 0;
+          hero.facing = angleTo(hero, target);
+        }
+      } else if (isRanged && d < hero.rng * 0.4 && threat > 1) {
         const awayAngle = angleTo(target, hero);
         hero.vx = Math.cos(awayAngle) * hero.spd * 1.5;
         hero.vy = Math.sin(awayAngle) * hero.spd * 1.5;
         hero.facing = angleTo(hero, target);
         hero.animState = 'walk';
+      }
+
+      if (isNearEnemyTower(state, hero) && 'heroDataId' in target) {
+        if (!hasAlliedMinionAhead(state, hero, target)) {
+          hero.targetId = null;
+          const angle = angleTo(target, hero);
+          hero.vx = Math.cos(angle) * hero.spd * 1.8;
+          hero.vy = Math.sin(angle) * hero.spd * 1.8;
+          hero.facing = angle;
+          hero.animState = 'walk';
+        }
       }
     }
   }
@@ -1327,7 +1595,6 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
   if (Math.random() < 0.0012 * dt) {
     const laneName = ['top', 'mid', 'bot'][hero.assignedLane];
     const enemiesNearbyChat = countEnemiesNearby(state, hero, 500);
-    const gamePhase = state.gameTime < 300 ? 'early' : state.gameTime < 600 ? 'mid' : 'late';
     const contextMsgs: string[] = [];
     if (hpPct < 0.3) contextMsgs.push('going b', 'need heal', 'low hp retreating', 'brb base');
     else if (hpPct < 0.5 && threat > 2) contextMsgs.push('playing safe', 'backing off', 'careful ' + laneName, 'they have kill pressure');
@@ -1337,9 +1604,9 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     else if (alliesNearby >= 3 && enemiesNearbyChat >= 2) contextMsgs.push('group push', 'all in', 'fight here', 'lets teamfight', 'GO GO GO');
     else if (alliesNearby >= 3) contextMsgs.push('push ' + laneName + ' together', 'group up', 'lets take tower');
     else if (hero.gold > 1500) contextMsgs.push('need to shop', 'saving for item', 'b for items');
-    else if (gamePhase === 'late' && enemiesNearbyChat === 0) contextMsgs.push('we need to end', 'push for nexus', 'group for final push');
-    else if (gamePhase === 'mid' && hero.level >= 6) contextMsgs.push('roaming ' + laneName, 'gank incoming', 'ult ready lets fight', 'push mid together');
-    else if (gamePhase === 'early') contextMsgs.push('farming ' + laneName, 'cs is good', 'stay safe early', 'scaling');
+    else if (phase === 'lategame' && enemiesNearbyChat === 0) contextMsgs.push('we need to end', 'push for nexus', 'group for final push');
+    else if (phase === 'midgame' && hero.level >= 6) contextMsgs.push('roaming ' + laneName, 'gank incoming', 'ult ready lets fight', 'push mid together');
+    else if (phase === 'laning') contextMsgs.push('farming ' + laneName, 'cs is good', 'stay safe early', 'scaling');
     else contextMsgs.push('push ' + laneName, 'enemy missing', 'group up', 'care', 'on my way', 'well played', 'focus carry', 'target their mage');
     addAiChat(state, hero, heroData, contextMsgs[Math.floor(Math.random() * contextMsgs.length)]);
   }
@@ -1531,7 +1798,10 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   const abilities = CLASS_ABILITIES[heroData.heroClass];
   if (!abilities || !abilities[abilityIndex]) return;
 
-  const ab = abilities[abilityIndex];
+  const abRaw = abilities[abilityIndex];
+  const abilityLevel = hero.abilityLevels?.[abilityIndex] || 0;
+  const levelDamageMultiplier = abilityLevel > 0 ? (1 + (abilityLevel - 1) * 0.25) : 1;
+  const ab = { ...abRaw, damage: Math.floor(abRaw.damage * levelDamageMultiplier) };
 
   if (ab.maxCharges && ab.maxCharges > 0) {
     if (hero.abilityCharges[abilityIndex] <= 0 || hero.mp < ab.manaCost) return;
@@ -1946,28 +2216,56 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
     target.dead = true;
 
     if ('heroDataId' in target) {
-      killHero(state, target);
+      const victim = target as MobaHero;
+      killHero(state, victim);
       if ('heroDataId' in attacker) {
         const killer = attacker as MobaHero;
         killer.kills++;
-        killer.gold += 300;
-        killer.xp += 150;
-        addFloatingText(state, killer.x, killer.y - 30, '+300g', '#ffd700', 16);
+        killer.killStreak++;
+        let goldReward = 300;
+        const killXp = 100 + victim.level * 20;
+
+        if (victim.killStreak >= 3) {
+          const streakBonus = 50 * victim.killStreak;
+          goldReward += streakBonus;
+          state.killFeed.push({
+            text: `Shutdown! +${streakBonus} bonus gold!`,
+            color: '#ffd700',
+            time: state.gameTime
+          });
+        }
+        victim.killStreak = 0;
+
+        if (!state.firstBloodClaimed) {
+          state.firstBloodClaimed = true;
+          goldReward += 200;
+          state.killFeed.push({
+            text: 'FIRST BLOOD!',
+            color: '#ef4444',
+            time: state.gameTime
+          });
+        }
+
+        killer.gold += goldReward;
+        killer.xp += killXp;
+        addFloatingText(state, killer.x, killer.y - 30, `+${goldReward}g`, '#ffd700', 16);
         checkLevelUp(state, killer);
 
-        for (const dmgId of target.lastDamagedBy) {
+        const assistXp = Math.floor(killXp * 0.6);
+        for (const dmgId of victim.lastDamagedBy) {
           if (dmgId !== killer.id) {
             const assistant = state.heroes.find(h => h.id === dmgId);
             if (assistant && assistant.team === killer.team) {
               assistant.assists++;
               assistant.gold += 100;
-              assistant.xp += 75;
+              assistant.xp += assistXp;
+              checkLevelUp(state, assistant);
             }
           }
         }
 
         const killerData = HEROES[killer.heroDataId];
-        const targetData = HEROES[target.heroDataId];
+        const targetData = HEROES[victim.heroDataId];
         if (killerData && targetData) {
           state.killFeed.push({
             text: `${killerData.name} killed ${targetData.name}`,
@@ -1979,9 +2277,11 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
     } else if ('goldValue' in target) {
       if ('heroDataId' in attacker) {
         const killer = attacker as MobaHero;
-        killer.gold += (target as MobaMinion).goldValue;
+        const lastHitBonus = 15;
+        const totalGold = (target as MobaMinion).goldValue + lastHitBonus;
+        killer.gold += totalGold;
         killer.xp += (target as MobaMinion).xpValue;
-        addFloatingText(state, killer.x, killer.y - 30, `+${(target as MobaMinion).goldValue}g`, '#ffd700', 12);
+        addFloatingText(state, killer.x, killer.y - 30, `+${totalGold}g`, '#ffd700', 12);
         checkLevelUp(state, killer);
       }
       spawnDeathParticles(state, target.x, target.y, '#888888');
@@ -1992,8 +2292,15 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
         color: TEAM_COLORS[target.team === 0 ? 1 : 0],
         time: state.gameTime
       });
-      if ('heroDataId' in attacker) {
-        (attacker as MobaHero).gold += 150;
+      const towerBounty = 200;
+      const enemyTeam = target.team === 0 ? 1 : 0;
+      const nearbyAllies = state.heroes.filter(h => h.team === enemyTeam && !h.dead && dist(h, target) < 1000);
+      if (nearbyAllies.length > 0) {
+        const goldPerAlly = Math.floor(towerBounty / nearbyAllies.length);
+        for (const ally of nearbyAllies) {
+          ally.gold += goldPerAlly;
+          addFloatingText(state, ally.x, ally.y - 30, `+${goldPerAlly}g`, '#ffd700', 12);
+        }
       }
     } else if ('destroyed' in target) {
       target.destroyed = true;
@@ -2004,7 +2311,7 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
 function killHero(state: MobaState, hero: MobaHero) {
   hero.dead = true;
   hero.deaths++;
-  hero.respawnTimer = 5 + hero.level * 2;
+  hero.respawnTimer = 5 + hero.level * 2 + state.gameTime / 60;
   hero.targetId = null;
   hero.moveTarget = null;
   hero.vx = 0;
@@ -2053,6 +2360,8 @@ function checkLevelUp(state: MobaState, hero: MobaHero) {
     hero.spd = stats.spd + totalItemStat(hero, 'spd');
     hero.maxMp = stats.mp + totalItemStat(hero, 'mp');
     hero.mp = Math.min(hero.mp + 20, hero.maxMp);
+
+    hero.abilityPoints++;
 
     addFloatingText(state, hero.x, hero.y - 40, `LEVEL ${hero.level}!`, '#ffd700', 20);
     spawnAbilityParticles(state, hero.x, hero.y, '#ffd700', 20);
@@ -2144,6 +2453,24 @@ function updateTower(state: MobaState, tower: MobaTower, dt: number) {
     }
   }
 
+  let heroAggressor: MobaHero | null = null;
+  for (const ally of state.heroes) {
+    if (ally.team !== tower.team || ally.dead) continue;
+    if (dist(tower, ally) > tower.rng) continue;
+    for (const enemy of state.heroes) {
+      if (enemy.team === tower.team || enemy.dead) continue;
+      if (dist(tower, enemy) > tower.rng) continue;
+      if (ally.lastDamagedBy.includes(enemy.id)) {
+        heroAggressor = enemy;
+        break;
+      }
+    }
+    if (heroAggressor) break;
+  }
+  if (heroAggressor && tower.targetId !== heroAggressor.id) {
+    tower.targetId = heroAggressor.id;
+  }
+
   if (tower.targetId === null) {
     let closest: any = null;
     let closestDist = tower.rng;
@@ -2158,15 +2485,6 @@ function updateTower(state: MobaState, tower: MobaTower, dt: number) {
         if (h.team === tower.team || h.dead) continue;
         const d = dist(tower, h);
         if (d > tower.rng) continue;
-        let priority = false;
-        for (const ally of state.heroes) {
-          if (ally.team !== tower.team || ally.dead) continue;
-          if (dist(tower, ally) < tower.rng && ally.lastDamagedBy.includes(h.id)) {
-            priority = true;
-            break;
-          }
-        }
-        if (priority) { closest = h; break; }
         if (d < closestDist) { closestDist = d; closest = h; }
       }
     }
@@ -2795,9 +3113,36 @@ export function handleBlock(state: MobaState, active: boolean) {
 export function handlePlayerAbility(state: MobaState, abilityIndex: number) {
   const player = state.heroes[state.playerHeroIndex];
   if (!player || player.dead) return;
+  if (player.abilityLevels[abilityIndex] <= 0) return;
 
   const target = findNearestEnemy(state, player, 600);
   executeAbility(state, player, abilityIndex, target);
+}
+
+export function handleLevelUpAbility(state: MobaState, abilityIndex: number) {
+  const player = state.heroes[state.playerHeroIndex];
+  if (!player || player.dead) return;
+  if (player.abilityPoints <= 0) return;
+  if (abilityIndex < 0 || abilityIndex > 3) return;
+
+  const maxLevel = abilityIndex === 3 ? 3 : 4;
+  if (player.abilityLevels[abilityIndex] >= maxLevel) return;
+
+  if (abilityIndex === 3) {
+    const requiredHeroLevels = [6, 11, 16];
+    const currentAbLevel = player.abilityLevels[abilityIndex];
+    if (currentAbLevel >= requiredHeroLevels.length) return;
+    if (player.level < requiredHeroLevels[currentAbLevel]) return;
+  }
+
+  player.abilityLevels[abilityIndex]++;
+  player.abilityPoints--;
+
+  const heroData = HEROES[player.heroDataId];
+  const abilities = heroData ? CLASS_ABILITIES[heroData.heroClass] : null;
+  const abName = abilities?.[abilityIndex]?.name || `Ability ${abilityIndex + 1}`;
+  addFloatingText(state, player.x, player.y - 40, `${abName} Leveled!`, '#ffd700', 14);
+  spawnAbilityParticles(state, player.x, player.y, '#ffd700', 10);
 }
 
 export function handlePlayerAttack(state: MobaState) {
@@ -2998,28 +3343,41 @@ export function getHudState(state: MobaState): HudState {
     blockCooldown: player?.blockCooldown ?? 0,
     abilityCharges: player?.abilityCharges ?? [0, 0, 0, 0],
     abilityMaxCharges: heroData ? (CLASS_ABILITIES[heroData.heroClass] || []).map(ab => ab.maxCharges || 0) : [0, 0, 0, 0],
-    minimapEntities: [
-      ...state.heroes.filter(h => !h.dead).map(h => ({
-        x: h.x, y: h.y,
-        type: (h.isPlayer ? 'player' : h.team === (player?.team ?? 0) ? 'ally_hero' : 'enemy_hero') as any,
-      })),
-      ...state.towers.filter(t => !t.dead).map(t => ({
-        x: t.x, y: t.y,
-        type: (t.team === (player?.team ?? 0) ? 'ally_tower' : 'enemy_tower') as any,
-      })),
-      ...state.nexuses.filter(n => !n.dead).map(n => ({
-        x: n.x, y: n.y,
-        type: (n.team === (player?.team ?? 0) ? 'ally_nexus' : 'enemy_nexus') as any,
-      })),
-      ...state.minions.map(m => ({
-        x: m.x, y: m.y,
-        type: (m.team === (player?.team ?? 0) ? 'ally_minion' : 'enemy_minion') as any,
-      })),
-      ...state.jungleCamps.filter(c => !c.allDead).map(c => ({
-        x: c.x, y: c.y,
-        type: (`jungle_${c.campType}` as any),
-      })),
-    ],
+    abilityLevels: player?.abilityLevels ?? [0, 0, 0, 0],
+    abilityPoints: player?.abilityPoints ?? 0,
+    minimapEntities: (() => {
+      const pt = player?.team ?? 0;
+      const visionSrcs: { x: number; y: number; r2: number }[] = [];
+      for (const h of state.heroes) if (!h.dead && h.team === pt) visionSrcs.push({ x: h.x, y: h.y, r2: 600 * 600 });
+      for (const t of state.towers) if (!t.dead && t.team === pt) visionSrcs.push({ x: t.x, y: t.y, r2: 500 * 500 });
+      for (const m of state.minions) if (!m.dead && m.team === pt) visionSrcs.push({ x: m.x, y: m.y, r2: 300 * 300 });
+      const inVis = (ex: number, ey: number) => {
+        for (const s of visionSrcs) { const dx = ex - s.x, dy = ey - s.y; if (dx * dx + dy * dy <= s.r2) return true; }
+        return false;
+      };
+      return [
+        ...state.heroes.filter(h => !h.dead && (h.team === pt || inVis(h.x, h.y))).map(h => ({
+          x: h.x, y: h.y,
+          type: (h.isPlayer ? 'player' : h.team === pt ? 'ally_hero' : 'enemy_hero') as any,
+        })),
+        ...state.towers.filter(t => !t.dead && (t.team === pt || inVis(t.x, t.y))).map(t => ({
+          x: t.x, y: t.y,
+          type: (t.team === pt ? 'ally_tower' : 'enemy_tower') as any,
+        })),
+        ...state.nexuses.filter(n => !n.dead).map(n => ({
+          x: n.x, y: n.y,
+          type: (n.team === pt ? 'ally_nexus' : 'enemy_nexus') as any,
+        })),
+        ...state.minions.filter(m => !m.dead && (m.team === pt || inVis(m.x, m.y))).map(m => ({
+          x: m.x, y: m.y,
+          type: (m.team === pt ? 'ally_minion' : 'enemy_minion') as any,
+        })),
+        ...state.jungleCamps.filter(c => !c.allDead && inVis(c.x, c.y)).map(c => ({
+          x: c.x, y: c.y,
+          type: (`jungle_${c.campType}` as any),
+        })),
+      ];
+    })(),
     cameraViewport: {
       x: state.camera.x,
       y: state.camera.y,
@@ -3129,15 +3487,125 @@ export class MobaRenderer {
   private grabCursorImg: HTMLImageElement | null = null;
   spriteEffects: SpriteEffectSystem;
   private lastRenderTime = 0;
+  private fogCanvas: HTMLCanvasElement;
+  private fogCtx: CanvasRenderingContext2D;
+  private exploredMap: boolean[][];
+  private visionSources: { x: number; y: number; radius: number }[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.voxel = new VoxelRenderer();
     this.spriteEffects = new SpriteEffectSystem();
+    this.fogCanvas = document.createElement('canvas');
+    this.fogCanvas.width = 800;
+    this.fogCanvas.height = 600;
+    this.fogCtx = this.fogCanvas.getContext('2d')!;
+    const gridSize = Math.ceil(MAP_SIZE / 80);
+    this.exploredMap = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
     const img = new Image();
     img.src = '/assets/cursor-grab.png';
     img.onload = () => { this.grabCursorImg = img; };
+  }
+
+  private updateVision(state: MobaState) {
+    const playerTeam = state.heroes[state.playerHeroIndex]?.team ?? 0;
+    this.visionSources.length = 0;
+    for (const hero of state.heroes) {
+      if (!hero.dead && hero.team === playerTeam) {
+        this.visionSources.push({ x: hero.x, y: hero.y, radius: 600 });
+      }
+    }
+    for (const tower of state.towers) {
+      if (!tower.dead && tower.team === playerTeam) {
+        this.visionSources.push({ x: tower.x, y: tower.y, radius: 500 });
+      }
+    }
+    for (const minion of state.minions) {
+      if (!minion.dead && minion.team === playerTeam) {
+        this.visionSources.push({ x: minion.x, y: minion.y, radius: 300 });
+      }
+    }
+    const tileSize = 80;
+    for (const src of this.visionSources) {
+      const r = src.radius;
+      const stx = Math.max(0, Math.floor((src.x - r) / tileSize));
+      const sty = Math.max(0, Math.floor((src.y - r) / tileSize));
+      const etx = Math.min(this.exploredMap[0].length - 1, Math.floor((src.x + r) / tileSize));
+      const ety = Math.min(this.exploredMap.length - 1, Math.floor((src.y + r) / tileSize));
+      for (let ty = sty; ty <= ety; ty++) {
+        for (let tx = stx; tx <= etx; tx++) {
+          const cx = tx * tileSize + tileSize / 2;
+          const cy = ty * tileSize + tileSize / 2;
+          const dx = cx - src.x, dy = cy - src.y;
+          if (dx * dx + dy * dy <= r * r) {
+            this.exploredMap[ty][tx] = true;
+          }
+        }
+      }
+    }
+  }
+
+  isInVision(x: number, y: number): boolean {
+    for (const src of this.visionSources) {
+      const dx = x - src.x, dy = y - src.y;
+      if (dx * dx + dy * dy <= src.radius * src.radius) return true;
+    }
+    return false;
+  }
+
+  private renderFogOfWar(ctx: CanvasRenderingContext2D, cam: Camera, W: number, H: number, state: MobaState) {
+    const fW = W;
+    const fH = H;
+    if (this.fogCanvas.width !== fW || this.fogCanvas.height !== fH) {
+      this.fogCanvas.width = fW;
+      this.fogCanvas.height = fH;
+    }
+    const fCtx = this.fogCtx;
+    fCtx.clearRect(0, 0, fW, fH);
+    fCtx.fillStyle = 'rgba(0,0,0,0.85)';
+    fCtx.fillRect(0, 0, fW, fH);
+
+    fCtx.globalCompositeOperation = 'destination-out';
+
+    for (const src of this.visionSources) {
+      const sx = (src.x - cam.x) * cam.zoom + fW / 2;
+      const sy = (src.y - cam.y) * cam.zoom + fH / 2;
+      const sr = src.radius * cam.zoom;
+      if (sx + sr < 0 || sx - sr > fW || sy + sr < 0 || sy - sr > fH) continue;
+      const grad = fCtx.createRadialGradient(sx, sy, sr * 0.3, sx, sy, sr);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(0.7, 'rgba(0,0,0,0.8)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      fCtx.fillStyle = grad;
+      fCtx.beginPath();
+      fCtx.arc(sx, sy, sr, 0, Math.PI * 2);
+      fCtx.fill();
+    }
+
+    fCtx.globalCompositeOperation = 'source-over';
+
+    const tileSize = 80;
+    const startTX = Math.max(0, Math.floor((cam.x - fW / 2 / cam.zoom) / tileSize) - 1);
+    const startTY = Math.max(0, Math.floor((cam.y - fH / 2 / cam.zoom) / tileSize) - 1);
+    const gridMax = this.exploredMap.length;
+    const endTX = Math.min(gridMax, Math.ceil((cam.x + fW / 2 / cam.zoom) / tileSize) + 1);
+    const endTY = Math.min(gridMax, Math.ceil((cam.y + fH / 2 / cam.zoom) / tileSize) + 1);
+    for (let ty = startTY; ty < endTY; ty++) {
+      for (let tx = startTX; tx < endTX; tx++) {
+        if (this.exploredMap[ty]?.[tx]) continue;
+        const px = (tx * tileSize - cam.x) * cam.zoom + fW / 2;
+        const py = (ty * tileSize - cam.y) * cam.zoom + fH / 2;
+        const ps = tileSize * cam.zoom;
+        fCtx.fillStyle = 'rgba(0,0,0,0.35)';
+        fCtx.fillRect(px, py, ps, ps);
+      }
+    }
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.fogCanvas, 0, 0);
+    ctx.restore();
   }
 
   render(state: MobaState) {
@@ -3145,6 +3613,9 @@ export class MobaRenderer {
     const W = canvas.width;
     const H = canvas.height;
     const cam = state.camera;
+    const playerTeam = state.heroes[state.playerHeroIndex]?.team ?? 0;
+
+    this.updateVision(state);
 
     ctx.fillStyle = '#0a0f0a';
     ctx.fillRect(0, 0, W, H);
@@ -3167,12 +3638,15 @@ export class MobaRenderer {
     }
 
     for (const tower of state.towers) {
-      if (!tower.dead) this.renderTower(ctx, tower);
+      if (!tower.dead) {
+        if (tower.team !== playerTeam && !this.isInVision(tower.x, tower.y)) continue;
+        this.renderTower(ctx, tower);
+      }
     }
 
     if (state.hoveredEntityId !== null) {
       const hovEntity = findEntityById(state, state.hoveredEntityId);
-      if (hovEntity && !hovEntity.dead) {
+      if (hovEntity && !hovEntity.dead && this.isInVision(hovEntity.x, hovEntity.y)) {
         ctx.save();
         ctx.translate(hovEntity.x, hovEntity.y);
         ctx.strokeStyle = '#ef4444';
@@ -3193,18 +3667,24 @@ export class MobaRenderer {
     for (const camp of state.jungleCamps) {
       if (camp.allDead) continue;
       for (const mob of camp.mobs) {
-        if (!mob.dead) this.renderJungleMob(ctx, mob, camp);
+        if (!mob.dead && this.isInVision(mob.x, mob.y)) this.renderJungleMob(ctx, mob, camp);
       }
     }
 
     const sortedMinions = [...state.minions].sort((a, b) => a.y - b.y);
     for (const minion of sortedMinions) {
-      if (!minion.dead) this.renderMinion(ctx, minion);
+      if (!minion.dead) {
+        if (minion.team !== playerTeam && !this.isInVision(minion.x, minion.y)) continue;
+        this.renderMinion(ctx, minion);
+      }
     }
 
     const sortedHeroes = [...state.heroes].sort((a, b) => a.y - b.y);
     for (const hero of sortedHeroes) {
-      if (!hero.dead) this.renderHero(ctx, hero, state);
+      if (!hero.dead) {
+        if (hero.team !== playerTeam && !this.isInVision(hero.x, hero.y)) continue;
+        this.renderHero(ctx, hero, state);
+      }
     }
 
     const player = state.heroes[state.playerHeroIndex];
@@ -3401,6 +3881,8 @@ export class MobaRenderer {
 
     ctx.restore();
 
+    this.renderFogOfWar(ctx, cam, W, H, state);
+
     this.renderKillFeed(ctx, state, W);
   }
 
@@ -3594,6 +4076,12 @@ export class MobaRenderer {
     const animTime = state.gameTime;
     const tileSize = 80;
 
+    const adj = (tx: number, ty: number, dx: number, dy: number) => {
+      const nx = tx + dx, ny = ty + dy;
+      if (nx < 0 || ny < 0 || nx >= TILE_GRID || ny >= TILE_GRID) return 'grass';
+      return TERRAIN_LOOKUP[state.terrainMap[ny]?.[nx] ?? 0] || 'grass';
+    };
+
     for (let ty = startTY; ty < endTY; ty++) {
       for (let tx = startTX; tx < endTX; tx++) {
         const terrainIdx = state.terrainMap[ty]?.[tx] ?? 0;
@@ -3603,65 +4091,219 @@ export class MobaRenderer {
         this.voxel.drawTerrainTile(ctx, x, y, tileSize, terrain, tx, ty);
 
         const seed = ((tx * 374761393 + ty * 668265263) >>> 0) % 1000;
+        const seed2 = ((tx * 668265263 + ty * 374761393 + 12345) >>> 0) % 1000;
 
         if (terrain === 'lane') {
-          ctx.strokeStyle = 'rgba(100,90,70,0.06)';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(x + 0.5, y + 0.5, tileSize - 1, tileSize - 1);
+          ctx.fillStyle = 'rgba(90,80,60,0.04)';
+          ctx.fillRect(x + 20, y, 40, tileSize);
 
-          if (seed > 600) {
-            const pebbleCount = 1 + (seed % 3);
-            ctx.fillStyle = 'rgba(120,110,90,0.15)';
+          ctx.strokeStyle = 'rgba(80,70,50,0.08)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([8, 12]);
+          ctx.beginPath();
+          ctx.moveTo(x + 15, y);
+          ctx.lineTo(x + 15, y + tileSize);
+          ctx.moveTo(x + 65, y);
+          ctx.lineTo(x + 65, y + tileSize);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          if (seed > 300) {
+            const crackCount = 1 + (seed % 3);
+            ctx.strokeStyle = 'rgba(60,50,40,0.08)';
+            ctx.lineWidth = 0.5;
+            for (let c = 0; c < crackCount; c++) {
+              const cx = x + 15 + ((seed * (c + 1) * 7) % 50);
+              const cy = y + 10 + ((seed * (c + 1) * 13) % 60);
+              const cl = 5 + (seed2 % 10);
+              const ca = ((seed * (c + 3)) % 628) / 100;
+              ctx.beginPath();
+              ctx.moveTo(cx, cy);
+              ctx.lineTo(cx + Math.cos(ca) * cl, cy + Math.sin(ca) * cl);
+              if (c % 2 === 0) {
+                ctx.lineTo(cx + Math.cos(ca + 0.5) * cl * 0.6, cy + Math.sin(ca + 0.5) * cl * 0.6);
+              }
+              ctx.stroke();
+            }
+          }
+
+          if (seed > 500) {
+            const pebbleCount = 2 + (seed % 4);
             for (let p = 0; p < pebbleCount; p++) {
               const px = x + 10 + ((seed * (p + 1) * 7) % 60);
               const py = y + 10 + ((seed * (p + 1) * 13) % 60);
-              const pr = 1 + (seed % 2);
+              const pr = 1 + (seed2 % 2);
+              ctx.fillStyle = `rgba(${100 + seed2 % 30},${90 + seed2 % 20},${70 + seed2 % 15},0.12)`;
               ctx.beginPath();
               ctx.arc(px, py, pr, 0, Math.PI * 2);
               ctx.fill();
             }
           }
+
+          if (seed > 800) {
+            const lx = x + 40;
+            const ly = y + 40;
+            const glowPulse = 0.03 + Math.sin(animTime * 2 + tx * 3) * 0.02;
+            ctx.fillStyle = `rgba(210,180,100,${glowPulse})`;
+            ctx.beginPath();
+            ctx.arc(lx, ly, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = `rgba(255,220,120,${glowPulse * 2})`;
+            ctx.beginPath();
+            ctx.arc(lx, ly, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
 
-        if (terrain === 'jungle' || terrain === 'grass') {
-          if (seed > 400) {
-            const bladeCount = 2 + (seed % 4);
-            for (let b = 0; b < bladeCount; b++) {
-              const bx = x + 5 + ((seed * (b + 1) * 11) % 70);
-              const by = y + 20 + ((seed * (b + 1) * 17) % 55);
-              const bh = 4 + (seed % 6);
-              const sway = Math.sin(animTime * 1.5 + bx * 0.05) * 2;
-              ctx.strokeStyle = terrain === 'jungle' ? 'rgba(30,90,20,0.2)' : 'rgba(60,130,40,0.15)';
-              ctx.lineWidth = 0.8;
+        if (terrain === 'grass') {
+          const bladeCount = 3 + (seed % 5);
+          for (let b = 0; b < bladeCount; b++) {
+            const bx = x + 5 + ((seed * (b + 1) * 11) % 70);
+            const by = y + 20 + ((seed * (b + 1) * 17) % 55);
+            const bh = 5 + (seed % 7);
+            const sway = Math.sin(animTime * 1.5 + bx * 0.05 + b * 0.3) * 2.5;
+            const shade = 40 + (seed2 * (b + 1)) % 50;
+            ctx.strokeStyle = `rgba(${shade},${shade + 60},${shade - 10},0.18)`;
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.quadraticCurveTo(bx + sway * 0.5, by - bh * 0.5, bx + sway * 1.5, by - bh);
+            ctx.stroke();
+          }
+
+          if (seed > 850) {
+            const flowerColors = ['rgba(220,80,120,0.3)', 'rgba(180,120,220,0.3)', 'rgba(220,200,80,0.3)', 'rgba(100,180,220,0.3)'];
+            const fc = flowerColors[seed % flowerColors.length];
+            const fx = x + 15 + (seed2 % 50);
+            const fy = y + 15 + ((seed * 3) % 50);
+            ctx.fillStyle = fc;
+            for (let p = 0; p < 5; p++) {
+              const pa = (p / 5) * Math.PI * 2 + animTime * 0.3;
               ctx.beginPath();
-              ctx.moveTo(bx, by);
-              ctx.quadraticCurveTo(bx + sway, by - bh * 0.6, bx + sway * 1.5, by - bh);
-              ctx.stroke();
+              ctx.arc(fx + Math.cos(pa) * 3, fy + Math.sin(pa) * 3, 1.5, 0, Math.PI * 2);
+              ctx.fill();
             }
+            ctx.fillStyle = 'rgba(255,230,100,0.4)';
+            ctx.beginPath();
+            ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          if (seed > 600 && seed < 700) {
+            const mx = x + 10 + (seed2 % 60);
+            const my = y + 25 + ((seed * 7) % 50);
+            ctx.fillStyle = 'rgba(180,140,100,0.08)';
+            ctx.beginPath();
+            ctx.arc(mx, my, 2 + seed % 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(200,60,60,0.12)';
+            ctx.beginPath();
+            ctx.ellipse(mx, my - 3 - seed % 2, 3 + seed % 2, 2 + seed % 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        if (terrain === 'jungle') {
+          const bladeCount = 4 + (seed % 5);
+          for (let b = 0; b < bladeCount; b++) {
+            const bx = x + 3 + ((seed * (b + 1) * 11) % 74);
+            const by = y + 15 + ((seed * (b + 1) * 17) % 60);
+            const bh = 6 + (seed % 8);
+            const sway = Math.sin(animTime * 1.2 + bx * 0.04 + b * 0.4) * 1.8;
+            ctx.strokeStyle = `rgba(${20 + seed % 15},${70 + seed % 30},${15 + seed % 10},0.25)`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.quadraticCurveTo(bx + sway * 0.5, by - bh * 0.6, bx + sway * 1.2, by - bh);
+            ctx.stroke();
+          }
+
+          if (seed > 500) {
+            const mossCount = 1 + seed % 3;
+            for (let m = 0; m < mossCount; m++) {
+              const mx = x + 8 + ((seed * (m + 2) * 19) % 64);
+              const my = y + 10 + ((seed * (m + 3) * 23) % 60);
+              ctx.fillStyle = 'rgba(30,80,25,0.12)';
+              ctx.beginPath();
+              ctx.ellipse(mx, my, 4 + seed % 4, 2 + seed % 3, (seed * m) % 314 / 100, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          if (seed > 700) {
+            const sporeX = x + 20 + (seed2 % 40);
+            const sporeY = y + 30 + ((seed * 5) % 30);
+            const sporeAlpha = 0.06 + Math.sin(animTime * 0.8 + seed) * 0.04;
+            ctx.fillStyle = `rgba(120,200,80,${sporeAlpha})`;
+            ctx.beginPath();
+            ctx.arc(sporeX, sporeY, 8 + Math.sin(animTime + seed) * 3, 0, Math.PI * 2);
+            ctx.fill();
           }
         }
 
         if (terrain === 'base_blue' || terrain === 'base_red') {
-          const baseColor = terrain === 'base_blue' ? 'rgba(60,100,220,' : 'rgba(220,60,60,';
+          const isBlue = terrain === 'base_blue';
+          const baseColor = isBlue ? 'rgba(60,100,220,' : 'rgba(220,60,60,';
           const glow = 0.04 + Math.sin(animTime * 1.5 + tx + ty) * 0.02;
           ctx.fillStyle = baseColor + glow + ')';
           ctx.fillRect(x, y, tileSize, tileSize);
 
-          if (seed > 700) {
-            ctx.strokeStyle = baseColor + '0.08)';
-            ctx.lineWidth = 0.5;
-            const cx = x + tileSize / 2;
-            const cy = y + tileSize / 2;
+          ctx.strokeStyle = baseColor + '0.04)';
+          ctx.lineWidth = 0.5;
+          for (let gx = 0; gx < 4; gx++) {
             ctx.beginPath();
-            ctx.arc(cx, cy, 15 + (seed % 20), 0, Math.PI * 2);
+            ctx.moveTo(x + gx * 20, y);
+            ctx.lineTo(x + gx * 20, y + tileSize);
             ctx.stroke();
           }
+          for (let gy = 0; gy < 4; gy++) {
+            ctx.beginPath();
+            ctx.moveTo(x, y + gy * 20);
+            ctx.lineTo(x + tileSize, y + gy * 20);
+            ctx.stroke();
+          }
+
+          if (seed > 600) {
+            const rcx = x + tileSize / 2;
+            const rcy = y + tileSize / 2;
+            const runeRotation = animTime * 0.5 + seed;
+            const runeAlpha = 0.06 + Math.sin(animTime * 2 + seed) * 0.03;
+            ctx.save();
+            ctx.translate(rcx, rcy);
+            ctx.rotate(runeRotation);
+            ctx.strokeStyle = baseColor + runeAlpha + ')';
+            ctx.lineWidth = 1;
+            const rr = 12 + (seed % 15);
+            ctx.beginPath();
+            ctx.arc(0, 0, rr, 0, Math.PI * 2);
+            ctx.stroke();
+            for (let s = 0; s < 4; s++) {
+              const sa = (s / 4) * Math.PI * 2;
+              ctx.beginPath();
+              ctx.moveTo(Math.cos(sa) * (rr - 3), Math.sin(sa) * (rr - 3));
+              ctx.lineTo(Math.cos(sa) * (rr + 5), Math.sin(sa) * (rr + 5));
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+
+          const ambientGlow = 0.02 + Math.sin(animTime * 1.2 + tx * 2 + ty * 3) * 0.015;
+          const grad = ctx.createRadialGradient(x + 40, y + 40, 0, x + 40, y + 40, 50);
+          grad.addColorStop(0, baseColor + ambientGlow + ')');
+          grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+          ctx.fillRect(x, y, tileSize, tileSize);
         }
 
         if (terrain === 'river' || terrain === 'water') {
           const wave1 = Math.sin(animTime * 2.2 + tx * 0.8 + ty * 0.6) * 0.08 + 0.07;
           ctx.globalAlpha = wave1;
           ctx.fillStyle = '#67e8f9';
+          ctx.fillRect(x, y, tileSize, tileSize);
+
+          const wave2 = Math.sin(animTime * 1.6 + tx * 1.2 + ty * 0.4) * 0.04;
+          ctx.globalAlpha = Math.max(0, wave2 + 0.03);
+          ctx.fillStyle = '#22d3ee';
           ctx.fillRect(x, y, tileSize, tileSize);
 
           ctx.strokeStyle = '#a5f3fc';
@@ -3683,33 +4325,60 @@ export class MobaRenderer {
           ctx.beginPath();
           ctx.arc(rippleX, rippleY, 6 + Math.sin(animTime * 5) * 4, 0, Math.PI * 2);
           ctx.stroke();
-          ctx.beginPath();
-          ctx.arc(rippleX + 8, rippleY - 5, 3 + Math.sin(animTime * 6 + 1) * 2, 0, Math.PI * 2);
-          ctx.stroke();
 
-          const adj = (dx: number, dy: number) => {
-            const nx = tx + dx, ny = ty + dy;
-            if (nx < 0 || ny < 0 || nx >= TILE_GRID || ny >= TILE_GRID) return 'grass';
-            return TERRAIN_LOOKUP[state.terrainMap[ny]?.[nx] ?? 0] || 'grass';
-          };
+          if (seed > 600) {
+            const lpx = x + 20 + (seed % 40);
+            const lpy = y + 20 + (seed2 % 40);
+            const lpBob = Math.sin(animTime * 0.8 + seed * 0.1) * 1.5;
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.ellipse(lpx, lpy + lpBob, 5, 3.5, (seed % 314) / 100, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#166534';
+            ctx.beginPath();
+            ctx.ellipse(lpx + 2, lpy + lpBob - 1, 2, 1, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          if (seed > 400 && seed < 600) {
+            const sparklePhase = animTime * 5 + seed;
+            if (Math.sin(sparklePhase) > 0.7) {
+              const spx = x + 10 + (seed % 60);
+              const spy = y + 10 + (seed2 % 60);
+              const sparkAlpha = (Math.sin(sparklePhase) - 0.7) * 3;
+              ctx.globalAlpha = sparkAlpha * 0.6;
+              ctx.fillStyle = '#ffffff';
+              ctx.beginPath();
+              ctx.arc(spx, spy, 1.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
           const foamAlpha = 0.06 + Math.sin(animTime * 3.5 + tx * 1.2) * 0.03;
           ctx.fillStyle = 'rgba(200,240,255,' + foamAlpha + ')';
-          if (adj(-1, 0) !== 'river' && adj(-1, 0) !== 'water') {
+          if (adj(tx, ty, -1, 0) !== 'river' && adj(tx, ty, -1, 0) !== 'water') {
             for (let fy = 0; fy < 4; fy++) {
               const fx = x + 1 + Math.sin(animTime * 2 + fy) * 2;
               ctx.fillRect(fx, y + fy * 20 + 5, 3 + Math.sin(animTime * 4 + fy) * 2, 2);
             }
           }
-          if (adj(1, 0) !== 'river' && adj(1, 0) !== 'water') {
+          if (adj(tx, ty, 1, 0) !== 'river' && adj(tx, ty, 1, 0) !== 'water') {
             for (let fy = 0; fy < 4; fy++) {
               const fx = x + tileSize - 4 + Math.sin(animTime * 2.3 + fy) * 2;
               ctx.fillRect(fx, y + fy * 20 + 8, 3 + Math.sin(animTime * 4.2 + fy) * 2, 2);
             }
           }
-          if (adj(0, -1) !== 'river' && adj(0, -1) !== 'water') {
+          if (adj(tx, ty, 0, -1) !== 'river' && adj(tx, ty, 0, -1) !== 'water') {
             for (let fx = 0; fx < 4; fx++) {
               const fy = y + 1 + Math.sin(animTime * 2.1 + fx) * 2;
               ctx.fillRect(x + fx * 20 + 5, fy, 2, 3 + Math.sin(animTime * 3.8 + fx) * 2);
+            }
+          }
+          if (adj(tx, ty, 0, 1) !== 'river' && adj(tx, ty, 0, 1) !== 'water') {
+            for (let fx = 0; fx < 4; fx++) {
+              const fy = y + tileSize - 3 + Math.sin(animTime * 2.4 + fx) * 2;
+              ctx.fillRect(x + fx * 20 + 8, fy, 2, 3 + Math.sin(animTime * 3.6 + fx) * 2);
             }
           }
 
