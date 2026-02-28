@@ -3633,6 +3633,8 @@ export class MobaRenderer {
     this.renderMap(ctx, cam, W, H, state);
     this.renderLanes(ctx);
 
+    this.renderFogOfWar(ctx, cam, W, H, state);
+
     for (const nexus of state.nexuses) {
       if (!nexus.dead) this.renderNexus(ctx, nexus);
     }
@@ -3880,8 +3882,6 @@ export class MobaRenderer {
     this.renderCursor(ctx, state);
 
     ctx.restore();
-
-    this.renderFogOfWar(ctx, cam, W, H, state);
 
     this.renderKillFeed(ctx, state, W);
   }
