@@ -409,7 +409,8 @@ export function getAbilityStatusEffects(abilityName: string, sourceId: number, h
     case 'Shield Bash':
       return [createStatusEffect(StatusEffectType.Stun, 1.5, sourceId, 0, 0, 0, 1, 'Shield Bash Stun')];
     case 'Battle Cry':
-      return [createStatusEffect(StatusEffectType.AtkBuff, 5, sourceId, 25, 0, 0, 1, 'Battle Cry')];
+    case 'Rally':
+      return [createStatusEffect(StatusEffectType.AtkBuff, 5, sourceId, 25, 0, 0, 1, 'Rally')];
     case 'Avatar':
       return [
         createStatusEffect(StatusEffectType.AtkBuff, 10, sourceId, 50, 0, 0, 1, 'Avatar ATK'),
@@ -440,6 +441,26 @@ export function getAbilityStatusEffects(abilityName: string, sourceId: number, h
       return [createStatusEffect(StatusEffectType.Haste, 1, sourceId, 100, 0, 0, 1, 'Shadow Speed')];
     case 'Storm of Arrows':
       return [createStatusEffect(StatusEffectType.Slow, 3, sourceId, 20, 0, 0, 1, 'Arrow Rain Slow')];
+    case 'Skull Splitter':
+      return [createStatusEffect(StatusEffectType.DefDebuff, 4, sourceId, 20, 0, 0, 1, 'DEF Shred')];
+    case 'War Cry':
+      return [createStatusEffect(StatusEffectType.Fear, 1.5, sourceId, 0, 0, 0, 1, 'War Cry Fear')];
+    case 'Cleave':
+      return [];
+    case 'Blood Fury':
+      return [
+        createStatusEffect(StatusEffectType.AtkBuff, 10, sourceId, 40, 0, 0, 1, 'Blood Fury ATK'),
+        createStatusEffect(StatusEffectType.Lifesteal, 10, sourceId, 30, 0, 0, 1, 'Blood Fury Lifesteal'),
+        createStatusEffect(StatusEffectType.Haste, 10, sourceId, 20, 0, 0, 1, 'Blood Fury Speed'),
+      ];
+    case 'Piercing Strike':
+      return [];
+    case 'Wind Walk':
+      return [createStatusEffect(StatusEffectType.Invulnerable, 1, sourceId, 0, 0, 0, 1, 'Wind Walk')];
+    case 'Glaive Sweep':
+      return [createStatusEffect(StatusEffectType.Slow, 2, sourceId, 25, 0, 0, 1, 'Glaive Slow')];
+    case 'Dance of Blades':
+      return [];
     default:
       return [];
   }

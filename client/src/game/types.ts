@@ -317,7 +317,7 @@ export interface AreaDamageZoneState {
 export interface SpellEffect {
   x: number;
   y: number;
-  type: 'slash_arc' | 'impact_ring' | 'dash_trail' | 'shield_flash' | 'combo_burst' | 'ground_slam' | 'fire_ring' | 'frost_ring' | 'meteor_shadow' | 'meteor_impact' | 'arrow_rain' | 'whirlwind_slash' | 'ground_scorch' | 'ground_frost' | 'cast_circle' | 'telegraph_circle';
+  type: 'slash_arc' | 'impact_ring' | 'dash_trail' | 'shield_flash' | 'combo_burst' | 'ground_slam' | 'fire_ring' | 'frost_ring' | 'meteor_shadow' | 'meteor_impact' | 'arrow_rain' | 'whirlwind_slash' | 'ground_scorch' | 'ground_frost' | 'cast_circle' | 'telegraph_circle' | 'axe_chop' | 'spear_thrust' | 'glaive_sweep' | 'blood_fury_aura' | 'fear_wave' | 'cleave_arc' | 'dance_blades';
   life: number;
   maxLife: number;
   radius: number;
@@ -443,9 +443,21 @@ export const STAT_COLORS: Record<string, string> = {
 export const CLASS_ABILITIES: Record<string, AbilityDef[]> = {
   Warrior: [
     { name: "Shield Bash", key: "Q", cooldown: 6, manaCost: 20, damage: 30, range: 80, radius: 0, duration: 1.5, type: 'damage', castType: 'targeted', description: "Bash target, dealing damage and stunning for 1.5s" },
-    { name: "Battle Cry", key: "W", cooldown: 15, manaCost: 30, damage: 0, range: 0, radius: 200, duration: 5, type: 'buff', castType: 'self_cast', description: "Boost ATK by 25% for 5s in radius" },
-    { name: "Whirlwind", key: "E", cooldown: 10, manaCost: 35, damage: 50, range: 0, radius: 120, duration: 0, type: 'aoe', castType: 'self_cast', description: "Spin dealing AoE damage around you" },
+    { name: "Rally", key: "W", cooldown: 15, manaCost: 30, damage: 0, range: 0, radius: 200, duration: 5, type: 'buff', castType: 'self_cast', description: "Rally allies, boosting ATK by 25% for 5s" },
+    { name: "Blade Storm", key: "E", cooldown: 10, manaCost: 35, damage: 50, range: 0, radius: 120, duration: 0, type: 'aoe', castType: 'self_cast', description: "Spin with your blade dealing AoE damage" },
     { name: "Avatar", key: "R", cooldown: 60, manaCost: 80, damage: 0, range: 0, radius: 0, duration: 10, type: 'buff', castType: 'self_cast', description: "Transform into a giant, +50% HP and ATK for 10s" }
+  ],
+  Orc_Warrior: [
+    { name: "Skull Splitter", key: "Q", cooldown: 7, manaCost: 25, damage: 50, range: 90, radius: 0, duration: 4, type: 'damage', castType: 'targeted', description: "Overhead axe chop dealing heavy damage and shredding -20% DEF for 4s" },
+    { name: "War Cry", key: "W", cooldown: 14, manaCost: 30, damage: 0, range: 0, radius: 250, duration: 5, type: 'debuff', castType: 'self_cast', description: "Terrifying war cry: fear enemies 1.5s, +30% ATK for 5s" },
+    { name: "Cleave", key: "E", cooldown: 8, manaCost: 30, damage: 45, range: 0, radius: 150, duration: 0, type: 'aoe', castType: 'cone', description: "Wide frontal axe cleave hitting all enemies in a cone" },
+    { name: "Blood Fury", key: "R", cooldown: 55, manaCost: 70, damage: 0, range: 0, radius: 0, duration: 10, type: 'buff', castType: 'self_cast', description: "Enter blood rage: +40% ATK, +30% lifesteal, +20% move speed for 10s" }
+  ],
+  Elf_Warrior: [
+    { name: "Piercing Strike", key: "Q", cooldown: 5, manaCost: 20, damage: 40, range: 120, radius: 0, duration: 0, type: 'damage', castType: 'targeted', description: "Long-range spear thrust dealing high damage" },
+    { name: "Wind Walk", key: "W", cooldown: 12, manaCost: 30, damage: 0, range: 200, radius: 0, duration: 1, type: 'dash', castType: 'ground_aoe', description: "Dash forward, dodging all attacks for 1s" },
+    { name: "Glaive Sweep", key: "E", cooldown: 9, manaCost: 35, damage: 40, range: 0, radius: 130, duration: 2, type: 'aoe', castType: 'self_cast', description: "Spinning glaive sweep dealing AoE damage and slowing 25% for 2s" },
+    { name: "Dance of Blades", key: "R", cooldown: 50, manaCost: 75, damage: 25, range: 0, radius: 160, duration: 3, type: 'aoe', castType: 'self_cast', description: "3s flurry of 8 rapid strikes on nearby enemies" }
   ],
   Worg: [
     { name: "Feral Charge", key: "Q", cooldown: 8, manaCost: 25, damage: 40, range: 300, radius: 0, duration: 0, type: 'dash', castType: 'targeted', description: "Dash to target, dealing damage on impact" },
@@ -514,6 +526,44 @@ export function calcDamage(atk: number, def: number): number {
   const reduction = def / (def + 50);
   const raw = atk * (1 + Math.random() * 0.2 - 0.1);
   return Math.max(1, Math.floor(raw * (1 - reduction)));
+}
+
+export type WeaponType = 'sword_shield' | 'heavy_axe' | 'spear' | 'war_hammer' | 'axe_shield' | 'greatsword' | 'claws' | 'bow' | 'staff' | 'pistol';
+
+export const HERO_WEAPONS: Record<string, WeaponType> = {
+  Human_Warrior: 'sword_shield',
+  Orc_Warrior: 'heavy_axe',
+  Elf_Warrior: 'spear',
+  Barbarian_Warrior: 'war_hammer',
+  Dwarf_Warrior: 'axe_shield',
+  Undead_Warrior: 'greatsword',
+  Human_Worg: 'claws',
+  Barbarian_Worg: 'claws',
+  Orc_Worg: 'claws',
+  Elf_Worg: 'claws',
+  Dwarf_Worg: 'claws',
+  Undead_Worg: 'claws',
+  Human_Ranger: 'bow',
+  Elf_Ranger: 'bow',
+  Orc_Ranger: 'bow',
+  Barbarian_Ranger: 'bow',
+  Dwarf_Ranger: 'bow',
+  Undead_Ranger: 'bow',
+  Human_Mage: 'staff',
+  Elf_Mage: 'staff',
+  Orc_Mage: 'staff',
+  Barbarian_Mage: 'staff',
+  Dwarf_Mage: 'staff',
+  Undead_Mage: 'staff',
+};
+
+export function getHeroWeapon(race: string, heroClass: string): WeaponType {
+  return HERO_WEAPONS[`${race}_${heroClass}`] || (heroClass === 'Warrior' ? 'sword_shield' : heroClass === 'Ranger' ? 'bow' : heroClass === 'Mage' ? 'staff' : 'claws');
+}
+
+export function getHeroAbilities(race: string, heroClass: string): AbilityDef[] {
+  const raceKey = `${race}_${heroClass}`;
+  return CLASS_ABILITIES[raceKey] || CLASS_ABILITIES[heroClass] || [];
 }
 
 export function getPortraitPath(race: string, heroClass: string, heroName?: string): string {

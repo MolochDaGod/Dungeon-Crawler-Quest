@@ -1,19 +1,19 @@
 import {
   MobaState, MobaHero, MobaMinion, MobaTower, MobaNexus,
   Projectile, Particle, FloatingText, HudState, Camera,
-  HeroData, HEROES, ITEMS, CLASS_ABILITIES, LANE_WAYPOINTS,
+  HeroData, HEROES, ITEMS, LANE_WAYPOINTS,
   MAP_SIZE, TEAM_COLORS, TEAM_NAMES, Vec2, SpellEffect,
   SpellProjectile, AreaDamageZoneState, TargetInfo,
   xpForLevel, heroStatsAtLevel, calcDamage,
   RACE_COLORS, CLASS_COLORS, RARITY_COLORS,
-  JungleCamp, JungleMob
+  JungleCamp, JungleMob, getHeroAbilities
 } from './types';
 import { VoxelRenderer, TerrainType } from './voxel';
 import { SpriteEffectSystem, SpriteEffectType } from './sprite-effects';
 import {
   StatusEffect, StatusEffectType, updateStatusEffects, applyStatusEffect,
   isStunned, isRooted, isSilenced, getSpeedMultiplier,
-  hasLifesteal, getAbilityStatusEffects,
+  hasLifesteal, getAbilityStatusEffects, createStatusEffect,
   CombatEntity, calculateDamage as combatCalcDamage,
   DOT_TYPES, CC_TYPES
 } from './combat';
@@ -306,7 +306,7 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     blockActive: false, blockTimer: 0, blockCooldown: 0,
     iFrames: 0,
     assignedLane: 1,
-    abilityCharges: initAbilityCharges(hd.heroClass),
+    abilityCharges: initAbilityCharges(hd.race, hd.heroClass),
     abilityChargeTimers: [0, 0, 0, 0],
     abilityLevels: [0, 0, 0, 0],
     abilityPoints: 1,
@@ -315,9 +315,9 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
   };
 }
 
-function initAbilityCharges(heroClass: string): number[] {
-  const abilities = CLASS_ABILITIES[heroClass];
-  if (!abilities) return [0, 0, 0, 0];
+function initAbilityCharges(race: string, heroClass: string): number[] {
+  const abilities = getHeroAbilities(race, heroClass);
+  if (!abilities || abilities.length === 0) return [0, 0, 0, 0];
   return abilities.map(ab => ab.maxCharges || 0);
 }
 
@@ -748,7 +748,7 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
 
   const heroData = HEROES[hero.heroDataId];
   if (heroData) {
-    const abilities = CLASS_ABILITIES[heroData.heroClass];
+    const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
     if (abilities) {
       for (let i = 0; i < abilities.length; i++) {
         const ab = abilities[i];
@@ -1227,7 +1227,7 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     }
 
     if (hpPct < 0.15 && hero.abilityCooldowns.length > 0) {
-      const abilities = CLASS_ABILITIES[heroData.heroClass];
+      const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
       if (abilities) {
         for (let i = 0; i < abilities.length; i++) {
           if (hero.abilityCooldowns[i] <= 0 && abilities[i].type === 'dash' && hero.mp >= abilities[i].manaCost) {
@@ -1250,7 +1250,7 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     if (hpPct < 0.6) return;
   }
 
-  const abilities = CLASS_ABILITIES[heroData.heroClass];
+  const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
   if (abilities) {
     const isWarriorClass = heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg';
     const isMage = heroData.heroClass === 'Mage';
@@ -1795,7 +1795,7 @@ function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, ta
 export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: number, target: any) {
   const heroData = HEROES[hero.heroDataId];
   if (!heroData) return;
-  const abilities = CLASS_ABILITIES[heroData.heroClass];
+  const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
   if (!abilities || !abilities[abilityIndex]) return;
 
   const abRaw = abilities[abilityIndex];
@@ -1827,6 +1827,218 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   const abilityColor = CLASS_COLORS[heroData.heroClass] || '#ffffff';
   const statusEffects = getAbilityStatusEffects(ab.name, hero.id, hero.atk);
   const mouseTarget = state.mouseWorld;
+
+  if (ab.name === 'Skull Splitter') {
+    if (target) {
+      const dmg = ab.damage + hero.atk * 0.9;
+      if (dist(hero, target) > hero.rng + 20) {
+        const lungeAngle = angleTo(hero, target);
+        const lungeDist = Math.min(dist(hero, target) - 30, 60);
+        hero.x += Math.cos(lungeAngle) * lungeDist;
+        hero.y += Math.sin(lungeAngle) * lungeDist;
+      }
+      hero.facing = angleTo(hero, target);
+      dealDamage(state, hero, target, dmg);
+      if (target.activeEffects) {
+        for (const eff of statusEffects) applyStatusEffect(target as any as CombatEntity, { ...eff });
+      }
+      state.spellEffects.push({
+        x: target.x, y: target.y, type: 'axe_chop',
+        life: 0.35, maxLife: 0.35, radius: 35, color: '#ef4444', angle: hero.facing
+      });
+      state.spellEffects.push({
+        x: target.x, y: target.y, type: 'impact_ring',
+        life: 0.25, maxLife: 0.25, radius: 30, color: '#dc2626', angle: 0
+      });
+      state.screenShake = 0.12;
+      spawnAbilityParticles(state, target.x, target.y, '#ef4444', 14);
+      spawnCastBurst(state, target.x, target.y, '#dc2626', 10);
+    }
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'War Cry') {
+    const entities = getAllEnemies(state, hero.team);
+    for (const e of entities) {
+      if (dist(hero, e) < ab.radius) {
+        if (e.activeEffects) {
+          for (const eff of statusEffects) applyStatusEffect(e as any as CombatEntity, { ...eff });
+        }
+      }
+    }
+    applyStatusEffect(hero as any as CombatEntity, createStatusEffect(StatusEffectType.AtkBuff, ab.duration, hero.id, 30, 0, 0, 1, 'War Cry ATK'));
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'fear_wave',
+      life: 0.6, maxLife: 0.6, radius: ab.radius, color: '#65a30d', angle: 0
+    });
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'impact_ring',
+      life: 0.4, maxLife: 0.4, radius: ab.radius * 0.8, color: '#65a30d', angle: 0
+    });
+    state.screenShake = 0.1;
+    spawnAbilityParticles(state, hero.x, hero.y, '#65a30d', 20);
+    spawnCastBurst(state, hero.x, hero.y, '#84cc16', 14);
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Cleave') {
+    const entities = getAllEnemies(state, hero.team);
+    const coneAngle = hero.facing;
+    const coneHalfWidth = Math.PI / 3;
+    let hitCount = 0;
+    for (const e of entities) {
+      if (dist(hero, e) < ab.radius) {
+        const angleToE = angleTo(hero, e);
+        let angleDiff = angleToE - coneAngle;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        if (Math.abs(angleDiff) < coneHalfWidth) {
+          const dmg = ab.damage + hero.atk * 0.7;
+          dealDamage(state, hero, e, dmg);
+          hitCount++;
+          spawnAbilityParticles(state, e.x, e.y, '#ef4444', 6);
+        }
+      }
+    }
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'cleave_arc',
+      life: 0.4, maxLife: 0.4, radius: ab.radius, color: '#ef4444', angle: coneAngle,
+      data: { halfWidth: coneHalfWidth }
+    });
+    if (hitCount >= 2) state.screenShake = 0.1;
+    spawnCastBurst(state, hero.x, hero.y, '#ef4444', 12);
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Blood Fury') {
+    for (const eff of statusEffects) applyStatusEffect(hero as any as CombatEntity, eff);
+    hero.buffTimer = ab.duration;
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'blood_fury_aura',
+      life: 1.0, maxLife: 1.0, radius: 50, color: '#dc2626', angle: 0
+    });
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'cast_circle',
+      life: 0.5, maxLife: 0.5, radius: 45, color: '#dc2626', angle: 0
+    });
+    state.screenShake = 0.12;
+    spawnAbilityParticles(state, hero.x, hero.y, '#dc2626', 22);
+    spawnCastBurst(state, hero.x, hero.y, '#ef4444', 14);
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Piercing Strike') {
+    if (target) {
+      const dmg = ab.damage + hero.atk * 0.85;
+      hero.facing = angleTo(hero, target);
+      if (dist(hero, target) > hero.rng + 10) {
+        const lungeAngle = angleTo(hero, target);
+        const lungeDist = Math.min(dist(hero, target) - 30, 70);
+        hero.x += Math.cos(lungeAngle) * lungeDist;
+        hero.y += Math.sin(lungeAngle) * lungeDist;
+      }
+      dealDamage(state, hero, target, dmg);
+      state.spellEffects.push({
+        x: target.x, y: target.y, type: 'spear_thrust',
+        life: 0.3, maxLife: 0.3, radius: 25, color: '#22d3ee', angle: hero.facing
+      });
+      state.spellEffects.push({
+        x: target.x, y: target.y, type: 'impact_ring',
+        life: 0.2, maxLife: 0.2, radius: 20, color: '#67e8f9', angle: 0
+      });
+      spawnAbilityParticles(state, target.x, target.y, '#22d3ee', 10);
+      spawnCastBurst(state, target.x, target.y, '#67e8f9', 8);
+    }
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Wind Walk') {
+    const tx = target ? target.x : mouseTarget.x;
+    const ty = target ? target.y : mouseTarget.y;
+    const angle = Math.atan2(ty - hero.y, tx - hero.x);
+    const dashDist = Math.min(ab.range, Math.sqrt((tx - hero.x) ** 2 + (ty - hero.y) ** 2));
+    const startX = hero.x, startY = hero.y;
+    hero.x += Math.cos(angle) * dashDist;
+    hero.y += Math.sin(angle) * dashDist;
+    hero.x = Math.max(50, Math.min(MAP_SIZE - 50, hero.x));
+    hero.y = Math.max(50, Math.min(MAP_SIZE - 50, hero.y));
+    hero.facing = angle;
+    hero.iFrames = ab.duration;
+    for (let i = 0; i < 5; i++) {
+      const t = i / 5;
+      state.spellEffects.push({
+        x: startX + (hero.x - startX) * t, y: startY + (hero.y - startY) * t,
+        type: 'dash_trail', life: 0.3, maxLife: 0.3, radius: 6, color: '#22d3ee', angle
+      });
+    }
+    spawnAbilityParticles(state, hero.x, hero.y, '#22d3ee', 12);
+    spawnCastBurst(state, hero.x, hero.y, '#67e8f9', 8);
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Glaive Sweep') {
+    const entities = getAllEnemies(state, hero.team);
+    let hitCount = 0;
+    for (const e of entities) {
+      if (dist(hero, e) < ab.radius) {
+        const dmg = ab.damage + hero.atk * 0.65;
+        dealDamage(state, hero, e, dmg);
+        hitCount++;
+        if (e.activeEffects) {
+          for (const eff of statusEffects) applyStatusEffect(e as any as CombatEntity, { ...eff });
+        }
+        spawnAbilityParticles(state, e.x, e.y, '#22d3ee', 4);
+      }
+    }
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'glaive_sweep',
+      life: 0.5, maxLife: 0.5, radius: ab.radius, color: '#22d3ee', angle: hero.facing
+    });
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'impact_ring',
+      life: 0.35, maxLife: 0.35, radius: ab.radius * 0.7, color: '#67e8f9', angle: 0
+    });
+    if (hitCount >= 2) state.screenShake = 0.1;
+    spawnCastBurst(state, hero.x, hero.y, '#22d3ee', 16);
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
+
+  if (ab.name === 'Dance of Blades') {
+    const entities = getAllEnemies(state, hero.team);
+    const totalHits = 8;
+    const dmgPerHit = (ab.damage + hero.atk * 0.4) / totalHits;
+    for (const e of entities) {
+      if (dist(hero, e) < ab.radius) {
+        const totalDmg = ab.damage + hero.atk * 0.4;
+        dealDamage(state, hero, e, totalDmg);
+        spawnAbilityParticles(state, e.x, e.y, '#22d3ee', 6);
+      }
+    }
+    state.spellEffects.push({
+      x: hero.x, y: hero.y, type: 'dance_blades',
+      life: 1.0, maxLife: 1.0, radius: ab.radius, color: '#22d3ee', angle: 0,
+      data: { hits: totalHits }
+    });
+    for (let i = 0; i < 6; i++) {
+      state.spellEffects.push({
+        x: hero.x, y: hero.y, type: 'whirlwind_slash',
+        life: 0.6, maxLife: 0.6, radius: ab.radius * 0.8,
+        color: '#22d3ee', angle: (i / 6) * Math.PI * 2
+      });
+    }
+    state.screenShake = 0.15;
+    spawnAbilityParticles(state, hero.x, hero.y, '#22d3ee', 25);
+    spawnCastBurst(state, hero.x, hero.y, '#67e8f9', 16);
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
+  }
 
   if (ab.name === 'Fireball') {
     const angle = target ? angleTo(hero, target) : angleTo(hero, mouseTarget);
@@ -1906,7 +2118,7 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
     return;
   }
 
-  if (ab.name === 'Whirlwind') {
+  if (ab.name === 'Whirlwind' || ab.name === 'Blade Storm') {
     const entities = getAllEnemies(state, hero.team);
     for (const e of entities) {
       if (dist(hero, e) < ab.radius) {
@@ -3139,7 +3351,7 @@ export function handleLevelUpAbility(state: MobaState, abilityIndex: number) {
   player.abilityPoints--;
 
   const heroData = HEROES[player.heroDataId];
-  const abilities = heroData ? CLASS_ABILITIES[heroData.heroClass] : null;
+  const abilities = heroData ? getHeroAbilities(heroData.race, heroData.heroClass) : null;
   const abName = abilities?.[abilityIndex]?.name || `Ability ${abilityIndex + 1}`;
   addFloatingText(state, player.x, player.y - 40, `${abName} Leveled!`, '#ffd700', 14);
   spawnAbilityParticles(state, player.x, player.y, '#ffd700', 10);
@@ -3342,7 +3554,7 @@ export function getHudState(state: MobaState): HudState {
     blockActive: player?.blockActive ?? false,
     blockCooldown: player?.blockCooldown ?? 0,
     abilityCharges: player?.abilityCharges ?? [0, 0, 0, 0],
-    abilityMaxCharges: heroData ? (CLASS_ABILITIES[heroData.heroClass] || []).map(ab => ab.maxCharges || 0) : [0, 0, 0, 0],
+    abilityMaxCharges: heroData ? getHeroAbilities(heroData.race, heroData.heroClass).map(ab => ab.maxCharges || 0) : [0, 0, 0, 0],
     abilityLevels: player?.abilityLevels ?? [0, 0, 0, 0],
     abilityPoints: player?.abilityPoints ?? 0,
     minimapEntities: (() => {
@@ -3692,7 +3904,7 @@ export class MobaRenderer {
     const player = state.heroes[state.playerHeroIndex];
     if (player && !player.dead && state.selectedAbility >= 0) {
       const heroData = HEROES[player.heroDataId];
-      const abilities = heroData ? CLASS_ABILITIES[heroData.heroClass] : null;
+      const abilities = heroData ? getHeroAbilities(heroData.race, heroData.heroClass) : null;
       const ab = abilities ? abilities[state.selectedAbility] : null;
       if (ab) {
         const range = ab.range || 300;
@@ -5262,6 +5474,180 @@ export class MobaRenderer {
       ctx.beginPath();
       ctx.arc(0, 0, se.radius * progress, 0, Math.PI * 2);
       ctx.stroke();
+    } else if (se.type === 'axe_chop') {
+      ctx.globalAlpha = (1 - progress) * 0.85;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 5 * (1 - progress);
+      ctx.lineCap = 'round';
+      const r = se.radius * (0.4 + progress * 0.6);
+      const startAngle = se.angle - Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(startAngle) * r * 0.2, Math.sin(startAngle) * r * 0.2);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(Math.cos(se.angle) * r, Math.sin(se.angle) * r);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2 * (1 - progress);
+      ctx.globalAlpha = (1 - progress) * 0.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.6, se.angle - 0.3, se.angle + 0.3);
+      ctx.stroke();
+      for (let i = 0; i < 4; i++) {
+        const spread = (Math.random() - 0.5) * 0.8;
+        const sparkR = r * (0.3 + Math.random() * 0.7);
+        ctx.fillStyle = '#fbbf24';
+        ctx.globalAlpha = (1 - progress) * 0.6;
+        ctx.beginPath();
+        ctx.arc(Math.cos(se.angle + spread) * sparkR, Math.sin(se.angle + spread) * sparkR, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (se.type === 'spear_thrust') {
+      ctx.globalAlpha = (1 - progress) * 0.8;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 3 * (1 - progress);
+      ctx.lineCap = 'round';
+      const len = se.radius * (0.5 + progress * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(-Math.cos(se.angle) * len * 0.3, -Math.sin(se.angle) * len * 0.3);
+      ctx.lineTo(Math.cos(se.angle) * len, Math.sin(se.angle) * len);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5 * (1 - progress);
+      ctx.globalAlpha = (1 - progress) * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(se.angle) * len * 0.5, Math.sin(se.angle) * len * 0.5);
+      ctx.lineTo(Math.cos(se.angle) * len, Math.sin(se.angle) * len);
+      ctx.stroke();
+      const tipX = Math.cos(se.angle) * len;
+      const tipY = Math.sin(se.angle) * len;
+      ctx.fillStyle = se.color;
+      ctx.globalAlpha = (1 - progress) * 0.6;
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, 4 * (1 - progress), 0, Math.PI * 2);
+      ctx.fill();
+    } else if (se.type === 'glaive_sweep') {
+      ctx.globalAlpha = (1 - progress) * 0.75;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 4 * (1 - progress);
+      ctx.lineCap = 'round';
+      const r = se.radius * (0.5 + progress * 0.5);
+      const fullSweep = Math.PI * 1.5;
+      const startAngle = se.angle - fullSweep / 2 + progress * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, startAngle, startAngle + fullSweep * (1 - progress * 0.3));
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2 * (1 - progress);
+      ctx.globalAlpha = (1 - progress) * 0.35;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.85, startAngle + fullSweep * 0.1, startAngle + fullSweep * 0.9);
+      ctx.stroke();
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 2 * (1 - progress);
+      ctx.globalAlpha = (1 - progress) * 0.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.5, startAngle, startAngle + fullSweep);
+      ctx.stroke();
+    } else if (se.type === 'blood_fury_aura') {
+      const pulseR = se.radius * (0.8 + Math.sin(progress * Math.PI * 6) * 0.2);
+      ctx.globalAlpha = (1 - progress) * 0.5;
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, pulseR);
+      grad.addColorStop(0, 'rgba(220,38,38,0.4)');
+      grad.addColorStop(0.5, 'rgba(239,68,68,0.2)');
+      grad.addColorStop(1, 'rgba(220,38,38,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 2 * (1 - progress);
+      ctx.globalAlpha = (1 - progress) * 0.6;
+      ctx.beginPath();
+      ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + progress * Math.PI * 3;
+        const pr = pulseR * 0.6;
+        ctx.fillStyle = '#ef4444';
+        ctx.globalAlpha = (1 - progress) * 0.4;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * pr, Math.sin(a) * pr, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (se.type === 'fear_wave') {
+      const waveR = se.radius * progress;
+      ctx.globalAlpha = (1 - progress) * 0.6;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 4 * (1 - progress);
+      ctx.beginPath();
+      ctx.arc(0, 0, waveR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#84cc16';
+      ctx.lineWidth = 2 * (1 - progress);
+      ctx.globalAlpha = (1 - progress) * 0.3;
+      ctx.beginPath();
+      ctx.arc(0, 0, waveR * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+      const grad = ctx.createRadialGradient(0, 0, waveR * 0.3, 0, 0, waveR);
+      grad.addColorStop(0, 'rgba(101,163,13,0.15)');
+      grad.addColorStop(1, 'rgba(101,163,13,0)');
+      ctx.fillStyle = grad;
+      ctx.globalAlpha = (1 - progress) * 0.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, waveR, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (se.type === 'cleave_arc') {
+      ctx.globalAlpha = (1 - progress) * 0.8;
+      ctx.strokeStyle = se.color;
+      ctx.lineWidth = 5 * (1 - progress);
+      ctx.lineCap = 'round';
+      const halfWidth = se.data?.halfWidth || Math.PI / 3;
+      const r = se.radius * (0.5 + progress * 0.5);
+      const startAngle = se.angle - halfWidth;
+      const endAngle = se.angle + halfWidth;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, startAngle, endAngle);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5 * (1 - progress);
+      ctx.globalAlpha = (1 - progress) * 0.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.85, startAngle + halfWidth * 0.2, endAngle - halfWidth * 0.2);
+      ctx.stroke();
+      ctx.fillStyle = se.color;
+      ctx.globalAlpha = (1 - progress) * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, r, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fill();
+    } else if (se.type === 'dance_blades') {
+      const hits = se.data?.hits || 8;
+      const activeHit = Math.floor(progress * hits);
+      for (let i = 0; i < hits; i++) {
+        const a = (i / hits) * Math.PI * 2 + progress * Math.PI * 4;
+        const bladeR = se.radius * (0.4 + Math.sin(progress * Math.PI * 3 + i) * 0.2);
+        const alpha = i <= activeHit ? (1 - progress) * 0.7 : (1 - progress) * 0.2;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 3 * (1 - progress);
+        ctx.lineCap = 'round';
+        const bladeLen = 15 * (1 - progress);
+        const bx = Math.cos(a) * bladeR;
+        const by = Math.sin(a) * bladeR;
+        ctx.beginPath();
+        ctx.moveTo(bx - Math.cos(a + Math.PI / 4) * bladeLen, by - Math.sin(a + Math.PI / 4) * bladeLen);
+        ctx.lineTo(bx + Math.cos(a + Math.PI / 4) * bladeLen, by + Math.sin(a + Math.PI / 4) * bladeLen);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = (1 - progress) * 0.15;
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, se.radius);
+      grad.addColorStop(0, 'rgba(34,211,238,0.2)');
+      grad.addColorStop(1, 'rgba(34,211,238,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, se.radius, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     ctx.restore();
