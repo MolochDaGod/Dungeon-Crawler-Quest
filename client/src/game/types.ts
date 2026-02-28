@@ -120,10 +120,13 @@ export interface MobaHero extends GameEntity {
   assignedLane: number;
   abilityCharges: number[];
   abilityChargeTimers: number[];
+  abilityLevels: number[];
+  abilityPoints: number;
   attackWindup: number;
   attackBackswing: number;
   pendingAttackTarget: number | null;
   aiChatTimer: number;
+  killStreak: number;
 }
 
 export interface MobaMinion extends GameEntity {
@@ -288,6 +291,7 @@ export interface MobaState {
   screenShake: number;
   areaDamageZones: AreaDamageZoneState[];
   pendingSpriteEffects: { type: string; x: number; y: number; scale: number; duration: number }[];
+  firstBloodClaimed: boolean;
 }
 
 export interface AreaDamageZoneState {
@@ -364,6 +368,8 @@ export interface HudState {
   blockCooldown: number;
   abilityCharges: number[];
   abilityMaxCharges: number[];
+  abilityLevels: number[];
+  abilityPoints: number;
   minimapEntities: { x: number; y: number; type: 'player' | 'ally_hero' | 'enemy_hero' | 'ally_tower' | 'enemy_tower' | 'ally_nexus' | 'enemy_nexus' | 'ally_minion' | 'enemy_minion' | 'jungle_small' | 'jungle_medium' | 'jungle_buff'; dead?: boolean }[];
   cameraViewport: { x: number; y: number; w: number; h: number };
   targetInfo: TargetInfo | null;
@@ -490,7 +496,7 @@ export const TEAM_COLORS = ['#3b82f6', '#ef4444'];
 export const TEAM_NAMES = ['Crusade', 'Legion'];
 
 export function xpForLevel(level: number): number {
-  return 100 + (level - 1) * 80;
+  return 100 + level * 60;
 }
 
 export function heroStatsAtLevel(hero: HeroData, level: number): { hp: number; atk: number; def: number; spd: number; mp: number } {
