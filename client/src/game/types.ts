@@ -566,6 +566,37 @@ export function getHeroAbilities(race: string, heroClass: string): AbilityDef[] 
   return CLASS_ABILITIES[raceKey] || CLASS_ABILITIES[heroClass] || [];
 }
 
+export const ABILITY_ICONS: Record<string, string> = {
+  'Shield Bash': '/assets/abilities/shield_bash.png',
+  'Rally': '/assets/abilities/rally.png',
+  'Blade Storm': '/assets/abilities/blade_storm.png',
+  'Avatar': '/assets/abilities/avatar.png',
+  'Skull Splitter': '/assets/abilities/skull_splitter.png',
+  'War Cry': '/assets/abilities/war_cry.png',
+  'Cleave': '/assets/abilities/cleave.png',
+  'Blood Fury': '/assets/abilities/blood_fury.png',
+  'Piercing Strike': '/assets/abilities/piercing_strike.png',
+  'Wind Walk': '/assets/abilities/wind_walk.png',
+  'Glaive Sweep': '/assets/abilities/glaive_sweep.png',
+  'Dance of Blades': '/assets/abilities/dance_of_blades.png',
+  'Feral Charge': '/assets/abilities/feral_charge.png',
+  'Howl': '/assets/abilities/howl.png',
+  'Rend': '/assets/abilities/rend.png',
+  'Primal Fury': '/assets/abilities/primal_fury.png',
+  'Fireball': '/assets/abilities/fireball.png',
+  'Frost Nova': '/assets/abilities/frost_nova.png',
+  'Arcane Barrier': '/assets/abilities/arcane_barrier.png',
+  'Meteor': '/assets/abilities/meteor.png',
+  'Power Shot': '/assets/abilities/power_shot.png',
+  'Trap': '/assets/abilities/trap.png',
+  'Shadow Step': '/assets/abilities/shadow_step.png',
+  'Storm of Arrows': '/assets/abilities/storm_of_arrows.png',
+};
+
+export function getAbilityIconPath(abilityName: string): string | null {
+  return ABILITY_ICONS[abilityName] || null;
+}
+
 export function getPortraitPath(race: string, heroClass: string, heroName?: string): string {
   if (heroName && (heroName.includes('Racalvin') || heroName.includes('Pirate King'))) {
     return '/assets/portraits/pirate_king.png';

@@ -5015,7 +5015,8 @@ export class MobaRenderer {
       }
     }
 
-    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, hero.facing, hero.animState, hero.animTimer, heroData.race, heroData.name, hero.buffTimer, hero.items);
+    const heroBuffNames = hero.activeEffects?.map((e: any) => e.name || '') || [];
+    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, hero.facing, hero.animState, hero.animTimer, heroData.race, heroData.name, hero.buffTimer, hero.items, hero.id, hero.shieldHp > 0 ? hero.shieldHp : undefined, heroBuffNames.length > 0 ? heroBuffNames : undefined, _state.gameTime);
 
     if (hero.animState === 'attack' || hero.animState === 'ability' || hero.animState === 'combo_finisher') {
       const isMelee = heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg';

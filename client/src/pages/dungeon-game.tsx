@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import {
-  HEROES, CLASS_ABILITIES, CLASS_COLORS, ITEMS, ItemDef, RACE_COLORS
+  HEROES, CLASS_ABILITIES, CLASS_COLORS, ITEMS, ItemDef, RACE_COLORS,
+  ABILITY_ICONS, getHeroAbilities
 } from '@/game/types';
 import {
   DungeonState, DungeonHudState,
@@ -102,7 +103,8 @@ export default function DungeonGamePage() {
   }, [heroId, setLocation]);
 
   const heroData = HEROES.find(h => h.id === heroId);
-  const abilities = heroData ? CLASS_ABILITIES[heroData.heroClass] || [] : [];
+  const abilities = heroData ? getHeroAbilities(heroData.race, heroData.heroClass) : [];
+  const [showDebug, setShowDebug] = useState(false);
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="dungeon-game-page">
@@ -227,7 +229,7 @@ export default function DungeonGamePage() {
                     return (
                       <button
                         key={i}
-                        className="relative flex items-center justify-center font-bold text-white"
+                        className="relative flex items-center justify-center font-bold text-white overflow-hidden"
                         style={{
                           width: 50, height: 50,
                           background: onCd ? 'linear-gradient(135deg, #1a1a1a, #0a0a0a)' : `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
@@ -242,10 +244,20 @@ export default function DungeonGamePage() {
                         title={`${ab.name}: ${ab.description}`}
                         data-testid={`button-dungeon-ability-${i}`}
                       >
-                        <span className="absolute text-[9px] font-bold" style={{ top: 2, left: 4, color: '#888' }}>{ab.key}</span>
-                        <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{ab.name.substring(0, 2)}</span>
+                        {ABILITY_ICONS[ab.name] ? (
+                          <img
+                            src={ABILITY_ICONS[ab.name]}
+                            alt={ab.name}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            style={{ filter: onCd ? 'grayscale(100%) brightness(0.4)' : 'none' }}
+                            draggable={false}
+                          />
+                        ) : (
+                          <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{ab.name.substring(0, 2)}</span>
+                        )}
+                        <span className="absolute text-[9px] font-bold z-10" style={{ top: 2, left: 4, color: '#ddd', textShadow: '0 0 3px #000, 0 0 3px #000' }}>{ab.key}</span>
                         {onCd && (
-                          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 2 }}>
+                          <div className="absolute inset-0 flex items-center justify-center z-10" style={{ background: 'rgba(0,0,0,0.5)', borderRadius: 2 }}>
                             <span className="text-sm font-black text-white" style={{ textShadow: '0 0 4px #000' }}>{Math.ceil(cd)}</span>
                           </div>
                         )}
@@ -311,6 +323,50 @@ export default function DungeonGamePage() {
               </div>
             </div>
           </div>
+
+          <button
+            className="absolute top-2 right-2 pointer-events-auto text-[10px] px-2 py-1 rounded"
+            style={{
+              background: showDebug ? 'rgba(255,200,0,0.3)' : 'rgba(0,0,0,0.4)',
+              color: showDebug ? '#ffd700' : '#555',
+              border: `1px solid ${showDebug ? '#ffd700' : '#333'}`
+            }}
+            onClick={() => setShowDebug(d => !d)}
+            data-testid="button-toggle-debug"
+          >
+            DBG
+          </button>
+
+          {showDebug && (
+            <div
+              className="absolute top-8 right-2 pointer-events-auto text-[10px] font-mono"
+              style={{
+                background: 'rgba(0,0,0,0.85)',
+                border: '1px solid #555',
+                borderRadius: 4,
+                padding: '6px 10px',
+                color: '#aaa',
+                minWidth: 180,
+                lineHeight: 1.6
+              }}
+              data-testid="panel-debug-overlay"
+            >
+              <div style={{ color: '#ffd700', fontWeight: 'bold', marginBottom: 2 }}>ANIM DEBUG</div>
+              <div>state: <span style={{ color: '#4ade80' }}>{hud.animState || 'idle'}</span></div>
+              <div>timer: <span style={{ color: '#60a5fa' }}>{hud.animTimer?.toFixed(2) || '0.00'}</span></div>
+              <div>facing: <span style={{ color: '#f59e0b' }}>{hud.facing || 'down'}</span></div>
+              <div>floor: <span style={{ color: '#c084fc' }}>{hud.floor}</span></div>
+              <div>pos: <span style={{ color: '#888' }}>{hud.px?.toFixed(0)},{hud.py?.toFixed(0)}</span></div>
+              {hud.activeEffects.length > 0 && (
+                <div style={{ marginTop: 2, borderTop: '1px solid #333', paddingTop: 2 }}>
+                  <div style={{ color: '#ffd700' }}>buffs:</div>
+                  {hud.activeEffects.map((e, i) => (
+                    <div key={i} style={{ color: e.color }}>{e.name} ({e.remaining.toFixed(1)}s)</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {hud.gameOver && <DungeonGameOver hud={hud} onReturn={() => setLocation('/')} />}
         </div>

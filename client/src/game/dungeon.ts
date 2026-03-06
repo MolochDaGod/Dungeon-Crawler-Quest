@@ -139,6 +139,11 @@ export interface DungeonHudState {
   killFeed: { text: string; color: string; time: number }[];
   gameTime: number;
   showInventory: boolean;
+  animState: string;
+  animTimer: number;
+  facing: string;
+  px: number;
+  py: number;
 }
 
 const TILE_SIZE = 40;
@@ -958,6 +963,11 @@ export function getDungeonHudState(state: DungeonState): DungeonHudState {
     killFeed: state.killFeed,
     gameTime: state.gameTime,
     showInventory: state.showInventory,
+    animState: p.animState || 'idle',
+    animTimer: p.animTimer || 0,
+    facing: String(p.facing ?? 0),
+    px: p.x,
+    py: p.y,
   };
 }
 
@@ -1193,17 +1203,8 @@ export class DungeonRenderer {
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    if (p.shieldHp > 0) {
-      ctx.strokeStyle = '#22c55e';
-      ctx.lineWidth = 3;
-      ctx.globalAlpha = 0.6;
-      ctx.beginPath();
-      ctx.arc(0, 0, 24, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-
-    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, hd.heroClass, p.facing, p.animState, p.animTimer, hd.race, hd.name);
+    const buffNames = p.activeEffects.map(e => e.name || '');
+    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, hd.heroClass, p.facing, p.animState, p.animTimer, hd.race, hd.name, undefined, undefined, p.id, p.shieldHp > 0 ? p.shieldHp : undefined, buffNames.length > 0 ? buffNames : undefined, state.gameTime);
 
     this.renderHealthBar(ctx, 0, -24, 20, p.hp, p.maxHp, '#22c55e');
     const mpPct = p.mp / p.maxMp;
