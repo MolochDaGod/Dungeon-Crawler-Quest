@@ -1,4 +1,4 @@
-import { getHeroWeapon, type WeaponType } from './types';
+import { getHeroWeapon, getWeaponRenderType, type WeaponType } from './types';
 import {
   drawCastingCircle, drawWeaponTrail, drawAuraEffect,
   drawTransformVFX, drawHealingVFX, drawShieldVFX,
@@ -716,7 +716,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
   const hair = race === 'Elf' ? '#e8d090' : race === 'Orc' ? '#2a2a2a' : race === 'Undead' ? '#444444' : race === 'Dwarf' ? '#a0522d' : '#3a2a1a';
   const eye = race === 'Undead' ? '#ff4444' : race === 'Orc' ? '#ffaa00' : '#2244aa';
-  const weaponType = getHeroWeapon(race, heroClass);
+  const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
 
   const W = 8, D = 8, H = 14;
   const model: VoxelModel = [];
@@ -1415,7 +1415,7 @@ export class VoxelRenderer {
 
   private drawAttackVFX(ctx: CanvasRenderingContext2D, x: number, y: number, heroClass: string, facing: number, t: number, race?: string) {
     const atkProgress = Math.min(1, t / 0.65);
-    const weaponType = race ? getHeroWeapon(race, heroClass) : 'sword_shield';
+    const weaponType = race ? getWeaponRenderType(getHeroWeapon(race, heroClass)) : 'sword_shield';
 
     if (heroClass === 'Warrior' || heroClass === 'Worg') {
       if (weaponType === 'heavy_axe') {
