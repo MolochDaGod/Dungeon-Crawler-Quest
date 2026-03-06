@@ -1,4 +1,11 @@
 import { getHeroWeapon, type WeaponType } from './types';
+import {
+  drawCastingCircle, drawWeaponTrail, drawAuraEffect,
+  drawTransformVFX, drawHealingVFX, drawShieldVFX,
+  drawSummonVFX, WeaponTrailSystem,
+  sampleMotion, additivePoses, MOTION_LIBRARY,
+  getClassMotionProfile, type FullPose
+} from './voxel-motion';
 
 type VoxelModel = (string | null)[][][];
 
@@ -247,7 +254,7 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const pulse = (Math.sin(t * 8) + 1) * 0.5;
     const burst = Math.max(0, Math.sin(t * 8 + 1.5));
     const channel = Math.min(1, t * 4);
-    return {
+    const basePose = {
       leftLeg: { ox: Math.round(-burst * 0.8), oy: 0, oz: 0 },
       rightLeg: { ox: Math.round(burst * 0.8), oy: 0, oz: 0 },
       leftArm: { ox: Math.round(burst * 2.5), oy: Math.round(-pulse * 1.5), oz: Math.round(pulse * 4 + channel * 2) },
@@ -257,6 +264,16 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
       weapon: { ox: Math.round(burst * 2.5), oy: 0, oz: Math.round(pulse * 5 + channel) },
       weaponGlow: Math.max(pulse, channel * 0.6) * 0.95
     };
+    const profile = weaponType ? getClassMotionProfile(heroClass, weaponType) : null;
+    if (profile) {
+      const motionKey = profile.abilityMotion;
+      const motion = MOTION_LIBRARY[motionKey];
+      if (motion) {
+        const motionPose = sampleMotion(motion, t * profile.attackSpeed);
+        return additivePoses(basePose, motionPose, 0.35 * profile.swingWeight) as typeof basePose;
+      }
+    }
+    return basePose;
   }
 
   if (animState === 'dodge') {
@@ -281,7 +298,7 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const recover = progress >= 0.6 ? (progress - 0.6) / 0.4 : 0;
     const lungeFwd = lunge * (1 - recover * 0.5);
     const slashArc = Math.sin(slash * Math.PI);
-    return {
+    const basePose = {
       leftLeg: { ox: Math.round(lungeFwd * 4 - recover * 2), oy: 0, oz: Math.round(Math.max(0, slash - 0.5) * 2) },
       rightLeg: { ox: Math.round(-lungeFwd * 2 + recover), oy: 0, oz: 0 },
       leftArm: { ox: Math.round(lungeFwd * 5 + slashArc * 3 - recover * 3), oy: Math.round(-slashArc * 4), oz: Math.round(lungeFwd * 3 + slashArc * 5 - recover * 4) },
@@ -291,6 +308,12 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
       weapon: { ox: Math.round(lungeFwd * 6 + slashArc * 4 - recover * 3), oy: Math.round(-slashArc * 6 + recover * 2), oz: Math.round(lungeFwd * 4 + slashArc * 6 - recover * 5) },
       weaponGlow: slash > 0.1 ? 1.0 : lungeFwd > 0.7 ? 0.6 : recover > 0 ? 0.3 : 0
     };
+    const swingMotion = MOTION_LIBRARY['swing_horizontal'];
+    if (swingMotion) {
+      const motionPose = sampleMotion(swingMotion, t * 1.2);
+      return additivePoses(basePose, motionPose, 0.2) as typeof basePose;
+    }
+    return basePose;
   }
 
   if (animState === 'dash_attack') {
@@ -318,7 +341,7 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const bodyLean = Math.sin(phase * 0.8) * 2.2;
     const jumpPulse = Math.max(0, Math.sin(phase * 0.4)) * 1.5;
     const windmill = Math.sin(phase * 1.8) * 1.5;
-    return {
+    const basePose = {
       leftLeg: { ox: Math.round(spin * 4.0), oy: Math.round(spin2 * 1.2 + twist * 0.5), oz: Math.round(Math.max(0, -spin) * 2.5 + jumpPulse) },
       rightLeg: { ox: Math.round(-spin * 4.0), oy: Math.round(-spin2 * 1.2 - twist * 0.5), oz: Math.round(Math.max(0, spin) * 2.5 + jumpPulse) },
       leftArm: { ox: Math.round(spin * 7 + windmill), oy: Math.round(-power * 5.5 + twist), oz: Math.round(power * 7 + slam * 4.0) },
@@ -328,6 +351,15 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
       weapon: { ox: Math.round(spin * 10 + power * 6), oy: Math.round(-power * 7 + slam * 4.0 + twist), oz: Math.round(power * 10 - slam * 6) },
       weaponGlow: 1.0
     };
+    const profile = weaponType ? getClassMotionProfile(heroClass, weaponType) : null;
+    if (profile) {
+      const motion = MOTION_LIBRARY[profile.attackMotion];
+      if (motion) {
+        const motionPose = sampleMotion(motion, (t * 1.5) % motion.duration);
+        return additivePoses(basePose, motionPose, 0.25 * profile.recoilScale) as typeof basePose;
+      }
+    }
+    return basePose;
   }
 
   if (animState === 'block') {
@@ -365,11 +397,15 @@ function buildBearModel(animState: string, animTimer: number): VoxelModel {
   const fur = '#5a3a1a';
   const darkFur = '#3a2a12';
   const lightFur = '#7a5a3a';
+  const midFur = '#6b4a2a';
   const nose = '#222222';
   const eye = '#111111';
+  const eyeGlow = '#ff6600';
   const claw = '#ccccaa';
+  const fang = '#eeeecc';
+  const pawPad = '#444433';
 
-  const W = 10, D = 10, H = 12;
+  const W = 12, D = 12, H = 14;
   const model: VoxelModel = [];
   for (let z = 0; z < H; z++) {
     model[z] = [];
@@ -384,77 +420,132 @@ function buildBearModel(animState: string, animTimer: number): VoxelModel {
   };
 
   const t = animTimer;
-  const walkPhase = animState === 'walk' ? Math.sin(t * 8) : 0;
-  const atkPhase = animState === 'attack' ? Math.max(0, Math.sin(t * 10)) : 0;
+  const walkPhase = animState === 'walk' ? Math.sin(t * 7) : 0;
+  const walkPhase2 = animState === 'walk' ? Math.cos(t * 7) : 0;
+  const atkProgress = animState === 'attack' ? Math.min(1, t / 0.6) : 0;
+  const rearUp = atkProgress < 0.4 ? atkProgress / 0.4 : atkProgress < 0.6 ? 1 : 1 - (atkProgress - 0.6) / 0.4;
+  const swipe = atkProgress >= 0.35 && atkProgress < 0.6 ? (atkProgress - 0.35) / 0.25 : 0;
+  const bodyBob = animState === 'walk' ? Math.abs(Math.sin(t * 14)) * 0.5 : 0;
 
-  const fLegOx = Math.round(walkPhase * 1.2);
-  const bLegOx = Math.round(-walkPhase * 1.2);
+  const fLegOx = Math.round(walkPhase * 1.5);
+  const bLegOx = Math.round(-walkPhase * 1.5);
+  const weightShift = Math.round(walkPhase2 * 0.6);
+  const bodyRear = Math.round(rearUp * 2);
 
-  for (let y = 3; y <= 6; y++) {
+  for (let y = 3; y <= 7; y++) {
     setV(0, y, 2 + fLegOx, darkFur);
     setV(1, y, 2 + fLegOx, fur);
-    setV(0, y, 7 + fLegOx, darkFur);
-    setV(1, y, 7 + fLegOx, fur);
+    setV(0, y, 9 + fLegOx, darkFur);
+    setV(1, y, 9 + fLegOx, fur);
+    setV(0, y, 2 + fLegOx + 1, darkFur);
+    setV(1, y, 9 + fLegOx - 1, darkFur);
   }
-  setV(0, 3 + fLegOx, 2, claw); setV(0, 3 + fLegOx, 7, claw);
+  setV(0, 3 + fLegOx, 2, claw); setV(0, 3 + fLegOx, 3, claw);
+  setV(0, 3 + fLegOx, 9, claw); setV(0, 3 + fLegOx, 8, claw);
+  setV(0, 4, 2 + fLegOx, pawPad); setV(0, 4, 9 + fLegOx, pawPad);
 
-  for (let y = 3; y <= 6; y++) {
-    setV(0, y, 3 + bLegOx, darkFur);
-    setV(1, y, 3 + bLegOx, fur);
-    setV(0, y, 6 + bLegOx, darkFur);
-    setV(1, y, 6 + bLegOx, fur);
+  for (let y = 3; y <= 7; y++) {
+    setV(0, y, 4 + bLegOx, darkFur);
+    setV(1, y, 4 + bLegOx, fur);
+    setV(0, y, 7 + bLegOx, darkFur);
+    setV(1, y, 7 + bLegOx, fur);
   }
+  setV(0, 3 + bLegOx, 4, claw); setV(0, 3 + bLegOx, 7, claw);
 
-  for (let x = 2; x <= 7; x++) {
-    for (let y = 3; y <= 6; y++) {
-      setV(2, y, x, fur);
-      setV(3, y, x, fur);
-      setV(4, y, x, darkFur);
+  const bodyZ = bodyRear + Math.round(bodyBob);
+  for (let x = 2; x <= 9; x++) {
+    for (let y = 3; y <= 8; y++) {
+      const isEdge = x === 2 || x === 9 || y === 3 || y === 8;
+      setV(2 + bodyZ, y + weightShift, x, isEdge ? darkFur : fur);
+      setV(3 + bodyZ, y + weightShift, x, isEdge ? fur : midFur);
+      setV(4 + bodyZ, y + weightShift, x, isEdge ? darkFur : fur);
     }
   }
-  for (let x = 3; x <= 6; x++) {
-    for (let y = 3; y <= 6; y++) {
-      setV(5, y, x, fur);
+
+  for (let x = 3; x <= 8; x++) {
+    for (let y = 3; y <= 8; y++) {
+      setV(5 + bodyZ, y + weightShift, x, fur);
     }
   }
 
-  for (let x = 2; x <= 7; x++) {
-    setV(3, 4, x, lightFur);
-    setV(3, 5, x, lightFur);
+  for (let x = 3; x <= 8; x++) {
+    setV(3 + bodyZ, 5 + weightShift, x, lightFur);
+    setV(3 + bodyZ, 6 + weightShift, x, lightFur);
+    setV(4 + bodyZ, 5 + weightShift, x, lightFur);
+    setV(4 + bodyZ, 6 + weightShift, x, lightFur);
   }
 
-  const headOz = Math.round(atkPhase * 1.5);
-  for (let x = 3; x <= 6; x++) {
-    for (let y = 2; y <= 5; y++) {
-      setV(5 + headOz, y, x, fur);
-      setV(6 + headOz, y, x, fur);
-      setV(7 + headOz, y, x, darkFur);
+  for (let x = 2; x <= 9; x++) {
+    setV(5 + bodyZ, 4 + weightShift, x, darkFur);
+    setV(5 + bodyZ, 7 + weightShift, x, darkFur);
+  }
+
+  const shoulderOz = bodyZ + Math.round(rearUp * 1);
+  for (let y = 3; y <= 8; y++) {
+    setV(5 + shoulderOz, y + weightShift, 2, midFur);
+    setV(5 + shoulderOz, y + weightShift, 9, midFur);
+    setV(6 + shoulderOz, y + weightShift, 3, darkFur);
+    setV(6 + shoulderOz, y + weightShift, 8, darkFur);
+  }
+
+  const headOz = bodyZ + Math.round(rearUp * 2.5);
+  const headOx = Math.round(swipe * 2);
+  for (let x = 3; x <= 8; x++) {
+    for (let y = 2; y <= 6; y++) {
+      const isTop = y === 2 || x === 3 || x === 8;
+      setV(6 + headOz, y + headOx, x, isTop ? darkFur : fur);
+      setV(7 + headOz, y + headOx, x, isTop ? fur : midFur);
+      setV(8 + headOz, y + headOx, x, darkFur);
     }
   }
-  for (let x = 4; x <= 5; x++) {
-    setV(8 + headOz, 3, x, fur);
-    setV(8 + headOz, 4, x, fur);
+  for (let x = 4; x <= 7; x++) {
+    setV(9 + headOz, 3 + headOx, x, fur);
+    setV(9 + headOz, 4 + headOx, x, fur);
+  }
+  for (let x = 5; x <= 6; x++) {
+    setV(10 + headOz, 3 + headOx, x, darkFur);
+    setV(10 + headOz, 4 + headOx, x, darkFur);
   }
 
-  setV(7 + headOz, 2, 3, eye);
-  setV(7 + headOz, 2, 6, eye);
+  setV(8 + headOz, 2 + headOx, 4, eye);
+  setV(8 + headOz, 2 + headOx, 7, eye);
+  setV(9 + headOz, 2 + headOx, 4, eyeGlow);
+  setV(9 + headOz, 2 + headOx, 7, eyeGlow);
 
-  setV(6 + headOz, 2, 4, nose);
-  setV(6 + headOz, 2, 5, nose);
-  setV(5 + headOz, 2, 4, '#994444');
-  setV(5 + headOz, 2, 5, '#994444');
+  setV(7 + headOz, 2 + headOx, 5, nose);
+  setV(7 + headOz, 2 + headOx, 6, nose);
+  setV(6 + headOz, 2 + headOx, 5, '#994444');
+  setV(6 + headOz, 2 + headOx, 6, '#994444');
 
-  setV(8 + headOz, 3, 3, fur);
-  setV(8 + headOz, 3, 6, fur);
-  setV(9 + headOz, 3, 3, darkFur);
-  setV(9 + headOz, 3, 6, darkFur);
+  setV(6 + headOz, 2 + headOx, 4, fang);
+  setV(6 + headOz, 2 + headOx, 7, fang);
+  setV(5 + headOz, 2 + headOx, 4, fang);
+  setV(5 + headOz, 2 + headOx, 7, fang);
 
-  if (atkPhase > 0.3) {
-    const clawExtend = Math.round(atkPhase * 2);
-    setV(3, 2, 1, claw);
-    setV(3, 2 - clawExtend, 1, claw);
-    setV(3, 2, 8, claw);
-    setV(3, 2 - clawExtend, 8, claw);
+  setV(9 + headOz, 4 + headOx, 3, fur);
+  setV(9 + headOz, 4 + headOx, 8, fur);
+  setV(10 + headOz, 4 + headOx, 3, darkFur);
+  setV(10 + headOz, 4 + headOx, 8, darkFur);
+  setV(10 + headOz, 3 + headOx, 3, darkFur);
+  setV(10 + headOz, 3 + headOx, 8, darkFur);
+
+  if (swipe > 0.1) {
+    const clawExtend = Math.round(swipe * 3);
+    for (let ci = 0; ci < 3; ci++) {
+      setV(4 + bodyZ, 2 - clawExtend + ci, 1, claw);
+      setV(4 + bodyZ, 2 - clawExtend + ci, 10, claw);
+    }
+    setV(3 + bodyZ, 1, 1, '#ff4400');
+    setV(3 + bodyZ, 1, 10, '#ff4400');
+  }
+
+  if (rearUp > 0.5) {
+    for (let y = 3; y <= 8; y++) {
+      setV(3 + bodyZ, y + weightShift, 1, darkFur);
+      setV(4 + bodyZ, y + weightShift, 1, fur);
+      setV(3 + bodyZ, y + weightShift, 10, darkFur);
+      setV(4 + bodyZ, y + weightShift, 10, fur);
+    }
   }
 
   return model;
@@ -1196,6 +1287,14 @@ export class VoxelRenderer {
   private spriteCache = new Map<string, ImageBitmap>();
   private tileCache = new Map<string, HTMLCanvasElement>();
   private cubeSize = 4;
+  private weaponTrails = new Map<number, WeaponTrailSystem>();
+  private transformTimers = new Map<number, number>();
+
+  private getWeaponTrail(entityId: number): WeaponTrailSystem {
+    let trail = this.weaponTrails.get(entityId);
+    if (!trail) { trail = new WeaponTrailSystem(); this.weaponTrails.set(entityId, trail); }
+    return trail;
+  }
 
   drawHeroVoxel(
     ctx: CanvasRenderingContext2D,
@@ -1206,14 +1305,41 @@ export class VoxelRenderer {
     race: string,
     heroName?: string,
     buffTimer?: number,
-    heroItems?: ({ id: number } | null)[]
+    heroItems?: ({ id: number } | null)[],
+    entityId?: number,
+    shieldHp?: number,
+    activeBuffs?: string[],
+    gameTime?: number
   ) {
     const groundY = y + 6;
+    const time = gameTime ?? animTimer;
+    const eid = entityId ?? 0;
 
     if (heroClass === 'Worg' && buffTimer && buffTimer > 0) {
+      const prevTransform = this.transformTimers.get(eid) ?? 0;
+      const transformProgress = Math.min(1, prevTransform + 0.05);
+      this.transformTimers.set(eid, transformProgress);
+
+      if (transformProgress < 0.95) {
+        drawTransformVFX(ctx, x, groundY - 14, transformProgress, '#f97316', time);
+      }
+
       const bearModel = buildBearModel(animState, animTimer);
       this.renderVoxelModel(ctx, x, groundY - 28, bearModel, this.cubeSize, facing);
+
+      if (shieldHp && shieldHp > 0) drawShieldVFX(ctx, x, groundY - 14, shieldHp, 200, time);
       return;
+    } else {
+      this.transformTimers.delete(eid);
+    }
+
+    const classVfxColors: Record<string, string> = { Warrior: '#ef4444', Mage: '#8b5cf6', Ranger: '#22c55e', Worg: '#f97316' };
+    const vfxColor = classVfxColors[heroClass] || '#ffffff';
+
+    if (animState === 'ability' && animTimer > 0.01) {
+      const castProgress = Math.min(1, animTimer / 0.5);
+      const castColor = heroClass === 'Mage' ? '#8b5cf6' : heroClass === 'Ranger' ? '#22c55e' : heroClass === 'Worg' ? '#f97316' : '#ef4444';
+      drawCastingCircle(ctx, x, groundY + 2, 22, castColor, castProgress, time);
     }
 
     if ((animState === 'attack' || animState === 'combo_finisher' || animState === 'lunge_slash' || animState === 'dash_attack') && animTimer > 0.03) {
@@ -1222,8 +1348,7 @@ export class VoxelRenderer {
       const isDash = animState === 'dash_attack';
       const trailAlpha = isFinisher ? 0.4 : isLunge ? 0.2 : isDash ? 0.15 : 0.12;
       const trailCount = isFinisher ? 4 : isLunge ? 2 : isDash ? 2 : 1;
-      const classTrailColors: Record<string, string> = { Warrior: '#ef4444', Mage: '#8b5cf6', Ranger: '#22c55e', Worg: '#f97316' };
-      const trailTint = classTrailColors[heroClass] || '#ffffff';
+      const trailTint = vfxColor;
       for (let ti = 0; ti < trailCount; ti++) {
         const trailOffset = 0.05 + ti * 0.05;
         ctx.save();
@@ -1238,6 +1363,18 @@ export class VoxelRenderer {
         ctx.fillRect(x - trailSize / 2, groundY - trailSize, trailSize, trailSize);
         ctx.restore();
       }
+
+      const trail = this.getWeaponTrail(eid);
+      const weaponDist = 12 + animTimer * 30;
+      const wx = x + Math.cos(facing) * weaponDist;
+      const wy = groundY - 10 + Math.sin(facing) * weaponDist * 0.5;
+      const wz = 8 + Math.sin(animTimer * 10) * 4;
+      trail.addPoint(wx, wy, wz, time);
+      trail.update(time);
+      drawWeaponTrail(ctx, trail.getPoints(), vfxColor, 4, facing);
+    } else {
+      const trail = this.weaponTrails.get(eid);
+      if (trail) { trail.update(time); if (trail.getPoints().length > 0) drawWeaponTrail(ctx, trail.getPoints(), vfxColor, 3, facing); }
     }
 
     const model = buildHeroModel(race, heroClass, animState, animTimer, heroName, heroItems);
@@ -1257,6 +1394,22 @@ export class VoxelRenderer {
     }
     if (animState === 'combo_finisher' && animTimer > 0.02) {
       this.drawComboFinisherVFX(ctx, x, groundY, heroClass, facing, animTimer);
+    }
+
+    if (shieldHp && shieldHp > 0) {
+      drawShieldVFX(ctx, x, groundY - 14, shieldHp, 200, time);
+    }
+
+    if (activeBuffs && activeBuffs.length > 0) {
+      const hasHeal = activeBuffs.some(b => b.includes('heal') || b.includes('Heal') || b.includes('Regen'));
+      const hasAtkBuff = activeBuffs.some(b => b.includes('ATK') || b.includes('Fury') || b.includes('Frenzy') || b.includes('Rally'));
+      const hasSpeedBuff = activeBuffs.some(b => b.includes('Speed') || b.includes('Haste') || b.includes('Wind'));
+      const hasLifesteal = activeBuffs.some(b => b.includes('Lifesteal') || b.includes('Blood'));
+
+      if (hasHeal) drawHealingVFX(ctx, x, groundY - 8, 0.7, time);
+      if (hasAtkBuff) drawAuraEffect(ctx, x, groundY - 12, '#ef4444', 0.6, time);
+      if (hasSpeedBuff) drawAuraEffect(ctx, x, groundY - 10, '#22d3ee', 0.4, time);
+      if (hasLifesteal) drawAuraEffect(ctx, x, groundY - 12, '#dc2626', 0.5, time);
     }
   }
 
