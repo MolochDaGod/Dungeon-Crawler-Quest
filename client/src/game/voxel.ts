@@ -915,70 +915,95 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
 }
 
 function buildMinionModel(color: string, minionType: string, animTimer: number): VoxelModel {
-  const dark = shade(color, 0.6);
-  const mid = shade(color, 0.85);
-  const light = shade(color, 1.2);
+  const dark = shade(color, 0.5);
+  const mid = shade(color, 0.75);
+  const col = color;
+  const light = shade(color, 1.15);
   const bright = shade(color, 1.4);
-  const bob = Math.sin(animTimer * 6);
   const walk = Math.sin(animTimer * 8);
+  const bob = Math.sin(animTimer * 6);
+  const metal = '#9ca3af'; const metalDark = '#6b7280'; const metalBright = '#d1d5db';
+  const leather = '#78350f'; const wood = '#92400e'; const woodLight = '#b45309';
+
+  function makeGrid(h: number, w: number): VoxelModel {
+    const m: VoxelModel = [];
+    for (let z = 0; z < h; z++) { m[z] = []; for (let y = 0; y < w; y++) { m[z][y] = []; for (let x = 0; x < w; x++) m[z][y][x] = null; } }
+    return m;
+  }
 
   if (minionType === 'siege' || minionType === 'super') {
-    const model: VoxelModel = [];
-    const h = 8; const w = 5;
-    for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
-    const legOff = Math.round(walk * 0.5);
-    model[0][1][0 + (legOff > 0 ? 1 : 0)] = dark;
-    model[0][1][4 - (legOff > 0 ? 1 : 0)] = dark;
-    model[0][3][0 - (legOff > 0 ? 0 : -1)] = dark;
-    model[0][3][4 + (legOff > 0 ? 0 : -1)] = dark;
-    for (let x = 1; x <= 3; x++) for (let y = 1; y <= 3; y++) { model[1][y][x] = dark; model[2][y][x] = mid; }
-    for (let x = 0; x <= 4; x++) for (let y = 0; y <= 4; y++) {
-      if (x === 0 || x === 4 || y === 0 || y === 4) { if ((x + y) % 2 === 0) model[3][y][x] = mid; }
-      else { model[3][y][x] = color; model[4][y][x] = color; }
+    const model = makeGrid(10, 7);
+    const legOff = Math.round(walk * 0.4);
+    const isSup = minionType === 'super';
+    const armor = isSup ? '#c5a059' : metalDark;
+    const armorLight = isSup ? '#d4af37' : metal;
+    model[0][1][1 + (legOff > 0 ? 1 : 0)] = dark; model[0][1][5 - (legOff > 0 ? 1 : 0)] = dark;
+    model[0][5][1 - (legOff > 0 ? 0 : -1)] = dark; model[0][5][5 + (legOff > 0 ? 0 : -1)] = dark;
+    model[1][1][1] = dark; model[1][1][5] = dark; model[1][5][1] = dark; model[1][5][5] = dark;
+    for (let x = 1; x <= 5; x++) for (let y = 1; y <= 5; y++) model[2][y][x] = mid;
+    for (let x = 1; x <= 5; x++) for (let y = 1; y <= 5; y++) { model[3][y][x] = col; model[4][y][x] = col; }
+    for (let x = 0; x <= 6; x++) { model[3][0][x] = armor; model[3][6][x] = armor; model[4][0][x] = armor; model[4][6][x] = armor; }
+    for (let y = 0; y <= 6; y++) { model[3][y][0] = armor; model[3][y][6] = armor; model[4][y][0] = armor; model[4][y][6] = armor; }
+    for (let x = 1; x <= 5; x++) for (let y = 1; y <= 5; y++) model[5][y][x] = col;
+    for (let x = 2; x <= 4; x++) for (let y = 2; y <= 4; y++) model[5][y][x] = light;
+    model[5][0][3] = armorLight; model[5][6][3] = armorLight; model[5][3][0] = armorLight; model[5][3][6] = armorLight;
+    for (let x = 2; x <= 4; x++) for (let y = 2; y <= 4; y++) model[6][y][x] = col;
+    model[6][3][3] = light;
+    model[7][2][3] = '#ef4444'; model[7][4][3] = '#ef4444'; model[7][3][3] = bright;
+    model[8][3][3] = bright;
+    if (isSup) {
+      model[9][3][3] = '#ffd700';
+      model[6][3][0] = '#ef4444'; model[7][3][0] = '#ef4444';
+      model[6][3][6] = '#ef4444'; model[7][3][6] = '#ef4444';
     }
-    for (let x = 1; x <= 3; x++) for (let y = 1; y <= 3; y++) model[5][y][x] = color;
-    model[6][2][1] = light; model[6][2][3] = light; model[6][2][2] = bright;
-    model[7][2][2] = bright;
-    const weaponColor = '#888888';
-    model[3][0][2] = weaponColor; model[4][0][2] = weaponColor; model[5][0][2] = shade(weaponColor, 1.3);
+    model[3][0][1] = metalDark; model[3][0][2] = metal; model[3][0][3] = metalBright;
+    model[3][0][4] = metal; model[3][0][5] = metalDark;
+    model[4][0][2] = metalBright; model[4][0][3] = metalBright; model[4][0][4] = metalBright;
+    model[5][0][3] = metalBright; model[6][0][3] = metal;
     return model;
   }
 
   if (minionType === 'ranged') {
-    const model: VoxelModel = [];
-    const h = 7; const w = 3;
-    for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+    const model = makeGrid(8, 5);
     const legOff = Math.round(walk * 0.5);
-    model[0][1][0 + (legOff > 0 ? 1 : 0)] = dark;
-    model[0][1][2 - (legOff > 0 ? 1 : 0)] = dark;
-    model[1][1][1] = mid;
-    for (let x = 0; x < w; x++) for (let y = 0; y < w; y++) {
-      if (Math.abs(x - 1) + Math.abs(y - 1) <= 1) model[2][y][x] = color;
-    }
-    model[3][1][1] = color; model[3][0][1] = mid; model[3][2][1] = mid;
-    model[4][1][0] = shade('#8b6c42', 0.8); model[4][1][2] = shade('#8b6c42', 0.8);
-    model[5][1][1] = light;
-    model[6][1][1] = bright;
-    model[3][0][0] = shade('#6b4423', 0.9); model[4][0][0] = shade('#6b4423', 0.9); model[5][0][0] = shade('#6b4423', 1.1);
+    model[0][2][1 + (legOff > 0 ? 1 : 0)] = dark;
+    model[0][2][3 - (legOff > 0 ? 1 : 0)] = dark;
+    model[1][2][1] = mid; model[1][2][3] = mid;
+    model[1][2][2] = dark;
+    for (let x = 1; x <= 3; x++) model[2][2][x] = col;
+    model[2][1][2] = col; model[2][3][2] = col;
+    model[3][2][2] = col; model[3][1][2] = mid; model[3][3][2] = mid;
+    model[3][2][1] = mid; model[3][2][3] = mid;
+    model[4][2][0] = leather; model[4][2][4] = leather;
+    model[4][2][2] = light; model[4][1][2] = mid; model[4][3][2] = mid;
+    model[5][2][2] = light;
+    model[6][1][2] = bright; model[6][3][2] = bright; model[6][2][2] = light;
+    model[7][2][2] = bright;
+    const bowAngle = bob * 0.3;
+    model[3][0][0] = wood; model[4][0][0] = wood; model[5][0][0] = woodLight;
+    model[2][0][0] = wood; model[6][0][0] = wood;
+    if (bowAngle > 0) { model[3][0][1] = '#d4d4d8'; model[4][0][1] = '#d4d4d8'; model[5][0][1] = '#d4d4d8'; }
     return model;
   }
 
-  const model: VoxelModel = [];
-  const h = 6; const w = 3;
-  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const model = makeGrid(7, 5);
   const legOff = Math.round(walk * 0.5);
-  model[0][1][0 + (legOff > 0 ? 1 : 0)] = dark;
-  model[0][1][2 - (legOff > 0 ? 1 : 0)] = dark;
-  model[1][1][1] = mid;
-  for (let x = 0; x < w; x++) for (let y = 0; y < w; y++) {
-    if (Math.abs(x - 1) + Math.abs(y - 1) <= 1) model[2][y][x] = color;
-  }
-  model[3][1][1] = color; model[3][0][1] = mid;
-  model[4][1][1] = light;
-  model[5][1][1] = bright;
-  const swordColor = '#a0a0a0';
-  model[2][0][0] = swordColor; model[3][0][0] = shade(swordColor, 1.2);
-  if (bob > 0.3) model[4][0][0] = shade(swordColor, 1.4);
+  model[0][2][1 + (legOff > 0 ? 1 : 0)] = dark;
+  model[0][2][3 - (legOff > 0 ? 1 : 0)] = dark;
+  model[0][2][2] = metalDark;
+  model[1][2][1] = mid; model[1][2][3] = mid; model[1][2][2] = dark;
+  for (let x = 1; x <= 3; x++) model[2][2][x] = col;
+  model[2][1][2] = col; model[2][3][2] = col;
+  model[3][2][2] = col; model[3][1][2] = mid; model[3][3][2] = mid;
+  model[3][2][1] = leather; model[3][2][3] = leather;
+  model[4][2][2] = light; model[4][1][2] = metal; model[4][3][2] = metal;
+  model[5][1][2] = bright; model[5][3][2] = bright; model[5][2][2] = light;
+  model[6][2][2] = bright;
+  const swingOff = bob > 0.2 ? 1 : 0;
+  model[2][0][0] = metal; model[3][0][0] = metalBright;
+  model[4 + swingOff][0][0] = metalBright;
+  model[2][0][1] = metalDark;
+  model[2][4][3] = metalDark; model[2][4][4] = metal; model[3][4][4] = metal;
   return model;
 }
 

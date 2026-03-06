@@ -246,6 +246,8 @@ export function getCCDuration(entity: CombatEntity, ccType: StatusEffectType, ba
 }
 
 export function applyStatusEffect(entity: CombatEntity, effect: StatusEffect): boolean {
+  if (!entity.activeEffects) return false;
+
   if (CC_TYPES.has(effect.type)) {
     if (!canApplyCC(entity, effect.type)) return false;
     effect.remaining = getCCDuration(entity, effect.type, effect.duration);

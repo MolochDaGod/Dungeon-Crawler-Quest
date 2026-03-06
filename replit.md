@@ -18,7 +18,7 @@ The game's architecture centers on a React frontend with a custom HTML5 Canvas 2
 - **Combat System:** Features 19 status effects (DoT, CC, buffs), critical hits, armor penetration, lifesteal, and a Dota 2-paced attack system.
 - **AI System:** Advanced DOTA2-style AI with game phase awareness (laning/midgame/lategame), last-hitting, lane equilibrium, gank rotations, focus-fire coordination, orb-walking for ranged heroes, and class-specific ability leveling priorities.
 - **Animation System:** Loads external FBX animation clips with cross-fading and state mapping for 3D models.
-- **Voxel Art System:** Procedural isometric voxel rendering for heroes, minions, terrain, and structures with multi-part body posing and class-specific animations.
+- **Voxel Art System:** Procedural isometric voxel rendering for heroes, minions, terrain, and structures with multi-part body posing and class-specific animations. Detailed minion models: melee (sword+shield, leather armor, metal shoulders), ranged (bow, leather bracers, taller build), siege (7x10 armored war machine with battering ram), super/monster (gold-crowned variant with glowing accents).
 - **RPG UI Overlay:** In-game HUD with ability hotbar (with level indicators and level-up buttons), item slots, buff/debuff display, KDA, scoreboard, and custom cursor.
 - **Spell VFX System:** Comprehensive system with 16 visual effect types, multi-layered impact VFX, projectiles with trails, screen shake, and charge systems.
 - **Keybinding System:** Fully rebindable actions persisted in localStorage. Ctrl+Q/W/E/R to level abilities.

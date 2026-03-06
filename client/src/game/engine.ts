@@ -1632,7 +1632,7 @@ function applyItemStats(hero: MobaHero, item: { hp: number; atk: number; def: nu
   hero.mp += item.mp;
 }
 
-function findNearestEnemy(state: MobaState, entity: { x: number; y: number; team: number }, range: number): { id: number; x: number; y: number; team: number; dead: boolean; hp: number } | null {
+function findNearestEnemy(state: MobaState, entity: { x: number; y: number; team: number }, range: number, includeJungle: boolean = true): { id: number; x: number; y: number; team: number; dead: boolean; hp: number } | null {
   let nearest: any = null;
   let nearestDist = range;
 
@@ -1656,11 +1656,13 @@ function findNearestEnemy(state: MobaState, entity: { x: number; y: number; team
     const d = dist(entity, n);
     if (d < nearestDist) { nearestDist = d; nearest = n; }
   }
-  for (const camp of state.jungleCamps) {
-    for (const mob of camp.mobs) {
-      if (mob.dead) continue;
-      const d = dist(entity, mob);
-      if (d < nearestDist) { nearestDist = d; nearest = mob; }
+  if (includeJungle) {
+    for (const camp of state.jungleCamps) {
+      for (const mob of camp.mobs) {
+        if (mob.dead) continue;
+        const d = dist(entity, mob);
+        if (d < nearestDist) { nearestDist = d; nearest = mob; }
+      }
     }
   }
 
@@ -2619,7 +2621,7 @@ function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
     return;
   }
 
-  const enemy = findNearestEnemy(state, minion, 300);
+  const enemy = findNearestEnemy(state, minion, 300, false);
   if (enemy && dist(minion, enemy) < minion.rng + 20) {
     minion.facing = angleTo(minion, enemy);
     if (minion.autoAttackTimer <= 0) {
@@ -2706,11 +2708,13 @@ function updateTower(state: MobaState, tower: MobaTower, dt: number) {
   if (tower.targetId !== null && tower.autoAttackTimer <= 0) {
     const target = findEntityById(state, tower.targetId);
     if (target) {
+      const tType: 'hero' | 'minion' | 'tower' | 'nexus' =
+        'heroDataId' in target ? 'hero' : 'minionType' in target ? 'minion' : 'tierIndex' in target ? 'tower' : 'nexus';
       state.projectiles.push({
         id: state.nextEntityId++,
         x: tower.x, y: tower.y,
         targetId: target.id,
-        targetType: 'hero',
+        targetType: tType,
         damage: tower.atk,
         speed: 800,
         team: tower.team,
@@ -3077,7 +3081,7 @@ function updateAreaDamageZones(state: MobaState, dt: number) {
 
           const zoneTypeEffects: Record<string, () => void> = {
             frost: () => {
-              if ('spd' in e) {
+              if ('spd' in e && 'activeEffects' in e) {
                 applyStatusEffect(e as any, {
                   id: state.nextEntityId++, type: StatusEffectType.Slow, name: 'Frost Zone', duration: 1.5,
                   icon: '❄', color: '#60a5fa', remaining: 1.5,
