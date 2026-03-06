@@ -7,7 +7,8 @@ import {
 import {
   DungeonState, DungeonHudState,
   createDungeonState, updateDungeon, getDungeonHudState,
-  DungeonRenderer, handleDungeonAbility, handleDungeonAttack
+  DungeonRenderer, handleDungeonAbility, handleDungeonAttack,
+  updateDungeonMouseWorld, startDungeonTargeting, confirmDungeonTargeting, cancelDungeonTargeting
 } from '@/game/dungeon';
 import { EFFECT_COLORS, StatusEffect } from '@/game/combat';
 import {
@@ -63,14 +64,30 @@ export default function DungeonGamePage() {
 
     const bindings = loadKeybindings();
 
+    const tryTargetOrCast = (abilityIndex: number) => {
+      const hd = HEROES[state.player.heroDataId];
+      const abs = getHeroAbilities(hd.race, hd.heroClass);
+      const ab = abs[abilityIndex];
+      if (ab && (ab.castType === 'ground_aoe' || ab.castType === 'skillshot' || ab.castType === 'cone' || ab.castType === 'line')) {
+        startDungeonTargeting(state, abilityIndex);
+      } else {
+        handleDungeonAbility(state, abilityIndex);
+      }
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       keysRef.current.add(key);
 
-      if (matchesKeyDown(bindings[KeybindAction.Ability1], e)) handleDungeonAbility(state, 0);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) handleDungeonAbility(state, 1);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) handleDungeonAbility(state, 2);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) handleDungeonAbility(state, 3);
+      if (key === 'escape' && state.targeting.active) {
+        cancelDungeonTargeting(state);
+        return;
+      }
+
+      if (matchesKeyDown(bindings[KeybindAction.Ability1], e)) { e.preventDefault(); tryTargetOrCast(0); }
+      else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) { e.preventDefault(); tryTargetOrCast(1); }
+      else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) { e.preventDefault(); tryTargetOrCast(2); }
+      else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) { e.preventDefault(); tryTargetOrCast(3); }
 
       if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handleDungeonAttack(state);
       if (key === 'i') state.showInventory = !state.showInventory;
@@ -80,7 +97,24 @@ export default function DungeonGamePage() {
     const onKeyUp = (e: KeyboardEvent) => { keysRef.current.delete(e.key.toLowerCase()); };
 
     const onClick = (e: MouseEvent) => {
-      if (e.button === 0) handleDungeonAttack(state);
+      if (e.button === 0) {
+        if (state.targeting.active) {
+          confirmDungeonTargeting(state);
+        } else {
+          handleDungeonAttack(state);
+        }
+      }
+    };
+
+    const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      if (state.targeting.active) {
+        cancelDungeonTargeting(state);
+      }
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      updateDungeonMouseWorld(state, e.clientX, e.clientY, canvas.width, canvas.height);
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -90,6 +124,8 @@ export default function DungeonGamePage() {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     canvas.addEventListener('click', onClick);
+    canvas.addEventListener('contextmenu', onContextMenu);
+    canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('wheel', onWheel);
 
     return () => {
@@ -98,13 +134,21 @@ export default function DungeonGamePage() {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       canvas.removeEventListener('click', onClick);
+      canvas.removeEventListener('contextmenu', onContextMenu);
+      canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('wheel', onWheel);
     };
   }, [heroId, setLocation]);
 
   const heroData = HEROES.find(h => h.id === heroId);
   const abilities = heroData ? getHeroAbilities(heroData.race, heroData.heroClass) : [];
-  const [showDebug, setShowDebug] = useState(false);
+  const [showDebug, setShowDebug] = useState(() => {
+    try {
+      const stored = localStorage.getItem('grudge_graphics_settings');
+      if (stored) return JSON.parse(stored).showDebugOverlay === true;
+    } catch {}
+    return false;
+  });
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="dungeon-game-page">
@@ -324,22 +368,41 @@ export default function DungeonGamePage() {
             </div>
           </div>
 
-          <button
-            className="absolute top-2 right-2 pointer-events-auto text-[10px] px-2 py-1 rounded"
-            style={{
-              background: showDebug ? 'rgba(255,200,0,0.3)' : 'rgba(0,0,0,0.4)',
-              color: showDebug ? '#ffd700' : '#555',
-              border: `1px solid ${showDebug ? '#ffd700' : '#333'}`
-            }}
-            onClick={() => setShowDebug(d => !d)}
-            data-testid="button-toggle-debug"
-          >
-            DBG
-          </button>
+          <div className="absolute top-2 right-2 pointer-events-auto flex items-center" style={{ gap: 4 }}>
+            <button
+              className="flex items-center justify-center rounded cursor-pointer"
+              style={{
+                width: 28, height: 28,
+                background: 'rgba(0,0,0,0.4)',
+                color: '#888',
+                border: '1px solid #333',
+              }}
+              onClick={() => setLocation('/settings')}
+              title="Settings"
+              data-testid="button-dungeon-settings"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+            <button
+              className="text-[10px] px-2 py-1 rounded cursor-pointer"
+              style={{
+                background: showDebug ? 'rgba(255,200,0,0.3)' : 'rgba(0,0,0,0.4)',
+                color: showDebug ? '#ffd700' : '#555',
+                border: `1px solid ${showDebug ? '#ffd700' : '#333'}`
+              }}
+              onClick={() => setShowDebug(d => !d)}
+              data-testid="button-toggle-debug"
+            >
+              DBG
+            </button>
+          </div>
 
           {showDebug && (
             <div
-              className="absolute top-8 right-2 pointer-events-auto text-[10px] font-mono"
+              className="absolute top-10 right-2 pointer-events-auto text-[10px] font-mono"
               style={{
                 background: 'rgba(0,0,0,0.85)',
                 border: '1px solid #555',

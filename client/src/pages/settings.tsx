@@ -14,6 +14,8 @@ interface GraphicsSettings {
   masterVolume: number;
   sfxVolume: number;
   musicVolume: number;
+  showDebugOverlay: boolean;
+  showDamageNumbers: boolean;
 }
 
 const GRAPHICS_STORAGE_KEY = 'grudge_graphics_settings';
@@ -27,7 +29,7 @@ function loadGraphicsSettings(): GraphicsSettings {
       return parsed;
     }
   } catch {}
-  const defaults = { particleQuality: 'medium' as const, screenShake: true, minimapSize: 200, masterVolume: 50, sfxVolume: 100, musicVolume: 60 };
+  const defaults = { particleQuality: 'medium' as const, screenShake: true, minimapSize: 200, masterVolume: 50, sfxVolume: 100, musicVolume: 60, showDebugOverlay: false, showDamageNumbers: true };
   localStorage.setItem('grudge_volume', String(defaults.masterVolume));
   return defaults;
 }
@@ -411,6 +413,96 @@ export default function SettingsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div
+          className="rounded-md overflow-hidden mb-8"
+          style={{
+            background: 'linear-gradient(to bottom, rgba(15,18,15,0.95), rgba(10,12,10,0.95))',
+            border: '1px solid rgba(197,160,89,0.2)',
+          }}
+          data-testid="panel-display"
+        >
+          <div
+            className="px-4 py-2.5 text-xs font-bold tracking-wider uppercase"
+            style={{ color: '#c5a059', background: 'rgba(197,160,89,0.06)', borderBottom: '1px solid rgba(197,160,89,0.15)' }}
+          >
+            Display
+          </div>
+
+          <div className="px-4 py-4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <span className="text-sm text-gray-300 block">Show Debug Overlay</span>
+                <span className="text-xs text-gray-600">Display FPS, position, and animation debug info</span>
+              </div>
+              <button
+                className="relative cursor-pointer"
+                style={{
+                  width: 48,
+                  height: 26,
+                  borderRadius: 13,
+                  background: graphics.showDebugOverlay
+                    ? 'linear-gradient(135deg, #c5a059, #8b6914)'
+                    : 'rgba(30,30,30,0.8)',
+                  border: `1px solid ${graphics.showDebugOverlay ? '#c5a059' : 'rgba(197,160,89,0.15)'}`,
+                  transition: 'all 0.2s',
+                }}
+                onClick={() => updateGraphics({ showDebugOverlay: !graphics.showDebugOverlay })}
+                data-testid="button-show-debug"
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    left: graphics.showDebugOverlay ? 23 : 2,
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: '#fff',
+                    transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  }}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <span className="text-sm text-gray-300 block">Show Damage Numbers</span>
+                <span className="text-xs text-gray-600">Display floating damage and healing numbers</span>
+              </div>
+              <button
+                className="relative cursor-pointer"
+                style={{
+                  width: 48,
+                  height: 26,
+                  borderRadius: 13,
+                  background: graphics.showDamageNumbers
+                    ? 'linear-gradient(135deg, #c5a059, #8b6914)'
+                    : 'rgba(30,30,30,0.8)',
+                  border: `1px solid ${graphics.showDamageNumbers ? '#c5a059' : 'rgba(197,160,89,0.15)'}`,
+                  transition: 'all 0.2s',
+                }}
+                onClick={() => updateGraphics({ showDamageNumbers: !graphics.showDamageNumbers })}
+                data-testid="button-show-damage-numbers"
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    left: graphics.showDamageNumbers ? 23 : 2,
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: '#fff',
+                    transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  }}
+                />
+              </button>
+            </div>
           </div>
         </div>
       </div>

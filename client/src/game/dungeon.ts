@@ -1,6 +1,7 @@
 import {
   HeroData, HEROES, CLASS_ABILITIES, Vec2, AbilityDef,
-  heroStatsAtLevel, calcDamage, RACE_COLORS, CLASS_COLORS, ItemDef, ITEMS
+  heroStatsAtLevel, calcDamage, RACE_COLORS, CLASS_COLORS, ItemDef, ITEMS,
+  getHeroAbilities, getWeaponRenderType, getHeroWeapon
 } from './types';
 import { VoxelRenderer, DungeonTileVoxelType } from './voxel';
 import {
@@ -45,6 +46,33 @@ export interface DungeonEnemy {
   ccImmunityTimers: Map<StatusEffectType, number>;
 }
 
+export interface DungeonHeroEnemy {
+  id: number;
+  x: number; y: number;
+  heroDataId: number;
+  hp: number; maxHp: number;
+  mp: number; maxMp: number;
+  atk: number; def: number;
+  spd: number; rng: number;
+  level: number;
+  facing: number;
+  dead: boolean;
+  animState: string;
+  animTimer: number;
+  attackTimer: number;
+  abilityCooldowns: number[];
+  xpValue: number;
+  goldValue: number;
+  activeEffects: StatusEffect[];
+  ccImmunityTimers: Map<StatusEffectType, number>;
+  shieldHp: number;
+  aiState: 'patrol' | 'chase' | 'attack' | 'ability' | 'retreat';
+  patrolTarget: Vec2 | null;
+  patrolTimer: number;
+  homeX: number;
+  homeY: number;
+}
+
 export interface DungeonChest {
   id: number;
   x: number; y: number;
@@ -86,6 +114,25 @@ export interface DungeonProjectile {
   sourceIsPlayer: boolean;
 }
 
+export interface DungeonSpellEffect {
+  x: number; y: number;
+  type: 'cast_circle' | 'impact_ring' | 'aoe_blast' | 'skillshot_trail' | 'cone_sweep' | 'dash_trail';
+  life: number; maxLife: number;
+  radius: number;
+  color: string;
+  angle: number;
+  data?: any;
+}
+
+export interface DungeonTargeting {
+  active: boolean;
+  abilityIndex: number;
+  castType: 'targeted' | 'skillshot' | 'ground_aoe' | 'self_cast' | 'cone' | 'line';
+  range: number;
+  radius: number;
+  color: string;
+}
+
 export interface DungeonParticle {
   x: number; y: number;
   vx: number; vy: number;
@@ -107,6 +154,7 @@ export interface DungeonState {
   mapHeight: number;
   player: DungeonPlayer;
   enemies: DungeonEnemy[];
+  heroEnemies: DungeonHeroEnemy[];
   chests: DungeonChest[];
   projectiles: DungeonProjectile[];
   particles: DungeonParticle[];
@@ -122,6 +170,9 @@ export interface DungeonState {
   visibleTiles: Set<number>;
   lastVisTileX: number;
   lastVisTileY: number;
+  mouseWorld: Vec2;
+  targeting: DungeonTargeting;
+  spellEffects: DungeonSpellEffect[];
 }
 
 export interface DungeonHudState {
@@ -169,6 +220,20 @@ const FLOOR_ENEMY_TYPES: string[][] = [
   ['Golem', 'Dark Mage', 'Dragon'],
 ];
 
+const OPPOSING_RACES: Record<string, string[]> = {
+  Human: ['Orc', 'Undead'],
+  Barbarian: ['Undead', 'Elf'],
+  Dwarf: ['Orc', 'Undead'],
+  Elf: ['Orc', 'Barbarian'],
+  Orc: ['Human', 'Elf', 'Dwarf'],
+  Undead: ['Human', 'Barbarian', 'Dwarf'],
+};
+
+function getOpposingHeroes(playerRace: string): HeroData[] {
+  const opposingRaces = OPPOSING_RACES[playerRace] || ['Orc', 'Undead'];
+  return HEROES.filter(h => opposingRaces.includes(h.race) && !h.isSecret);
+}
+
 function xpForDungeonLevel(level: number): number {
   return 80 + (level - 1) * 60;
 }
@@ -205,6 +270,7 @@ export function createDungeonState(heroId: number): DungeonState {
       kills: 0,
     },
     enemies: [],
+    heroEnemies: [],
     chests: [],
     projectiles: [],
     particles: [],
@@ -220,6 +286,16 @@ export function createDungeonState(heroId: number): DungeonState {
     visibleTiles: new Set<number>(),
     lastVisTileX: -1,
     lastVisTileY: -1,
+    mouseWorld: { x: 0, y: 0 },
+    targeting: {
+      active: false,
+      abilityIndex: -1,
+      castType: 'targeted',
+      range: 0,
+      radius: 0,
+      color: '#fff',
+    },
+    spellEffects: [],
   };
 
   generateFloor(state);
@@ -287,6 +363,7 @@ function generateFloor(state: DungeonState) {
   revealAround(state, state.player.x, state.player.y, 6);
 
   state.enemies = [];
+  state.heroEnemies = [];
   state.chests = [];
 
   const floorIdx = Math.min(state.floor - 1, FLOOR_ENEMY_TYPES.length - 1);
@@ -332,6 +409,32 @@ function generateFloor(state: DungeonState) {
       const cy = (room.y + 1 + Math.random() * (room.h - 2)) * TILE_SIZE;
       if (Math.random() < 0.4) {
         state.tiles[Math.floor(cy / TILE_SIZE)][Math.floor(cx / TILE_SIZE)].type = 'trap';
+      }
+    }
+  }
+
+  if (state.floor >= 2) {
+    const playerHd = HEROES[state.player.heroDataId];
+    const opposingPool = getOpposingHeroes(playerHd.race);
+    if (opposingPool.length > 0) {
+      const heroCount = state.floor <= 3 ? 1 : state.floor <= 6 ? 2 : 3;
+      const normalRooms = state.rooms.filter(r => r.type === 'normal');
+      const usedRoomIndices = new Set<number>();
+
+      for (let h = 0; h < heroCount && usedRoomIndices.size < normalRooms.length; h++) {
+        let roomIdx: number;
+        do {
+          roomIdx = Math.floor(Math.random() * normalRooms.length);
+        } while (usedRoomIndices.has(roomIdx) && usedRoomIndices.size < normalRooms.length);
+        usedRoomIndices.add(roomIdx);
+
+        const room = normalRooms[roomIdx];
+        const heroData = opposingPool[Math.floor(Math.random() * opposingPool.length)];
+        const heroLevel = Math.max(1, state.player.level + state.floor - 2);
+        const hx = (room.x + room.w / 2) * TILE_SIZE;
+        const hy = (room.y + room.h / 2) * TILE_SIZE;
+
+        state.heroEnemies.push(createHeroEnemy(state, heroData, heroLevel, hx, hy));
       }
     }
   }
@@ -386,6 +489,41 @@ function createEnemy(
     size: template.size,
     activeEffects: [],
     ccImmunityTimers: new Map(),
+  };
+}
+
+function createHeroEnemy(state: DungeonState, heroData: HeroData, level: number, x: number, y: number): DungeonHeroEnemy {
+  const stats = heroStatsAtLevel(heroData, level);
+  const scaleFactor = 1 + (state.floor - 1) * 0.1;
+  return {
+    id: state.nextId++,
+    x, y,
+    heroDataId: heroData.id,
+    hp: Math.floor(stats.hp * scaleFactor),
+    maxHp: Math.floor(stats.hp * scaleFactor),
+    mp: stats.mp,
+    maxMp: stats.mp,
+    atk: Math.floor(stats.atk * scaleFactor),
+    def: Math.floor(stats.def * scaleFactor),
+    spd: heroData.spd,
+    rng: heroData.rng * 50,
+    level,
+    facing: 0,
+    dead: false,
+    animState: 'idle',
+    animTimer: Math.random() * 5,
+    attackTimer: 0,
+    abilityCooldowns: [0, 0, 0, 0],
+    xpValue: Math.floor((50 + level * 20) * scaleFactor),
+    goldValue: Math.floor((40 + level * 15) * scaleFactor),
+    activeEffects: [],
+    ccImmunityTimers: new Map(),
+    shieldHp: 0,
+    aiState: 'patrol',
+    patrolTarget: null,
+    patrolTimer: 0,
+    homeX: x,
+    homeY: y,
   };
 }
 
@@ -669,10 +807,13 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
     }
   }
 
+  updateHeroEnemies(state, dt);
+
   for (const proj of state.projectiles) {
     let target: { x: number; y: number; id: number } | null = null;
     if (proj.sourceIsPlayer) {
-      target = state.enemies.find(e => e.id === proj.targetId && !e.dead) || null;
+      target = state.enemies.find(e => e.id === proj.targetId && !e.dead) ||
+               state.heroEnemies.find(he => he.id === proj.targetId && !he.dead) || null;
     } else {
       target = proj.targetId === p.id && !p.dead ? p : null;
     }
@@ -686,6 +827,7 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
     if (distXY(proj, target) < 15) {
       if (proj.sourceIsPlayer) {
         const enemy = state.enemies.find(e => e.id === target!.id);
+        const heroEnemy = !enemy ? state.heroEnemies.find(he => he.id === target!.id && !he.dead) : null;
         if (enemy) {
           const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: enemy.def, activeEffects: enemy.activeEffects }, proj.damage);
           enemy.hp -= result.finalDamage;
@@ -700,6 +842,25 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
           }
 
           if (enemy.hp <= 0) killDungeonEnemy(state, enemy);
+        } else if (heroEnemy) {
+          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: heroEnemy.def, activeEffects: heroEnemy.activeEffects }, proj.damage);
+          if (heroEnemy.shieldHp > 0) {
+            const abs = Math.min(heroEnemy.shieldHp, result.finalDamage);
+            heroEnemy.shieldHp -= abs;
+            result.finalDamage = Math.max(0, result.finalDamage - abs);
+          }
+          heroEnemy.hp -= result.finalDamage;
+          const col = result.isCrit ? '#ffd700' : '#ffffff';
+          addDungeonText(state, heroEnemy.x, heroEnemy.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, col, result.isCrit ? 16 : 12);
+          spawnDungeonParticles(state, heroEnemy.x, heroEnemy.y, '#ff6666', 5);
+
+          const ls = hasLifesteal(p as any as CombatEntity);
+          if (ls > 0) {
+            const heal = Math.floor(result.finalDamage * ls);
+            p.hp = Math.min(p.maxHp, p.hp + heal);
+          }
+
+          if (heroEnemy.hp <= 0) killDungeonHeroEnemy(state, heroEnemy);
         }
       } else {
         const result = combatCalcDamage({ atk: 15, activeEffects: [] }, { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp }, proj.damage);
@@ -718,6 +879,7 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
 
   state.projectiles = state.projectiles.filter(pr => pr.targetId !== -1);
   state.enemies = state.enemies.filter(e => !e.dead || e.animTimer < 0.5);
+  state.heroEnemies = state.heroEnemies.filter(he => !he.dead || he.animTimer < 0.5);
 
   for (const pt of state.particles) {
     pt.x += pt.vx * dt;
@@ -734,6 +896,11 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
   state.floatingTexts = state.floatingTexts.filter(ft => ft.life > 0);
 
   state.killFeed = state.killFeed.filter(k => state.gameTime - k.time < 6);
+
+  for (const se of state.spellEffects) {
+    se.life -= dt;
+  }
+  state.spellEffects = state.spellEffects.filter(se => se.life > 0);
 
   if (p.hp <= 0) {
     p.dead = true;
@@ -756,6 +923,297 @@ function killDungeonEnemy(state: DungeonState, enemy: DungeonEnemy) {
   spawnDungeonParticles(state, enemy.x, enemy.y, enemy.color, 12);
   checkDungeonLevelUp(state, state.player);
   state.killFeed.push({ text: `Defeated ${enemy.type}${enemy.isBoss ? ' (BOSS)' : ''}`, color: enemy.color, time: state.gameTime });
+}
+
+function killDungeonHeroEnemy(state: DungeonState, he: DungeonHeroEnemy) {
+  he.dead = true;
+  he.animTimer = 0;
+  const heroData = HEROES[he.heroDataId];
+  state.player.xp += he.xpValue;
+  state.player.gold += he.goldValue;
+  state.player.kills++;
+  addDungeonText(state, he.x, he.y - 20, `+${he.goldValue}g +${he.xpValue}xp`, '#ffd700', 16);
+  spawnDungeonParticles(state, he.x, he.y, RACE_COLORS[heroData.race] || '#fff', 20);
+  checkDungeonLevelUp(state, state.player);
+  state.killFeed.push({
+    text: `Slain enemy hero ${heroData.name} (${heroData.race} ${heroData.heroClass})`,
+    color: RACE_COLORS[heroData.race] || '#ffd700',
+    time: state.gameTime
+  });
+}
+
+function updateHeroEnemies(state: DungeonState, dt: number) {
+  const p = state.player;
+  if (p.dead) return;
+
+  for (const he of state.heroEnemies) {
+    if (he.dead) continue;
+    he.animTimer += dt;
+    he.mp = Math.min(he.maxMp, he.mp + dt * 2);
+
+    const eres = updateStatusEffects(he as any as CombatEntity, dt);
+    if (eres.damage > 0) {
+      he.hp -= eres.damage;
+      addDungeonText(state, he.x, he.y - 15, `-${Math.floor(eres.damage)}`, '#ff6666', 10);
+    }
+    if (eres.heal > 0) {
+      he.hp = Math.min(he.maxHp, he.hp + eres.heal);
+    }
+
+    if (he.hp <= 0) {
+      killDungeonHeroEnemy(state, he);
+      continue;
+    }
+
+    if (isStunned(he as any as CombatEntity)) continue;
+
+    for (let i = 0; i < he.abilityCooldowns.length; i++) {
+      if (he.abilityCooldowns[i] > 0) he.abilityCooldowns[i] -= dt;
+    }
+
+    he.attackTimer -= dt;
+
+    const d = distXY(he, p);
+    const heroData = HEROES[he.heroDataId];
+    const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
+    const hpPct = he.hp / he.maxHp;
+
+    if (hpPct < 0.25 && he.aiState !== 'retreat') {
+      he.aiState = 'retreat';
+    } else if (d < 500 && hpPct >= 0.25) {
+      if (d <= he.rng + 20) {
+        he.aiState = 'attack';
+      } else {
+        he.aiState = 'chase';
+      }
+    } else if (he.aiState !== 'retreat') {
+      he.aiState = 'patrol';
+    }
+
+    he.facing = angleBetween(he, p);
+
+    switch (he.aiState) {
+      case 'patrol': {
+        he.patrolTimer -= dt;
+        if (!he.patrolTarget || he.patrolTimer <= 0 || distXY(he, he.patrolTarget) < 10) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 60 + Math.random() * 80;
+          he.patrolTarget = {
+            x: he.homeX + Math.cos(angle) * dist,
+            y: he.homeY + Math.sin(angle) * dist,
+          };
+          he.patrolTimer = 2 + Math.random() * 3;
+        }
+        if (he.patrolTarget && !isRooted(he as any as CombatEntity)) {
+          const angle = angleBetween(he, he.patrolTarget);
+          const spdMult = getSpeedMultiplier(he as any as CombatEntity);
+          const nx = he.x + Math.cos(angle) * he.spd * 0.5 * spdMult * dt;
+          const ny = he.y + Math.sin(angle) * he.spd * 0.5 * spdMult * dt;
+          if (isWalkable(state, nx, ny)) { he.x = nx; he.y = ny; }
+          he.facing = angle;
+          he.animState = 'walk';
+        }
+        break;
+      }
+      case 'chase': {
+        if (!isRooted(he as any as CombatEntity)) {
+          const spdMult = getSpeedMultiplier(he as any as CombatEntity);
+          const angle = angleBetween(he, p);
+          const nx = he.x + Math.cos(angle) * he.spd * 2 * spdMult * dt;
+          const ny = he.y + Math.sin(angle) * he.spd * 2 * spdMult * dt;
+          if (isWalkable(state, nx, ny)) { he.x = nx; he.y = ny; }
+          he.animState = 'walk';
+        }
+
+        if (abilities) {
+          for (let i = 1; i < abilities.length; i++) {
+            const ab = abilities[i];
+            if (!ab || he.abilityCooldowns[i] > 0 || he.mp < ab.manaCost) continue;
+            if (ab.type === 'dash' && d > 100 && d < ab.range + 50) {
+              heroEnemyUseAbility(state, he, i, abilities);
+              break;
+            }
+          }
+        }
+        break;
+      }
+      case 'attack': {
+        he.animState = 'attack';
+
+        if (abilities) {
+          let usedAbility = false;
+          for (let i = 1; i < abilities.length; i++) {
+            const ab = abilities[i];
+            if (!ab || he.abilityCooldowns[i] > 0 || he.mp < ab.manaCost) continue;
+            if (d <= (ab.range || he.rng) + 30 || ab.castType === 'self_cast') {
+              if (Math.random() < 0.4) {
+                heroEnemyUseAbility(state, he, i, abilities);
+                usedAbility = true;
+                break;
+              }
+            }
+          }
+
+          if (!usedAbility && he.attackTimer <= 0) {
+            const spdMult = getSpeedMultiplier(he as any as CombatEntity);
+            state.projectiles.push({
+              id: state.nextId++,
+              x: he.x, y: he.y,
+              targetId: p.id,
+              damage: he.atk,
+              speed: he.rng > 150 ? 400 : 350,
+              color: CLASS_COLORS[heroData.heroClass] || '#fff',
+              size: 4,
+              sourceIsPlayer: false,
+            });
+            he.attackTimer = 1.0 / spdMult;
+          }
+        } else if (he.attackTimer <= 0) {
+          const spdMult = getSpeedMultiplier(he as any as CombatEntity);
+          state.projectiles.push({
+            id: state.nextId++,
+            x: he.x, y: he.y,
+            targetId: p.id,
+            damage: he.atk,
+            speed: 350,
+            color: CLASS_COLORS[heroData.heroClass] || '#fff',
+            size: 4,
+            sourceIsPlayer: false,
+          });
+          he.attackTimer = 1.0 / spdMult;
+        }
+        break;
+      }
+      case 'retreat': {
+        if (!isRooted(he as any as CombatEntity)) {
+          const spdMult = getSpeedMultiplier(he as any as CombatEntity);
+          const fleeAngle = angleBetween(p, he);
+          const nx = he.x + Math.cos(fleeAngle) * he.spd * 2.5 * spdMult * dt;
+          const ny = he.y + Math.sin(fleeAngle) * he.spd * 2.5 * spdMult * dt;
+          if (isWalkable(state, nx, ny)) { he.x = nx; he.y = ny; }
+          he.animState = 'walk';
+          he.facing = fleeAngle;
+        }
+
+        if (abilities) {
+          for (let i = 0; i < abilities.length; i++) {
+            const ab = abilities[i];
+            if (!ab || he.abilityCooldowns[i] > 0 || he.mp < ab.manaCost) continue;
+            if (ab.type === 'buff' || ab.type === 'heal' || ab.type === 'dash') {
+              heroEnemyUseAbility(state, he, i, abilities);
+              break;
+            }
+          }
+        }
+
+        if (hpPct >= 0.4 || d > 500) {
+          he.aiState = 'patrol';
+        }
+        break;
+      }
+    }
+  }
+}
+
+function heroEnemyUseAbility(state: DungeonState, he: DungeonHeroEnemy, abilityIndex: number, abilities: AbilityDef[]) {
+  if (isSilenced(he as any as CombatEntity)) return;
+
+  const ab = abilities[abilityIndex];
+  if (!ab) return;
+
+  he.mp -= ab.manaCost;
+  he.abilityCooldowns[abilityIndex] = ab.cooldown;
+  he.animState = 'ability';
+
+  const p = state.player;
+  const heroData = HEROES[he.heroDataId];
+  const abilityColor = CLASS_COLORS[heroData.heroClass] || '#fff';
+
+  switch (ab.type) {
+    case 'damage': {
+      if (distXY(he, p) <= (ab.range || he.rng) + 50) {
+        const dmg = ab.damage + he.atk * 0.8;
+        const result = combatCalcDamage({ atk: he.atk, activeEffects: he.activeEffects }, { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp }, dmg, 0.1);
+        if (p.shieldHp > 0) {
+          const abs = Math.min(p.shieldHp, result.finalDamage);
+          p.shieldHp -= abs;
+          result.finalDamage = Math.max(0, result.finalDamage - abs);
+        }
+        p.hp -= result.finalDamage;
+        addDungeonText(state, p.x, p.y - 20, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, '#ef4444', 14);
+        spawnDungeonParticles(state, p.x, p.y, abilityColor, 8);
+        const effects = getAbilityEffects(ab.name, he.id, he.atk);
+        for (const eff of effects) applyStatusEffect(p as any as CombatEntity, eff);
+      }
+      break;
+    }
+    case 'aoe': {
+      const cx = he.x + Math.cos(he.facing) * 60;
+      const cy = he.y + Math.sin(he.facing) * 60;
+      if (distXY({ x: cx, y: cy }, p) < ab.radius) {
+        const dmg = ab.damage + he.atk * 0.6;
+        const result = combatCalcDamage({ atk: he.atk, activeEffects: he.activeEffects }, { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp }, dmg);
+        if (p.shieldHp > 0) {
+          const abs = Math.min(p.shieldHp, result.finalDamage);
+          p.shieldHp -= abs;
+          result.finalDamage = Math.max(0, result.finalDamage - abs);
+        }
+        p.hp -= result.finalDamage;
+        addDungeonText(state, p.x, p.y - 20, `-${result.finalDamage}`, '#ef4444', 14);
+        const effects = getAbilityEffects(ab.name, he.id, he.atk);
+        for (const eff of effects) applyStatusEffect(p as any as CombatEntity, eff);
+      }
+      spawnDungeonParticles(state, cx, cy, abilityColor, 15);
+      break;
+    }
+    case 'buff': {
+      const effects = getAbilityEffects(ab.name, he.id, he.atk);
+      for (const eff of effects) applyStatusEffect(he as any as CombatEntity, eff);
+      spawnDungeonParticles(state, he.x, he.y, '#ffd700', 10);
+      break;
+    }
+    case 'heal': {
+      he.shieldHp = 60 + he.def * 2;
+      const effects = getAbilityEffects(ab.name, he.id, he.atk);
+      for (const eff of effects) applyStatusEffect(he as any as CombatEntity, eff);
+      spawnDungeonParticles(state, he.x, he.y, '#22c55e', 8);
+      break;
+    }
+    case 'dash': {
+      const angle = angleBetween(he, p);
+      const dashDist = Math.min(ab.range, distXY(he, p));
+      const nx = he.x + Math.cos(angle) * dashDist;
+      const ny = he.y + Math.sin(angle) * dashDist;
+      if (isWalkable(state, nx, ny)) { he.x = nx; he.y = ny; }
+      if (ab.damage > 0 && distXY(he, p) < 60) {
+        const result = combatCalcDamage({ atk: he.atk, activeEffects: he.activeEffects }, { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp }, ab.damage + he.atk * 0.5);
+        if (p.shieldHp > 0) {
+          const abs = Math.min(p.shieldHp, result.finalDamage);
+          p.shieldHp -= abs;
+          result.finalDamage = Math.max(0, result.finalDamage - abs);
+        }
+        p.hp -= result.finalDamage;
+        addDungeonText(state, p.x, p.y - 20, `-${result.finalDamage}`, '#ef4444', 14);
+      }
+      spawnDungeonParticles(state, he.x, he.y, abilityColor, 8);
+      const effects = getAbilityEffects(ab.name, he.id, he.atk);
+      for (const eff of effects) applyStatusEffect(he as any as CombatEntity, eff);
+      break;
+    }
+    case 'debuff': {
+      if (distXY(he, p) <= ab.radius + 50) {
+        const effects = getAbilityEffects(ab.name, he.id, he.atk);
+        for (const eff of effects) applyStatusEffect(p as any as CombatEntity, eff);
+        if (ab.damage > 0) {
+          const result = combatCalcDamage({ atk: he.atk, activeEffects: he.activeEffects }, { def: p.def, activeEffects: p.activeEffects }, ab.damage);
+          p.hp -= result.finalDamage;
+        }
+      }
+      spawnDungeonParticles(state, he.x, he.y, '#06b6d4', 10);
+      break;
+    }
+  }
+  addDungeonText(state, he.x, he.y - 30, ab.name, abilityColor, 14);
 }
 
 function checkDungeonLevelUp(state: DungeonState, p: DungeonPlayer) {
@@ -788,7 +1246,22 @@ function applyDungeonItemStats(p: DungeonPlayer, item: ItemDef) {
   p.spd += item.spd; p.maxMp += item.mp; p.mp += item.mp;
 }
 
+function getDungeonSettings(): { showDamageNumbers: boolean; showDebugOverlay: boolean } {
+  try {
+    const raw = localStorage.getItem('grudge_graphics_settings');
+    if (raw) {
+      const s = JSON.parse(raw);
+      return {
+        showDamageNumbers: s.showDamageNumbers !== false,
+        showDebugOverlay: s.showDebugOverlay === true,
+      };
+    }
+  } catch { /* ignore */ }
+  return { showDamageNumbers: true, showDebugOverlay: false };
+}
+
 function addDungeonText(state: DungeonState, x: number, y: number, text: string, color: string, size: number) {
+  if (!getDungeonSettings().showDamageNumbers) return;
   state.floatingTexts.push({ x, y, text, color, life: 1.5, vy: -35, size });
 }
 
@@ -804,12 +1277,12 @@ function spawnDungeonParticles(state: DungeonState, x: number, y: number, color:
   }
 }
 
-export function handleDungeonAbility(state: DungeonState, abilityIndex: number) {
+export function handleDungeonAbility(state: DungeonState, abilityIndex: number, targetWorld?: { x: number; y: number }) {
   const p = state.player;
   if (p.dead || isStunned(p as any) || isSilenced(p as any)) return;
 
   const hd = HEROES[p.heroDataId];
-  const abilities = CLASS_ABILITIES[hd.heroClass];
+  const abilities = getHeroAbilities(hd.race, hd.heroClass);
   if (!abilities || !abilities[abilityIndex]) return;
 
   const ab = abilities[abilityIndex];
@@ -819,28 +1292,54 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number) 
   p.abilityCooldowns[abilityIndex] = ab.cooldown;
   p.animState = 'ability';
 
+  if (targetWorld && (ab.castType === 'ground_aoe' || ab.castType === 'skillshot' || ab.castType === 'line' || ab.castType === 'cone')) {
+    p.facing = Math.atan2(targetWorld.y - p.y, targetWorld.x - p.x);
+  }
+
   const nearest = findNearestDungeonEnemy(state, p, ab.range + 100);
   const abilityColor = CLASS_COLORS[hd.heroClass] || '#fff';
+
+  addSpellEffect(state, p.x, p.y, 'cast_circle', 25, abilityColor, 0.5);
+
+  const realHeroTarget = nearest ? state.heroEnemies.find(he => he.id === nearest.id && !he.dead) : null;
 
   switch (ab.type) {
     case 'damage': {
       if (nearest) {
         const dmg = ab.damage + p.atk * 0.8;
-        const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, dmg, 0.1);
-        nearest.hp -= result.finalDamage;
-        addDungeonText(state, nearest.x, nearest.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, result.isCrit ? '#ffd700' : abilityColor, 14);
-        spawnDungeonParticles(state, nearest.x, nearest.y, abilityColor, 8);
-
-        const effects = getAbilityEffects(ab.name, p.id, p.atk);
-        for (const eff of effects) applyStatusEffect(nearest as any as CombatEntity, eff);
-
-        if (nearest.hp <= 0) killDungeonEnemy(state, nearest);
+        if (realHeroTarget) {
+          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: realHeroTarget.def, activeEffects: realHeroTarget.activeEffects }, dmg, 0.1);
+          if (realHeroTarget.shieldHp > 0) { const a = Math.min(realHeroTarget.shieldHp, result.finalDamage); realHeroTarget.shieldHp -= a; result.finalDamage = Math.max(0, result.finalDamage - a); }
+          realHeroTarget.hp -= result.finalDamage;
+          addDungeonText(state, realHeroTarget.x, realHeroTarget.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, result.isCrit ? '#ffd700' : abilityColor, 14);
+          spawnDungeonParticles(state, realHeroTarget.x, realHeroTarget.y, abilityColor, 8);
+          addSpellEffect(state, realHeroTarget.x, realHeroTarget.y, 'impact_ring', 30, abilityColor, 0.4);
+          const effects = getAbilityEffects(ab.name, p.id, p.atk);
+          for (const eff of effects) applyStatusEffect(realHeroTarget as any as CombatEntity, eff);
+          if (realHeroTarget.hp <= 0) killDungeonHeroEnemy(state, realHeroTarget);
+        } else {
+          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, dmg, 0.1);
+          nearest.hp -= result.finalDamage;
+          addDungeonText(state, nearest.x, nearest.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, result.isCrit ? '#ffd700' : abilityColor, 14);
+          spawnDungeonParticles(state, nearest.x, nearest.y, abilityColor, 8);
+          addSpellEffect(state, nearest.x, nearest.y, 'impact_ring', 30, abilityColor, 0.4);
+          const effects = getAbilityEffects(ab.name, p.id, p.atk);
+          for (const eff of effects) applyStatusEffect(nearest as any as CombatEntity, eff);
+          if (nearest.hp <= 0) killDungeonEnemy(state, nearest);
+        }
       }
       break;
     }
     case 'aoe': {
-      const cx = nearest ? nearest.x : p.x + Math.cos(p.facing) * 100;
-      const cy = nearest ? nearest.y : p.y + Math.sin(p.facing) * 100;
+      const cx = targetWorld && (ab.castType === 'ground_aoe') ? targetWorld.x : nearest ? nearest.x : p.x + Math.cos(p.facing) * 100;
+      const cy = targetWorld && (ab.castType === 'ground_aoe') ? targetWorld.y : nearest ? nearest.y : p.y + Math.sin(p.facing) * 100;
+
+      if (ab.castType === 'cone') {
+        addSpellEffect(state, p.x, p.y, 'cone_sweep', ab.radius, abilityColor, 0.6, p.facing);
+      } else {
+        addSpellEffect(state, cx, cy, 'aoe_blast', ab.radius, abilityColor, 0.6);
+      }
+
       for (const e of state.enemies) {
         if (e.dead) continue;
         if (distXY({ x: cx, y: cy }, e) < ab.radius) {
@@ -848,9 +1347,23 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number) 
           const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: e.def, activeEffects: e.activeEffects }, dmg);
           e.hp -= result.finalDamage;
           addDungeonText(state, e.x, e.y - 15, `-${result.finalDamage}`, abilityColor, 12);
+          addSpellEffect(state, e.x, e.y, 'impact_ring', 20, abilityColor, 0.3);
           const effects = getAbilityEffects(ab.name, p.id, p.atk);
           for (const eff of effects) applyStatusEffect(e as any as CombatEntity, eff);
           if (e.hp <= 0) killDungeonEnemy(state, e);
+        }
+      }
+      for (const he of state.heroEnemies) {
+        if (he.dead) continue;
+        if (distXY({ x: cx, y: cy }, he) < ab.radius) {
+          const dmg = ab.damage + p.atk * 0.6;
+          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: he.def, activeEffects: he.activeEffects }, dmg);
+          he.hp -= result.finalDamage;
+          addDungeonText(state, he.x, he.y - 15, `-${result.finalDamage}`, abilityColor, 12);
+          addSpellEffect(state, he.x, he.y, 'impact_ring', 20, abilityColor, 0.3);
+          const effects = getAbilityEffects(ab.name, p.id, p.atk);
+          for (const eff of effects) applyStatusEffect(he as any as CombatEntity, eff);
+          if (he.hp <= 0) killDungeonHeroEnemy(state, he);
         }
       }
       spawnDungeonParticles(state, cx, cy, abilityColor, 20);
@@ -859,10 +1372,12 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number) 
     case 'buff': {
       const effects = getAbilityEffects(ab.name, p.id, p.atk);
       for (const eff of effects) applyStatusEffect(p as any as CombatEntity, eff);
+      addSpellEffect(state, p.x, p.y, 'cast_circle', 35, '#ffd700', 0.8);
       spawnDungeonParticles(state, p.x, p.y, '#ffd700', 15);
       break;
     }
     case 'debuff': {
+      addSpellEffect(state, p.x, p.y, 'aoe_blast', ab.radius, '#06b6d4', 0.5);
       for (const e of state.enemies) {
         if (e.dead || distXY(p, e) > ab.radius) continue;
         const effects = getAbilityEffects(ab.name, p.id, p.atk);
@@ -873,6 +1388,16 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number) 
           if (e.hp <= 0) killDungeonEnemy(state, e);
         }
       }
+      for (const he of state.heroEnemies) {
+        if (he.dead || distXY(p, he) > ab.radius) continue;
+        const effects = getAbilityEffects(ab.name, p.id, p.atk);
+        for (const eff of effects) applyStatusEffect(he as any as CombatEntity, eff);
+        if (ab.damage > 0) {
+          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: he.def, activeEffects: he.activeEffects }, ab.damage);
+          he.hp -= result.finalDamage;
+          if (he.hp <= 0) killDungeonHeroEnemy(state, he);
+        }
+      }
       spawnDungeonParticles(state, p.x, p.y, '#06b6d4', 12);
       break;
     }
@@ -880,10 +1405,12 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number) 
       p.shieldHp = 100 + p.def * 2;
       const effects = getAbilityEffects(ab.name, p.id, p.atk);
       for (const eff of effects) applyStatusEffect(p as any as CombatEntity, eff);
+      addSpellEffect(state, p.x, p.y, 'cast_circle', 30, '#22c55e', 0.6);
       spawnDungeonParticles(state, p.x, p.y, '#22c55e', 10);
       break;
     }
     case 'dash': {
+      const startX = p.x, startY = p.y;
       if (nearest) {
         const angle = angleBetween(p, nearest);
         const dashDist = Math.min(ab.range, distXY(p, nearest));
@@ -891,15 +1418,24 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number) 
         const ny = p.y + Math.sin(angle) * dashDist;
         if (isWalkable(state, nx, ny)) { p.x = nx; p.y = ny; }
         if (ab.damage > 0) {
-          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, ab.damage + p.atk * 0.5);
-          nearest.hp -= result.finalDamage;
-          if (nearest.hp <= 0) killDungeonEnemy(state, nearest);
+          if (realHeroTarget) {
+            const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: realHeroTarget.def, activeEffects: realHeroTarget.activeEffects }, ab.damage + p.atk * 0.5);
+            realHeroTarget.hp -= result.finalDamage;
+            addSpellEffect(state, realHeroTarget.x, realHeroTarget.y, 'impact_ring', 25, abilityColor, 0.4);
+            if (realHeroTarget.hp <= 0) killDungeonHeroEnemy(state, realHeroTarget);
+          } else {
+            const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, ab.damage + p.atk * 0.5);
+            nearest.hp -= result.finalDamage;
+            addSpellEffect(state, nearest.x, nearest.y, 'impact_ring', 25, abilityColor, 0.4);
+            if (nearest.hp <= 0) killDungeonEnemy(state, nearest);
+          }
         }
       } else {
         const nx = p.x + Math.cos(p.facing) * ab.range;
         const ny = p.y + Math.sin(p.facing) * ab.range;
         if (isWalkable(state, nx, ny)) { p.x = nx; p.y = ny; }
       }
+      addSpellEffect(state, startX, startY, 'dash_trail', 15, abilityColor, 0.4, Math.atan2(p.y - startY, p.x - startX), { endX: p.x, endY: p.y });
       const effects = getAbilityEffects(ab.name, p.id, p.atk);
       for (const eff of effects) applyStatusEffect(p as any as CombatEntity, eff);
       spawnDungeonParticles(state, p.x, p.y, abilityColor, 8);
@@ -911,6 +1447,51 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number) 
 
 function getAbilityEffects(name: string, sourceId: number, atk: number): StatusEffect[] {
   return getAbilityStatusEffects(name, sourceId, atk);
+}
+
+export function updateDungeonMouseWorld(state: DungeonState, screenX: number, screenY: number, canvasW: number, canvasH: number) {
+  const cam = state.camera;
+  state.mouseWorld.x = (screenX - canvasW / 2) / cam.zoom + cam.x;
+  state.mouseWorld.y = (screenY - canvasH / 2) / cam.zoom + cam.y;
+}
+
+export function startDungeonTargeting(state: DungeonState, abilityIndex: number) {
+  const p = state.player;
+  if (p.dead) return;
+  const hd = HEROES[p.heroDataId];
+  const abilities = getHeroAbilities(hd.race, hd.heroClass);
+  if (!abilities || !abilities[abilityIndex]) return;
+  const ab = abilities[abilityIndex];
+  if (p.abilityCooldowns[abilityIndex] > 0 || p.mp < ab.manaCost) return;
+
+  if (ab.castType === 'self_cast' || ab.castType === 'targeted') {
+    handleDungeonAbility(state, abilityIndex);
+    return;
+  }
+
+  state.targeting = {
+    active: true,
+    abilityIndex,
+    castType: ab.castType,
+    range: ab.range > 0 ? ab.range : 200,
+    radius: ab.radius > 0 ? ab.radius : 80,
+    color: CLASS_COLORS[hd.heroClass] || '#fff',
+  };
+}
+
+export function confirmDungeonTargeting(state: DungeonState) {
+  if (!state.targeting.active) return;
+  handleDungeonAbility(state, state.targeting.abilityIndex, state.mouseWorld);
+  cancelDungeonTargeting(state);
+}
+
+export function cancelDungeonTargeting(state: DungeonState) {
+  state.targeting.active = false;
+  state.targeting.abilityIndex = -1;
+}
+
+function addSpellEffect(state: DungeonState, x: number, y: number, type: DungeonSpellEffect['type'], radius: number, color: string, duration: number, angle: number = 0, data?: any) {
+  state.spellEffects.push({ x, y, type, life: duration, maxLife: duration, radius, color, angle, data });
 }
 
 export function handleDungeonAttack(state: DungeonState) {
@@ -941,6 +1522,28 @@ function findNearestDungeonEnemy(state: DungeonState, from: { x: number; y: numb
     if (e.dead) continue;
     const d = distXY(from, e);
     if (d < nearestDist) { nearestDist = d; nearest = e; }
+  }
+  for (const he of state.heroEnemies) {
+    if (he.dead) continue;
+    const d = distXY(from, he);
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearest = {
+        id: he.id, x: he.x, y: he.y,
+        type: HEROES[he.heroDataId].name,
+        hp: he.hp, maxHp: he.maxHp,
+        atk: he.atk, def: he.def,
+        spd: he.spd, rng: he.rng,
+        facing: he.facing, dead: he.dead,
+        animState: he.animState, animTimer: he.animTimer,
+        attackTimer: he.attackTimer, targetId: null,
+        color: RACE_COLORS[HEROES[he.heroDataId].race] || '#fff',
+        xpValue: he.xpValue, goldValue: he.goldValue,
+        isBoss: false, size: 14,
+        activeEffects: he.activeEffects,
+        ccImmunityTimers: he.ccImmunityTimers,
+      };
+    }
   }
   return nearest;
 }
@@ -999,10 +1602,22 @@ export class DungeonRenderer {
     this.renderTiles(ctx, state, cam, W, H);
     this.renderChests(ctx, state);
 
+    this.renderTargetingIndicator(ctx, state);
+
     const sorted = [...state.enemies.filter(e => !e.dead && isInPlayerVision(state, e.x, e.y))].sort((a, b) => a.y - b.y);
     for (const enemy of sorted) this.renderEnemy(ctx, enemy, state);
 
+    for (const he of state.heroEnemies) {
+      if (!he.dead && isInPlayerVision(state, he.x, he.y)) {
+        this.renderHeroEnemy(ctx, he, state);
+      }
+    }
+
     this.renderPlayer(ctx, state);
+
+    for (const se of state.spellEffects) {
+      this.renderSpellEffect(ctx, se, state);
+    }
 
     for (const proj of state.projectiles) {
       if (isInPlayerVision(state, proj.x, proj.y)) this.renderProjectile(ctx, proj);
@@ -1186,6 +1801,64 @@ export class DungeonRenderer {
     ctx.restore();
   }
 
+  private renderHeroEnemy(ctx: CanvasRenderingContext2D, he: DungeonHeroEnemy, state: DungeonState) {
+    const heroData = HEROES[he.heroDataId];
+    const raceColor = RACE_COLORS[heroData.race] || '#888';
+    const classColor = CLASS_COLORS[heroData.heroClass] || '#888';
+    const dx = he.x - state.player.x;
+    const dy = he.y - state.player.y;
+    const distSq = dx * dx + dy * dy;
+    const dimFactor = Math.max(0.3, 1 - distSq / (VISION_RADIUS * VISION_RADIUS) * 0.5);
+
+    ctx.save();
+    ctx.globalAlpha = dimFactor;
+
+    ctx.save();
+    ctx.translate(he.x, he.y);
+
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.003) * 0.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = dimFactor;
+
+    const buffNames = he.activeEffects.map(e => e.name || '');
+    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, he.facing, he.animState, he.animTimer, heroData.race, heroData.name, undefined, undefined, he.id, he.shieldHp > 0 ? he.shieldHp : undefined, buffNames.length > 0 ? buffNames : undefined, state.gameTime);
+
+    ctx.globalAlpha = 1;
+    this.renderHealthBar(ctx, 0, -24, 20, he.hp, he.maxHp, '#ef4444');
+
+    const mpPct = he.mp / he.maxMp;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(-20, -18, 40, 3);
+    ctx.fillStyle = '#6366f1';
+    ctx.fillRect(-20, -18, 40 * mpPct, 3);
+
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${heroData.name}`, 0, -30);
+    ctx.fillStyle = '#ccc';
+    ctx.font = '8px sans-serif';
+    ctx.fillText(`Lv${he.level} ${heroData.heroClass}`, 0, -38);
+
+    if (he.activeEffects.length > 0) {
+      let ox = -he.activeEffects.length * 5;
+      for (const eff of he.activeEffects) {
+        ctx.fillStyle = eff.color;
+        ctx.globalAlpha = 0.8;
+        ctx.fillRect(ox, -44, 8, 4);
+        ctx.globalAlpha = 1;
+        ox += 10;
+      }
+    }
+
+    ctx.restore();
+    ctx.restore();
+  }
+
   private renderPlayer(ctx: CanvasRenderingContext2D, state: DungeonState) {
     const p = state.player;
     const hd = HEROES[p.heroDataId];
@@ -1264,6 +1937,274 @@ export class DungeonRenderer {
     ctx.fillRect(x - hw, y, hw * 2 * pct, 4);
   }
 
+  private renderTargetingIndicator(ctx: CanvasRenderingContext2D, state: DungeonState) {
+    const t = state.targeting;
+    if (!t.active) return;
+
+    const p = state.player;
+    const mx = state.mouseWorld.x;
+    const my = state.mouseWorld.y;
+    const pulse = 0.4 + Math.sin(Date.now() * 0.005) * 0.15;
+
+    ctx.save();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, t.range, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const dx = mx - p.x;
+    const dy = my - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const inRange = dist <= t.range * 1.1;
+    const baseColor = inRange ? t.color : '#ff3333';
+
+    if (t.castType === 'ground_aoe') {
+      const tx = dist > t.range ? p.x + (dx / dist) * t.range : mx;
+      const ty = dist > t.range ? p.y + (dy / dist) * t.range : my;
+
+      ctx.globalAlpha = pulse * 0.25;
+      ctx.fillStyle = baseColor;
+      ctx.beginPath();
+      ctx.arc(tx, ty, t.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = pulse * 0.8;
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(tx, ty, t.radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.globalAlpha = pulse * 0.5;
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tx - 6, ty);
+      ctx.lineTo(tx + 6, ty);
+      ctx.moveTo(tx, ty - 6);
+      ctx.lineTo(tx, ty + 6);
+      ctx.stroke();
+    } else if (t.castType === 'skillshot' || t.castType === 'line') {
+      const angle = Math.atan2(dy, dx);
+      const endX = p.x + Math.cos(angle) * t.range;
+      const endY = p.y + Math.sin(angle) * t.range;
+      const halfWidth = t.radius > 0 ? t.radius * 0.3 : 12;
+      const perpX = Math.cos(angle + Math.PI / 2) * halfWidth;
+      const perpY = Math.sin(angle + Math.PI / 2) * halfWidth;
+
+      ctx.globalAlpha = pulse * 0.2;
+      ctx.fillStyle = baseColor;
+      ctx.beginPath();
+      ctx.moveTo(p.x + perpX, p.y + perpY);
+      ctx.lineTo(endX + perpX, endY + perpY);
+      ctx.lineTo(endX - perpX, endY - perpY);
+      ctx.lineTo(p.x - perpX, p.y - perpY);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.globalAlpha = pulse * 0.7;
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(p.x + perpX, p.y + perpY);
+      ctx.lineTo(endX + perpX, endY + perpY);
+      ctx.lineTo(endX - perpX, endY - perpY);
+      ctx.lineTo(p.x - perpX, p.y - perpY);
+      ctx.closePath();
+      ctx.stroke();
+
+      ctx.globalAlpha = pulse * 0.4;
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (t.castType === 'cone') {
+      const angle = Math.atan2(dy, dx);
+      const coneAngle = Math.PI / 3;
+      const startAngle = angle - coneAngle / 2;
+      const endAngle = angle + coneAngle / 2;
+
+      ctx.globalAlpha = pulse * 0.2;
+      ctx.fillStyle = baseColor;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.arc(p.x, p.y, t.radius, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.globalAlpha = pulse * 0.7;
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.arc(p.x, p.y, t.radius, startAngle, endAngle);
+      ctx.closePath();
+      ctx.stroke();
+
+      const segCount = 3;
+      ctx.globalAlpha = pulse * 0.15;
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = 0.5;
+      for (let i = 1; i <= segCount; i++) {
+        const r = (t.radius / (segCount + 1)) * i;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, startAngle, endAngle);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  private renderSpellEffect(ctx: CanvasRenderingContext2D, se: DungeonSpellEffect, state: DungeonState) {
+    const t = se.life / se.maxLife;
+    ctx.save();
+
+    switch (se.type) {
+      case 'cast_circle': {
+        const expand = 1 + (1 - t) * 0.3;
+        ctx.globalAlpha = t * 0.5;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, se.radius * expand, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.globalAlpha = t * 0.15;
+        ctx.fillStyle = se.color;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, se.radius * expand * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        const rotAngle = (1 - t) * Math.PI * 4;
+        ctx.globalAlpha = t * 0.3;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+          const a = rotAngle + (Math.PI / 2) * i;
+          const r = se.radius * expand;
+          ctx.beginPath();
+          ctx.arc(se.x, se.y, r, a - 0.2, a + 0.2);
+          ctx.stroke();
+        }
+        break;
+      }
+      case 'impact_ring': {
+        const expand = 1 + (1 - t) * 1.5;
+        ctx.globalAlpha = t * 0.7;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 3 * t;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, se.radius * expand, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.globalAlpha = t * 0.3;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, se.radius * expand * 0.5, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+      }
+      case 'aoe_blast': {
+        const expand = 0.3 + (1 - t) * 0.7;
+        ctx.globalAlpha = t * 0.3;
+        ctx.fillStyle = se.color;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, se.radius * expand, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = t * 0.6;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, se.radius * expand, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (t > 0.5) {
+          ctx.globalAlpha = (t - 0.5) * 2 * 0.4;
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(se.x, se.y, se.radius * expand * 0.8, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        break;
+      }
+      case 'cone_sweep': {
+        const sweepProgress = 1 - t;
+        const coneAngle = Math.PI / 3;
+        const currentAngle = se.angle - coneAngle / 2 + coneAngle * sweepProgress;
+
+        ctx.globalAlpha = t * 0.3;
+        ctx.fillStyle = se.color;
+        ctx.beginPath();
+        ctx.moveTo(se.x, se.y);
+        ctx.arc(se.x, se.y, se.radius, se.angle - coneAngle / 2, se.angle + coneAngle / 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.globalAlpha = t * 0.8;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(se.x, se.y);
+        ctx.lineTo(se.x + Math.cos(currentAngle) * se.radius, se.y + Math.sin(currentAngle) * se.radius);
+        ctx.stroke();
+        break;
+      }
+      case 'dash_trail': {
+        if (!se.data) break;
+        const endX = se.data.endX || se.x;
+        const endY = se.data.endY || se.y;
+
+        ctx.globalAlpha = t * 0.5;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 4 * t;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(se.x, se.y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        ctx.globalAlpha = t * 0.2;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 8 * t;
+        ctx.beginPath();
+        ctx.moveTo(se.x, se.y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        ctx.lineCap = 'butt';
+        break;
+      }
+      case 'skillshot_trail': {
+        const angle = se.angle;
+        const len = se.radius;
+        const endX = se.x + Math.cos(angle) * len;
+        const endY = se.y + Math.sin(angle) * len;
+
+        ctx.globalAlpha = t * 0.6;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 3 * t;
+        ctx.beginPath();
+        ctx.moveTo(se.x, se.y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        break;
+      }
+    }
+
+    ctx.restore();
+  }
+
   private renderMinimap(ctx: CanvasRenderingContext2D, state: DungeonState, W: number, H: number) {
     const mw = 160, mh = 120;
     const mx = W - mw - 10, my = 10;
@@ -1292,6 +2233,17 @@ export class DungeonRenderer {
       if (!isInPlayerVision(state, enemy.x, enemy.y)) continue;
       ctx.fillStyle = enemy.isBoss ? '#ffd700' : enemy.color;
       ctx.fillRect(mx + enemy.x * scale - 1, my + enemy.y * scale - 1, 3, 3);
+    }
+
+    for (const he of state.heroEnemies) {
+      if (he.dead || !isInPlayerVision(state, he.x, he.y)) continue;
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(mx + he.x * scale, my + he.y * scale, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
 
     ctx.fillStyle = '#22c55e';

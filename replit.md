@@ -25,17 +25,17 @@ The game's architecture centers on a React frontend with a custom HTML5 Canvas 2
 - **Ability Icons:** 24 generated ability icons (dark fantasy RPG style) in `public/assets/abilities/` mapped via `ABILITY_ICONS` in types.ts. All 6 class kits covered (Warrior, Orc_Warrior, Elf_Warrior, Worg, Mage, Ranger).
 - **RPG UI Overlay:** In-game HUD with ability hotbar (with level indicators, level-up buttons, and ability icons), item slots, buff/debuff display, KDA, scoreboard, custom cursor, and toggleable animation debug overlay (animState, timer, facing, position, active buffs).
 - **Spell VFX System:** Comprehensive system with 16 visual effect types, multi-layered impact VFX, projectiles with trails, screen shake, and charge systems.
-- **Keybinding System:** Fully rebindable actions persisted in localStorage. Ctrl+Q/W/E/R to level abilities.
+- **Keybinding System:** Fully rebindable actions persisted in localStorage. Q=attack, E=core skill, Space=defensive, R=ultimate. Ctrl+Q/E/Space/R to level abilities.
 - **Fog of War (MOBA):** Full fog of war on both main 2D canvas and minimap. Vision sources: heroes (600px), towers (500px), minions (300px). Explored-but-not-visible areas shown dimly. Enemy entities hidden outside vision.
 - **Dungeon Line of Sight:** Recursive shadowcasting algorithm (8-octant) computes true LOS from player position. Walls block vision — no seeing through walls or around corners. 7-tile vision radius with distance falloff. Revealed-but-not-visible tiles shown at 0.15 opacity. Enemies, chests, projectiles, particles all hidden outside LOS. Cached per player tile position for performance.
 - **Ability Leveling System:** Heroes gain ability points on level up. Each ability (Q/W/E/R) can be leveled up to 4 times (R up to 3 times at levels 6/11/16). Ability damage scales +25% per level.
 
 **Features:**
-- **Heroes:** 26 unique heroes across 6 races and 4 classes, each with 4 abilities. Race-specific warrior kits: Human (Sword & Shield), Orc (Heavy Axe), Elf (Spear/Glaive), Barbarian (War Hammer), Dwarf (Axe & Shield), Undead (Greatsword).
+- **Heroes:** 26 unique heroes across 6 races and 4 classes, each with 4 weapon-based abilities from the GRUDGE ObjectStore sprite database. Weapon types: swords, greataxes, spears, hammers, axes1h, greatswords, daggers, scythes, bows, crossbows, guns, fireStaves, frostStaves, arcaneStaves, natureStaves, lightningStaves. Each hero mapped to a unique weapon with slot1 (Q/attack), slot2 (E/core skill), slot3 (Space/defensive), slot4 (R/ultimate).
 - **MOBA Mode:** 4000x4000 map, 3 lanes, towers, Nexus objective, minion waves, jungle camps, hero leveling (1-18), item shop, gold economy, and KDA scoring.
-- **Dungeon Crawler Mode:** 10 procedural floors, various enemy types, boss fights, traps, chests, and an inventory system.
-- **Targeting System:** `MouseTargetingManager` handles AOE ground targeting with visual indicators.
-- **Audio Settings:** Configurable master, SFX, and music volumes persisted locally.
+- **Dungeon Crawler Mode:** 10 procedural floors, various enemy types, boss fights, traps, chests, inventory system, and enemy AI heroes of opposing factions (spawn floor 2+, 1-3 per floor, with patrol/chase/attack/retreat AI and weapon-skill casting).
+- **Targeting System:** `MouseTargetingManager` handles AOE ground targeting with visual indicators in MOBA. Dungeon mode has full targeting indicators: ground AOE circles, skillshot lines, cone arcs, with spell effects (cast circles, impact rings, AOE blasts, cone sweeps, dash trails).
+- **Settings UI:** `/settings` page with hotkey rebinding, audio settings (master/SFX/music volume sliders), display toggles (show damage numbers, show debug overlay). Settings gear icon in dungeon HUD. All settings persisted to localStorage.
 - **Sprite Effect System:** Loads and manages 20 pixel art effect spritesheets for various combat triggers.
 - **Dungeon Visibility:** Fog of War with `VISION_RADIUS` and distance-based dimming for tiles and enemies.
 - **Animation Editor:** Developer tool for previewing voxel hero animations, accessed via `/animation-editor`.
