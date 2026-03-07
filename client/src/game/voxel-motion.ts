@@ -2,6 +2,8 @@ import type { WeaponType } from './types';
 
 export interface BodyPartPose {
   ox: number; oy: number; oz: number;
+  rotation?: number;
+  scale?: number;
 }
 
 export interface FullPose {
@@ -52,10 +54,14 @@ function bounceOut(t: number): number {
 function lerpPart(a: Partial<BodyPartPose> | undefined, b: Partial<BodyPartPose> | undefined, t: number): BodyPartPose {
   const ax = a?.ox ?? 0, ay = a?.oy ?? 0, az = a?.oz ?? 0;
   const bx = b?.ox ?? 0, by = b?.oy ?? 0, bz = b?.oz ?? 0;
+  const ar = a?.rotation ?? 0, br = b?.rotation ?? 0;
+  const as = a?.scale ?? 1, bs = b?.scale ?? 1;
   return {
     ox: Math.round(ax + (bx - ax) * t),
     oy: Math.round(ay + (by - ay) * t),
     oz: Math.round(az + (bz - az) * t),
+    rotation: ar + (br - ar) * t,
+    scale: as + (bs - as) * t,
   };
 }
 
@@ -117,6 +123,8 @@ export function composePoses(base: FullPose, overlay: FullPose, blend: number): 
       ox: Math.round(bPart.ox + (oPart.ox - bPart.ox) * blend),
       oy: Math.round(bPart.oy + (oPart.oy - bPart.oy) * blend),
       oz: Math.round(bPart.oz + (oPart.oz - bPart.oz) * blend),
+      rotation: (bPart.rotation ?? 0) + ((oPart.rotation ?? 0) - (bPart.rotation ?? 0)) * blend,
+      scale: (bPart.scale ?? 1) + ((oPart.scale ?? 1) - (bPart.scale ?? 1)) * blend,
     };
   }
   return result;
@@ -134,10 +142,71 @@ export function additivePoses(base: FullPose, add: FullPose, scale: number): Ful
       ox: Math.round(bPart.ox + aPart.ox * scale),
       oy: Math.round(bPart.oy + aPart.oy * scale),
       oz: Math.round(bPart.oz + aPart.oz * scale),
+      rotation: (bPart.rotation ?? 0) + (aPart.rotation ?? 0) * scale,
+      scale: (bPart.scale ?? 1) * Math.pow(aPart.scale ?? 1, scale),
     };
   }
   return result;
 }
+
+export function generateSmoothedAnimation(snapshots: { time: number; pose: FullPose; glow?: number }[], duration: number, loop: boolean, smoothingSteps: number = 2): MotionPrimitive {
+  const keyframes: Keyframe[] = snapshots.map(s => ({
+    time: s.time,
+    pose: {} as any,
+    glow: s.glow ?? 0,
+    easing: 'easeInOut' as const,
+  }));
+
+  for (let idx = 0; idx < snapshots.length; idx++) {
+    const s = snapshots[idx];
+    const kf = keyframes[idx];
+    const parts: (keyof Omit<FullPose, 'weaponGlow'>)[] = ['leftLeg', 'rightLeg', 'leftArm', 'rightArm', 'torso', 'head', 'weapon'];
+    for (const p of parts) {
+      const bp = s.pose[p];
+      kf.pose[p] = { ox: bp.ox, oy: bp.oy, oz: bp.oz, rotation: bp.rotation ?? 0, scale: bp.scale ?? 1 };
+    }
+  }
+
+  if (smoothingSteps > 0 && keyframes.length >= 2) {
+    const extras: Keyframe[] = [];
+    for (let i = 0; i < keyframes.length - 1; i++) {
+      const kA = keyframes[i];
+      const kB = keyframes[i + 1];
+      const span = kB.time - kA.time;
+      if (span <= 0) continue;
+
+      for (let s = 1; s <= smoothingSteps; s++) {
+        const frac = s / (smoothingSteps + 1);
+        const midTime = parseFloat((kA.time + span * frac).toFixed(4));
+        const parts: (keyof Omit<FullPose, 'weaponGlow'>)[] = ['leftLeg', 'rightLeg', 'leftArm', 'rightArm', 'torso', 'head', 'weapon'];
+        const midPose: any = {};
+        for (const p of parts) {
+          const a = kA.pose[p];
+          const b = kB.pose[p];
+          if (a || b) {
+            midPose[p] = lerpPart(a, b, ease(frac, 'easeInOut'));
+          }
+        }
+        const midGlow = (kA.glow ?? 0) + ((kB.glow ?? 0) - (kA.glow ?? 0)) * ease(frac, 'easeInOut');
+        extras.push({ time: midTime, pose: midPose, glow: midGlow, easing: 'easeInOut' });
+      }
+    }
+    keyframes.push(...extras);
+    keyframes.sort((a, b) => a.time - b.time);
+  }
+
+  return { name: 'ai_smoothed', duration, keyframes, loop };
+}
+
+export const BODY_PART_CENTERS: Record<string, { x: number; y: number; z: number }> = {
+  leftLeg: { x: 2, y: 2.5, z: 0.5 },
+  rightLeg: { x: 5, y: 2.5, z: 0.5 },
+  leftArm: { x: 1, y: 3, z: 4 },
+  rightArm: { x: 6, y: 3, z: 4 },
+  torso: { x: 3.5, y: 3, z: 3.5 },
+  head: { x: 3.5, y: 3, z: 6.5 },
+  weapon: { x: 0, y: 1, z: 5 },
+};
 
 export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
   swing_horizontal: {

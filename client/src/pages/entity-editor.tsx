@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { VoxelRenderer } from "@/game/voxel";
 import { SpriteEffectSystem, SpriteEffectType } from "@/game/sprite-effects";
-import { sampleMotion, type MotionPrimitive, type Keyframe as MotionKeyframe, type BodyPartPose, type FullPose } from "@/game/voxel-motion";
+import { sampleMotion, generateSmoothedAnimation, BODY_PART_CENTERS, type MotionPrimitive, type Keyframe as MotionKeyframe, type BodyPartPose, type FullPose } from "@/game/voxel-motion";
 import { HEROES, RACE_COLORS, CLASS_COLORS, CLASS_ABILITIES, ITEMS, HeroData } from "@/game/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,7 +14,8 @@ import {
   ArrowLeft, Play, Pause, SkipForward, SkipBack, RotateCcw, Download,
   Swords, User, Sparkles, TreePine, Castle, Bug, Footprints,
   Copy, Eye, EyeOff, Zap, ChevronLeft, ChevronRight,
-  Plus, Minus, Clock, Layers, Film
+  Plus, Minus, Clock, Layers, Film, Move, RotateCw, Maximize2,
+  Camera, Wand2
 } from "lucide-react";
 
 const RACES = ["Human", "Barbarian", "Dwarf", "Elf", "Orc", "Undead"];
@@ -36,6 +37,25 @@ const SPRITE_EFFECT_TYPES: SpriteEffectType[] = [
 ];
 
 type TabId = "heroes" | "minions" | "monsters" | "structures" | "effects" | "environment";
+type GizmoMode = "move" | "rotate" | "scale";
+
+interface PoseSnapshot {
+  id: number;
+  label: string;
+  time: number;
+  pose: FullPose;
+  glow: number;
+}
+
+const GIZMO_SCREEN_POSITIONS: Record<string, { sx: number; sy: number }> = {
+  head: { sx: 0, sy: -18 },
+  torso: { sx: 0, sy: -8 },
+  leftArm: { sx: -12, sy: -8 },
+  rightArm: { sx: 12, sy: -8 },
+  leftLeg: { sx: -5, sy: 4 },
+  rightLeg: { sx: 5, sy: 4 },
+  weapon: { sx: -16, sy: -12 },
+};
 
 const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "heroes", label: "Heroes", icon: User },
@@ -191,8 +211,8 @@ function KeyframeTimelineEditor({ timeline, setTimeline, animTimer, setAnimTimer
     setTimeline(prev => ({ ...prev, keyframes: newKeyframes }));
   };
 
-  const updatePartPose = (part: string, axis: 'ox' | 'oy' | 'oz', value: number) => {
-    const rounded = Math.round(value);
+  const updatePartPose = (part: string, axis: string, value: number) => {
+    const rounded = axis === 'rotation' || axis === 'scale' ? value : Math.round(value);
     const newKeyframes = timeline.keyframes.map((k, i) => {
       if (i !== timeline.selectedKeyframeIdx) return k;
       const existingPart = k.pose[part as keyof typeof k.pose] || {};
@@ -207,11 +227,11 @@ function KeyframeTimelineEditor({ timeline, setTimeline, animTimer, setAnimTimer
     setTimeline(prev => ({ ...prev, keyframes: newKeyframes }));
   };
 
-  const getPartValue = (part: string, axis: 'ox' | 'oy' | 'oz'): number => {
-    if (!kf) return 0;
+  const getPartValue = (part: string, axis: string): number => {
+    if (!kf) return axis === 'scale' ? 1 : 0;
     const p = kf.pose[part as keyof typeof kf.pose];
-    if (!p) return 0;
-    return (p as any)[axis] ?? 0;
+    if (!p) return axis === 'scale' ? 1 : 0;
+    return (p as any)[axis] ?? (axis === 'scale' ? 1 : 0);
   };
 
   const handleTimelineClick = (e: React.MouseEvent) => {
@@ -393,6 +413,10 @@ function KeyframeTimelineEditor({ timeline, setTimeline, animTimer, setAnimTimer
                             onChange={v => updatePartPose(part, 'oy', v)} />
                           <LabeledSlider label="oz (height)" value={getPartValue(part, 'oz')} min={-8} max={8} step={1}
                             onChange={v => updatePartPose(part, 'oz', v)} />
+                          <LabeledSlider label="rotation (deg)" value={getPartValue(part, 'rotation')} min={-180} max={180} step={5}
+                            onChange={v => updatePartPose(part, 'rotation', v)} suffix="°" />
+                          <LabeledSlider label="scale" value={getPartValue(part, 'scale') || 1} min={0.2} max={3} step={0.1}
+                            onChange={v => updatePartPose(part, 'scale', v)} suffix="x" />
                         </div>
                       )}
                     </div>
@@ -1068,6 +1092,16 @@ export default function EntityEditorPage() {
   const [timeline, setTimeline] = useState<TimelineState>(defaultTimelineState);
   const timelineRef = useRef<TimelineState>(defaultTimelineState());
 
+  const [gizmoMode, setGizmoMode] = useState<GizmoMode>("move");
+  const [selectedPart, setSelectedPart] = useState<string | null>(null);
+  const [snapshots, setSnapshots] = useState<PoseSnapshot[]>([]);
+  const [showGizmo, setShowGizmo] = useState(true);
+  const snapshotIdRef = useRef(1);
+  const dragRef = useRef<{ part: string; startX: number; startY: number; startOx: number; startOy: number; startOz: number; startRot: number; startScale: number } | null>(null);
+  const gizmoModeRef = useRef<GizmoMode>("move");
+  const selectedPartRef = useRef<string | null>(null);
+  const showGizmoRef = useRef(true);
+
   const [state, setStateRaw] = useState<EditorState>({
     race: "Human",
     heroClass: "Warrior",
@@ -1101,6 +1135,9 @@ export default function EntityEditorPage() {
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { stateRef.current = state; }, [state]);
   useEffect(() => { timelineRef.current = timeline; }, [timeline]);
+  useEffect(() => { gizmoModeRef.current = gizmoMode; }, [gizmoMode]);
+  useEffect(() => { selectedPartRef.current = selectedPart; }, [selectedPart]);
+  useEffect(() => { showGizmoRef.current = showGizmo; }, [showGizmo]);
 
   const resetTimer = useCallback(() => {
     animTimerRef.current = 0;
@@ -1122,6 +1159,159 @@ export default function EntityEditorPage() {
   const setAnimTimerDirect = useCallback((t: number) => {
     animTimerRef.current = t;
     setAnimTimer(t);
+  }, []);
+
+  const getCurrentPose = useCallback((): FullPose => {
+    const tl = timelineRef.current;
+    if (tl.enabled) {
+      const motion: MotionPrimitive = { name: tl.name, duration: tl.duration, keyframes: tl.keyframes, loop: tl.loop };
+      return sampleMotion(motion, animTimerRef.current);
+    }
+    const zero: BodyPartPose = { ox: 0, oy: 0, oz: 0 };
+    return { leftLeg: zero, rightLeg: zero, leftArm: zero, rightArm: zero, torso: zero, head: zero, weapon: zero, weaponGlow: 0 };
+  }, []);
+
+  const captureSnapshot = useCallback(() => {
+    const pose = getCurrentPose();
+    const tl = timelineRef.current;
+    const kf = tl.keyframes[tl.selectedKeyframeIdx];
+    const glow = kf?.glow ?? 0;
+    const id = snapshotIdRef.current++;
+    setSnapshots(prev => [...prev, {
+      id, label: `Snap ${id}`,
+      time: parseFloat(animTimerRef.current.toFixed(3)),
+      pose, glow,
+    }]);
+  }, [getCurrentPose]);
+
+  const applySnapshotsToTimeline = useCallback((smooth: boolean) => {
+    if (snapshots.length < 2) return;
+    const sorted = [...snapshots].sort((a, b) => a.time - b.time);
+    const maxTime = sorted[sorted.length - 1].time;
+    const duration = maxTime > 0 ? maxTime : 1;
+
+    if (smooth) {
+      const smoothed = generateSmoothedAnimation(sorted, duration, timeline.loop, 2);
+      setTimeline(prev => ({
+        ...prev,
+        enabled: true,
+        duration: smoothed.duration,
+        endTime: smoothed.duration,
+        keyframes: smoothed.keyframes,
+        selectedKeyframeIdx: 0,
+      }));
+    } else {
+      const keyframes: MotionKeyframe[] = sorted.map(s => {
+        const kf: MotionKeyframe = { time: s.time, pose: {}, glow: s.glow, easing: 'easeInOut' };
+        const parts: (keyof Omit<FullPose, 'weaponGlow'>)[] = ['leftLeg', 'rightLeg', 'leftArm', 'rightArm', 'torso', 'head', 'weapon'];
+        for (const p of parts) {
+          const bp = s.pose[p];
+          if (bp.ox !== 0 || bp.oy !== 0 || bp.oz !== 0 || (bp.rotation && bp.rotation !== 0) || (bp.scale && bp.scale !== 1)) {
+            kf.pose[p] = { ...bp };
+          }
+        }
+        return kf;
+      });
+      setTimeline(prev => ({
+        ...prev,
+        enabled: true,
+        duration,
+        endTime: duration,
+        keyframes,
+        selectedKeyframeIdx: 0,
+      }));
+    }
+  }, [snapshots, timeline.loop]);
+
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (activeTab !== 'heroes' || !showGizmoRef.current || !timelineRef.current.enabled) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2 + 20;
+    const scale = 3.5;
+
+    let closestPart: string | null = null;
+    let closestDist = 20;
+    for (const [part, pos] of Object.entries(GIZMO_SCREEN_POSITIONS)) {
+      const tl = timelineRef.current;
+      const kf = tl.keyframes[tl.selectedKeyframeIdx];
+      const partPose = kf?.pose?.[part as keyof typeof kf.pose] as Partial<BodyPartPose> | undefined;
+      const px = cx + (pos.sx + (partPose?.ox ?? 0)) * scale;
+      const py = cy + (pos.sy - (partPose?.oz ?? 0)) * scale;
+      const d = Math.sqrt((mx - px) ** 2 + (my - py) ** 2);
+      if (d < closestDist) {
+        closestDist = d;
+        closestPart = part;
+      }
+    }
+
+    if (closestPart) {
+      setSelectedPart(closestPart);
+      setTimeline(prev => ({ ...prev, expandedPart: closestPart }));
+      const tl = timelineRef.current;
+      const kf = tl.keyframes[tl.selectedKeyframeIdx];
+      const pp = kf?.pose?.[closestPart as keyof typeof kf.pose] as Partial<BodyPartPose> | undefined;
+      dragRef.current = {
+        part: closestPart,
+        startX: mx, startY: my,
+        startOx: pp?.ox ?? 0,
+        startOy: pp?.oy ?? 0,
+        startOz: pp?.oz ?? 0,
+        startRot: pp?.rotation ?? 0,
+        startScale: pp?.scale ?? 1,
+      };
+      setPlaying(false);
+    } else {
+      setSelectedPart(null);
+    }
+  }, [activeTab]);
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!dragRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const scale = 3.5;
+    const dx = (mx - dragRef.current.startX) / scale;
+    const dy = (my - dragRef.current.startY) / scale;
+    const part = dragRef.current.part;
+    const mode = gizmoModeRef.current;
+
+    const tl = timelineRef.current;
+    const kfIdx = tl.selectedKeyframeIdx;
+    const existingPart = tl.keyframes[kfIdx]?.pose?.[part as keyof MotionKeyframe['pose']] || {};
+
+    let updates: Record<string, number> = {};
+    if (mode === 'move') {
+      if (e.shiftKey) {
+        updates = { oy: Math.round(dragRef.current.startOy - dy) };
+      } else {
+        updates = { ox: Math.round(dragRef.current.startOx + dx), oz: Math.round(dragRef.current.startOz - dy) };
+      }
+    } else if (mode === 'rotate') {
+      const angleDelta = Math.atan2(dy, dx) * 180 / Math.PI;
+      updates = { rotation: Math.round((dragRef.current.startRot + angleDelta) / 5) * 5 };
+    } else if (mode === 'scale') {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const sign = dy < 0 ? 1 : -1;
+      updates = { scale: Math.max(0.2, Math.min(3, parseFloat((dragRef.current.startScale + sign * dist * 0.05).toFixed(1)))) };
+    }
+
+    const newKeyframes = tl.keyframes.map((k, i) => {
+      if (i !== kfIdx) return k;
+      return { ...k, pose: { ...k.pose, [part]: { ...existingPart, ...updates } } };
+    });
+    setTimeline(prev => ({ ...prev, keyframes: newKeyframes }));
+  }, []);
+
+  const handleCanvasMouseUp = useCallback(() => {
+    dragRef.current = null;
   }, []);
 
   const playEffect = useCallback((type: SpriteEffectType, scale: number, durationMs: number) => {
@@ -1211,6 +1401,71 @@ export default function EntityEditorPage() {
         vr.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, s.heroClass, s.facing, s.animState, t, s.race, hero.name);
       }
       ctx.restore();
+
+      if (showGizmoRef.current && tl.enabled) {
+        ctx.save();
+        const gScale = 3.5;
+        const selPart = selectedPartRef.current;
+        const gMode = gizmoModeRef.current;
+        const kf = tl.keyframes[tl.selectedKeyframeIdx];
+
+        for (const [part, pos] of Object.entries(GIZMO_SCREEN_POSITIONS)) {
+          const pp = kf?.pose?.[part as keyof typeof kf.pose] as Partial<BodyPartPose> | undefined;
+          const px = cx + (pos.sx + (pp?.ox ?? 0)) * gScale;
+          const py = cy + (pos.sy - (pp?.oz ?? 0)) * gScale;
+          const isSelected = part === selPart;
+          const color = PART_COLORS[part] || '#888';
+
+          ctx.beginPath();
+          ctx.arc(px, py, isSelected ? 8 : 5, 0, Math.PI * 2);
+          ctx.fillStyle = isSelected ? color : color + '66';
+          ctx.fill();
+          ctx.strokeStyle = isSelected ? '#ffffff' : color + 'aa';
+          ctx.lineWidth = isSelected ? 2 : 1;
+          ctx.stroke();
+
+          if (isSelected) {
+            if (gMode === 'move') {
+              ctx.strokeStyle = '#ef4444';
+              ctx.lineWidth = 2;
+              ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + 20, py); ctx.stroke();
+              ctx.beginPath(); ctx.moveTo(px + 16, py - 3); ctx.lineTo(px + 20, py); ctx.lineTo(px + 16, py + 3); ctx.fill();
+              ctx.strokeStyle = '#22c55e';
+              ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py - 20); ctx.stroke();
+              ctx.beginPath(); ctx.moveTo(px - 3, py - 16); ctx.lineTo(px, py - 20); ctx.lineTo(px + 3, py - 16); ctx.fill();
+            } else if (gMode === 'rotate') {
+              const rot = (pp?.rotation ?? 0) * Math.PI / 180;
+              ctx.strokeStyle = '#f59e0b';
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.arc(px, py, 16, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.strokeStyle = '#fbbf24';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(px, py);
+              ctx.lineTo(px + Math.cos(rot) * 16, py - Math.sin(rot) * 16);
+              ctx.stroke();
+            } else if (gMode === 'scale') {
+              const sc = pp?.scale ?? 1;
+              const sz = 10 * sc;
+              ctx.strokeStyle = '#8b5cf6';
+              ctx.lineWidth = 1.5;
+              ctx.strokeRect(px - sz, py - sz, sz * 2, sz * 2);
+              ctx.fillStyle = '#8b5cf600';
+              ctx.fillRect(px - sz, py - sz, sz * 2, sz * 2);
+              ctx.fillStyle = '#8b5cf6';
+              ctx.fillRect(px + sz - 3, py + sz - 3, 6, 6);
+            }
+          }
+
+          ctx.fillStyle = isSelected ? '#ffffff' : 'rgba(255,255,255,0.5)';
+          ctx.font = `${isSelected ? 'bold' : 'normal'} 9px monospace`;
+          ctx.textAlign = 'center';
+          ctx.fillText(PART_LABELS[part] || part, px, py + (isSelected ? 18 : 14));
+        }
+        ctx.restore();
+      }
     } else if (activeTab === "minions") {
       ctx.save();
       const scale = 4.0;
@@ -1270,6 +1525,20 @@ export default function EntityEditorPage() {
     animFrameRef.current = requestAnimationFrame(renderFrame);
     return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
   }, [renderFrame]);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (activeTab !== 'heroes') return;
+      if (e.key === 'm' || e.key === 'M') setGizmoMode('move');
+      if (e.key === 'r' && !e.ctrlKey && !e.metaKey) setGizmoMode('rotate');
+      if (e.key === 's' && !e.ctrlKey && !e.metaKey) setGizmoMode('scale');
+      if (e.key === 'g' || e.key === 'G') setShowGizmo(prev => !prev);
+      if (e.key === 'c' && !e.ctrlKey && !e.metaKey) captureSnapshot();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [activeTab, captureSnapshot]);
 
   return (
     <div className="h-screen flex bg-[#0a0a14] text-white overflow-hidden" data-testid="entity-editor-page">
@@ -1333,9 +1602,90 @@ export default function EntityEditorPage() {
           </div>
 
           <div className="flex-1 flex items-center justify-center bg-[#08080f] relative">
+            {activeTab === 'heroes' && timeline.enabled && (
+              <div className="absolute top-3 left-3 flex gap-1 z-10">
+                <button data-testid="btn-gizmo-move"
+                  className={`w-8 h-8 rounded flex items-center justify-center transition-all ${gizmoMode === 'move' ? 'bg-red-900/60 text-red-400 border border-red-600' : 'bg-black/60 text-gray-400 hover:text-gray-200 border border-gray-700/50'}`}
+                  onClick={() => setGizmoMode('move')} title="Move (M)">
+                  <Move className="w-4 h-4" />
+                </button>
+                <button data-testid="btn-gizmo-rotate"
+                  className={`w-8 h-8 rounded flex items-center justify-center transition-all ${gizmoMode === 'rotate' ? 'bg-amber-900/60 text-amber-400 border border-amber-600' : 'bg-black/60 text-gray-400 hover:text-gray-200 border border-gray-700/50'}`}
+                  onClick={() => setGizmoMode('rotate')} title="Rotate (R)">
+                  <RotateCw className="w-4 h-4" />
+                </button>
+                <button data-testid="btn-gizmo-scale"
+                  className={`w-8 h-8 rounded flex items-center justify-center transition-all ${gizmoMode === 'scale' ? 'bg-purple-900/60 text-purple-400 border border-purple-600' : 'bg-black/60 text-gray-400 hover:text-gray-200 border border-gray-700/50'}`}
+                  onClick={() => setGizmoMode('scale')} title="Scale (S)">
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+                <div className="w-px bg-gray-700/50 mx-0.5" />
+                <button data-testid="btn-toggle-gizmo"
+                  className={`w-8 h-8 rounded flex items-center justify-center transition-all ${showGizmo ? 'bg-green-900/40 text-green-400 border border-green-700' : 'bg-black/60 text-gray-500 border border-gray-700/50'}`}
+                  onClick={() => setShowGizmo(!showGizmo)} title="Toggle Gizmo">
+                  {showGizmo ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                </button>
+              </div>
+            )}
+
+            {activeTab === 'heroes' && timeline.enabled && (
+              <div className="absolute top-3 right-3 flex gap-1 z-10">
+                <button data-testid="btn-capture-snapshot"
+                  className="h-8 px-3 rounded bg-amber-900/60 text-amber-400 border border-amber-600 text-xs flex items-center gap-1.5 hover:bg-amber-800/60 transition-all"
+                  onClick={captureSnapshot} title="Capture Snapshot">
+                  <Camera className="w-3.5 h-3.5" /> Snapshot
+                </button>
+                {snapshots.length >= 2 && (
+                  <>
+                    <button data-testid="btn-apply-snapshots"
+                      className="h-8 px-3 rounded bg-purple-900/60 text-purple-400 border border-purple-600 text-xs flex items-center gap-1.5 hover:bg-purple-800/60 transition-all"
+                      onClick={() => applySnapshotsToTimeline(false)} title="Apply Snapshots to Timeline">
+                      <Film className="w-3.5 h-3.5" /> Apply
+                    </button>
+                    <button data-testid="btn-ai-smooth"
+                      className="h-8 px-3 rounded bg-green-900/60 text-green-400 border border-green-600 text-xs flex items-center gap-1.5 hover:bg-green-800/60 transition-all"
+                      onClick={() => applySnapshotsToTimeline(true)} title="AI Smooth Animation">
+                      <Wand2 className="w-3.5 h-3.5" /> AI Smooth
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'heroes' && snapshots.length > 0 && (
+              <div className="absolute bottom-12 left-3 right-3 z-10">
+                <div className="bg-black/80 backdrop-blur rounded border border-gray-700/50 p-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] text-amber-400 font-bold uppercase">Snapshots ({snapshots.length})</span>
+                    <button className="text-[10px] text-gray-500 hover:text-red-400" data-testid="btn-clear-snapshots"
+                      onClick={() => setSnapshots([])}>Clear All</button>
+                  </div>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    {snapshots.map((snap, idx) => (
+                      <div key={snap.id} data-testid={`snapshot-${snap.id}`}
+                        className="flex-shrink-0 bg-gray-900/80 rounded px-2 py-1 border border-gray-700/50 hover:border-amber-700/50 transition-all cursor-pointer group"
+                        onClick={() => setAnimTimerDirect(snap.time)}>
+                        <div className="text-[9px] text-amber-400 font-mono">{snap.label}</div>
+                        <div className="text-[8px] text-gray-500">t:{snap.time.toFixed(2)}s</div>
+                        <button className="text-[8px] text-gray-600 hover:text-red-400 mt-0.5"
+                          onClick={(e) => { e.stopPropagation(); setSnapshots(prev => prev.filter(s => s.id !== snap.id)); }}>
+                          remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <canvas ref={canvasRef} width={640} height={520}
               className="rounded-lg border border-gray-800/30"
-              data-testid="editor-preview-canvas" />
+              data-testid="editor-preview-canvas"
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+              onMouseLeave={handleCanvasMouseUp}
+              style={{ cursor: activeTab === 'heroes' && showGizmo && timeline.enabled ? 'crosshair' : 'default' }} />
             <div className="absolute bottom-3 left-3 flex gap-2">
               <div className="bg-black/60 backdrop-blur rounded px-2 py-1 text-[10px] text-gray-400" data-testid="text-entity-label">
                 {activeTab === "heroes" ? `${state.race} ${state.heroClass}` :
@@ -1350,6 +1700,12 @@ export default function EntityEditorPage() {
               <div className="bg-black/60 backdrop-blur rounded px-2 py-1 text-[10px] text-amber-400 font-mono" data-testid="text-timer-display">
                 t:{animTimer.toFixed(3)}
               </div>
+              {selectedPart && (
+                <div className="bg-black/60 backdrop-blur rounded px-2 py-1 text-[10px] font-mono" data-testid="text-selected-part"
+                  style={{ color: PART_COLORS[selectedPart] || '#888' }}>
+                  {PART_LABELS[selectedPart] || selectedPart} | {gizmoMode}
+                </div>
+              )}
             </div>
           </div>
         </div>

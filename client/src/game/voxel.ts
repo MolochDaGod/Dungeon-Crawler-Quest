@@ -91,6 +91,8 @@ const DUNGEON_PALETTES: Record<DungeonTileVoxelType, { base: string[]; accent: s
 
 interface BodyPartPose {
   ox: number; oy: number; oz: number;
+  rotation?: number;
+  scale?: number;
 }
 
 function getAnimPoses(heroClass: string, animState: string, animTimer: number, weaponType?: WeaponType): {
@@ -1055,49 +1057,68 @@ export function buildHeroModelWithPoses(race: string, heroClass: string, customP
   const wP = poses.weapon;
   const weaponGlow = poses.weaponGlow;
 
-  setV(0 + lL.oz, 2 + lL.oy, 2 + lL.ox, bootColor);
-  setV(0 + lL.oz, 3 + lL.oy, 2 + lL.ox, bootColor);
-  setV(1 + lL.oz, 2 + lL.oy, 2 + lL.ox, armor.primary);
-  setV(0 + rL.oz, 2 + rL.oy, 5 + rL.ox, bootColor);
-  setV(0 + rL.oz, 3 + rL.oy, 5 + rL.ox, bootColor);
-  setV(1 + rL.oz, 2 + rL.oy, 5 + rL.ox, armor.primary);
+  const xformV = (baseZ: number, baseY: number, baseX: number, part: BodyPartPose, cx: number, cy: number, cz: number, color: string, useWV?: boolean) => {
+    let dz = baseZ - cz, dy = baseY - cy, dx = baseX - cx;
+    const sc = part.scale ?? 1;
+    if (sc !== 1) { dz *= sc; dy *= sc; dx *= sc; }
+    const rot = part.rotation ?? 0;
+    if (rot !== 0) {
+      const rad = rot * Math.PI / 180;
+      const cosR = Math.cos(rad), sinR = Math.sin(rad);
+      const newDx = dx * cosR - dz * sinR;
+      const newDz = dx * sinR + dz * cosR;
+      dx = newDx; dz = newDz;
+    }
+    const fz = Math.round(cz + dz + part.oz);
+    const fy = Math.round(cy + dy + part.oy);
+    const fx = Math.round(cx + dx + part.ox);
+    if (useWV) setWV(fz, fy, fx, color); else setV(fz, fy, fx, color);
+  };
 
-  for (let x = 2; x <= 5; x++) for (let y = 2; y <= 4; y++) setV(2 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
+  xformV(0, 2, 2, lL, 2, 2.5, 0.5, bootColor);
+  xformV(0, 3, 2, lL, 2, 2.5, 0.5, bootColor);
+  xformV(1, 2, 2, lL, 2, 2.5, 0.5, armor.primary);
+  xformV(0, 2, 5, rL, 5, 2.5, 0.5, bootColor);
+  xformV(0, 3, 5, rL, 5, 2.5, 0.5, bootColor);
+  xformV(1, 2, 5, rL, 5, 2.5, 0.5, armor.primary);
+
+  for (let x = 2; x <= 5; x++) for (let y = 2; y <= 4; y++) xformV(2, y, x, tP, 3.5, 3, 3.5, armor.primary);
   for (let x = 2; x <= 5; x++) for (let y = 2; y <= 4; y++) {
-    setV(3 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
-    setV(4 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
-    setV(5 + tP.oz, y + tP.oy, x + tP.ox, armor.secondary);
+    xformV(3, y, x, tP, 3.5, 3, 3.5, armor.primary);
+    xformV(4, y, x, tP, 3.5, 3, 3.5, armor.primary);
+    xformV(5, y, x, tP, 3.5, 3, 3.5, armor.secondary);
   }
 
-  setV(3 + lA.oz, 3 + lA.oy, 1 + lA.ox, armor.primary);
-  setV(4 + lA.oz, 3 + lA.oy, 1 + lA.ox, armor.secondary);
-  setV(5 + lA.oz, 3 + lA.oy, 1 + lA.ox, skin);
-  setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, armor.primary);
-  setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, armor.secondary);
-  setV(5 + rA.oz, 3 + rA.oy, 6 + rA.ox, skin);
+  xformV(3, 3, 1, lA, 1, 3, 4, armor.primary);
+  xformV(4, 3, 1, lA, 1, 3, 4, armor.secondary);
+  xformV(5, 3, 1, lA, 1, 3, 4, skin);
+  xformV(3, 3, 6, rA, 6, 3, 4, armor.primary);
+  xformV(4, 3, 6, rA, 6, 3, 4, armor.secondary);
+  xformV(5, 3, 6, rA, 6, 3, 4, skin);
 
-  for (let x = 2; x <= 5; x++) for (let y = 2; y <= 4; y++) setV(6 + hP.oz, y + hP.oy, x + hP.ox, skin);
-  setV(7 + hP.oz, 2 + hP.oy, 3 + hP.ox, skin);
-  setV(7 + hP.oz, 2 + hP.oy, 4 + hP.ox, skin);
-  setV(7 + hP.oz, 3 + hP.oy, 3 + hP.ox, hair);
-  setV(7 + hP.oz, 3 + hP.oy, 4 + hP.ox, hair);
-  setV(7 + hP.oz, 4 + hP.oy, 3 + hP.ox, hair);
-  setV(7 + hP.oz, 4 + hP.oy, 4 + hP.ox, hair);
-  setV(6 + hP.oz, 2 + hP.oy, 3 + hP.ox, eye);
-  setV(6 + hP.oz, 2 + hP.oy, 4 + hP.ox, eye);
+  for (let x = 2; x <= 5; x++) for (let y = 2; y <= 4; y++) xformV(6, y, x, hP, 3.5, 3, 6.5, skin);
+  xformV(7, 2, 3, hP, 3.5, 3, 6.5, skin);
+  xformV(7, 2, 4, hP, 3.5, 3, 6.5, skin);
+  xformV(7, 3, 3, hP, 3.5, 3, 6.5, hair);
+  xformV(7, 3, 4, hP, 3.5, 3, 6.5, hair);
+  xformV(7, 4, 3, hP, 3.5, 3, 6.5, hair);
+  xformV(7, 4, 4, hP, 3.5, 3, 6.5, hair);
+  xformV(6, 2, 3, hP, 3.5, 3, 6.5, eye);
+  xformV(6, 2, 4, hP, 3.5, 3, 6.5, eye);
 
+  const wCx = 0, wCy = 1, wCz = 5;
   if (weaponType === 'sword') {
-    setWV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c5a059');
-    for (let z = 3; z <= 8; z++) setWV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c0c0c0');
+    xformV(2, 1, 0, wP, wCx, wCy, wCz, '#c5a059', true);
+    for (let z = 3; z <= 8; z++) xformV(z, 1, 0, wP, wCx, wCy, wCz, '#c0c0c0', true);
   } else if (weaponType === 'staff') {
-    for (let z = 1; z <= 9; z++) setWV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, z >= 8 ? '#8b5cf6' : '#6b4423');
+    for (let z = 1; z <= 9; z++) xformV(z, 1, 0, wP, wCx, wCy, wCz, z >= 8 ? '#8b5cf6' : '#6b4423', true);
   } else if (weaponType === 'bow') {
-    for (let z = 2; z <= 7; z++) setWV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#6b4423');
-    setWV(2 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#d4d4d8');
-    setWV(7 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#d4d4d8');
+    for (let z = 2; z <= 7; z++) xformV(z, 1, 0, wP, wCx, wCy, wCz, '#6b4423', true);
+    xformV(2, 0, 0, wP, wCx, wCy, wCz, '#d4d4d8', true);
+    xformV(7, 0, 0, wP, wCx, wCy, wCz, '#d4d4d8', true);
   } else {
-    setWV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c5a059');
-    for (let z = 3; z <= 8; z++) setWV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c0c0c0');
+    xformV(2, 1, 0, wP, wCx, wCy, wCz, '#c5a059', true);
+    for (let z = 3; z <= 8; z++) xformV(z, 1, 0, wP, wCx, wCy, wCz, '#c0c0c0', true);
   }
 
   return model;
