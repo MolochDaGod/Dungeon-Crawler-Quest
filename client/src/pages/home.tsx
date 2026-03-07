@@ -175,14 +175,24 @@ export default function Home() {
             {selectedMode === 'moba' ? 'ENTER THE ARENA' : 'DESCEND INTO DARKNESS'}
           </Button>
 
-          <button
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer mt-2"
-            onClick={() => setLocation('/settings')}
-            data-testid="button-settings"
-          >
-            <Settings className="w-4 h-4" />
-            <span>Keybindings &amp; Settings</span>
-          </button>
+          <div className="flex gap-4 mt-2">
+            <button
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"
+              onClick={() => setLocation('/settings')}
+              data-testid="button-settings"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Keybindings &amp; Settings</span>
+            </button>
+            <button
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"
+              onClick={() => setLocation('/editor')}
+              data-testid="button-editor"
+            >
+              <Sword className="w-4 h-4" />
+              <span>Entity Editor</span>
+            </button>
+          </div>
         </div>
 
         <div className="w-full max-w-lg mx-auto bg-black/20 rounded-lg px-6 py-4 border border-gray-800/50 overflow-y-auto" style={{ maxHeight: '40vh' }} data-testid="section-how-to-play">

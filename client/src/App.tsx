@@ -12,6 +12,7 @@ import SettingsPage from "@/pages/settings";
 import OpenWorldPage from "@/pages/open-world";
 import AnimationEditorPage from "@/pages/animation-editor";
 import AdminPage from "@/pages/admin";
+import EntityEditorPage from "@/pages/entity-editor";
 import { useEffect } from "react";
 
 function Router() {
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/settings" component={SettingsPage} />
       <Route path="/animation-editor" component={AnimationEditorPage} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/editor" component={EntityEditorPage} />
       <Route component={NotFound} />
     </Switch>
   );
