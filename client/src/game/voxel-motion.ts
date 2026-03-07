@@ -518,8 +518,8 @@ export function drawCastingCircle(ctx: CanvasRenderingContext2D, x: number, y: n
 
   const rotation = time * 2;
   const runeCount = 6;
-  const innerRadius = radius * 0.6;
-  const outerRadius = radius;
+  const innerRadius = Math.max(0.1, radius * 0.6);
+  const outerRadius = Math.max(0.1, radius);
 
   ctx.strokeStyle = color;
   ctx.lineWidth = 1.5;
@@ -1113,7 +1113,7 @@ export function drawAISpellVFX(
   if (plan.burstOnImpact && progress > 0.7) {
     const burstProgress = (progress - 0.7) / 0.3;
     const burstAlpha = Math.max(0, 1 - burstProgress * 1.5);
-    const radius = plan.burstRadius * burstProgress;
+    const radius = Math.max(0.1, plan.burstRadius * burstProgress);
 
     ctx.save();
     ctx.shadowColor = plan.burstColor;
@@ -1141,7 +1141,7 @@ export function drawAISpellVFX(
       ctx.fillStyle = i % 2 === 0 ? '#ffffff' : plan.burstColor;
       ctx.globalAlpha = burstAlpha * 0.5;
       ctx.beginPath();
-      ctx.arc(x + Math.cos(sa) * sd, y + Math.sin(sa) * sd, 1.5 * (1 - burstProgress), 0, Math.PI * 2);
+      ctx.arc(x + Math.cos(sa) * sd, y + Math.sin(sa) * sd, Math.max(0.1, 1.5 * (1 - burstProgress)), 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
