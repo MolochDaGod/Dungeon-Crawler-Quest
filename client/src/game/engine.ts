@@ -218,6 +218,7 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     cursorMode: 'default',
     hoveredEntityId: null,
     aKeyHeld: false,
+    autoAttackEnabled: true,
     _ambientTimer: 0,
     spellEffects: [],
     spellProjectiles: [],
@@ -650,7 +651,7 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
         player.animState = 'walk';
       }
     } else if (!player.stopCommand && player.targetId === null && !player.moveTarget && !player.isAttackMoving) {
-      const nearEnemy = findNearestEnemy(state, player, player.rng + 30);
+      const nearEnemy = state.autoAttackEnabled ? findNearestEnemy(state, player, player.rng + 30) : null;
       if (nearEnemy) {
         player.targetId = nearEnemy.id;
       } else {
@@ -3557,6 +3558,7 @@ export function getHudState(state: MobaState): HudState {
     comboTimer: player?.comboTimer ?? 0,
     blockActive: player?.blockActive ?? false,
     blockCooldown: player?.blockCooldown ?? 0,
+    autoAttackEnabled: state.autoAttackEnabled,
     abilityCharges: player?.abilityCharges ?? [0, 0, 0, 0],
     abilityMaxCharges: heroData ? getHeroAbilities(heroData.race, heroData.heroClass).map(ab => ab.maxCharges || 0) : [0, 0, 0, 0],
     abilityLevels: player?.abilityLevels ?? [0, 0, 0, 0],

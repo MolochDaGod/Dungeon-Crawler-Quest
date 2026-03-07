@@ -14,7 +14,6 @@ import {
 } from '@/game/engine';
 import { ThreeRenderer } from '@/game/three-renderer';
 import { VoxelRenderer } from '@/game/voxel';
-import hudFramePath from '@assets/hud-frame.png';
 import shopPanelPath from '@assets/shop-panel.png';
 import scoreboardBgPath from '@assets/scoreboard-bg.png';
 import minimapBgPath from '@assets/minimap-bg.png';
@@ -406,9 +405,15 @@ export default function GamePage() {
         handleStopCommand(state);
       }
 
-      if (key === 'a') {
-        state.aKeyHeld = true;
-        state.cursorMode = 'attackmove';
+      if (key === 'a' && !e.repeat) {
+        state.autoAttackEnabled = !state.autoAttackEnabled;
+        if (!state.autoAttackEnabled) {
+          const player = state.heroes[state.playerHeroIndex];
+          if (player) {
+            player.targetId = null;
+            player.stopCommand = true;
+          }
+        }
       }
 
       if (matchesKeyDown(bindings[KeybindAction.Dodge], e)) {
@@ -445,12 +450,6 @@ export default function GamePage() {
       keysRef.current.delete(key);
       if (matchesKeyDown(bindings[KeybindAction.ToggleScoreboard], e) || key === 'tab') {
         state.showScoreboard = false;
-      }
-      if (key === 'a') {
-        state.aKeyHeld = false;
-        if (state.cursorMode === 'attackmove') {
-          state.cursorMode = state.hoveredEntityId !== null ? 'attack' : 'default';
-        }
       }
       if (matchesKeyDown(bindings[KeybindAction.Block], e)) {
         handleBlock(state, false);
@@ -531,9 +530,6 @@ export default function GamePage() {
             state.selectedAbility = -1;
             state.cursorMode = 'default';
           }
-        } else if (state.aKeyHeld) {
-          handleAttackMoveClick(state, wp.x, wp.y);
-          state.cursorMode = 'attackmove';
         } else if (state.selectedAbility >= 0) {
           const abIdx = state.selectedAbility;
           state.selectedAbility = -1;
@@ -570,9 +566,7 @@ export default function GamePage() {
         state.camera.y = panRef.current.camStartY - dy;
       }
 
-      if (state.aKeyHeld) {
-        state.cursorMode = 'attackmove';
-      } else if (state.selectedAbility >= 0) {
+      if (state.selectedAbility >= 0) {
         state.cursorMode = 'ability';
       } else if (state.hoveredEntityId !== null) {
         state.cursorMode = 'attack';
@@ -721,21 +715,17 @@ export default function GamePage() {
               <div
                 className="flex flex-col items-center relative"
                 style={{
-                  background: `linear-gradient(to bottom, rgba(20,15,10,0.96), rgba(8,5,0,0.96))`,
-                  border: '2px solid #c5a059',
-                  borderRadius: 6,
-                  padding: '10px 14px 8px 14px',
+                  background: 'linear-gradient(to bottom, rgba(18,14,10,0.95), rgba(10,8,5,0.97))',
+                  border: '1px solid rgba(197,160,89,0.5)',
+                  borderBottom: '2px solid rgba(197,160,89,0.6)',
+                  borderRadius: 4,
+                  padding: '8px 12px 6px 12px',
                   maxWidth: 580,
                   width: '100%',
-                  boxShadow: '0 -4px 30px rgba(0,0,0,0.9), inset 0 0 20px rgba(0,0,0,0.4), 0 0 1px rgba(197,160,89,0.4)',
-                  backgroundImage: `url(${hudFramePath})`,
-                  backgroundSize: '100% 100%',
-                  backgroundBlendMode: 'overlay'
+                  boxShadow: '0 -2px 16px rgba(0,0,0,0.7)',
                 }}
                 data-testid="panel-hotbar"
               >
-                <div style={{ position: 'absolute', top: -1, left: -1, width: 6, height: 6, background: '#c5a059', borderRadius: '0 0 2px 0', boxShadow: '0 0 4px rgba(197,160,89,0.6)' }} />
-                <div style={{ position: 'absolute', top: -1, right: -1, width: 6, height: 6, background: '#c5a059', borderRadius: '0 0 0 2px', boxShadow: '0 0 4px rgba(197,160,89,0.6)' }} />
 
                 <div className="flex items-center w-full mb-1.5" style={{ gap: 8 }}>
                   <div className="flex items-center" style={{ gap: 4, flex: 1 }}>
@@ -972,7 +962,47 @@ export default function GamePage() {
                     </div>
                   )}
 
-                  <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, transparent, #c5a059, transparent)', margin: '0 4px' }} />
+                  <div className="relative flex flex-col items-center" style={{ gap: 1 }}>
+                    <button
+                      className="relative flex items-center justify-center font-bold text-white"
+                      style={{
+                        width: 36, height: 36,
+                        background: hud.autoAttackEnabled
+                          ? 'linear-gradient(135deg, rgba(239,68,68,0.3), rgba(239,68,68,0.15))'
+                          : 'linear-gradient(135deg, #1a1a1a, #0a0a0a)',
+                        border: `2px solid ${hud.autoAttackEnabled ? '#ef4444' : '#444'}`,
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        boxShadow: hud.autoAttackEnabled ? '0 0 8px rgba(239,68,68,0.4)' : 'none'
+                      }}
+                      onClick={() => {
+                        if (stateRef.current) {
+                          stateRef.current.autoAttackEnabled = !stateRef.current.autoAttackEnabled;
+                          if (!stateRef.current.autoAttackEnabled) {
+                            const player = stateRef.current.heroes[stateRef.current.playerHeroIndex];
+                            if (player) {
+                              player.targetId = null;
+                              player.stopCommand = true;
+                            }
+                          }
+                        }
+                      }}
+                      title={hud.autoAttackEnabled ? 'Auto-Attack: ON (A)' : 'Auto-Attack: OFF (A)'}
+                      data-testid="button-auto-attack-toggle"
+                    >
+                      <span className="absolute text-[7px] font-bold" style={{ top: 1, left: 2, color: '#888' }}>A</span>
+                      <span className="text-[9px] font-black" style={{
+                        color: hud.autoAttackEnabled ? '#ef4444' : '#666',
+                        textShadow: '0 1px 2px #000'
+                      }}>ATK</span>
+                    </button>
+                    <span className="text-[7px] font-bold" style={{ color: hud.autoAttackEnabled ? '#ef4444' : '#555' }}>
+                      {hud.autoAttackEnabled ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+
+                  <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, transparent, rgba(197,160,89,0.4), transparent)', margin: '0 4px' }} />
 
                   {hud.items.map((item, i) => (
                     <div
