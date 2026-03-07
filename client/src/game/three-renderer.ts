@@ -920,14 +920,33 @@ export class ThreeRenderer {
       }
 
     } else if (hero.animState === 'block') {
+      const breathe = Math.sin(time * 3) * 0.02;
       if (leftArm) {
-        leftArm.rotation.x = -0.8;
-        leftArm.position.z = 0.15;
+        leftArm.rotation.x = -1.2;
+        leftArm.rotation.z = 0.3;
+        leftArm.position.z = 0.25;
+        leftArm.position.y = 0.55 + breathe;
       }
       if (rightArm) {
-        rightArm.rotation.x = -0.8;
-        rightArm.position.z = 0.15;
+        rightArm.rotation.x = -1.0;
+        rightArm.rotation.z = -0.2;
+        rightArm.position.z = 0.2;
+        rightArm.position.y = 0.5 + breathe;
       }
+      if (weapon) {
+        weapon.rotation.x = -Math.PI * 0.5;
+        weapon.position.z = 0.3;
+        weapon.position.y = 0.6 + breathe * 0.5;
+      }
+      if (torso) {
+        torso.rotation.x = -0.1;
+        torso.position.y = 0.65;
+      }
+      if (head) {
+        head.position.y = 1.2;
+      }
+      if (leftLeg) { leftLeg.position.z = -0.08; }
+      if (rightLeg) { rightLeg.position.z = 0.08; }
 
     } else {
       if (leftLeg) { leftLeg.rotation.x = 0; leftLeg.position.y = 0.22; }
