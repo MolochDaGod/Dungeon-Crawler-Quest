@@ -152,19 +152,19 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
       { time: 0.22, pose: {
         leftArm: { ox: -4, oy: 2, oz: 5 }, rightArm: { ox: -2, oy: 1, oz: 3 },
         torso: { ox: -1, oy: -1, oz: 0 }, head: { ox: -1, oy: 0, oz: 1 },
-        leftLeg: { ox: -1, oy: 0, oz: 0 }, rightLeg: { ox: 1, oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: -1, oz: 0 }, rightLeg: { ox: 0, oy: 1, oz: 0 },
         weapon: { ox: -3, oy: 3, oz: 8 }
       }, glow: 0.5, easing: 'easeOut' },
       { time: 0.35, pose: {
         leftArm: { ox: 6, oy: -4, oz: 5 }, rightArm: { ox: 1, oy: -1, oz: 1 },
         torso: { ox: 2, oy: 1, oz: -1 }, head: { ox: 2, oy: 0, oz: -1 },
-        leftLeg: { ox: 3, oy: 0, oz: 1 }, rightLeg: { ox: -2, oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: 3, oz: 1 }, rightLeg: { ox: 0, oy: -2, oz: 0 },
         weapon: { ox: 8, oy: -7, oz: 3 }
       }, glow: 1.0, easing: 'overshoot' },
       { time: 0.5, pose: {
         leftArm: { ox: 4, oy: -3, oz: 2 }, rightArm: { ox: 0, oy: 0, oz: 0 },
         torso: { ox: 1, oy: 0, oz: 0 }, head: { ox: 1, oy: 0, oz: 0 },
-        leftLeg: { ox: 1, oy: 0, oz: 0 }, rightLeg: { ox: 0, oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: 1, oz: 0 }, rightLeg: { ox: 0, oy: 0, oz: 0 },
         weapon: { ox: 5, oy: -4, oz: 1 }
       }, glow: 0.3, easing: 'easeOut' },
       { time: 0.65, pose: {}, glow: 0 },
@@ -183,13 +183,13 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
       { time: 0.35, pose: {
         leftArm: { ox: -1, oy: -1, oz: 7 }, rightArm: { ox: -2, oy: 1, oz: 4 },
         torso: { ox: 0, oy: 0, oz: 1 }, head: { ox: 0, oy: 0, oz: 2 },
-        leftLeg: { ox: 1, oy: 0, oz: 0 }, rightLeg: { ox: -1, oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: 1, oz: 0 }, rightLeg: { ox: 0, oy: -1, oz: 0 },
         weapon: { ox: -2, oy: -1, oz: 12 }
       }, glow: 0.6, easing: 'easeIn' },
       { time: 0.5, pose: {
         leftArm: { ox: 3, oy: -2, oz: -2 }, rightArm: { ox: 1, oy: 0, oz: -1 },
         torso: { ox: 2, oy: 0, oz: -3 }, head: { ox: 1, oy: 0, oz: -2 },
-        leftLeg: { ox: 2, oy: 0, oz: 1 }, rightLeg: { ox: -1, oy: 0, oz: 1 },
+        leftLeg: { ox: 0, oy: 2, oz: 1 }, rightLeg: { ox: 0, oy: -1, oz: 1 },
         weapon: { ox: 5, oy: -4, oz: -6 }
       }, glow: 1.0, easing: 'overshoot' },
       { time: 0.65, pose: {
@@ -206,19 +206,19 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
       { time: 0, pose: {
         leftArm: { ox: -3, oy: 0, oz: 2 }, rightArm: { ox: -1, oy: 1, oz: 2 },
         torso: { ox: -1, oy: 0, oz: 0 }, head: { ox: 0, oy: 0, oz: 0 },
-        leftLeg: { ox: -1, oy: 0, oz: 0 }, rightLeg: { ox: 1, oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: -1, oz: 0 }, rightLeg: { ox: 0, oy: 1, oz: 0 },
         weapon: { ox: -4, oy: 0, oz: 3 }
       }, glow: 0, easing: 'easeIn' },
       { time: 0.25, pose: {
         leftArm: { ox: -4, oy: -1, oz: 3 }, rightArm: { ox: -2, oy: 0, oz: 2 },
         torso: { ox: -2, oy: 1, oz: 0 }, head: { ox: -1, oy: 0, oz: 0 },
-        leftLeg: { ox: -2, oy: 0, oz: 0 }, rightLeg: { ox: 2, oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: -2, oz: 0 }, rightLeg: { ox: 0, oy: 2, oz: 0 },
         weapon: { ox: -5, oy: -1, oz: 4 }
       }, glow: 0.4, easing: 'easeIn' },
       { time: 0.4, pose: {
         leftArm: { ox: 7, oy: -2, oz: 3 }, rightArm: { ox: 2, oy: 0, oz: 1 },
         torso: { ox: 3, oy: 1, oz: 0 }, head: { ox: 3, oy: 0, oz: 0 },
-        leftLeg: { ox: 4, oy: 0, oz: 1 }, rightLeg: { ox: -2, oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: 4, oz: 1 }, rightLeg: { ox: 0, oy: -2, oz: 0 },
         weapon: { ox: 10, oy: -3, oz: 4 }
       }, glow: 1.0, easing: 'overshoot' },
       { time: 0.55, pose: {
@@ -248,7 +248,7 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
       { time: 0.52, pose: {
         leftArm: { ox: 3, oy: -3, oz: -4 }, rightArm: { ox: 2, oy: -2, oz: -3 },
         torso: { ox: 1, oy: 0, oz: -4 }, head: { ox: 1, oy: 0, oz: -3 },
-        leftLeg: { ox: 2, oy: -1, oz: 2 }, rightLeg: { ox: -1, oy: 1, oz: 2 },
+        leftLeg: { ox: 0, oy: 2, oz: 2 }, rightLeg: { ox: 0, oy: -1, oz: 2 },
         weapon: { ox: 4, oy: -5, oz: -10 }
       }, glow: 1.0, easing: 'overshoot' },
       { time: 0.65, pose: {
@@ -339,7 +339,7 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
       { time: 0.2, pose: {
         leftArm: { ox: 6, oy: -5, oz: 3 }, rightArm: { ox: 2, oy: -2, oz: 1 },
         torso: { ox: 2, oy: 1, oz: -1 }, head: { ox: 2, oy: 0, oz: 0 },
-        leftLeg: { ox: 2, oy: 0, oz: 1 }, rightLeg: { ox: -1, oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: 2, oz: 1 }, rightLeg: { ox: 0, oy: -1, oz: 0 },
         weapon: { ox: 8, oy: -7, oz: 2 }
       }, glow: 1.0, easing: 'overshoot' },
       { time: 0.35, pose: {
@@ -363,7 +363,7 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
       { time: 0.35, pose: {
         leftArm: { ox: 4, oy: -1, oz: 3 }, rightArm: { ox: -4, oy: 0, oz: 2 },
         torso: { ox: -1, oy: -1, oz: 0 }, head: { ox: 1, oy: 0, oz: 0 },
-        leftLeg: { ox: -1, oy: 0, oz: 0 }, rightLeg: { ox: 1, oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: -1, oz: 0 }, rightLeg: { ox: 0, oy: 1, oz: 0 },
         weapon: { ox: 4, oy: -1, oz: 4 }
       }, glow: 0.7, easing: 'easeIn' },
       { time: 0.45, pose: {

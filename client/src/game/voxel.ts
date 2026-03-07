@@ -116,19 +116,18 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const phase = Math.sin(t * freq);
     const phase2 = Math.cos(t * freq);
     const stride = 2.0;
-    const liftHeight = 0.8;
-    const bounce = Math.abs(Math.sin(t * freq * 2)) * 0.6;
-    const hipSway = Math.sin(t * freq) * 0.4;
-    const shoulderRock = Math.sin(t * freq) * 0.3;
-    const headBob = Math.sin(t * freq * 2 + 0.5) * 0.35;
+    const liftHeight = 1.0;
+    const bounce = Math.abs(Math.sin(t * freq * 2)) * 0.5;
+    const hipSway = Math.sin(t * freq) * 0.3;
+    const headBob = Math.sin(t * freq * 2 + 0.5) * 0.3;
     return {
-      leftLeg: { ox: Math.round(phase * stride), oy: 0, oz: Math.round(Math.max(0, -phase) * liftHeight) },
-      rightLeg: { ox: Math.round(-phase * stride), oy: 0, oz: Math.round(Math.max(0, phase) * liftHeight) },
-      leftArm: { ox: Math.round(-phase * 1.4), oy: Math.round(shoulderRock * 0.5), oz: Math.round(phase2 * 0.5) },
-      rightArm: { ox: Math.round(phase * 1.4), oy: Math.round(-shoulderRock * 0.5), oz: Math.round(-phase2 * 0.5) },
-      torso: { ox: 0, oy: Math.round(hipSway), oz: Math.round(bounce) },
-      head: { ox: 0, oy: Math.round(Math.sin(t * freq * 0.5) * 0.25), oz: Math.round(bounce * 0.8 + headBob) },
-      weapon: { ox: Math.round(phase * 0.6), oy: Math.round(shoulderRock * 0.3), oz: Math.round(bounce * 0.3) },
+      leftLeg: { ox: 0, oy: Math.round(phase * stride), oz: Math.round(Math.max(0, -phase) * liftHeight) },
+      rightLeg: { ox: 0, oy: Math.round(-phase * stride), oz: Math.round(Math.max(0, phase) * liftHeight) },
+      leftArm: { ox: 0, oy: Math.round(-phase * 1.6), oz: Math.round(Math.abs(phase2) * 0.4) },
+      rightArm: { ox: 0, oy: Math.round(phase * 1.6), oz: Math.round(Math.abs(-phase2) * 0.4) },
+      torso: { ox: 0, oy: 0, oz: Math.round(bounce) },
+      head: { ox: 0, oy: 0, oz: Math.round(bounce * 0.7 + headBob) },
+      weapon: { ox: 0, oy: Math.round(-phase * 0.5), oz: Math.round(bounce * 0.3) },
       weaponGlow: 0
     };
   }
@@ -144,8 +143,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
       const slamDown = Math.round(chop * 8.0);
       const bodyDip = Math.round(chop * 2.5);
       return {
-        leftLeg: { ox: Math.round(chop * 2.0 - followThru * 0.5), oy: 0, oz: Math.round(chop * 1.0) },
-        rightLeg: { ox: Math.round(-chop * 1.0 + windUp * 0.5), oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: Math.round(chop * 2.0 - followThru * 0.5), oz: Math.round(chop * 1.0) },
+        rightLeg: { ox: 0, oy: Math.round(-chop * 1.0 + windUp * 0.5), oz: 0 },
         leftArm: { ox: Math.round(chop * 3.0 - windUp * 1.0), oy: Math.round(-chop * 2.0), oz: Math.round(raisedArm - slamDown + followThru * 1.0) },
         rightArm: { ox: Math.round(-windUp * 1.5 + followThru * 0.5), oy: Math.round(windUp * 0.8), oz: Math.round(windUp * 3.0 - chop * 1.5) },
         torso: { ox: Math.round(chop * 1.5 - followThru * 0.5), oy: 0, oz: Math.round(-bodyDip + followThru * 1.0) },
@@ -162,8 +161,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
       const pullBack = Math.round(draw * 3.0);
       const pushFwd = Math.round(thrust * 7.0);
       return {
-        leftLeg: { ox: Math.round(thrust * 3.5 - retract * 1.5), oy: 0, oz: Math.round(thrust * 0.5) },
-        rightLeg: { ox: Math.round(-thrust * 1.5 + draw * 1.0), oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: Math.round(thrust * 3.5 - retract * 1.5), oz: Math.round(thrust * 0.5) },
+        rightLeg: { ox: 0, oy: Math.round(-thrust * 1.5 + draw * 1.0), oz: 0 },
         leftArm: { ox: Math.round(-pullBack + pushFwd - retract * 2.0), oy: Math.round(-thrust * 1.5), oz: Math.round(thrust * 2.0 + draw * 1.0) },
         rightArm: { ox: Math.round(-draw * 1.0 + retract * 0.5), oy: Math.round(draw * 0.5), oz: Math.round(draw * 1.5) },
         torso: { ox: Math.round(-pullBack * 0.4 + pushFwd * 0.5 - retract * 0.3), oy: Math.round(thrust * 0.5), oz: Math.round(-thrust * 0.3) },
@@ -181,8 +180,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
       const smash = Math.round(slam * 10.0);
       const bodySquat = Math.round(slam * 3.0);
       return {
-        leftLeg: { ox: Math.round(slam * 1.5), oy: Math.round(-slam * 0.5), oz: Math.round(slam * 1.5) },
-        rightLeg: { ox: Math.round(-slam * 1.5), oy: Math.round(slam * 0.5), oz: Math.round(slam * 1.5) },
+        leftLeg: { ox: 0, oy: Math.round(slam * 1.5 - slam * 0.5), oz: Math.round(slam * 1.5) },
+        rightLeg: { ox: 0, oy: Math.round(-slam * 1.5 + slam * 0.5), oz: Math.round(slam * 1.5) },
         leftArm: { ox: Math.round(slam * 2.0), oy: Math.round(-slam * 2.5), oz: Math.round(raise - smash + followThru * 2.0) },
         rightArm: { ox: Math.round(slam * 1.5), oy: Math.round(-slam * 1.5), oz: Math.round(raise * 0.8 - smash * 0.6 + followThru * 1.0) },
         torso: { ox: Math.round(slam * 0.5), oy: 0, oz: Math.round(-bodySquat + followThru * 1.5) },
@@ -202,8 +201,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
       const plantFeet = Math.round(swing * 0.8);
       const shoulderTwist = Math.round(swing * 1.2 - windUp * 0.6);
       return {
-        leftLeg: { ox: Math.round(swing * 2.5 - followThru * 0.8), oy: 0, oz: plantFeet },
-        rightLeg: { ox: Math.round(-swing * 1.5 + windUp * 0.8), oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: Math.round(swing * 2.5 - followThru * 0.8), oz: plantFeet },
+        rightLeg: { ox: 0, oy: Math.round(-swing * 1.5 + windUp * 0.8), oz: 0 },
         leftArm: { ox: armExtend, oy: Math.round(swing * -3.5 + shoulderTwist), oz: Math.round(swing * 5.0 - windUp * 3.0) },
         rightArm: { ox: Math.round(-windUp * 2.0 + followThru * 0.8), oy: Math.round(windUp * 1.0), oz: Math.round(windUp * 2.0 + swing * 0.5) },
         torso: { ox: lunge, oy: Math.round(swing * 0.8 - windUp * 0.5), oz: Math.round(-bodyLean * 0.4) },
@@ -219,8 +218,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
       const recoil = atkProgress >= 0.7 ? (atkProgress - 0.7) / 0.3 : 0;
       const stringTension = draw * (1 - release);
       return {
-        leftLeg: { ox: Math.round(-draw * 1.0), oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(draw * 1.2 - recoil * 0.5), oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: Math.round(-draw * 1.0), oz: 0 },
+        rightLeg: { ox: 0, oy: Math.round(draw * 1.2 - recoil * 0.5), oz: 0 },
         leftArm: { ox: Math.round(draw * 3.5 - release * 0.5 - recoil * 1.0), oy: Math.round(-draw * 0.8), oz: Math.round(draw * 3.0) },
         rightArm: { ox: Math.round(-draw * 3.0 + release * 5.0 - recoil * 2.0), oy: Math.round(draw * 0.3), oz: Math.round(draw * 2.0 + release * 1.0 - recoil * 0.5) },
         torso: { ox: Math.round(-draw * 0.8 + release * 0.5), oy: Math.round(-draw * 0.5 + release * 0.3), oz: Math.round(release * -0.3) },
@@ -237,8 +236,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
       const glow = Math.max(channel * 0.8, cast);
       const orbPulse = Math.sin(t * 20) * 0.3;
       return {
-        leftLeg: { ox: Math.round(-cast * 0.8 + recover * 0.3), oy: 0, oz: 0 },
-        rightLeg: { ox: Math.round(cast * 0.8 - recover * 0.4), oy: 0, oz: 0 },
+        leftLeg: { ox: 0, oy: Math.round(-cast * 0.8 + recover * 0.3), oz: 0 },
+        rightLeg: { ox: 0, oy: Math.round(cast * 0.8 - recover * 0.4), oz: 0 },
         leftArm: { ox: Math.round(cast * 4.5 - recover * 1.5), oy: Math.round(-raise * 1.5 + orbPulse), oz: Math.round(raise * 5.5 + cast * 1.0 - recover * 3) },
         rightArm: { ox: Math.round(cast * 3.0 - recover * 0.8), oy: Math.round(raise * 1.0 - orbPulse), oz: Math.round(raise * 4.5 + channel * 1.0 - recover * 2) },
         torso: { ox: Math.round(cast * 0.5), oy: 0, oz: Math.round(raise * 1.0 + channel * 0.5 - recover * 0.8) },
@@ -255,8 +254,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const burst = Math.max(0, Math.sin(t * 8 + 1.5));
     const channel = Math.min(1, t * 4);
     const basePose = {
-      leftLeg: { ox: Math.round(-burst * 0.8), oy: 0, oz: 0 },
-      rightLeg: { ox: Math.round(burst * 0.8), oy: 0, oz: 0 },
+      leftLeg: { ox: 0, oy: Math.round(-burst * 0.8), oz: 0 },
+      rightLeg: { ox: 0, oy: Math.round(burst * 0.8), oz: 0 },
       leftArm: { ox: Math.round(burst * 2.5), oy: Math.round(-pulse * 1.5), oz: Math.round(pulse * 4 + channel * 2) },
       rightArm: { ox: Math.round(burst * 2.5), oy: Math.round(pulse * 1.5), oz: Math.round(pulse * 4 + channel * 2) },
       torso: { ox: 0, oy: 0, oz: Math.round(pulse * 0.7 + channel * 0.5) },
@@ -280,8 +279,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const roll = Math.min(1, t * 8);
     const spin = Math.sin(roll * Math.PI * 2);
     return {
-      leftLeg: { ox: Math.round(spin * 2), oy: 0, oz: Math.round(-roll * 2) },
-      rightLeg: { ox: Math.round(-spin * 2), oy: 0, oz: Math.round(-roll * 2) },
+      leftLeg: { ox: 0, oy: Math.round(spin * 2), oz: Math.round(-roll * 2) },
+      rightLeg: { ox: 0, oy: Math.round(-spin * 2), oz: Math.round(-roll * 2) },
       leftArm: { ox: Math.round(-spin * 1.5), oy: Math.round(-roll), oz: Math.round(-roll * 3) },
       rightArm: { ox: Math.round(spin * 1.5), oy: Math.round(roll), oz: Math.round(-roll * 3) },
       torso: { ox: Math.round(spin * 0.5), oy: 0, oz: Math.round(-roll * 4) },
@@ -299,8 +298,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const lungeFwd = lunge * (1 - recover * 0.5);
     const slashArc = Math.sin(slash * Math.PI);
     const basePose = {
-      leftLeg: { ox: Math.round(lungeFwd * 4 - recover * 2), oy: 0, oz: Math.round(Math.max(0, slash - 0.5) * 2) },
-      rightLeg: { ox: Math.round(-lungeFwd * 2 + recover), oy: 0, oz: 0 },
+      leftLeg: { ox: 0, oy: Math.round(lungeFwd * 4 - recover * 2), oz: Math.round(Math.max(0, slash - 0.5) * 2) },
+      rightLeg: { ox: 0, oy: Math.round(-lungeFwd * 2 + recover), oz: 0 },
       leftArm: { ox: Math.round(lungeFwd * 5 + slashArc * 3 - recover * 3), oy: Math.round(-slashArc * 4), oz: Math.round(lungeFwd * 3 + slashArc * 5 - recover * 4) },
       rightArm: { ox: Math.round(lungeFwd * 2 - recover), oy: Math.round(slashArc * 1.5), oz: Math.round(lungeFwd * 2 + slashArc * 2 - recover * 2) },
       torso: { ox: Math.round(lungeFwd * 3.5 - recover * 1.5), oy: Math.round(slashArc * 0.8), oz: Math.round(-slashArc * 0.5 + lungeFwd * 0.5) },
@@ -320,8 +319,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const thrust = Math.min(1, t * 6);
     const extend = Math.sin(thrust * Math.PI);
     return {
-      leftLeg: { ox: Math.round(-extend * 2), oy: 0, oz: 0 },
-      rightLeg: { ox: Math.round(extend * 2), oy: 0, oz: 0 },
+      leftLeg: { ox: 0, oy: Math.round(-extend * 2), oz: 0 },
+      rightLeg: { ox: 0, oy: Math.round(extend * 2), oz: 0 },
       leftArm: { ox: Math.round(extend * 3), oy: Math.round(-extend), oz: Math.round(extend * 2) },
       rightArm: { ox: Math.round(extend * 2), oy: 0, oz: Math.round(extend) },
       torso: { ox: Math.round(extend * 2), oy: 0, oz: Math.round(extend * 0.5) },
@@ -342,8 +341,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const jumpPulse = Math.max(0, Math.sin(phase * 0.4)) * 1.5;
     const windmill = Math.sin(phase * 1.8) * 1.5;
     const basePose = {
-      leftLeg: { ox: Math.round(spin * 4.0), oy: Math.round(spin2 * 1.2 + twist * 0.5), oz: Math.round(Math.max(0, -spin) * 2.5 + jumpPulse) },
-      rightLeg: { ox: Math.round(-spin * 4.0), oy: Math.round(-spin2 * 1.2 - twist * 0.5), oz: Math.round(Math.max(0, spin) * 2.5 + jumpPulse) },
+      leftLeg: { ox: 0, oy: Math.round(spin * 4.0 + spin2 * 1.2 + twist * 0.5), oz: Math.round(Math.max(0, -spin) * 2.5 + jumpPulse) },
+      rightLeg: { ox: 0, oy: Math.round(-spin * 4.0 - spin2 * 1.2 - twist * 0.5), oz: Math.round(Math.max(0, spin) * 2.5 + jumpPulse) },
       leftArm: { ox: Math.round(spin * 7 + windmill), oy: Math.round(-power * 5.5 + twist), oz: Math.round(power * 7 + slam * 4.0) },
       rightArm: { ox: Math.round(-spin * 6 - windmill), oy: Math.round(power * 3.0 - twist), oz: Math.round(power * 6 + slam * 3.0) },
       torso: { ox: Math.round(spin * 3.0 + bodyLean), oy: Math.round(twist * 1.5), oz: Math.round(power * 2.0 - slam * 3.0 + jumpPulse * 0.5) },
@@ -365,8 +364,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
   if (animState === 'block') {
     const brace = Math.min(1, t * 6);
     return {
-      leftLeg: { ox: Math.round(-brace * 0.5), oy: 0, oz: 0 },
-      rightLeg: { ox: Math.round(brace * 0.5), oy: 0, oz: 0 },
+      leftLeg: { ox: 0, oy: Math.round(-brace * 0.5), oz: 0 },
+      rightLeg: { ox: 0, oy: Math.round(brace * 0.5), oz: 0 },
       leftArm: { ox: Math.round(-brace * 2), oy: Math.round(brace), oz: Math.round(brace * 2) },
       rightArm: { ox: Math.round(brace * 1), oy: Math.round(-brace * 0.5), oz: Math.round(brace * 1.5) },
       torso: { ox: Math.round(-brace * 0.5), oy: 0, oz: Math.round(brace * 0.3) },
@@ -379,8 +378,8 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
   if (animState === 'death') {
     const fall = Math.min(1, t * 2);
     return {
-      leftLeg: { ox: Math.round(fall * 2), oy: 0, oz: Math.round(-fall * 3) },
-      rightLeg: { ox: Math.round(fall * 2), oy: 0, oz: Math.round(-fall * 3) },
+      leftLeg: { ox: 0, oy: Math.round(fall * 2), oz: Math.round(-fall * 3) },
+      rightLeg: { ox: 0, oy: Math.round(fall * 2), oz: Math.round(-fall * 3) },
       leftArm: { ox: Math.round(fall * 3), oy: Math.round(-fall), oz: Math.round(-fall * 2) },
       rightArm: { ox: Math.round(fall * 3), oy: Math.round(fall), oz: Math.round(-fall * 2) },
       torso: { ox: Math.round(fall * 2), oy: 0, oz: Math.round(-fall * 4) },
@@ -427,30 +426,32 @@ function buildBearModel(animState: string, animTimer: number): VoxelModel {
   const swipe = atkProgress >= 0.35 && atkProgress < 0.6 ? (atkProgress - 0.35) / 0.25 : 0;
   const bodyBob = animState === 'walk' ? Math.abs(Math.sin(t * 14)) * 0.5 : 0;
 
-  const fLegOx = Math.round(walkPhase * 1.5);
-  const bLegOx = Math.round(-walkPhase * 1.5);
+  const fLegOy = Math.round(walkPhase * 1.5);
+  const bLegOy = Math.round(-walkPhase * 1.5);
+  const fLegOz = Math.round(Math.max(0, -walkPhase) * 0.8);
+  const bLegOz = Math.round(Math.max(0, walkPhase) * 0.8);
   const weightShift = Math.round(walkPhase2 * 0.6);
   const bodyRear = Math.round(rearUp * 2);
 
   for (let y = 3; y <= 7; y++) {
-    setV(0, y, 2 + fLegOx, darkFur);
-    setV(1, y, 2 + fLegOx, fur);
-    setV(0, y, 9 + fLegOx, darkFur);
-    setV(1, y, 9 + fLegOx, fur);
-    setV(0, y, 2 + fLegOx + 1, darkFur);
-    setV(1, y, 9 + fLegOx - 1, darkFur);
+    setV(0 + fLegOz, y + fLegOy, 2, darkFur);
+    setV(1 + fLegOz, y + fLegOy, 2, fur);
+    setV(0 + fLegOz, y + fLegOy, 9, darkFur);
+    setV(1 + fLegOz, y + fLegOy, 9, fur);
+    setV(0 + fLegOz, y + fLegOy, 3, darkFur);
+    setV(1 + fLegOz, y + fLegOy, 8, darkFur);
   }
-  setV(0, 3 + fLegOx, 2, claw); setV(0, 3 + fLegOx, 3, claw);
-  setV(0, 3 + fLegOx, 9, claw); setV(0, 3 + fLegOx, 8, claw);
-  setV(0, 4, 2 + fLegOx, pawPad); setV(0, 4, 9 + fLegOx, pawPad);
+  setV(0, 3 + fLegOy, 2, claw); setV(0, 3 + fLegOy, 3, claw);
+  setV(0, 3 + fLegOy, 9, claw); setV(0, 3 + fLegOy, 8, claw);
+  setV(0, 4, 2, pawPad); setV(0, 4, 9, pawPad);
 
   for (let y = 3; y <= 7; y++) {
-    setV(0, y, 4 + bLegOx, darkFur);
-    setV(1, y, 4 + bLegOx, fur);
-    setV(0, y, 7 + bLegOx, darkFur);
-    setV(1, y, 7 + bLegOx, fur);
+    setV(0 + bLegOz, y + bLegOy, 4, darkFur);
+    setV(1 + bLegOz, y + bLegOy, 4, fur);
+    setV(0 + bLegOz, y + bLegOy, 7, darkFur);
+    setV(1 + bLegOz, y + bLegOy, 7, fur);
   }
-  setV(0, 3 + bLegOx, 4, claw); setV(0, 3 + bLegOx, 7, claw);
+  setV(0, 3 + bLegOy, 4, claw); setV(0, 3 + bLegOy, 7, claw);
 
   const bodyZ = bodyRear + Math.round(bodyBob);
   for (let x = 2; x <= 9; x++) {

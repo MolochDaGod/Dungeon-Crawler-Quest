@@ -1,0 +1,19 @@
+Generate a comprehensive guide on XYZ math (3D coordinate mathematics) and definitions for creating animations of combat and movement actions in a voxel-based game character, similar to a Minecraft-style pixel art figure with brown hair, blue eyes, green tunic, and a bow on its back. Focus on actions like attacks (e.g., bow shooting or melee swing), dodge (quick sidestep), roll (evasive tumble), block (defensive stance with shield or arms), stun (temporary immobilization with visual effects), and similar mechanics (e.g., jump, parry, recovery).
+
+Structure the output as a Markdown document with the following sections:
+
+1. **Introduction to XYZ Math for Animations**: Explain core concepts like XYZ coordinates (X for horizontal, Y for vertical, Z for depth), vectors, quaternions for rotation, easing functions (e.g., linear, cubic bezier for smooth motion), and interpolation (lerp/slerp) for frame-by-frame animation. Include why this math is essential for realistic, efficient animations in 3D space.
+
+2. **Key Definitions and Formulas**: Provide mathematical definitions and formulas for each action. Use LaTeX formatting for equations (e.g., $position = \begin{pmatrix} x \\ y \\ z \end{pmatrix}$). Cover:
+   - **Attack**: Formulas for projectile trajectory (parabolic arc using gravity vector), swing animation (rotation around Y-axis with angular velocity ω).
+   - **Dodge**: Quick translation in X/Z plane, with velocity vector and deceleration curve.
+   - **Roll**: Combined rotation (around X-axis) and translation, including roll distance and recovery time.
+   - **Block**: Static pose with collision bounding box adjustments in XYZ, plus stun resistance multiplier.
+   - **Stun**: Temporary zero-velocity state with oscillation (small XYZ jitter) for visual effect, and duration formula based on impact force.
+   - Additional: General formulas for hit detection (distance between XYZ points < threshold), animation blending, and state machines.
+
+3. **Implementation Examples**: Give pseudo-code snippets in TypeScript (or Rust if Web3-focused) showing how to apply these in a game loop. For instance, animating a dodge: Calculate new position as current_pos + dodge_vector * delta_time.
+
+4. **Best Practices for Animation Creation**: Tips on integrating with tools like Blender or Unity for voxel characters, optimizing for performance (e.g., avoid floating-point precision issues), and ensuring actions feel responsive (e.g., input lag compensation). Include how to adapt for Web3 (e.g., on-chain randomization of stun durations).
+
+Ensure all content is clear, actionable, and includes diagrams (text-based or Mermaid syntax) for visualizing XYZ transformations. Keep it concise yet detailed, around 1500-2000 words, suitable for developers building animation systems.
