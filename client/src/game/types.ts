@@ -289,6 +289,7 @@ export interface MobaState {
   cursorMode: 'default' | 'attack' | 'ability' | 'move' | 'attackmove';
   hoveredEntityId: number | null;
   aKeyHeld: boolean;
+  autoAttackEnabled: boolean;
   _ambientTimer: number;
   spellEffects: SpellEffect[];
   spellProjectiles: SpellProjectile[];
@@ -370,6 +371,7 @@ export interface HudState {
   comboTimer: number;
   blockActive: boolean;
   blockCooldown: number;
+  autoAttackEnabled: boolean;
   abilityCharges: number[];
   abilityMaxCharges: number[];
   abilityLevels: number[];
