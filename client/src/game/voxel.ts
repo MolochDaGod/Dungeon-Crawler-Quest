@@ -9,6 +9,11 @@ import {
   type AttackPlan, type SpellVFXPlan
 } from './voxel-motion';
 
+function vfxSeededRand(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  return x - Math.floor(x);
+}
+
 type VoxelModel = (string | null)[][][];
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -1774,9 +1779,10 @@ export class VoxelRenderer {
           ctx.beginPath();
           ctx.arc(impactX, impactY, shockRadius, 0, Math.PI * 2);
           ctx.stroke();
+          const slamSeed = Math.floor(animTimer * 10);
           for (let i = 0; i < 5; i++) {
-            const sa = Math.random() * Math.PI * 2;
-            const sd = shockRadius * 0.5 + Math.random() * shockRadius * 0.5;
+            const sa = vfxSeededRand(slamSeed + i * 7) * Math.PI * 2;
+            const sd = shockRadius * 0.5 + vfxSeededRand(slamSeed + i * 13 + 3) * shockRadius * 0.5;
             ctx.fillStyle = i % 2 === 0 ? '#ffd700' : '#ef4444';
             ctx.globalAlpha = fadeAlpha * 0.4;
             ctx.beginPath();
@@ -1956,15 +1962,16 @@ export class VoxelRenderer {
 
         if (swing > 0.5) {
           const sparkCount = 6;
+          const swingSeed = Math.floor(animTimer * 10) + 50;
           for (let s = 0; s < sparkCount; s++) {
             const sa = arcAngle - s * 0.12;
-            const sr = reachDist + (Math.random() - 0.5) * 12;
+            const sr = reachDist + (vfxSeededRand(swingSeed + s * 11) - 0.5) * 12;
             const sx = Math.cos(sa) * sr;
             const sy = Math.sin(sa) * sr;
             ctx.fillStyle = s % 2 === 0 ? '#ffffff' : secondaryColor;
             ctx.globalAlpha = (1 - swing) * 2.5;
             ctx.beginPath();
-            ctx.arc(sx, sy, 1.5 + Math.random() * 1.5, 0, Math.PI * 2);
+            ctx.arc(sx, sy, Math.max(0.1, 1.5 + vfxSeededRand(swingSeed + s * 17 + 5) * 1.5), 0, Math.PI * 2);
             ctx.fill();
           }
         }
@@ -1998,13 +2005,17 @@ export class VoxelRenderer {
         ctx.arc(Math.cos(facing) * 20, Math.sin(facing) * 20, shockRadius, 0, Math.PI * 2);
         ctx.stroke();
 
+        const followSeed = Math.floor(animTimer * 10) + 200;
         for (let i = 0; i < 4; i++) {
-          const sparkAngle = facing + (Math.random() - 0.5) * 1.2;
-          const sparkDist = 20 + followThru * 25 + Math.random() * 10;
+          const fr1 = vfxSeededRand(followSeed + i * 7);
+          const fr2 = vfxSeededRand(followSeed + i * 13 + 3);
+          const fr3 = vfxSeededRand(followSeed + i * 19 + 7);
+          const sparkAngle = facing + (fr1 - 0.5) * 1.2;
+          const sparkDist = 20 + followThru * 25 + fr2 * 10;
           ctx.fillStyle = '#fde68a';
           ctx.globalAlpha = fadeAlpha * 0.5;
           ctx.beginPath();
-          ctx.arc(Math.cos(sparkAngle) * sparkDist, Math.sin(sparkAngle) * sparkDist, 1 + Math.random(), 0, Math.PI * 2);
+          ctx.arc(Math.cos(sparkAngle) * sparkDist, Math.sin(sparkAngle) * sparkDist, Math.max(0.1, 1 + fr3), 0, Math.PI * 2);
           ctx.fill();
         }
 
@@ -2113,13 +2124,14 @@ export class VoxelRenderer {
             ctx.arc(arrowX, arrowY, impactRadius, 0, Math.PI * 2);
             ctx.stroke();
 
+            const arrowSeed = Math.floor(animTimer * 10) + 300;
             for (let s = 0; s < 4; s++) {
               const sa = facing + (s - 1.5) * 0.6;
-              const sd = impactRadius + Math.random() * 5;
+              const sd = impactRadius + vfxSeededRand(arrowSeed + s * 11) * 5;
               ctx.fillStyle = '#bbf7d0';
               ctx.globalAlpha = (1 - impactProgress) * 0.5;
               ctx.beginPath();
-              ctx.arc(arrowX + Math.cos(sa) * sd, arrowY + Math.sin(sa) * sd, 1 + Math.random(), 0, Math.PI * 2);
+              ctx.arc(arrowX + Math.cos(sa) * sd, arrowY + Math.sin(sa) * sd, Math.max(0.1, 1 + vfxSeededRand(arrowSeed + s * 17 + 5)), 0, Math.PI * 2);
               ctx.fill();
             }
           }
@@ -2214,7 +2226,7 @@ export class VoxelRenderer {
           ctx.fillStyle = s % 2 === 0 ? '#e9d5ff' : '#a855f7';
           ctx.globalAlpha = 0.5 + Math.sin(t * 10 + s * 2) * 0.3;
           ctx.beginPath();
-          ctx.arc(orbX + Math.cos(sa) * sr, orbY + Math.sin(sa) * sr, 1.2 + Math.random() * 0.8, 0, Math.PI * 2);
+          ctx.arc(orbX + Math.cos(sa) * sr, orbY + Math.sin(sa) * sr, Math.max(0.1, 1.2 + vfxSeededRand(Math.floor(t * 10) + s * 7) * 0.8), 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -2438,13 +2450,17 @@ export class VoxelRenderer {
     ctx.stroke();
 
     const sparkAngle = facing + Math.PI;
+    const dashSeed = Math.floor(t * 10);
     for (let i = 0; i < 3; i++) {
-      const sa = sparkAngle + (Math.random() - 0.5) * 1.2;
-      const sd = 3 + Math.random() * 8;
+      const r1 = vfxSeededRand(dashSeed + i * 7);
+      const r2 = vfxSeededRand(dashSeed + i * 13 + 3);
+      const r3 = vfxSeededRand(dashSeed + i * 19 + 7);
+      const sa = sparkAngle + (r1 - 0.5) * 1.2;
+      const sd = 3 + r2 * 8;
       ctx.fillStyle = trailColor;
       ctx.globalAlpha = (1 - thrust) * 0.5;
       ctx.beginPath();
-      ctx.arc(Math.cos(sa) * sd, Math.sin(sa) * sd, 1 + Math.random(), 0, Math.PI * 2);
+      ctx.arc(Math.cos(sa) * sd, Math.sin(sa) * sd, Math.max(0.1, 1 + r3), 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -2515,14 +2531,17 @@ export class VoxelRenderer {
       ctx.stroke();
 
       if (slash > 0.4) {
+        const lungeSeed = Math.floor(t * 10);
         for (let s = 0; s < 5; s++) {
           const sa = arcAngle - s * 0.12;
-          const sr = slashDist + (Math.random() - 0.5) * 12;
+          const rs1 = vfxSeededRand(lungeSeed + s * 11);
+          const rs2 = vfxSeededRand(lungeSeed + s * 17 + 5);
+          const sr = slashDist + (rs1 - 0.5) * 12;
           ctx.fillStyle = s % 2 === 0 ? '#ffffff' : classColor;
           ctx.globalAlpha = (1 - slash) * 1.5;
           ctx.shadowBlur = 3;
           ctx.beginPath();
-          ctx.arc(Math.cos(sa) * sr, Math.sin(sa) * sr, 1.5 + Math.random(), 0, Math.PI * 2);
+          ctx.arc(Math.cos(sa) * sr, Math.sin(sa) * sr, Math.max(0.1, 1.5 + rs2), 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -2546,13 +2565,17 @@ export class VoxelRenderer {
 
     const sparkAngle = facing + Math.PI;
     if (lunge > 0.3 && recover < 0.3) {
+      const trailSeed = Math.floor(t * 10) + 100;
       for (let i = 0; i < 3; i++) {
-        const sa = sparkAngle + (Math.random() - 0.5) * 1.0;
-        const sd = 4 + Math.random() * 10;
+        const rt1 = vfxSeededRand(trailSeed + i * 7);
+        const rt2 = vfxSeededRand(trailSeed + i * 13 + 3);
+        const rt3 = vfxSeededRand(trailSeed + i * 19 + 7);
+        const sa = sparkAngle + (rt1 - 0.5) * 1.0;
+        const sd = 4 + rt2 * 10;
         ctx.fillStyle = classColor;
         ctx.globalAlpha = (1 - progress) * 0.6;
         ctx.beginPath();
-        ctx.arc(Math.cos(sa) * sd, Math.sin(sa) * sd, 1 + Math.random() * 0.5, 0, Math.PI * 2);
+        ctx.arc(Math.cos(sa) * sd, Math.sin(sa) * sd, Math.max(0.1, 1 + rt3 * 0.5), 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -2765,7 +2788,8 @@ export class VoxelRenderer {
       ctx.fillRect(x + px * 3, y - Math.floor(py * 0.5), px * 2, py);
     }
 
-    ctx.fillStyle = armor.primary + '44';
+    const [br, bg, bb] = hexToRgb(armor.primary);
+    ctx.fillStyle = `rgba(${br},${bg},${bb},0.27)`;
     ctx.fillRect(x, y, 1, height);
     ctx.fillRect(x + width - 1, y, 1, height);
     ctx.fillRect(x, y, width, 1);
@@ -3121,7 +3145,7 @@ export class VoxelRenderer {
             const fd = 5 + fi * 4 * breathPhase;
             const fs = 2 + fi * 1.5 * breathPhase;
             ctx.beginPath();
-            ctx.arc((5 + fd) * scale * facingFlip, (-18 + Math.random() * 4) * scale + bob, fs * scale, 0, Math.PI * 2);
+            ctx.arc((5 + fd) * scale * facingFlip, (-18 + vfxSeededRand(fi * 13 + Math.floor(breathPhase * 10)) * 4) * scale + bob, fs * scale, 0, Math.PI * 2);
             ctx.fill();
           }
           ctx.shadowBlur = 0;
