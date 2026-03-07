@@ -38,6 +38,16 @@ const SPRITE_EFFECT_TYPES: SpriteEffectType[] = [
 
 type TabId = "heroes" | "minions" | "monsters" | "structures" | "effects" | "environment";
 type GizmoMode = "move" | "rotate" | "scale";
+type BrushId = "pose" | "wave" | "pulse" | "spin" | "bounce" | "tremble";
+
+const ANIM_BRUSHES: { id: BrushId; label: string; color: string; desc: string }[] = [
+  { id: 'pose', label: 'Pose', color: '#ef4444', desc: 'Static offset brush — paint a body part to a target offset' },
+  { id: 'wave', label: 'Wave', color: '#3b82f6', desc: 'Sinusoidal motion — paint gentle oscillation on selected parts' },
+  { id: 'pulse', label: 'Pulse', color: '#22c55e', desc: 'Scale pulse — paint a heartbeat-like scale animation' },
+  { id: 'spin', label: 'Spin', color: '#a855f7', desc: 'Rotation sweep — paint a smooth rotation arc on parts' },
+  { id: 'bounce', label: 'Bounce', color: '#f59e0b', desc: 'Vertical bounce — paint an up-down hop on parts' },
+  { id: 'tremble', label: 'Tremble', color: '#06b6d4', desc: 'Micro-shake — paint fine trembling for tension or fear' },
+];
 
 interface PoseSnapshot {
   id: number;
@@ -1096,6 +1106,9 @@ export default function EntityEditorPage() {
   const [selectedPart, setSelectedPart] = useState<string | null>(null);
   const [snapshots, setSnapshots] = useState<PoseSnapshot[]>([]);
   const [showGizmo, setShowGizmo] = useState(true);
+  const [activeBrush, setActiveBrush] = useState<BrushId | null>(null);
+  const [brushIntensity, setBrushIntensity] = useState(1.0);
+  const [brushTargetParts, setBrushTargetParts] = useState<Set<string>>(new Set());
   const snapshotIdRef = useRef(1);
   const dragRef = useRef<{ part: string; startX: number; startY: number; startOx: number; startOy: number; startOz: number; startRot: number; startScale: number } | null>(null);
   const gizmoModeRef = useRef<GizmoMode>("move");
@@ -1222,6 +1235,95 @@ export default function EntityEditorPage() {
       }));
     }
   }, [snapshots, timeline.loop]);
+
+  const applyBrush = useCallback((brushId: BrushId) => {
+    if (brushTargetParts.size === 0) return;
+    const tl = timelineRef.current;
+    const dur = tl.duration || 1;
+    const intensity = brushIntensity;
+    const targetPartsArr = Array.from(brushTargetParts);
+
+    let keyframes: MotionKeyframe[] = [];
+    const steps = 5;
+
+    if (brushId === 'pose') {
+      const kfStart: MotionKeyframe = { time: 0, pose: {}, glow: 0, easing: 'easeInOut' };
+      const kfPeak: MotionKeyframe = { time: dur * 0.4, pose: {}, glow: 0, easing: 'easeOut' };
+      const kfEnd: MotionKeyframe = { time: dur, pose: {}, glow: 0, easing: 'easeOut' };
+      for (const p of targetPartsArr) {
+        kfPeak.pose[p as keyof MotionKeyframe['pose']] = { ox: Math.round(2 * intensity), oy: 0, oz: Math.round(1 * intensity) };
+      }
+      keyframes = [kfStart, kfPeak, kfEnd];
+    } else if (brushId === 'wave') {
+      for (let i = 0; i <= steps; i++) {
+        const t = (i / steps) * dur;
+        const wave = Math.sin((i / steps) * Math.PI * 2) * intensity;
+        const kf: MotionKeyframe = { time: parseFloat(t.toFixed(4)), pose: {}, glow: 0, easing: 'easeInOut' };
+        for (const p of targetPartsArr) {
+          kf.pose[p as keyof MotionKeyframe['pose']] = { ox: Math.round(wave * 1.5), oy: 0, oz: Math.round(Math.cos((i / steps) * Math.PI * 2) * intensity * 0.5) };
+        }
+        keyframes.push(kf);
+      }
+    } else if (brushId === 'pulse') {
+      for (let i = 0; i <= steps; i++) {
+        const t = (i / steps) * dur;
+        const pulse = 1 + Math.sin((i / steps) * Math.PI * 2) * 0.15 * intensity;
+        const kf: MotionKeyframe = { time: parseFloat(t.toFixed(4)), pose: {}, glow: 0, easing: 'easeInOut' };
+        for (const p of targetPartsArr) {
+          kf.pose[p as keyof MotionKeyframe['pose']] = { ox: 0, oy: 0, oz: 0, scale: parseFloat(pulse.toFixed(2)) };
+        }
+        keyframes.push(kf);
+      }
+    } else if (brushId === 'spin') {
+      for (let i = 0; i <= steps; i++) {
+        const t = (i / steps) * dur;
+        const rot = (i / steps) * 360 * intensity;
+        const kf: MotionKeyframe = { time: parseFloat(t.toFixed(4)), pose: {}, glow: 0, easing: 'easeInOut' };
+        for (const p of targetPartsArr) {
+          kf.pose[p as keyof MotionKeyframe['pose']] = { ox: 0, oy: 0, oz: 0, rotation: rot };
+        }
+        keyframes.push(kf);
+      }
+    } else if (brushId === 'bounce') {
+      for (let i = 0; i <= steps; i++) {
+        const t = (i / steps) * dur;
+        const bounce = Math.abs(Math.sin((i / steps) * Math.PI * 2)) * 2 * intensity;
+        const kf: MotionKeyframe = { time: parseFloat(t.toFixed(4)), pose: {}, glow: 0, easing: 'easeInOut' };
+        for (const p of targetPartsArr) {
+          kf.pose[p as keyof MotionKeyframe['pose']] = { ox: 0, oy: 0, oz: Math.round(bounce) };
+        }
+        keyframes.push(kf);
+      }
+    } else if (brushId === 'tremble') {
+      for (let i = 0; i <= steps * 2; i++) {
+        const t = (i / (steps * 2)) * dur;
+        const shake = (i % 2 === 0 ? 1 : -1) * 0.5 * intensity;
+        const kf: MotionKeyframe = { time: parseFloat(t.toFixed(4)), pose: {}, glow: 0, easing: 'linear' };
+        for (const p of targetPartsArr) {
+          kf.pose[p as keyof MotionKeyframe['pose']] = { ox: Math.round(shake), oy: Math.round(shake * 0.5), oz: 0 };
+        }
+        keyframes.push(kf);
+      }
+    }
+
+    if (keyframes.length > 0) {
+      setTimeline(prev => ({
+        ...prev,
+        enabled: true,
+        keyframes,
+        selectedKeyframeIdx: 0,
+      }));
+    }
+  }, [brushTargetParts, brushIntensity]);
+
+  const toggleBrushPart = useCallback((part: string) => {
+    setBrushTargetParts(prev => {
+      const next = new Set(prev);
+      if (next.has(part)) next.delete(part);
+      else next.add(part);
+      return next;
+    });
+  }, []);
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (activeTab !== 'heroes' || !showGizmoRef.current || !timelineRef.current.enabled) return;
@@ -1674,6 +1776,61 @@ export default function EntityEditorPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'heroes' && timeline.enabled && (
+              <div className="absolute top-14 left-3 z-10 w-40" data-testid="brush-palette">
+                <div className="bg-black/85 backdrop-blur rounded-lg border border-gray-700/50 p-2">
+                  <div className="text-[9px] text-cyan-400 font-bold uppercase tracking-wider mb-1.5">Anim Brushes</div>
+                  <div className="grid grid-cols-3 gap-1 mb-2">
+                    {ANIM_BRUSHES.map(brush => (
+                      <button key={brush.id} data-testid={`btn-brush-${brush.id}`}
+                        className={`px-1.5 py-1 rounded text-[9px] font-semibold transition-all border ${activeBrush === brush.id
+                          ? 'border-opacity-80 shadow-lg'
+                          : 'border-gray-700/40 text-gray-500 hover:text-gray-300 hover:border-gray-600/60'}`}
+                        style={activeBrush === brush.id ? { borderColor: brush.color, color: brush.color, backgroundColor: brush.color + '20', boxShadow: `0 0 8px ${brush.color}40` } : {}}
+                        onClick={() => setActiveBrush(activeBrush === brush.id ? null : brush.id)}
+                        title={brush.desc}>
+                        {brush.label}
+                      </button>
+                    ))}
+                  </div>
+                  {activeBrush && (
+                    <>
+                      <div className="text-[8px] text-gray-400 mb-1.5">
+                        {ANIM_BRUSHES.find(b => b.id === activeBrush)?.desc}
+                      </div>
+                      <div className="text-[9px] text-gray-400 mb-1">Target Parts</div>
+                      <div className="flex flex-wrap gap-0.5 mb-2">
+                        {BODY_PARTS.map(part => (
+                          <button key={part} data-testid={`btn-brush-part-${part}`}
+                            className={`px-1.5 py-0.5 rounded text-[8px] font-mono transition-all border ${brushTargetParts.has(part)
+                              ? 'border-opacity-70'
+                              : 'border-gray-700/40 text-gray-600 hover:text-gray-400'}`}
+                            style={brushTargetParts.has(part) ? { borderColor: PART_COLORS[part], color: PART_COLORS[part], backgroundColor: PART_COLORS[part] + '15' } : {}}
+                            onClick={() => toggleBrushPart(part)}>
+                            {PART_LABELS[part]}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="space-y-1 mb-2">
+                        <div className="flex justify-between text-[9px]">
+                          <span className="text-gray-400">Intensity</span>
+                          <span className="text-cyan-400 font-mono">{brushIntensity.toFixed(1)}x</span>
+                        </div>
+                        <Slider min={0.1} max={3} step={0.1} value={[brushIntensity]} onValueChange={([v]) => setBrushIntensity(v)} />
+                      </div>
+                      <button data-testid="btn-brush-apply"
+                        className="w-full h-7 rounded text-[10px] font-bold transition-all border flex items-center justify-center gap-1"
+                        style={{ borderColor: ANIM_BRUSHES.find(b => b.id === activeBrush)?.color || '#888', color: ANIM_BRUSHES.find(b => b.id === activeBrush)?.color || '#888', backgroundColor: (ANIM_BRUSHES.find(b => b.id === activeBrush)?.color || '#888') + '20' }}
+                        disabled={brushTargetParts.size === 0}
+                        onClick={() => applyBrush(activeBrush)}>
+                        <Wand2 className="w-3 h-3" /> Paint {ANIM_BRUSHES.find(b => b.id === activeBrush)?.label}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}

@@ -904,9 +904,19 @@ export class ThreeRenderer {
       }
 
     } else if (hero.animState === 'dodge') {
-      if (torso) {
-        torso.rotation.z = time * 15;
-        torso.position.y = 0.5;
+      const dodgeP = Math.min(1, hero.animTimer * 3);
+      const dodgeVariant = hero.id % 3;
+      if (dodgeVariant === 0 && torso) {
+        torso.rotation.x = dodgeP * Math.PI * 2;
+        torso.position.y = 0.6 + Math.sin(dodgeP * Math.PI) * 0.25;
+        if (leftArm) { leftArm.rotation.x = -dodgeP * 0.3; }
+        if (rightArm) { rightArm.rotation.x = -dodgeP * 0.3; }
+      } else if (dodgeVariant === 1 && torso) {
+        torso.rotation.y = dodgeP * Math.PI * 2;
+        torso.position.y = 0.6 - Math.sin(dodgeP * Math.PI) * 0.1;
+      } else if (torso) {
+        torso.rotation.y = -dodgeP * Math.PI * 2;
+        torso.position.y = 0.6 - Math.sin(dodgeP * Math.PI) * 0.1;
       }
 
     } else if (hero.animState === 'block') {

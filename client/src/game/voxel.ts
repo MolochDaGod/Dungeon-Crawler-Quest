@@ -280,18 +280,51 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
   }
 
   if (animState === 'dodge') {
-    const roll = Math.min(1, t * 8);
-    const spin = Math.sin(roll * Math.PI * 2);
-    return {
-      leftLeg: { ox: 0, oy: Math.round(spin * 2), oz: Math.round(-roll * 2) },
-      rightLeg: { ox: 0, oy: Math.round(-spin * 2), oz: Math.round(-roll * 2) },
-      leftArm: { ox: Math.round(-spin * 1.5), oy: Math.round(-roll), oz: Math.round(-roll * 3) },
-      rightArm: { ox: Math.round(spin * 1.5), oy: Math.round(roll), oz: Math.round(-roll * 3) },
-      torso: { ox: Math.round(spin * 0.5), oy: 0, oz: Math.round(-roll * 4) },
-      head: { ox: Math.round(spin * 0.3), oy: 0, oz: Math.round(-roll * 5) },
-      weapon: { ox: Math.round(-spin * 2), oy: 0, oz: Math.round(-roll * 3) },
-      weaponGlow: 0
-    };
+    const dur = 0.35;
+    const p = Math.min(1, t / dur);
+    const variant = (heroClass.charCodeAt(0) + (weaponType || '').length) % 3;
+
+    if (variant === 0) {
+      const flipAngle = p * 360;
+      const arc = Math.sin(p * Math.PI);
+      const tuck = p < 0.5 ? p * 2 : (1 - p) * 2;
+      return {
+        leftLeg: { ox: 0, oy: Math.round(-tuck * 1), oz: Math.round(arc * 2) },
+        rightLeg: { ox: 0, oy: Math.round(tuck * 1), oz: Math.round(arc * 2) },
+        leftArm: { ox: Math.round(-tuck * 1), oy: 0, oz: Math.round(tuck * 1) },
+        rightArm: { ox: Math.round(tuck * 1), oy: 0, oz: Math.round(tuck * 1) },
+        torso: { ox: 0, oy: Math.round(-arc * 2), oz: Math.round(arc * 3), rotation: flipAngle },
+        head: { ox: 0, oy: Math.round(-arc * 1), oz: Math.round(arc * 2) },
+        weapon: { ox: 0, oy: 0, oz: Math.round(arc * 1) },
+        weaponGlow: 0
+      };
+    } else if (variant === 1) {
+      const spinAngle = p * 360;
+      const crouch = Math.sin(p * Math.PI) * 0.5;
+      return {
+        leftLeg: { ox: 0, oy: Math.round(-crouch * 1), oz: Math.round(-crouch * 1) },
+        rightLeg: { ox: 0, oy: Math.round(crouch * 1), oz: Math.round(-crouch * 1) },
+        leftArm: { ox: Math.round(-crouch * 1), oy: Math.round(-crouch * 1), oz: 0 },
+        rightArm: { ox: Math.round(crouch * 1), oy: Math.round(crouch * 1), oz: 0 },
+        torso: { ox: 0, oy: 0, oz: Math.round(-crouch * 2), rotation: spinAngle },
+        head: { ox: 0, oy: 0, oz: Math.round(-crouch * 1) },
+        weapon: { ox: 0, oy: 0, oz: 0 },
+        weaponGlow: 0
+      };
+    } else {
+      const spinAngle = -p * 360;
+      const crouch = Math.sin(p * Math.PI) * 0.5;
+      return {
+        leftLeg: { ox: 0, oy: Math.round(crouch * 1), oz: Math.round(-crouch * 1) },
+        rightLeg: { ox: 0, oy: Math.round(-crouch * 1), oz: Math.round(-crouch * 1) },
+        leftArm: { ox: Math.round(crouch * 1), oy: Math.round(crouch * 1), oz: 0 },
+        rightArm: { ox: Math.round(-crouch * 1), oy: Math.round(-crouch * 1), oz: 0 },
+        torso: { ox: 0, oy: 0, oz: Math.round(-crouch * 2), rotation: spinAngle },
+        head: { ox: 0, oy: 0, oz: Math.round(-crouch * 1) },
+        weapon: { ox: 0, oy: 0, oz: 0 },
+        weaponGlow: 0
+      };
+    }
   }
 
   if (animState === 'lunge_slash') {
@@ -335,31 +368,53 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
   }
 
   if (animState === 'combo_finisher') {
-    const phase = t * 28;
-    const spin = Math.sin(phase);
-    const spin2 = Math.cos(phase * 0.7);
-    const power = Math.abs(Math.sin(phase * 0.5));
-    const slam = Math.max(0, Math.sin(phase * 0.5 + 1.2));
-    const twist = Math.sin(phase * 1.3) * 2.5;
-    const bodyLean = Math.sin(phase * 0.8) * 2.2;
-    const jumpPulse = Math.max(0, Math.sin(phase * 0.4)) * 1.5;
-    const windmill = Math.sin(phase * 1.8) * 1.5;
+    const dur = 0.7;
+    const p = Math.min(1, t / dur);
+    const wind = p < 0.25 ? p / 0.25 : 0;
+    const strike = p >= 0.25 && p < 0.55 ? (p - 0.25) / 0.3 : 0;
+    const follow = p >= 0.55 ? (p - 0.55) / 0.45 : 0;
+    const recover = p >= 0.7 ? (p - 0.7) / 0.3 : 0;
+    const easeStrike = strike > 0 ? Math.sin(strike * Math.PI * 0.5) : 0;
+    const easeFollow = follow > 0 ? Math.sin(follow * Math.PI * 0.5) : 0;
+    const easeRecover = recover > 0 ? recover * recover : 0;
+
     const basePose = {
-      leftLeg: { ox: 0, oy: Math.round(spin * 4.0 + spin2 * 1.2 + twist * 0.5), oz: Math.round(Math.max(0, -spin) * 2.5 + jumpPulse) },
-      rightLeg: { ox: 0, oy: Math.round(-spin * 4.0 - spin2 * 1.2 - twist * 0.5), oz: Math.round(Math.max(0, spin) * 2.5 + jumpPulse) },
-      leftArm: { ox: Math.round(spin * 7 + windmill), oy: Math.round(-power * 5.5 + twist), oz: Math.round(power * 7 + slam * 4.0) },
-      rightArm: { ox: Math.round(-spin * 6 - windmill), oy: Math.round(power * 3.0 - twist), oz: Math.round(power * 6 + slam * 3.0) },
-      torso: { ox: Math.round(spin * 3.0 + bodyLean), oy: Math.round(twist * 1.5), oz: Math.round(power * 2.0 - slam * 3.0 + jumpPulse * 0.5) },
-      head: { ox: Math.round(spin * 2.0 + bodyLean * 0.8), oy: Math.round(twist * 1.0), oz: Math.round(power * 1.5 - slam * 2.5 + jumpPulse * 0.5) },
-      weapon: { ox: Math.round(spin * 10 + power * 6), oy: Math.round(-power * 7 + slam * 4.0 + twist), oz: Math.round(power * 10 - slam * 6) },
-      weaponGlow: 1.0
+      leftLeg: { ox: 0, oy: Math.round(wind * 1 - easeStrike * 2 + easeRecover * 1), oz: 0 },
+      rightLeg: { ox: 0, oy: Math.round(-wind * 1 + easeStrike * 1), oz: Math.round(easeStrike * 1) },
+      leftArm: {
+        ox: Math.round(-wind * 2 + easeStrike * 3 - easeFollow * 1 - easeRecover * 2),
+        oy: Math.round(wind * 1 - easeStrike * 2 + easeRecover * 1),
+        oz: Math.round(wind * 2 + easeStrike * 2 - easeFollow * 2 - easeRecover * 1)
+      },
+      rightArm: {
+        ox: Math.round(-wind * 1 + easeStrike * 1 - easeRecover * 1),
+        oy: Math.round(-wind * 1 + easeStrike * 1),
+        oz: Math.round(wind * 1 + easeStrike * 1 - easeRecover * 1)
+      },
+      torso: {
+        ox: Math.round(-wind * 1 + easeStrike * 2 - easeFollow * 1 - easeRecover * 1),
+        oy: Math.round(wind * 0.5 - easeStrike * 0.5),
+        oz: Math.round(wind * 1 - easeStrike * 1),
+        rotation: -wind * 15 + easeStrike * 25 - easeFollow * 10 - easeRecover * 15
+      },
+      head: {
+        ox: Math.round(-wind * 0.5 + easeStrike * 1 - easeRecover * 0.5),
+        oy: 0,
+        oz: Math.round(wind * 0.5 - easeStrike * 0.5)
+      },
+      weapon: {
+        ox: Math.round(-wind * 3 + easeStrike * 5 + easeFollow * 2 - easeRecover * 4),
+        oy: Math.round(wind * 1 - easeStrike * 3 + easeRecover * 1),
+        oz: Math.round(wind * 4 + easeStrike * 3 - easeFollow * 4 - easeRecover * 2)
+      },
+      weaponGlow: easeStrike > 0.3 ? Math.min(1, easeStrike * 1.5) : wind > 0.5 ? 0.4 : easeRecover > 0 ? 0.2 : 0
     };
     const profile = weaponType ? getClassMotionProfile(heroClass, weaponType) : null;
     if (profile) {
       const motion = MOTION_LIBRARY[profile.attackMotion];
       if (motion) {
-        const motionPose = sampleMotion(motion, (t * 1.5) % motion.duration);
-        return additivePoses(basePose, motionPose, 0.25 * profile.recoilScale) as typeof basePose;
+        const motionPose = sampleMotion(motion, (t * 1.2) % motion.duration);
+        return additivePoses(basePose, motionPose, 0.15 * profile.recoilScale) as typeof basePose;
       }
     }
     return basePose;
