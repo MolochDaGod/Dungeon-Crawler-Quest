@@ -3867,15 +3867,12 @@ export class MobaRenderer {
       if (hovEntity && !hovEntity.dead && this.isInVision(hovEntity.x, hovEntity.y)) {
         ctx.save();
         ctx.translate(hovEntity.x, hovEntity.y);
-        ctx.strokeStyle = '#ef4444';
+        const isEnemy = 'team' in hovEntity && (hovEntity as any).team !== state.heroes[state.playerHeroIndex]?.team;
+        ctx.strokeStyle = isEnemy ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.35)';
         ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.005) * 0.2;
-        ctx.setLineDash([4, 3]);
         ctx.beginPath();
-        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.ellipse(0, 12, 18, 6, 0, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 1;
         ctx.restore();
       }
     }
@@ -3915,70 +3912,68 @@ export class MobaRenderer {
         const castType = ab.castType || 'targeted';
         const mx = state.mouseWorld.x;
         const my = state.mouseWorld.y;
-        const pulse = 0.25 + Math.sin(Date.now() * 0.004) * 0.1;
+        const dist = Math.sqrt((mx - player.x) ** 2 + (my - player.y) ** 2);
+        const inRange = dist <= range;
 
         ctx.save();
-        ctx.strokeStyle = '#a855f7';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([6, 4]);
-        ctx.globalAlpha = pulse;
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(player.x, player.y, range, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.setLineDash([]);
 
         if (castType === 'ground_aoe' && ab.radius > 0) {
           const r = ab.radius;
-          ctx.globalAlpha = 0.15 + Math.sin(Date.now() * 0.005) * 0.05;
-          ctx.fillStyle = '#a855f7';
+          const indicatorColor = inRange ? 'rgba(100,200,255,0.12)' : 'rgba(255,80,80,0.12)';
+          const borderColor = inRange ? 'rgba(100,200,255,0.5)' : 'rgba(255,80,80,0.5)';
+          ctx.fillStyle = indicatorColor;
           ctx.beginPath();
           ctx.arc(mx, my, r, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = '#c084fc';
-          ctx.lineWidth = 2;
-          ctx.globalAlpha = 0.6;
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 1.5;
           ctx.stroke();
         } else if (castType === 'skillshot') {
           const angle = angleTo(player, { x: mx, y: my });
-          const w = 30;
-          ctx.globalAlpha = 0.12;
-          ctx.fillStyle = '#a855f7';
+          const w = 25;
           ctx.save();
           ctx.translate(player.x, player.y);
           ctx.rotate(angle);
+          ctx.fillStyle = 'rgba(100,200,255,0.08)';
           ctx.fillRect(0, -w, range, w * 2);
-          ctx.strokeStyle = '#c084fc';
-          ctx.lineWidth = 1.5;
-          ctx.globalAlpha = 0.5;
+          ctx.strokeStyle = 'rgba(100,200,255,0.35)';
+          ctx.lineWidth = 1;
           ctx.strokeRect(0, -w, range, w * 2);
+          ctx.beginPath();
+          ctx.moveTo(0, 0); ctx.lineTo(range, 0);
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.setLineDash([4, 6]);
+          ctx.stroke();
+          ctx.setLineDash([]);
           ctx.restore();
         } else if (castType === 'line') {
           const angle = angleTo(player, { x: mx, y: my });
-          const w = 15;
-          ctx.globalAlpha = 0.15;
-          ctx.fillStyle = '#22d3ee';
+          const w = 12;
           ctx.save();
           ctx.translate(player.x, player.y);
           ctx.rotate(angle);
+          ctx.fillStyle = 'rgba(100,200,255,0.1)';
           ctx.fillRect(0, -w, range, w * 2);
-          ctx.strokeStyle = '#67e8f9';
+          ctx.strokeStyle = 'rgba(100,200,255,0.4)';
           ctx.lineWidth = 1;
-          ctx.globalAlpha = 0.6;
           ctx.strokeRect(0, -w, range, w * 2);
           ctx.restore();
         } else if (castType === 'cone') {
           const angle = angleTo(player, { x: mx, y: my });
           const spread = Math.PI / 4;
-          ctx.globalAlpha = 0.12;
-          ctx.fillStyle = '#f97316';
+          ctx.fillStyle = 'rgba(100,200,255,0.08)';
           ctx.beginPath();
           ctx.moveTo(player.x, player.y);
           ctx.arc(player.x, player.y, range, angle - spread, angle + spread);
           ctx.closePath();
           ctx.fill();
-          ctx.strokeStyle = '#fb923c';
-          ctx.lineWidth = 1.5;
-          ctx.globalAlpha = 0.4;
+          ctx.strokeStyle = 'rgba(100,200,255,0.3)';
+          ctx.lineWidth = 1;
           ctx.stroke();
         } else if (castType === 'targeted') {
           if (state.hoveredEntityId !== null) {
@@ -4002,13 +3997,7 @@ export class MobaRenderer {
       }
     }
 
-    if (player && !player.dead) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, player.rng + 30, 0, Math.PI * 2);
-      ctx.stroke();
-    }
+    
 
     for (const proj of state.projectiles) {
       this.renderProjectile(ctx, proj, state);
@@ -4117,29 +4106,17 @@ export class MobaRenderer {
     const glowColor = isAlly ? 'rgba(74,222,128,' : isNeutral ? 'rgba(251,191,36,' : 'rgba(239,68,68,';
 
     const t = Date.now() * 0.003;
-    const pulse = 0.4 + Math.sin(t * 2) * 0.15;
-    const bracketAnim = Math.sin(t) * 2;
 
     const entitySize = 'heroDataId' in entity ? 28 : 'tierIndex' in entity ? 35 : 'destroyed' in entity ? 40 : 20;
-    const sz = entitySize + 6 + bracketAnim;
-    const bracketLen = sz * 0.4;
+    const sz = entitySize + 4;
+    const bracketLen = sz * 0.35;
 
     ctx.save();
     ctx.translate(entity.x, entity.y);
 
-    const glowRad = entitySize + 10 + Math.sin(t * 3) * 3;
-    const glow = ctx.createRadialGradient(0, 0, entitySize * 0.3, 0, 0, glowRad);
-    glow.addColorStop(0, glowColor + '0)');
-    glow.addColorStop(0.5, glowColor + (pulse * 0.3).toFixed(2) + ')');
-    glow.addColorStop(1, glowColor + '0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(0, 0, glowRad, 0, Math.PI * 2);
-    ctx.fill();
-
     ctx.strokeStyle = frameColor;
     ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.7 + Math.sin(t * 2) * 0.2;
+    ctx.globalAlpha = 0.8;
     ctx.lineCap = 'round';
 
     ctx.beginPath();
@@ -4154,15 +4131,6 @@ export class MobaRenderer {
     ctx.beginPath();
     ctx.moveTo(sz - bracketLen, sz); ctx.lineTo(sz, sz); ctx.lineTo(sz, sz - bracketLen);
     ctx.stroke();
-
-    ctx.globalAlpha = pulse * 0.5;
-    ctx.strokeStyle = frameColor;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 5]);
-    ctx.beginPath();
-    ctx.arc(0, entitySize + 4, entitySize + 2, 0, Math.PI, false);
-    ctx.stroke();
-    ctx.setLineDash([]);
 
     let entityName = '';
     if ('heroDataId' in entity) {
@@ -4937,82 +4905,41 @@ export class MobaRenderer {
     ctx.fill();
 
     if (isPlayer) {
-      ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.4 + Math.sin(Date.now() * 0.004) * 0.2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(0, 0, 25, 0, Math.PI * 2);
+      ctx.ellipse(0, 12, 18, 6, 0, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.globalAlpha = 1;
     }
 
     if (hero.buffTimer > 0) {
-      ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.ellipse(0, 12, 16, 5, 0, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.globalAlpha = 1;
     }
 
     if (hero.shieldHp > 0) {
-      ctx.strokeStyle = '#22c55e';
-      ctx.lineWidth = 3;
-      ctx.globalAlpha = 0.6;
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(0, 0, 28, 0, Math.PI * 2);
+      ctx.ellipse(0, 12, 20, 7, 0, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.globalAlpha = 1;
     }
 
     if (hero.blockActive) {
       ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 3;
-      ctx.globalAlpha = 0.6 + Math.sin(Date.now() * 0.01) * 0.2;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.5;
       ctx.beginPath();
-      ctx.arc(0, 0, 24, hero.facing - Math.PI / 3, hero.facing + Math.PI / 3);
+      ctx.arc(0, -5, 20, hero.facing - Math.PI / 3, hero.facing + Math.PI / 3);
       ctx.stroke();
-      ctx.fillStyle = 'rgba(245,158,11,0.1)';
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, 24, hero.facing - Math.PI / 3, hero.facing + Math.PI / 3);
-      ctx.closePath();
-      ctx.fill();
       ctx.globalAlpha = 1;
     }
 
     if (hero.iFrames > 0) {
       ctx.globalAlpha = 0.4 + Math.sin(Date.now() * 0.03) * 0.3;
-    }
-
-    if (hero.comboCount > 0 && hero.comboTimer > 0) {
-      const comboAlpha = 0.3 + hero.comboCount * 0.15;
-      ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 1;
-      ctx.globalAlpha = comboAlpha;
-      for (let c = 0; c < hero.comboCount; c++) {
-        const cAngle = (c / Math.max(hero.comboCount, 1)) * Math.PI * 2 + Date.now() * 0.005;
-        ctx.beginPath();
-        ctx.arc(Math.cos(cAngle) * 18, Math.sin(cAngle) * 18 - 5, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    if (hero.activeEffects && hero.activeEffects.length > 0) {
-      for (const eff of hero.activeEffects) {
-        const effColor = eff.color || '#fff';
-        ctx.strokeStyle = effColor;
-        ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.006) * 0.15;
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.arc(0, 0, 20, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 1;
-      }
     }
 
     const heroBuffNames = hero.activeEffects?.map((e: any) => e.name || '') || [];

@@ -1336,33 +1336,17 @@ export class VoxelRenderer {
     const classVfxColors: Record<string, string> = { Warrior: '#ef4444', Mage: '#8b5cf6', Ranger: '#22c55e', Worg: '#f97316' };
     const vfxColor = classVfxColors[heroClass] || '#ffffff';
 
-    if (animState === 'ability' && animTimer > 0.01) {
-      const castProgress = Math.min(1, animTimer / 0.5);
+    if (animState === 'ability' && animTimer > 0.01 && animTimer < 0.3) {
+      const castProgress = Math.min(1, animTimer / 0.3);
       const castColor = heroClass === 'Mage' ? '#8b5cf6' : heroClass === 'Ranger' ? '#22c55e' : heroClass === 'Worg' ? '#f97316' : '#ef4444';
-      drawCastingCircle(ctx, x, groundY + 2, 22, castColor, castProgress, time);
+      ctx.save();
+      ctx.globalAlpha = (1 - castProgress) * 0.5;
+      drawCastingCircle(ctx, x, groundY + 2, 16, castColor, castProgress, time);
+      ctx.restore();
     }
 
     if ((animState === 'attack' || animState === 'combo_finisher' || animState === 'lunge_slash' || animState === 'dash_attack') && animTimer > 0.03) {
       const isFinisher = animState === 'combo_finisher';
-      const isLunge = animState === 'lunge_slash';
-      const isDash = animState === 'dash_attack';
-      const trailAlpha = isFinisher ? 0.4 : isLunge ? 0.2 : isDash ? 0.15 : 0.12;
-      const trailCount = isFinisher ? 4 : isLunge ? 2 : isDash ? 2 : 1;
-      const trailTint = vfxColor;
-      for (let ti = 0; ti < trailCount; ti++) {
-        const trailOffset = 0.05 + ti * 0.05;
-        ctx.save();
-        ctx.globalAlpha = trailAlpha * (1 - ti * 0.25);
-        ctx.globalCompositeOperation = 'lighter';
-        const trailModel = buildHeroModel(race, heroClass, animState, Math.max(0, animTimer - trailOffset), heroName, heroItems);
-        this.renderVoxelModel(ctx, x, groundY - 12, trailModel, this.cubeSize, facing);
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = (isFinisher ? trailAlpha * 0.6 : trailAlpha * 0.35) * (1 - ti * 0.25);
-        ctx.fillStyle = trailTint;
-        const trailSize = isFinisher ? 36 : isLunge ? 28 : 24;
-        ctx.fillRect(x - trailSize / 2, groundY - trailSize, trailSize, trailSize);
-        ctx.restore();
-      }
 
       const trail = this.getWeaponTrail(eid);
       const weaponDist = 12 + animTimer * 30;
@@ -1371,10 +1355,10 @@ export class VoxelRenderer {
       const wz = 8 + Math.sin(animTimer * 10) * 4;
       trail.addPoint(wx, wy, wz, time);
       trail.update(time);
-      drawWeaponTrail(ctx, trail.getPoints(), vfxColor, 4, facing);
+      drawWeaponTrail(ctx, trail.getPoints(), vfxColor, isFinisher ? 4 : 3, facing);
     } else {
       const trail = this.weaponTrails.get(eid);
-      if (trail) { trail.update(time); if (trail.getPoints().length > 0) drawWeaponTrail(ctx, trail.getPoints(), vfxColor, 3, facing); }
+      if (trail) { trail.update(time); if (trail.getPoints().length > 0) drawWeaponTrail(ctx, trail.getPoints(), vfxColor, 2, facing); }
     }
 
     const model = buildHeroModel(race, heroClass, animState, animTimer, heroName, heroItems);
@@ -1397,7 +1381,10 @@ export class VoxelRenderer {
     }
 
     if (shieldHp && shieldHp > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.35;
       drawShieldVFX(ctx, x, groundY - 14, shieldHp, 200, time);
+      ctx.restore();
     }
 
     if (activeBuffs && activeBuffs.length > 0) {
@@ -1406,10 +1393,10 @@ export class VoxelRenderer {
       const hasSpeedBuff = activeBuffs.some(b => b.includes('Speed') || b.includes('Haste') || b.includes('Wind'));
       const hasLifesteal = activeBuffs.some(b => b.includes('Lifesteal') || b.includes('Blood'));
 
-      if (hasHeal) drawHealingVFX(ctx, x, groundY - 8, 0.7, time);
-      if (hasAtkBuff) drawAuraEffect(ctx, x, groundY - 12, '#ef4444', 0.6, time);
-      if (hasSpeedBuff) drawAuraEffect(ctx, x, groundY - 10, '#22d3ee', 0.4, time);
-      if (hasLifesteal) drawAuraEffect(ctx, x, groundY - 12, '#dc2626', 0.5, time);
+      if (hasHeal) drawHealingVFX(ctx, x, groundY - 8, 0.3, time);
+      if (hasAtkBuff) drawAuraEffect(ctx, x, groundY - 12, '#ef4444', 0.15, time);
+      if (hasSpeedBuff) drawAuraEffect(ctx, x, groundY - 10, '#22d3ee', 0.12, time);
+      if (hasLifesteal) drawAuraEffect(ctx, x, groundY - 12, '#dc2626', 0.12, time);
     }
   }
 
