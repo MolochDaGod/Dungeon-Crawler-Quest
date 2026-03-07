@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { VoxelRenderer } from "@/game/voxel";
 import { SpriteEffectSystem, SpriteEffectType } from "@/game/sprite-effects";
+import { sampleMotion, type MotionPrimitive, type Keyframe as MotionKeyframe, type BodyPartPose, type FullPose } from "@/game/voxel-motion";
 import { HEROES, RACE_COLORS, CLASS_COLORS, CLASS_ABILITIES, ITEMS, HeroData } from "@/game/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,7 +13,8 @@ import {
 import {
   ArrowLeft, Play, Pause, SkipForward, SkipBack, RotateCcw, Download,
   Swords, User, Sparkles, TreePine, Castle, Bug, Footprints,
-  Copy, Eye, EyeOff, Zap, ChevronLeft, ChevronRight
+  Copy, Eye, EyeOff, Zap, ChevronLeft, ChevronRight,
+  Plus, Minus, Clock, Layers, Film
 } from "lucide-react";
 
 const RACES = ["Human", "Barbarian", "Dwarf", "Elf", "Orc", "Undead"];
@@ -95,13 +97,346 @@ function ColorPicker({ label, value, onChange }: { label: string; value: string;
   );
 }
 
+const EASING_OPTIONS: MotionKeyframe['easing'][] = ['linear', 'easeIn', 'easeOut', 'easeInOut', 'overshoot', 'bounce'];
+const TIMELINE_BODY_PARTS = ['leftLeg', 'rightLeg', 'leftArm', 'rightArm', 'torso', 'head', 'weapon'] as const;
+const PART_LABELS: Record<string, string> = {
+  leftLeg: 'L.Leg', rightLeg: 'R.Leg', leftArm: 'L.Arm', rightArm: 'R.Arm',
+  torso: 'Torso', head: 'Head', weapon: 'Weapon'
+};
+const PART_COLORS: Record<string, string> = {
+  leftLeg: '#3b82f6', rightLeg: '#6366f1', leftArm: '#22c55e', rightArm: '#10b981',
+  torso: '#f59e0b', head: '#ef4444', weapon: '#a855f7'
+};
+
+interface TimelineState {
+  enabled: boolean;
+  name: string;
+  duration: number;
+  loop: boolean;
+  startTime: number;
+  endTime: number;
+  keyframes: MotionKeyframe[];
+  selectedKeyframeIdx: number;
+  expandedPart: string | null;
+}
+
+function defaultTimelineState(): TimelineState {
+  return {
+    enabled: false,
+    name: 'custom_anim',
+    duration: 1.0,
+    loop: true,
+    startTime: 0,
+    endTime: 1.0,
+    keyframes: [
+      { time: 0, pose: {}, easing: 'easeInOut' },
+      { time: 1.0, pose: {}, easing: 'easeInOut' },
+    ],
+    selectedKeyframeIdx: 0,
+    expandedPart: null,
+  };
+}
+
+function KeyframeTimelineEditor({ timeline, setTimeline, animTimer, setAnimTimerDirect, playing, setPlaying }: {
+  timeline: TimelineState;
+  setTimeline: (t: TimelineState | ((prev: TimelineState) => TimelineState)) => void;
+  animTimer: number;
+  setAnimTimerDirect: (t: number) => void;
+  playing: boolean;
+  setPlaying: (p: boolean) => void;
+}) {
+  const kf = timeline.keyframes[timeline.selectedKeyframeIdx];
+  const timelineBarRef = useRef<HTMLDivElement>(null);
+
+  const addKeyframe = () => {
+    const mid = timeline.duration / 2;
+    let bestTime = mid;
+    const sorted = [...timeline.keyframes].sort((a, b) => a.time - b.time);
+    let maxGap = 0;
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const gap = sorted[i + 1].time - sorted[i].time;
+      if (gap > maxGap) { maxGap = gap; bestTime = sorted[i].time + gap / 2; }
+    }
+    const newKf: MotionKeyframe = { time: parseFloat(bestTime.toFixed(3)), pose: {}, easing: 'easeInOut' };
+    const newKeyframes = [...timeline.keyframes, newKf].sort((a, b) => a.time - b.time);
+    const newIdx = newKeyframes.indexOf(newKf);
+    setTimeline(prev => ({ ...prev, keyframes: newKeyframes, selectedKeyframeIdx: newIdx }));
+  };
+
+  const removeKeyframe = () => {
+    if (timeline.keyframes.length <= 2) return;
+    const newKeyframes = timeline.keyframes.filter((_, i) => i !== timeline.selectedKeyframeIdx);
+    setTimeline(prev => ({
+      ...prev,
+      keyframes: newKeyframes,
+      selectedKeyframeIdx: Math.min(prev.selectedKeyframeIdx, newKeyframes.length - 1),
+    }));
+  };
+
+  const updateKeyframeTime = (newTime: number) => {
+    const clamped = Math.max(0, Math.min(timeline.duration, parseFloat(newTime.toFixed(3))));
+    const newKeyframes = timeline.keyframes.map((k, i) => i === timeline.selectedKeyframeIdx ? { ...k, time: clamped } : k);
+    newKeyframes.sort((a, b) => a.time - b.time);
+    const newIdx = newKeyframes.findIndex(k => k.time === clamped);
+    setTimeline(prev => ({ ...prev, keyframes: newKeyframes, selectedKeyframeIdx: newIdx >= 0 ? newIdx : 0 }));
+  };
+
+  const updateKeyframeEasing = (easing: MotionKeyframe['easing']) => {
+    const newKeyframes = timeline.keyframes.map((k, i) => i === timeline.selectedKeyframeIdx ? { ...k, easing } : k);
+    setTimeline(prev => ({ ...prev, keyframes: newKeyframes }));
+  };
+
+  const updateKeyframeGlow = (glow: number) => {
+    const newKeyframes = timeline.keyframes.map((k, i) => i === timeline.selectedKeyframeIdx ? { ...k, glow } : k);
+    setTimeline(prev => ({ ...prev, keyframes: newKeyframes }));
+  };
+
+  const updatePartPose = (part: string, axis: 'ox' | 'oy' | 'oz', value: number) => {
+    const rounded = Math.round(value);
+    const newKeyframes = timeline.keyframes.map((k, i) => {
+      if (i !== timeline.selectedKeyframeIdx) return k;
+      const existingPart = k.pose[part as keyof typeof k.pose] || {};
+      return {
+        ...k,
+        pose: {
+          ...k.pose,
+          [part]: { ...existingPart, [axis]: rounded },
+        },
+      };
+    });
+    setTimeline(prev => ({ ...prev, keyframes: newKeyframes }));
+  };
+
+  const getPartValue = (part: string, axis: 'ox' | 'oy' | 'oz'): number => {
+    if (!kf) return 0;
+    const p = kf.pose[part as keyof typeof kf.pose];
+    if (!p) return 0;
+    return (p as any)[axis] ?? 0;
+  };
+
+  const handleTimelineClick = (e: React.MouseEvent) => {
+    if (!timelineBarRef.current) return;
+    const rect = timelineBarRef.current.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const t = pct * timeline.duration;
+    setPlaying(false);
+    setAnimTimerDirect(t);
+  };
+
+  const exportMotionPrimitive = (): MotionPrimitive => ({
+    name: timeline.name,
+    duration: timeline.duration,
+    keyframes: timeline.keyframes,
+    loop: timeline.loop,
+  });
+
+  const playbackPct = timeline.duration > 0 ? Math.min(1, (animTimer % timeline.duration) / timeline.duration) : 0;
+  const startPct = timeline.duration > 0 ? timeline.startTime / timeline.duration : 0;
+  const endPct = timeline.duration > 0 ? timeline.endTime / timeline.duration : 1;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <SectionHeader title="Animation Timeline" />
+        <Button size="sm" variant={timeline.enabled ? "default" : "outline"} data-testid="btn-toggle-timeline"
+          className={`text-[10px] h-6 ${timeline.enabled ? 'bg-purple-700 hover:bg-purple-800' : ''}`}
+          onClick={() => setTimeline(prev => ({ ...prev, enabled: !prev.enabled }))}>
+          <Film className="w-3 h-3 mr-1" /> {timeline.enabled ? 'ON' : 'OFF'}
+        </Button>
+      </div>
+
+      {timeline.enabled && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-0.5">Name</label>
+              <input type="text" value={timeline.name} data-testid="input-anim-name"
+                onChange={e => setTimeline(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full bg-black/40 border border-gray-700 rounded px-2 py-1 text-xs text-white" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-0.5">Duration (s)</label>
+              <input type="number" value={timeline.duration} min={0.1} max={10} step={0.05} data-testid="input-anim-duration"
+                onChange={e => {
+                  const d = parseFloat(e.target.value) || 0.1;
+                  setTimeline(prev => ({ ...prev, duration: d, endTime: Math.min(prev.endTime, d) }));
+                }}
+                className="w-full bg-black/40 border border-gray-700 rounded px-2 py-1 text-xs text-white font-mono" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <LabeledSlider label="Start Time" value={timeline.startTime} min={0} max={timeline.duration} step={0.01}
+              onChange={v => setTimeline(prev => ({ ...prev, startTime: Math.min(v, prev.endTime - 0.01) }))} suffix="s" />
+            <LabeledSlider label="End Time" value={timeline.endTime} min={0} max={timeline.duration} step={0.01}
+              onChange={v => setTimeline(prev => ({ ...prev, endTime: Math.max(v, prev.startTime + 0.01) }))} suffix="s" />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">
+              <input type="checkbox" checked={timeline.loop} data-testid="check-loop"
+                onChange={e => setTimeline(prev => ({ ...prev, loop: e.target.checked }))}
+                className="rounded border-gray-700 bg-black/40" />
+              Loop
+            </label>
+          </div>
+
+          <div className="bg-black/30 rounded p-2 space-y-1.5">
+            <div className="flex justify-between text-[10px] text-gray-500">
+              <span>0s</span>
+              <span className="text-amber-400 font-mono">{animTimer.toFixed(3)}s</span>
+              <span>{timeline.duration.toFixed(2)}s</span>
+            </div>
+            <div ref={timelineBarRef} className="relative h-8 bg-gray-900 rounded cursor-pointer select-none" data-testid="timeline-bar"
+              onClick={handleTimelineClick}>
+              <div className="absolute inset-y-0 bg-purple-900/20 rounded"
+                style={{ left: `${startPct * 100}%`, width: `${(endPct - startPct) * 100}%` }} />
+
+              {timeline.keyframes.map((k, i) => {
+                const pct = timeline.duration > 0 ? (k.time / timeline.duration) * 100 : 0;
+                return (
+                  <div key={i} data-testid={`keyframe-marker-${i}`}
+                    className={`absolute top-0 bottom-0 w-0.5 cursor-pointer transition-colors ${
+                      i === timeline.selectedKeyframeIdx ? 'bg-amber-400' : 'bg-purple-400/60 hover:bg-purple-300'
+                    }`}
+                    style={{ left: `${pct}%` }}
+                    onClick={(e) => { e.stopPropagation(); setTimeline(prev => ({ ...prev, selectedKeyframeIdx: i })); }}>
+                    <div className={`absolute -top-0.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border-2 ${
+                      i === timeline.selectedKeyframeIdx
+                        ? 'bg-amber-400 border-amber-300'
+                        : 'bg-purple-500 border-purple-400'
+                    }`} />
+                    <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[8px] text-gray-500 font-mono whitespace-nowrap">
+                      {k.time.toFixed(2)}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="absolute top-0 bottom-0 w-0.5 bg-green-400 pointer-events-none"
+                style={{ left: `${playbackPct * 100}%` }}>
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[3px] border-r-[3px] border-t-[5px] border-l-transparent border-r-transparent border-t-green-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-1">
+            <Button size="sm" variant="outline" className="flex-1 text-[10px] h-7" onClick={addKeyframe} data-testid="btn-add-keyframe">
+              <Plus className="w-3 h-3 mr-1" /> Add KF
+            </Button>
+            <Button size="sm" variant="outline" className="flex-1 text-[10px] h-7" onClick={removeKeyframe} data-testid="btn-remove-keyframe"
+              disabled={timeline.keyframes.length <= 2}>
+              <Minus className="w-3 h-3 mr-1" /> Remove KF
+            </Button>
+          </div>
+
+          {kf && (
+            <div className="bg-black/30 rounded p-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-amber-400 font-bold uppercase">
+                  Keyframe {timeline.selectedKeyframeIdx + 1} / {timeline.keyframes.length}
+                </span>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0" data-testid="btn-prev-keyframe"
+                    onClick={() => setTimeline(prev => ({ ...prev, selectedKeyframeIdx: Math.max(0, prev.selectedKeyframeIdx - 1) }))}
+                    disabled={timeline.selectedKeyframeIdx === 0}>
+                    <ChevronLeft className="w-3 h-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0" data-testid="btn-next-keyframe"
+                    onClick={() => setTimeline(prev => ({ ...prev, selectedKeyframeIdx: Math.min(prev.keyframes.length - 1, prev.selectedKeyframeIdx + 1) }))}
+                    disabled={timeline.selectedKeyframeIdx >= timeline.keyframes.length - 1}>
+                    <ChevronRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
+              <LabeledSlider label="Time" value={kf.time} min={0} max={timeline.duration} step={0.01}
+                onChange={updateKeyframeTime} suffix="s" />
+
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">Easing</label>
+                <Select value={kf.easing || 'easeInOut'} onValueChange={v => updateKeyframeEasing(v as MotionKeyframe['easing'])}>
+                  <SelectTrigger className="h-7 text-xs" data-testid="select-easing"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {EASING_OPTIONS.map(e => <SelectItem key={e} value={e!}>{e}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <LabeledSlider label="Weapon Glow" value={kf.glow ?? 0} min={0} max={1} step={0.05}
+                onChange={updateKeyframeGlow} />
+
+              <div className="space-y-1 mt-1">
+                <span className="text-[10px] text-gray-500 uppercase font-bold">Body Part Poses</span>
+                {TIMELINE_BODY_PARTS.map(part => {
+                  const expanded = timeline.expandedPart === part;
+                  return (
+                    <div key={part} className="bg-black/20 rounded">
+                      <button className="w-full flex items-center justify-between px-2 py-1 text-xs" data-testid={`btn-expand-${part}`}
+                        onClick={() => setTimeline(prev => ({ ...prev, expandedPart: expanded ? null : part }))}>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PART_COLORS[part] }} />
+                          <span className="text-gray-300">{PART_LABELS[part]}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-gray-600 font-mono">
+                            {getPartValue(part, 'ox')},{getPartValue(part, 'oy')},{getPartValue(part, 'oz')}
+                          </span>
+                          <ChevronRight className={`w-3 h-3 text-gray-600 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                        </div>
+                      </button>
+                      {expanded && (
+                        <div className="px-2 pb-2 space-y-1">
+                          <LabeledSlider label="ox (left-right)" value={getPartValue(part, 'ox')} min={-8} max={8} step={1}
+                            onChange={v => updatePartPose(part, 'ox', v)} />
+                          <LabeledSlider label="oy (fwd-back)" value={getPartValue(part, 'oy')} min={-8} max={8} step={1}
+                            onChange={v => updatePartPose(part, 'oy', v)} />
+                          <LabeledSlider label="oz (height)" value={getPartValue(part, 'oz')} min={-8} max={8} step={1}
+                            onChange={v => updatePartPose(part, 'oz', v)} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-1">
+            <Button variant="outline" className="flex-1 text-[10px] h-7" data-testid="btn-export-motion"
+              onClick={() => {
+                const data = exportMotionPrimitive();
+                navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+              }}>
+              <Copy className="w-3 h-3 mr-1" /> Copy JSON
+            </Button>
+            <Button variant="outline" className="flex-1 text-[10px] h-7" data-testid="btn-download-motion"
+              onClick={() => {
+                const data = exportMotionPrimitive();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `${timeline.name}.json`; a.click();
+                URL.revokeObjectURL(url);
+              }}>
+              <Download className="w-3 h-3 mr-1" /> Download
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HeroesPanel({ state, setState, playing, setPlaying, speed, setSpeed,
-  animTimer, resetTimer, stepFrame, stepBack }: {
+  animTimer, resetTimer, stepFrame, stepBack, timeline, setTimeline, setAnimTimerDirect }: {
   state: EditorState; setState: (s: Partial<EditorState>) => void;
   playing: boolean; setPlaying: (p: boolean) => void;
   speed: number; setSpeed: (s: number) => void;
   animTimer: number; resetTimer: () => void;
   stepFrame: () => void; stepBack: () => void;
+  timeline: TimelineState; setTimeline: (t: TimelineState | ((prev: TimelineState) => TimelineState)) => void;
+  setAnimTimerDirect: (t: number) => void;
 }) {
   const hero = HEROES.find(h => h.race === state.race && h.heroClass === state.heroClass) || HEROES[0];
 
@@ -144,17 +479,21 @@ function HeroesPanel({ state, setState, playing, setPlaying, speed, setSpeed,
         ))}
       </div>
 
-      <SectionHeader title="Animation" />
-      <div className="grid grid-cols-2 gap-2">
-        {ANIM_STATES.map(s => (
-          <Button key={s} size="sm" data-testid={`btn-anim-${s}`}
-            variant={state.animState === s ? "default" : "outline"}
-            className={`text-xs ${state.animState === s ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-            onClick={() => { setState({ animState: s }); resetTimer(); }}>
-            {s.replace(/_/g, ' ')}
-          </Button>
-        ))}
-      </div>
+      {!timeline.enabled && (
+        <>
+          <SectionHeader title="Animation" />
+          <div className="grid grid-cols-2 gap-2">
+            {ANIM_STATES.map(s => (
+              <Button key={s} size="sm" data-testid={`btn-anim-${s}`}
+                variant={state.animState === s ? "default" : "outline"}
+                className={`text-xs ${state.animState === s ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+                onClick={() => { setState({ animState: s }); resetTimer(); }}>
+                {s.replace(/_/g, ' ')}
+              </Button>
+            ))}
+          </div>
+        </>
+      )}
 
       <SectionHeader title="Playback" />
       <div className="flex gap-2 justify-center">
@@ -186,6 +525,9 @@ function HeroesPanel({ state, setState, playing, setPlaying, speed, setSpeed,
           <div className="h-full bg-amber-500 rounded transition-all" style={{ width: `${Math.min(100, (animTimer % 2) * 50)}%` }} />
         </div>
       </div>
+
+      <KeyframeTimelineEditor timeline={timeline} setTimeline={setTimeline} animTimer={animTimer}
+        setAnimTimerDirect={setAnimTimerDirect} playing={playing} setPlaying={setPlaying} />
 
       <SectionHeader title="Abilities" />
       <div className="space-y-2">
@@ -723,6 +1065,8 @@ export default function EntityEditorPage() {
   const [speed, setSpeed] = useState(1);
   const [animTimer, setAnimTimer] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [timeline, setTimeline] = useState<TimelineState>(defaultTimelineState);
+  const timelineRef = useRef<TimelineState>(defaultTimelineState());
 
   const [state, setStateRaw] = useState<EditorState>({
     race: "Human",
@@ -756,6 +1100,7 @@ export default function EntityEditorPage() {
   useEffect(() => { playingRef.current = playing; }, [playing]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => { timelineRef.current = timeline; }, [timeline]);
 
   const resetTimer = useCallback(() => {
     animTimerRef.current = 0;
@@ -772,6 +1117,11 @@ export default function EntityEditorPage() {
     setPlaying(false);
     animTimerRef.current = Math.max(0, animTimerRef.current - 1 / 60);
     setAnimTimer(animTimerRef.current);
+  }, []);
+
+  const setAnimTimerDirect = useCallback((t: number) => {
+    animTimerRef.current = t;
+    setAnimTimer(t);
   }, []);
 
   const playEffect = useCallback((type: SpriteEffectType, scale: number, durationMs: number) => {
@@ -796,7 +1146,21 @@ export default function EntityEditorPage() {
     lastTimeRef.current = timestamp;
 
     if (playingRef.current) {
+      const tl = timelineRef.current;
       animTimerRef.current += dt * speedRef.current;
+      if (tl.enabled) {
+        const range = tl.endTime - tl.startTime;
+        if (animTimerRef.current > tl.endTime) {
+          if (tl.loop && range > 0) {
+            animTimerRef.current = tl.startTime + ((animTimerRef.current - tl.startTime) % range);
+          } else {
+            animTimerRef.current = tl.endTime;
+          }
+        }
+        if (animTimerRef.current < tl.startTime) {
+          animTimerRef.current = tl.startTime;
+        }
+      }
       setAnimTimer(animTimerRef.current);
     }
 
@@ -836,9 +1200,16 @@ export default function EntityEditorPage() {
       const scale = 3.5;
       ctx.translate(cx, cy);
       ctx.scale(scale, scale);
-      const raceColor = RACE_COLORS[s.race] || "#94a3b8";
-      const classColor = CLASS_COLORS[s.heroClass] || "#ef4444";
-      vr.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, s.heroClass, s.facing, s.animState, t, s.race, hero.name);
+      const tl = timelineRef.current;
+      if (tl.enabled) {
+        const motion: MotionPrimitive = { name: tl.name, duration: tl.duration, keyframes: tl.keyframes, loop: tl.loop };
+        const pose = sampleMotion(motion, t);
+        vr.drawHeroVoxelCustomPose(ctx, 0, 0, s.race, s.heroClass, s.facing, pose, hero.name);
+      } else {
+        const raceColor = RACE_COLORS[s.race] || "#94a3b8";
+        const classColor = CLASS_COLORS[s.heroClass] || "#ef4444";
+        vr.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, s.heroClass, s.facing, s.animState, t, s.race, hero.name);
+      }
       ctx.restore();
     } else if (activeTab === "minions") {
       ctx.save();
@@ -883,7 +1254,8 @@ export default function EntityEditorPage() {
 
     ctx.fillStyle = "rgba(255,255,255,0.4)";
     ctx.font = "10px monospace";
-    const label = activeTab === "heroes" ? `${s.race} ${s.heroClass} | ${s.animState}`
+    const tlActive = timelineRef.current.enabled;
+    const label = activeTab === "heroes" ? `${s.race} ${s.heroClass} | ${tlActive ? 'custom' : s.animState}`
       : activeTab === "minions" ? `Minion: ${s.minionType}`
       : activeTab === "monsters" ? `Monster: ${s.mobType}`
       : activeTab === "structures" ? `Structure`
@@ -1001,7 +1373,8 @@ export default function EntityEditorPage() {
             {activeTab === "heroes" && (
               <HeroesPanel state={state} setState={setState} playing={playing} setPlaying={setPlaying}
                 speed={speed} setSpeed={setSpeed} animTimer={animTimer} resetTimer={resetTimer}
-                stepFrame={stepFrame} stepBack={stepBack} />
+                stepFrame={stepFrame} stepBack={stepBack} timeline={timeline} setTimeline={setTimeline}
+                setAnimTimerDirect={setAnimTimerDirect} />
             )}
             {activeTab === "minions" && (
               <MinionsPanel state={state} setState={setState} playing={playing} setPlaying={setPlaying}
