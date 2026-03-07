@@ -794,6 +794,363 @@ export function drawHealingVFX(ctx: CanvasRenderingContext2D, x: number, y: numb
   ctx.restore();
 }
 
+export interface AttackPlan {
+  motionName: string;
+  duration: number;
+  speedMult: number;
+  weight: number;
+  slashArc: number;
+  slashAngleStart: number;
+  slashWidth: number;
+  slashColor: string;
+  impactFlash: boolean;
+  trailIntensity: number;
+  screenShake: number;
+}
+
+export interface SpellVFXPlan {
+  castCircle: boolean;
+  castColor: string;
+  castRadius: number;
+  auraColor: string;
+  auraIntensity: number;
+  particleCount: number;
+  particleColor: string;
+  particleRise: boolean;
+  orbGlow: boolean;
+  orbColor: string;
+  burstOnImpact: boolean;
+  burstColor: string;
+  burstRadius: number;
+}
+
+const COMBO_PATTERNS: Record<string, string[]> = {
+  swing_horizontal: ['swing_horizontal', 'thrust_linear', 'swing_vertical_chop'],
+  swing_vertical_chop: ['swing_vertical_chop', 'swing_horizontal', 'slam_overhead'],
+  thrust_linear: ['thrust_linear', 'claw_swipe', 'thrust_linear'],
+  slam_overhead: ['slam_overhead', 'swing_horizontal', 'slam_overhead'],
+  claw_swipe: ['claw_swipe', 'claw_swipe', 'swing_horizontal'],
+  bow_draw_release: ['bow_draw_release', 'bow_draw_release', 'bow_draw_release'],
+  staff_cast: ['staff_cast', 'staff_cast', 'staff_cast'],
+};
+
+const CLASS_SLASH_COLORS: Record<string, string> = {
+  Warrior: '#ef4444', Worg: '#f97316', Mage: '#8b5cf6', Ranger: '#22c55e',
+};
+
+const CLASS_SPELL_COLORS: Record<string, { cast: string; aura: string; particle: string; orb: string; burst: string }> = {
+  Warrior: { cast: '#ef4444', aura: '#dc2626', particle: '#fca5a5', orb: '#ef4444', burst: '#ff6b6b' },
+  Worg: { cast: '#f97316', aura: '#ea580c', particle: '#fed7aa', orb: '#f97316', burst: '#ff9f43' },
+  Mage: { cast: '#8b5cf6', aura: '#7c3aed', particle: '#c4b5fd', orb: '#a78bfa', burst: '#c084fc' },
+  Ranger: { cast: '#22c55e', aura: '#16a34a', particle: '#86efac', orb: '#4ade80', burst: '#34d399' },
+};
+
+export class AnimationDirector {
+  private comboCounters: Map<number, number> = new Map();
+  private lastAttackTime: Map<number, number> = new Map();
+  private comboTimeout = 1.5;
+
+  getComboCount(entityId: number): number {
+    return this.comboCounters.get(entityId) || 0;
+  }
+
+  registerAttack(entityId: number, time: number): number {
+    const lastTime = this.lastAttackTime.get(entityId) || 0;
+    let combo = this.comboCounters.get(entityId) || 0;
+
+    if (time - lastTime > this.comboTimeout) {
+      combo = 0;
+    }
+
+    const currentCombo = combo;
+    this.comboCounters.set(entityId, combo + 1);
+    this.lastAttackTime.set(entityId, time);
+    return currentCombo;
+  }
+
+  planAttack(heroClass: string, weaponType: WeaponType, entityId: number, targetAngle: number): AttackPlan {
+    const profile = getClassMotionProfile(heroClass, weaponType);
+    const rawCombo = this.comboCounters.get(entityId) || 0;
+    const combo = Math.max(0, rawCombo - 1);
+    const comboIdx = combo % 3;
+
+    const baseMotion = profile.attackMotion;
+    const pattern = COMBO_PATTERNS[baseMotion] || COMBO_PATTERNS['swing_horizontal'];
+    const motionName = pattern[comboIdx];
+    const motion = MOTION_LIBRARY[motionName];
+
+    const isFinisher = comboIdx === 2;
+    const speedVariation = 0.9 + (((entityId * 7 + combo * 13) % 100) / 100) * 0.2;
+    const angleVariation = ((combo * 31 + entityId * 17) % 60 - 30) * (Math.PI / 180);
+
+    const slashColor = CLASS_SLASH_COLORS[heroClass] || '#ef4444';
+
+    return {
+      motionName,
+      duration: motion ? motion.duration / (profile.attackSpeed * speedVariation) : 0.65,
+      speedMult: profile.attackSpeed * speedVariation,
+      weight: profile.swingWeight * (isFinisher ? 1.3 : 1.0),
+      slashArc: (motionName === 'swing_horizontal' ? 130 : motionName === 'swing_vertical_chop' ? 90 : motionName === 'thrust_linear' ? 40 : motionName === 'slam_overhead' ? 110 : 100) * (Math.PI / 180),
+      slashAngleStart: targetAngle + angleVariation + (motionName === 'swing_horizontal' ? -Math.PI * 0.36 : -Math.PI * 0.25),
+      slashWidth: (isFinisher ? 4.5 : 3) * profile.swingWeight,
+      slashColor,
+      impactFlash: isFinisher || motionName === 'slam_overhead',
+      trailIntensity: isFinisher ? 1.5 : 1.0,
+      screenShake: isFinisher ? 3 : motionName === 'slam_overhead' ? 2 : 0,
+    };
+  }
+
+  planSpellVFX(heroClass: string, abilityKey: string): SpellVFXPlan {
+    const colors = CLASS_SPELL_COLORS[heroClass] || CLASS_SPELL_COLORS['Warrior'];
+    const isUltimate = abilityKey === 'R';
+    const isDefensive = abilityKey === 'Space';
+
+    return {
+      castCircle: !isDefensive,
+      castColor: colors.cast,
+      castRadius: isUltimate ? 22 : 16,
+      auraColor: colors.aura,
+      auraIntensity: isUltimate ? 1.0 : 0.6,
+      particleCount: isUltimate ? 12 : isDefensive ? 8 : 6,
+      particleColor: colors.particle,
+      particleRise: !isDefensive,
+      orbGlow: heroClass === 'Mage' || isUltimate,
+      orbColor: colors.orb,
+      burstOnImpact: true,
+      burstColor: colors.burst,
+      burstRadius: isUltimate ? 30 : 18,
+    };
+  }
+
+  getAIAttackPose(heroClass: string, weaponType: WeaponType, entityId: number, animTimer: number, facing: number): FullPose {
+    const plan = this.planAttack(heroClass, weaponType, entityId, facing);
+    const motion = MOTION_LIBRARY[plan.motionName];
+    if (!motion) {
+      return { leftLeg: zeroPose, rightLeg: zeroPose, leftArm: zeroPose, rightArm: zeroPose, torso: zeroPose, head: zeroPose, weapon: zeroPose, weaponGlow: 0 };
+    }
+
+    const scaledTime = animTimer * plan.speedMult;
+    const motionPose = sampleMotion(motion, scaledTime);
+
+    const combo = this.comboCounters.get(entityId) || 0;
+    const isFinisher = (combo % 3) === 2;
+
+    if (isFinisher) {
+      return additivePoses(motionPose, motionPose, 0.15);
+    }
+
+    return motionPose;
+  }
+
+  cleanup(entityId: number) {
+    this.comboCounters.delete(entityId);
+    this.lastAttackTime.delete(entityId);
+  }
+}
+
+export const globalAnimDirector = new AnimationDirector();
+
+export function drawAISlashVFX(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number,
+  plan: AttackPlan,
+  progress: number,
+  time: number
+) {
+  if (progress < 0.15 || progress > 0.95) return;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  const swingProgress = Math.max(0, Math.min(1, (progress - 0.2) / 0.45));
+  const fadeOut = progress > 0.65 ? Math.max(0, 1 - (progress - 0.65) / 0.3) : 1;
+
+  const arcLen = plan.slashArc * swingProgress;
+  const startAngle = plan.slashAngleStart;
+  const innerRadius = 8;
+  const outerRadius = 18 + plan.slashWidth * 3;
+
+  ctx.globalAlpha = 0.7 * fadeOut;
+  ctx.shadowColor = plan.slashColor;
+  ctx.shadowBlur = 10 + plan.slashWidth * 2;
+
+  const grad = ctx.createRadialGradient(0, 0, innerRadius, 0, 0, outerRadius);
+  grad.addColorStop(0, plan.slashColor + '00');
+  grad.addColorStop(0.3, plan.slashColor + '88');
+  grad.addColorStop(0.7, plan.slashColor + 'cc');
+  grad.addColorStop(1, '#ffffff88');
+
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(0, 0, outerRadius, startAngle, startAngle + arcLen);
+  ctx.arc(0, 0, innerRadius, startAngle + arcLen, startAngle, true);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.5 * fadeOut;
+  ctx.beginPath();
+  ctx.arc(0, 0, outerRadius - 1, startAngle, startAngle + arcLen);
+  ctx.stroke();
+
+  if (swingProgress > 0.3) {
+    const sparkCount = Math.floor(plan.trailIntensity * 5);
+    for (let i = 0; i < sparkCount; i++) {
+      const sa = startAngle + arcLen * (0.5 + Math.random() * 0.5);
+      const sr = innerRadius + Math.random() * (outerRadius - innerRadius);
+      const sparkX = Math.cos(sa) * sr + (Math.random() - 0.5) * 4;
+      const sparkY = Math.sin(sa) * sr + (Math.random() - 0.5) * 4;
+      ctx.fillStyle = i % 2 === 0 ? '#ffffff' : plan.slashColor;
+      ctx.globalAlpha = (0.3 + Math.random() * 0.5) * fadeOut;
+      ctx.beginPath();
+      ctx.arc(sparkX, sparkY, 0.8 + Math.random() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (plan.impactFlash && swingProgress > 0.7) {
+    const flashAlpha = Math.max(0, (swingProgress - 0.7) / 0.3) * fadeOut;
+    const impactAngle = startAngle + arcLen;
+    const impactX = Math.cos(impactAngle) * (outerRadius + 5);
+    const impactY = Math.sin(impactAngle) * (outerRadius + 5);
+
+    const flashGrad = ctx.createRadialGradient(impactX, impactY, 0, impactX, impactY, 12);
+    flashGrad.addColorStop(0, '#ffffff');
+    flashGrad.addColorStop(0.3, plan.slashColor);
+    flashGrad.addColorStop(1, plan.slashColor + '00');
+    ctx.fillStyle = flashGrad;
+    ctx.globalAlpha = flashAlpha * 0.8;
+    ctx.beginPath();
+    ctx.arc(impactX, impactY, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = flashAlpha * 0.5;
+    ctx.beginPath();
+    ctx.arc(impactX, impactY, 8 + flashAlpha * 8, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+export function drawAISpellVFX(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number,
+  plan: SpellVFXPlan,
+  progress: number,
+  time: number
+) {
+  ctx.save();
+
+  if (plan.castCircle && progress < 0.6) {
+    const castAlpha = progress < 0.3 ? progress / 0.3 : 1 - (progress - 0.3) / 0.3;
+    drawCastingCircle(ctx, x, y + 8, plan.castRadius, plan.castColor, castAlpha, time);
+  }
+
+  if (plan.auraIntensity > 0) {
+    const auraPhase = Math.sin(time * 3) * 0.3 + 0.7;
+    drawAuraEffect(ctx, x, y - 5, plan.auraColor, plan.auraIntensity * auraPhase * Math.min(1, progress * 3), time);
+  }
+
+  if (plan.particleCount > 0 && progress > 0.05) {
+    const pAlpha = Math.min(1, progress * 2) * (progress < 0.8 ? 1 : (1 - progress) / 0.2);
+    for (let i = 0; i < plan.particleCount; i++) {
+      const pa = time * 2.5 + (i / plan.particleCount) * Math.PI * 2;
+      const radius = 8 + Math.sin(time * 3 + i) * 5;
+      const px = x + Math.cos(pa) * radius;
+      let py = y - 5 + Math.sin(pa) * radius * 0.4;
+      if (plan.particleRise) {
+        py -= ((time * 20 + i * 6) % 25);
+      }
+      ctx.fillStyle = plan.particleColor;
+      ctx.globalAlpha = pAlpha * (0.3 + Math.sin(pa) * 0.3);
+      ctx.beginPath();
+      ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (plan.orbGlow && progress > 0.1 && progress < 0.8) {
+    const orbProgress = Math.min(1, (progress - 0.1) / 0.3);
+    const orbFade = progress > 0.6 ? (0.8 - progress) / 0.2 : 1;
+    const orbRadius = 3 + orbProgress * 4;
+    const orbPulse = 1 + Math.sin(time * 8) * 0.2;
+
+    ctx.save();
+    ctx.shadowColor = plan.orbColor;
+    ctx.shadowBlur = 12 + orbProgress * 8;
+    const orbGrad = ctx.createRadialGradient(x, y - 12, 0, x, y - 12, orbRadius * orbPulse);
+    orbGrad.addColorStop(0, '#ffffff');
+    orbGrad.addColorStop(0.4, plan.orbColor);
+    orbGrad.addColorStop(1, plan.orbColor + '00');
+    ctx.fillStyle = orbGrad;
+    ctx.globalAlpha = orbFade * 0.9;
+    ctx.beginPath();
+    ctx.arc(x, y - 12, orbRadius * orbPulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    const rayCount = 4;
+    for (let i = 0; i < rayCount; i++) {
+      const ra = time * 4 + (i / rayCount) * Math.PI * 2;
+      const rx = Math.cos(ra) * orbRadius * orbPulse * 1.5;
+      const ry = Math.sin(ra) * orbRadius * orbPulse * 1.5;
+      ctx.strokeStyle = plan.orbColor;
+      ctx.lineWidth = 0.8;
+      ctx.globalAlpha = orbFade * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 12);
+      ctx.lineTo(x + rx, y - 12 + ry);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  if (plan.burstOnImpact && progress > 0.7) {
+    const burstProgress = (progress - 0.7) / 0.3;
+    const burstAlpha = Math.max(0, 1 - burstProgress * 1.5);
+    const radius = plan.burstRadius * burstProgress;
+
+    ctx.save();
+    ctx.shadowColor = plan.burstColor;
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = plan.burstColor;
+    ctx.lineWidth = 2 * (1 - burstProgress);
+    ctx.globalAlpha = burstAlpha * 0.6;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const innerGrad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    innerGrad.addColorStop(0, plan.burstColor + '33');
+    innerGrad.addColorStop(1, plan.burstColor + '00');
+    ctx.fillStyle = innerGrad;
+    ctx.globalAlpha = burstAlpha * 0.3;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    const burstSparks = 8;
+    for (let i = 0; i < burstSparks; i++) {
+      const sa = (i / burstSparks) * Math.PI * 2 + time * 2;
+      const sd = radius * (0.5 + burstProgress * 0.5);
+      ctx.fillStyle = i % 2 === 0 ? '#ffffff' : plan.burstColor;
+      ctx.globalAlpha = burstAlpha * 0.5;
+      ctx.beginPath();
+      ctx.arc(x + Math.cos(sa) * sd, y + Math.sin(sa) * sd, 1.5 * (1 - burstProgress), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
 export function drawShieldVFX(ctx: CanvasRenderingContext2D, x: number, y: number, shieldHp: number, maxShieldHp: number, time: number) {
   if (shieldHp <= 0) return;
   ctx.save();
