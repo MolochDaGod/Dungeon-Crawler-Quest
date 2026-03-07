@@ -1,5 +1,26 @@
 import type { WeaponType } from './types';
 
+function hexToRgba(hex: string, alpha: number): string {
+  if (!hex || hex[0] !== '#' || hex.length < 4) return `rgba(128,128,128,${alpha})`;
+  let r: number, g: number, b: number;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else {
+    r = parseInt(hex.slice(1, 3), 16);
+    g = parseInt(hex.slice(3, 5), 16);
+    b = parseInt(hex.slice(5, 7), 16);
+  }
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return `rgba(128,128,128,${alpha})`;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function seededRand(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  return x - Math.floor(x);
+}
+
 export interface BodyPartPose {
   ox: number; oy: number; oz: number;
   rotation?: number;
@@ -693,18 +714,21 @@ export function drawWeaponTrail(ctx: CanvasRenderingContext2D, trail: WeaponTrai
 }
 
 export function drawAuraEffect(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, intensity: number, time: number) {
+  if (intensity < 0.01) return;
   ctx.save();
 
   const layers = 3;
   for (let i = 0; i < layers; i++) {
     const phase = time * (2 + i * 0.5) + i * 1.2;
     const pulse = 0.6 + Math.sin(phase) * 0.4;
-    const radius = (12 + i * 6) * pulse * intensity;
+    const radius = Math.max(0.5, (12 + i * 6) * pulse * intensity);
 
+    const innerAlpha = Math.min(1, (40 * pulse * intensity) / 255);
+    const midAlpha = Math.min(1, (20 * pulse * intensity) / 255);
     const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    grad.addColorStop(0, color + Math.floor(40 * pulse * intensity).toString(16).padStart(2, '0'));
-    grad.addColorStop(0.5, color + Math.floor(20 * pulse * intensity).toString(16).padStart(2, '0'));
-    grad.addColorStop(1, color + '00');
+    grad.addColorStop(0, hexToRgba(color, innerAlpha));
+    grad.addColorStop(0.5, hexToRgba(color, midAlpha));
+    grad.addColorStop(1, hexToRgba(color, 0));
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -734,9 +758,9 @@ export function drawTransformVFX(ctx: CanvasRenderingContext2D, x: number, y: nu
   if (progress < 1) {
     const burstRadius = 20 + progress * 40;
     const grad = ctx.createRadialGradient(x, y, 0, x, y, burstRadius);
-    grad.addColorStop(0, color + 'aa');
-    grad.addColorStop(0.4, color + '55');
-    grad.addColorStop(1, color + '00');
+    grad.addColorStop(0, hexToRgba(color, 0.67));
+    grad.addColorStop(0.4, hexToRgba(color, 0.33));
+    grad.addColorStop(1, hexToRgba(color, 0));
     ctx.fillStyle = grad;
     ctx.globalAlpha = (1 - progress) * 0.8;
     ctx.beginPath();
@@ -797,8 +821,8 @@ export function drawSummonVFX(ctx: CanvasRenderingContext2D, x: number, y: numbe
   ctx.stroke();
 
   const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, portalRadius);
-  grad.addColorStop(0, color + '44');
-  grad.addColorStop(1, color + '00');
+  grad.addColorStop(0, hexToRgba(color, 0.27));
+  grad.addColorStop(1, hexToRgba(color, 0));
   ctx.fillStyle = grad;
   ctx.globalAlpha = progress * 0.5;
   ctx.beginPath();
@@ -1048,16 +1072,19 @@ export function drawAISlashVFX(
   ctx.shadowColor = plan.slashColor;
   ctx.shadowBlur = 10 + plan.slashWidth * 2;
 
-  const grad = ctx.createRadialGradient(0, 0, innerRadius, 0, 0, outerRadius);
-  grad.addColorStop(0, plan.slashColor + '00');
-  grad.addColorStop(0.3, plan.slashColor + '88');
-  grad.addColorStop(0.7, plan.slashColor + 'cc');
-  grad.addColorStop(1, '#ffffff88');
+  const safeOuterRadius = Math.max(0.5, outerRadius);
+  const safeInnerRadius = Math.max(0.1, innerRadius);
+
+  const grad = ctx.createRadialGradient(0, 0, safeInnerRadius, 0, 0, safeOuterRadius);
+  grad.addColorStop(0, hexToRgba(plan.slashColor, 0));
+  grad.addColorStop(0.3, hexToRgba(plan.slashColor, 0.53));
+  grad.addColorStop(0.7, hexToRgba(plan.slashColor, 0.8));
+  grad.addColorStop(1, 'rgba(255,255,255,0.53)');
 
   ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(0, 0, outerRadius, startAngle, startAngle + arcLen);
-  ctx.arc(0, 0, innerRadius, startAngle + arcLen, startAngle, true);
+  ctx.arc(0, 0, safeOuterRadius, startAngle, startAngle + arcLen);
+  ctx.arc(0, 0, safeInnerRadius, startAngle + arcLen, startAngle, true);
   ctx.closePath();
   ctx.fill();
 
@@ -1065,20 +1092,26 @@ export function drawAISlashVFX(
   ctx.lineWidth = 1.5;
   ctx.globalAlpha = 0.5 * fadeOut;
   ctx.beginPath();
-  ctx.arc(0, 0, outerRadius - 1, startAngle, startAngle + arcLen);
+  ctx.arc(0, 0, Math.max(0.1, safeOuterRadius - 1), startAngle, startAngle + arcLen);
   ctx.stroke();
 
   if (swingProgress > 0.3) {
     const sparkCount = Math.floor(plan.trailIntensity * 5);
+    const timeSeed = Math.floor(time * 10);
     for (let i = 0; i < sparkCount; i++) {
-      const sa = startAngle + arcLen * (0.5 + Math.random() * 0.5);
-      const sr = innerRadius + Math.random() * (outerRadius - innerRadius);
-      const sparkX = Math.cos(sa) * sr + (Math.random() - 0.5) * 4;
-      const sparkY = Math.sin(sa) * sr + (Math.random() - 0.5) * 4;
+      const r1 = seededRand(timeSeed + i * 7);
+      const r2 = seededRand(timeSeed + i * 13 + 3);
+      const r3 = seededRand(timeSeed + i * 19 + 7);
+      const r4 = seededRand(timeSeed + i * 23 + 11);
+      const r5 = seededRand(timeSeed + i * 29 + 17);
+      const sa = startAngle + arcLen * (0.5 + r1 * 0.5);
+      const sr = safeInnerRadius + r2 * (safeOuterRadius - safeInnerRadius);
+      const sparkX = Math.cos(sa) * sr + (r3 - 0.5) * 4;
+      const sparkY = Math.sin(sa) * sr + (r4 - 0.5) * 4;
       ctx.fillStyle = i % 2 === 0 ? '#ffffff' : plan.slashColor;
-      ctx.globalAlpha = (0.3 + Math.random() * 0.5) * fadeOut;
+      ctx.globalAlpha = (0.3 + r5 * 0.5) * fadeOut;
       ctx.beginPath();
-      ctx.arc(sparkX, sparkY, 0.8 + Math.random() * 1.2, 0, Math.PI * 2);
+      ctx.arc(sparkX, sparkY, Math.max(0.1, 0.8 + r3 * 1.2), 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -1086,13 +1119,13 @@ export function drawAISlashVFX(
   if (plan.impactFlash && swingProgress > 0.7) {
     const flashAlpha = Math.max(0, (swingProgress - 0.7) / 0.3) * fadeOut;
     const impactAngle = startAngle + arcLen;
-    const impactX = Math.cos(impactAngle) * (outerRadius + 5);
-    const impactY = Math.sin(impactAngle) * (outerRadius + 5);
+    const impactX = Math.cos(impactAngle) * (safeOuterRadius + 5);
+    const impactY = Math.sin(impactAngle) * (safeOuterRadius + 5);
 
     const flashGrad = ctx.createRadialGradient(impactX, impactY, 0, impactX, impactY, 12);
     flashGrad.addColorStop(0, '#ffffff');
     flashGrad.addColorStop(0.3, plan.slashColor);
-    flashGrad.addColorStop(1, plan.slashColor + '00');
+    flashGrad.addColorStop(1, hexToRgba(plan.slashColor, 0));
     ctx.fillStyle = flashGrad;
     ctx.globalAlpha = flashAlpha * 0.8;
     ctx.beginPath();
@@ -1103,7 +1136,7 @@ export function drawAISlashVFX(
     ctx.lineWidth = 1;
     ctx.globalAlpha = flashAlpha * 0.5;
     ctx.beginPath();
-    ctx.arc(impactX, impactY, 8 + flashAlpha * 8, 0, Math.PI * 2);
+    ctx.arc(impactX, impactY, Math.max(0.1, 8 + flashAlpha * 8), 0, Math.PI * 2);
     ctx.stroke();
   }
 
@@ -1158,14 +1191,15 @@ export function drawAISpellVFX(
     ctx.save();
     ctx.shadowColor = plan.orbColor;
     ctx.shadowBlur = 12 + orbProgress * 8;
-    const orbGrad = ctx.createRadialGradient(x, y - 12, 0, x, y - 12, orbRadius * orbPulse);
+    const safeOrbR = Math.max(0.5, orbRadius * orbPulse);
+    const orbGrad = ctx.createRadialGradient(x, y - 12, 0, x, y - 12, safeOrbR);
     orbGrad.addColorStop(0, '#ffffff');
     orbGrad.addColorStop(0.4, plan.orbColor);
-    orbGrad.addColorStop(1, plan.orbColor + '00');
+    orbGrad.addColorStop(1, hexToRgba(plan.orbColor, 0));
     ctx.fillStyle = orbGrad;
     ctx.globalAlpha = orbFade * 0.9;
     ctx.beginPath();
-    ctx.arc(x, y - 12, orbRadius * orbPulse, 0, Math.PI * 2);
+    ctx.arc(x, y - 12, safeOrbR, 0, Math.PI * 2);
     ctx.fill();
 
     const rayCount = 4;
@@ -1200,8 +1234,8 @@ export function drawAISpellVFX(
     ctx.stroke();
 
     const innerGrad = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    innerGrad.addColorStop(0, plan.burstColor + '33');
-    innerGrad.addColorStop(1, plan.burstColor + '00');
+    innerGrad.addColorStop(0, hexToRgba(plan.burstColor, 0.2));
+    innerGrad.addColorStop(1, hexToRgba(plan.burstColor, 0));
     ctx.fillStyle = innerGrad;
     ctx.globalAlpha = burstAlpha * 0.3;
     ctx.beginPath();
@@ -1253,9 +1287,9 @@ export function drawShieldVFX(ctx: CanvasRenderingContext2D, x: number, y: numbe
   ctx.stroke();
 
   const innerGrad = ctx.createRadialGradient(x, y - 8, 0, x, y - 8, shieldRadius);
-  innerGrad.addColorStop(0, shieldColor + '15');
-  innerGrad.addColorStop(0.7, shieldColor + '08');
-  innerGrad.addColorStop(1, shieldColor + '00');
+  innerGrad.addColorStop(0, hexToRgba(shieldColor, 0.08));
+  innerGrad.addColorStop(0.7, hexToRgba(shieldColor, 0.03));
+  innerGrad.addColorStop(1, hexToRgba(shieldColor, 0));
   ctx.fillStyle = innerGrad;
   ctx.globalAlpha = 0.5 * ratio;
   ctx.fill();
