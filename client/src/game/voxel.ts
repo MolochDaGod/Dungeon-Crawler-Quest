@@ -1006,6 +1006,101 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   return model;
 }
 
+export function buildHeroModelWithPoses(race: string, heroClass: string, customPoses: {
+  leftLeg: BodyPartPose; rightLeg: BodyPartPose;
+  leftArm: BodyPartPose; rightArm: BodyPartPose;
+  torso: BodyPartPose; head: BodyPartPose;
+  weapon: BodyPartPose; weaponGlow: number;
+}, heroName?: string): VoxelModel {
+  const isPirate = heroName?.includes('Racalvin') || heroName?.includes('Pirate King');
+  const skin = RACE_SKIN[race] || '#c4956a';
+  const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
+  const hair = race === 'Elf' ? '#e8d090' : race === 'Orc' ? '#2a2a2a' : race === 'Undead' ? '#444444' : race === 'Dwarf' ? '#a0522d' : '#3a2a1a';
+  const eye = race === 'Undead' ? '#ff4444' : race === 'Orc' ? '#ffaa00' : '#2244aa';
+  const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
+
+  const W = 8, D = 8, H = 14;
+  const model: VoxelModel = [];
+  for (let z = 0; z < H; z++) {
+    model[z] = [];
+    for (let y = 0; y < D; y++) {
+      model[z][y] = [];
+      for (let x = 0; x < W; x++) model[z][y][x] = null;
+    }
+  }
+
+  const poses = customPoses;
+
+  const setV = (z: number, y: number, x: number, c: string) => {
+    if (z >= 0 && z < H && y >= 0 && y < D && x >= 0 && x < W) {
+      model[z][y][x] = c;
+    }
+  };
+
+  const setWV = (z: number, y: number, x: number, c: string) => {
+    if (z >= 0 && z < H && y >= 0 && y < D && x >= 0 && x < W) {
+      if (poses.weaponGlow > 0) {
+        c = blend(c, '#ffd700', poses.weaponGlow * 0.4);
+      }
+      model[z][y][x] = c;
+    }
+  };
+
+  const bootColor = shade(armor.primary, 0.7);
+  const lL = poses.leftLeg, rL = poses.rightLeg;
+  const lA = poses.leftArm, rA = poses.rightArm;
+  const tP = poses.torso, hP = poses.head;
+  const wP = poses.weapon;
+  const weaponGlow = poses.weaponGlow;
+
+  setV(0 + lL.oz, 2 + lL.oy, 2 + lL.ox, bootColor);
+  setV(0 + lL.oz, 3 + lL.oy, 2 + lL.ox, bootColor);
+  setV(1 + lL.oz, 2 + lL.oy, 2 + lL.ox, armor.primary);
+  setV(0 + rL.oz, 2 + rL.oy, 5 + rL.ox, bootColor);
+  setV(0 + rL.oz, 3 + rL.oy, 5 + rL.ox, bootColor);
+  setV(1 + rL.oz, 2 + rL.oy, 5 + rL.ox, armor.primary);
+
+  for (let x = 2; x <= 5; x++) for (let y = 2; y <= 4; y++) setV(2 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
+  for (let x = 2; x <= 5; x++) for (let y = 2; y <= 4; y++) {
+    setV(3 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
+    setV(4 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
+    setV(5 + tP.oz, y + tP.oy, x + tP.ox, armor.secondary);
+  }
+
+  setV(3 + lA.oz, 3 + lA.oy, 1 + lA.ox, armor.primary);
+  setV(4 + lA.oz, 3 + lA.oy, 1 + lA.ox, armor.secondary);
+  setV(5 + lA.oz, 3 + lA.oy, 1 + lA.ox, skin);
+  setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, armor.primary);
+  setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, armor.secondary);
+  setV(5 + rA.oz, 3 + rA.oy, 6 + rA.ox, skin);
+
+  for (let x = 2; x <= 5; x++) for (let y = 2; y <= 4; y++) setV(6 + hP.oz, y + hP.oy, x + hP.ox, skin);
+  setV(7 + hP.oz, 2 + hP.oy, 3 + hP.ox, skin);
+  setV(7 + hP.oz, 2 + hP.oy, 4 + hP.ox, skin);
+  setV(7 + hP.oz, 3 + hP.oy, 3 + hP.ox, hair);
+  setV(7 + hP.oz, 3 + hP.oy, 4 + hP.ox, hair);
+  setV(7 + hP.oz, 4 + hP.oy, 3 + hP.ox, hair);
+  setV(7 + hP.oz, 4 + hP.oy, 4 + hP.ox, hair);
+  setV(6 + hP.oz, 2 + hP.oy, 3 + hP.ox, eye);
+  setV(6 + hP.oz, 2 + hP.oy, 4 + hP.ox, eye);
+
+  if (weaponType === 'sword') {
+    setWV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c5a059');
+    for (let z = 3; z <= 8; z++) setWV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c0c0c0');
+  } else if (weaponType === 'staff') {
+    for (let z = 1; z <= 9; z++) setWV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, z >= 8 ? '#8b5cf6' : '#6b4423');
+  } else if (weaponType === 'bow') {
+    for (let z = 2; z <= 7; z++) setWV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#6b4423');
+    setWV(2 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#d4d4d8');
+    setWV(7 + wP.oz, 0 + wP.oy, 0 + wP.ox, '#d4d4d8');
+  } else {
+    setWV(2 + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c5a059');
+    for (let z = 3; z <= 8; z++) setWV(z + wP.oz, 1 + wP.oy, 0 + wP.ox, '#c0c0c0');
+  }
+
+  return model;
+}
+
 function buildMinionModel(color: string, minionType: string, animTimer: number): VoxelModel {
   const dark = shade(color, 0.5);
   const mid = shade(color, 0.75);
@@ -2459,6 +2554,27 @@ export class VoxelRenderer {
     ctx.fillRect(x + width - 1, y, 1, height);
     ctx.fillRect(x, y, width, 1);
     ctx.fillRect(x, y + height - 1, width, 1);
+  }
+
+  drawHeroVoxelCustomPose(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number,
+    race: string, heroClass: string, facing: number,
+    customPoses: {
+      leftLeg: { ox: number; oy: number; oz: number };
+      rightLeg: { ox: number; oy: number; oz: number };
+      leftArm: { ox: number; oy: number; oz: number };
+      rightArm: { ox: number; oy: number; oz: number };
+      torso: { ox: number; oy: number; oz: number };
+      head: { ox: number; oy: number; oz: number };
+      weapon: { ox: number; oy: number; oz: number };
+      weaponGlow: number;
+    },
+    heroName?: string
+  ) {
+    const groundY = y + 6;
+    const model = buildHeroModelWithPoses(race, heroClass, customPoses, heroName);
+    this.renderVoxelModel(ctx, x, groundY - 12, model, this.cubeSize, facing);
   }
 
   drawMinionVoxel(
