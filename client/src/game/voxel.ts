@@ -420,29 +420,30 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
   }
 
   if (animState === 'block') {
-    const brace = Math.min(1, t * 6);
+    const brace = Math.min(1, t * 8);
+    const breathe = Math.sin(t * 3) * 0.3 * brace;
     return {
-      leftLeg: { ox: 0, oy: Math.round(-brace * 0.5), oz: 0 },
-      rightLeg: { ox: 0, oy: Math.round(brace * 0.5), oz: 0 },
-      leftArm: { ox: Math.round(-brace * 2), oy: Math.round(brace), oz: Math.round(brace * 2) },
-      rightArm: { ox: Math.round(brace * 1), oy: Math.round(-brace * 0.5), oz: Math.round(brace * 1.5) },
-      torso: { ox: Math.round(-brace * 0.5), oy: 0, oz: Math.round(brace * 0.3) },
-      head: { ox: Math.round(-brace * 0.5), oy: 0, oz: Math.round(brace * 0.3) },
-      weapon: { ox: Math.round(-brace * 1), oy: Math.round(brace * 2), oz: Math.round(brace * 3) },
-      weaponGlow: 0.2
+      leftLeg: { ox: 0, oy: Math.round(-brace * 1.5), oz: Math.round(brace * 0.5) },
+      rightLeg: { ox: 0, oy: Math.round(brace * 1.5), oz: 0 },
+      leftArm: { ox: Math.round(brace * 3), oy: Math.round(-brace * 1), oz: Math.round(brace * 2 + breathe) },
+      rightArm: { ox: Math.round(brace * 2), oy: Math.round(brace * 0.5), oz: Math.round(brace * 1.5 + breathe) },
+      torso: { ox: Math.round(-brace * 0.5), oy: 0, oz: Math.round(-brace * 0.5), rotation: -brace * 5 },
+      head: { ox: Math.round(-brace * 0.5), oy: 0, oz: Math.round(-brace * 0.3) },
+      weapon: { ox: Math.round(brace * 4), oy: Math.round(-brace * 1), oz: Math.round(brace * 2 + breathe * 0.5), rotation: Math.max(-90, -brace * 90) },
+      weaponGlow: brace * 0.4
     };
   }
 
   if (animState === 'death') {
     const fall = Math.min(1, t * 2);
     return {
-      leftLeg: { ox: 0, oy: Math.round(fall * 2), oz: Math.round(-fall * 3) },
-      rightLeg: { ox: 0, oy: Math.round(fall * 2), oz: Math.round(-fall * 3) },
-      leftArm: { ox: Math.round(fall * 3), oy: Math.round(-fall), oz: Math.round(-fall * 2) },
-      rightArm: { ox: Math.round(fall * 3), oy: Math.round(fall), oz: Math.round(-fall * 2) },
-      torso: { ox: Math.round(fall * 2), oy: 0, oz: Math.round(-fall * 4) },
-      head: { ox: Math.round(fall * 3), oy: 0, oz: Math.round(-fall * 5) },
-      weapon: { ox: Math.round(fall * 4), oy: Math.round(-fall * 2), oz: Math.round(-fall * 4) },
+      leftLeg: { ox: Math.round(fall * -2), oy: Math.round(fall * 3), oz: Math.round(-fall * 6) },
+      rightLeg: { ox: Math.round(fall * 2), oy: Math.round(fall * 2), oz: Math.round(-fall * 5) },
+      leftArm: { ox: Math.round(fall * -4), oy: Math.round(-fall * 3), oz: Math.round(-fall * 4), rotation: fall * 45 },
+      rightArm: { ox: Math.round(fall * 4), oy: Math.round(fall * 2), oz: Math.round(-fall * 3), rotation: -fall * 30 },
+      torso: { ox: Math.round(fall * 1), oy: Math.round(fall * 1), oz: Math.round(-fall * 7), rotation: fall * 25 },
+      head: { ox: Math.round(fall * 2), oy: Math.round(-fall * 1), oz: Math.round(-fall * 8), rotation: fall * 40 },
+      weapon: { ox: Math.round(fall * 5), oy: Math.round(-fall * 4), oz: Math.round(-fall * 6), rotation: -fall * 120 },
       weaponGlow: 0
     };
   }
@@ -1456,17 +1457,109 @@ function buildNexusModel(teamColor: string): VoxelModel {
   return model;
 }
 
+interface DeathVoxel {
+  sx: number; sy: number; sz: number;
+  vx: number; vy: number; vz: number;
+  color: string;
+  rot: number; rotSpeed: number;
+  scale: number;
+  grounded: boolean;
+}
+
+interface DeathDebris {
+  voxels: DeathVoxel[];
+  startTime: number;
+  duration: number;
+}
+
 export class VoxelRenderer {
   private spriteCache = new Map<string, ImageBitmap>();
   private tileCache = new Map<string, HTMLCanvasElement>();
   private cubeSize = 4;
   private weaponTrails = new Map<number, WeaponTrailSystem>();
   private transformTimers = new Map<number, number>();
+  private deathDebrisCache = new Map<number, DeathDebris>();
 
   private getWeaponTrail(entityId: number): WeaponTrailSystem {
     let trail = this.weaponTrails.get(entityId);
     if (!trail) { trail = new WeaponTrailSystem(); this.weaponTrails.set(entityId, trail); }
     return trail;
+  }
+
+  private initDeathDebris(entityId: number, model: VoxelModel, time: number): DeathDebris {
+    const voxels: DeathVoxel[] = [];
+    for (let z = 0; z < model.length; z++) {
+      const layer = model[z];
+      if (!layer) continue;
+      for (let y = 0; y < layer.length; y++) {
+        const row = layer[y];
+        if (!row) continue;
+        for (let x = 0; x < row.length; x++) {
+          const color = row[x];
+          if (!color) continue;
+          const cx = x - 4, cy = y - 4, cz = z;
+          const angle = Math.atan2(cy, cx);
+          const dist = Math.sqrt(cx * cx + cy * cy) + 0.5;
+          const speed = 0.8 + Math.random() * 1.5;
+          voxels.push({
+            sx: cx, sy: cy, sz: cz,
+            vx: Math.cos(angle) * dist * speed * 0.4 + (Math.random() - 0.5) * 2,
+            vy: Math.sin(angle) * dist * speed * 0.3 + (Math.random() - 0.5) * 1.5,
+            vz: (cz * 0.3 + 1) * speed + Math.random() * 2,
+            color,
+            rot: 0,
+            rotSpeed: (Math.random() - 0.5) * 360,
+            scale: 1,
+            grounded: false
+          });
+        }
+      }
+    }
+    voxels.sort((a, b) => a.sz - b.sz);
+    const debris: DeathDebris = { voxels, startTime: time, duration: 2.5 };
+    this.deathDebrisCache.set(entityId, debris);
+    return debris;
+  }
+
+  private renderDeathDebris(ctx: CanvasRenderingContext2D, cx: number, cy: number, debris: DeathDebris, time: number, facing: number) {
+    const elapsed = time - debris.startTime;
+    const gravity = 18;
+    const cs = this.cubeSize;
+    const isoX = cs;
+    const isoY = cs * 0.5;
+    const fadeStart = debris.duration * 0.6;
+    const globalAlpha = elapsed > fadeStart ? Math.max(0, 1 - (elapsed - fadeStart) / (debris.duration - fadeStart)) : 1;
+
+    ctx.save();
+    ctx.globalAlpha = globalAlpha;
+
+    for (const v of debris.voxels) {
+      let px: number, py: number, pz: number;
+      if (v.grounded) {
+        px = v.sx;
+        py = v.sy;
+        pz = -2;
+      } else {
+        px = v.sx + v.vx * elapsed;
+        py = v.sy + v.vy * elapsed;
+        pz = v.sz + v.vz * elapsed - 0.5 * gravity * elapsed * elapsed;
+
+        if (pz < -2) {
+          pz = -2;
+          v.sx = px; v.sy = py;
+          v.vx = 0; v.vy = 0; v.vz = 0;
+          v.grounded = true;
+        }
+      }
+
+      const screenX = cx + (px - py) * isoX;
+      const screenY = cy + (px + py) * isoY - pz * cs;
+      const shrink = elapsed > fadeStart ? Math.max(0.3, 1 - (elapsed - fadeStart) / (debris.duration - fadeStart) * 0.7) : 1;
+
+      this.drawIsoCube(ctx, screenX, screenY, cs * shrink, v.color);
+    }
+
+    ctx.restore();
   }
 
   drawHeroVoxel(
@@ -1535,6 +1628,24 @@ export class VoxelRenderer {
     }
 
     const model = buildHeroModel(race, heroClass, animState, animTimer, heroName, heroItems);
+
+    if (animState === 'death') {
+      let debris = this.deathDebrisCache.get(eid);
+      if (!debris) {
+        const aliveModel = buildHeroModel(race, heroClass, 'idle', 0, heroName, heroItems);
+        debris = this.initDeathDebris(eid, aliveModel, time);
+      }
+      const elapsed = time - debris.startTime;
+      if (elapsed < debris.duration) {
+        this.renderDeathDebris(ctx, x, groundY - 12, debris, time, facing);
+      } else {
+        this.deathDebrisCache.delete(eid);
+      }
+      return;
+    } else {
+      this.deathDebrisCache.delete(eid);
+    }
+
     this.renderVoxelModel(ctx, x, groundY - 12, model, this.cubeSize, facing);
 
     if (animState === 'attack' && animTimer > 0.02) {
