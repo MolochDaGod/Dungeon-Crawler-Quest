@@ -10,6 +10,7 @@ import {
 } from './types';
 import { VoxelRenderer, TerrainType } from './voxel';
 import { SpriteEffectSystem, SpriteEffectType } from './sprite-effects';
+import { globalAnimDirector } from './voxel-motion';
 import {
   StatusEffect, StatusEffectType, updateStatusEffects, applyStatusEffect,
   isStunned, isRooted, isSilenced, getSpeedMultiplier,
@@ -998,6 +999,7 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
           hero.animTimer = 0;
           hero.attackAnimPhase = windupTime + 0.3;
           hero.autoAttackTimer = Math.max(0.8, 2.2 - hero.spd * 0.008);
+          globalAnimDirector.registerAttack(hero.id, state.gameTime);
         }
         hero.vx = 0;
         hero.vy = 0;

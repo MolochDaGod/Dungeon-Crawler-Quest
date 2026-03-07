@@ -4,7 +4,9 @@ import {
   drawTransformVFX, drawHealingVFX, drawShieldVFX,
   drawSummonVFX, WeaponTrailSystem,
   sampleMotion, additivePoses, MOTION_LIBRARY,
-  getClassMotionProfile, type FullPose
+  getClassMotionProfile, type FullPose,
+  globalAnimDirector, drawAISlashVFX, drawAISpellVFX,
+  type AttackPlan, type SpellVFXPlan
 } from './voxel-motion';
 
 type VoxelModel = (string | null)[][][];
@@ -1462,15 +1464,43 @@ export class VoxelRenderer {
 
     if (animState === 'attack' && animTimer > 0.02) {
       this.drawAttackVFX(ctx, x, groundY, heroClass, facing, animTimer, race);
+      const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
+      const aiPlan = globalAnimDirector.planAttack(heroClass, weaponType, eid, facing);
+      const atkProgress = Math.min(1, animTimer / aiPlan.duration);
+      drawAISlashVFX(ctx, x, groundY - 8, aiPlan, atkProgress, time);
     }
     if (animState === 'ability' && animTimer > 0.02) {
       this.drawAbilityVFX(ctx, x, groundY, heroClass, facing, animTimer);
+      const abilityKey = heroClass === 'Mage' ? 'E' : heroClass === 'Ranger' ? 'Q' : 'Q';
+      const spellPlan = globalAnimDirector.planSpellVFX(heroClass, abilityKey);
+      const abilityProgress = Math.min(1, animTimer / 0.8);
+      drawAISpellVFX(ctx, x, groundY - 5, spellPlan, abilityProgress, time);
+    }
+    if (animState === 'combo_finisher' && animTimer > 0.02) {
+      const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
+      const finisherPlan = globalAnimDirector.planAttack(heroClass, weaponType, eid, facing);
+      finisherPlan.impactFlash = true;
+      finisherPlan.slashWidth *= 1.4;
+      finisherPlan.trailIntensity = 2.0;
+      const finisherProgress = Math.min(1, animTimer / finisherPlan.duration);
+      drawAISlashVFX(ctx, x, groundY - 8, finisherPlan, finisherProgress, time);
     }
     if (animState === 'dash_attack' && animTimer > 0.02) {
       this.drawDashVFX(ctx, x, groundY, heroClass, facing, animTimer);
+      const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
+      const dashPlan = globalAnimDirector.planAttack(heroClass, weaponType, eid, facing);
+      dashPlan.slashArc *= 0.7;
+      const dashProgress = Math.min(1, animTimer / dashPlan.duration);
+      drawAISlashVFX(ctx, x, groundY - 8, dashPlan, dashProgress, time);
     }
     if (animState === 'lunge_slash' && animTimer > 0.02) {
       this.drawLungeSlashVFX(ctx, x, groundY, heroClass, facing, animTimer);
+      const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
+      const lungePlan = globalAnimDirector.planAttack(heroClass, weaponType, eid, facing);
+      lungePlan.slashArc *= 1.2;
+      lungePlan.screenShake = true;
+      const lungeProgress = Math.min(1, animTimer / lungePlan.duration);
+      drawAISlashVFX(ctx, x, groundY - 8, lungePlan, lungeProgress, time);
     }
     if (animState === 'combo_finisher' && animTimer > 0.02) {
       this.drawComboFinisherVFX(ctx, x, groundY, heroClass, facing, animTimer);

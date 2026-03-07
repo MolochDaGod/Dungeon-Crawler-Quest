@@ -4,6 +4,7 @@ import {
   getHeroAbilities, getWeaponRenderType, getHeroWeapon
 } from './types';
 import { VoxelRenderer, DungeonTileVoxelType } from './voxel';
+import { globalAnimDirector } from './voxel-motion';
 import {
   StatusEffect, StatusEffectType, createStatusEffect, applyStatusEffect,
   updateStatusEffects, isStunned, isRooted, isSilenced, getSpeedMultiplier,
@@ -776,6 +777,7 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
 
       if (d <= enemy.rng + 10) {
         enemy.animState = 'attack';
+        globalAnimDirector.registerAttack(enemy.id, state.gameTime || 0);
         enemy.attackTimer -= dt;
         if (enemy.attackTimer <= 0) {
           const spdMult = getSpeedMultiplier(enemy as any as CombatEntity);
@@ -1512,6 +1514,7 @@ export function handleDungeonAttack(state: DungeonState) {
     });
     p.animState = 'attack';
     p.facing = angleBetween(p, nearest);
+    globalAnimDirector.registerAttack(p.id, state.gameTime || 0);
   }
 }
 
