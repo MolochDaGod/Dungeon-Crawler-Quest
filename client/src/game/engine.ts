@@ -562,7 +562,7 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
 
   if (state.gameTime >= state.nextMinionWave) {
     spawnMinionWave(state);
-    state.nextMinionWave += 30;
+    state.nextMinionWave += 25;
   }
 
   for (const hero of state.heroes) {
@@ -1109,8 +1109,8 @@ function findBestAbilityTarget(state: MobaState, hero: MobaHero, ability: any, a
 }
 
 function getGamePhase(gameTime: number): 'laning' | 'midgame' | 'lategame' {
-  if (gameTime < 600) return 'laning';
-  if (gameTime < 1500) return 'midgame';
+  if (gameTime < 180) return 'laning';
+  if (gameTime < 600) return 'midgame';
   return 'lategame';
 }
 
@@ -1213,9 +1213,9 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
 
   aiLevelUpAbilities(state, hero, heroData);
 
-  const retreatThreshold = alliesNearby >= 2 ? 0.15 : (alliesNearby >= 1 ? 0.25 : 0.35);
+  const retreatThreshold = alliesNearby >= 2 ? 0.10 : (alliesNearby >= 1 ? 0.18 : 0.25);
 
-  if (hpPct < retreatThreshold || (hpPct < 0.4 && threat > 3 && alliesNearby === 0)) {
+  if (hpPct < retreatThreshold || (hpPct < 0.3 && threat > 4 && alliesNearby === 0)) {
     hero.moveTarget = { x: base.x, y: base.y };
     hero.targetId = null;
     const angle = angleTo(hero, base);
@@ -1248,9 +1248,9 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
   }
 
   if (baseDist < 250 && hpPct < 0.8) {
-    hero.hp = Math.min(hero.maxHp, hero.hp + dt * 15);
-    hero.mp = Math.min(hero.maxMp, hero.mp + dt * 8);
-    if (hpPct < 0.6) return;
+    hero.hp = Math.min(hero.maxHp, hero.hp + dt * 25);
+    hero.mp = Math.min(hero.maxMp, hero.mp + dt * 12);
+    if (hpPct < 0.5) return;
   }
 
   const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
@@ -1344,22 +1344,22 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
           const d = dist(hero, h);
           if (d > aggroRange) continue;
           if (!hasLineOfSight(state, hero, h, hero.team)) continue;
-          if (alliesNearby >= enemiesNearby && hpPct > 0.5) {
-            let score = (aggroRange - d) / aggroRange * 3;
-            score += (1 - h.hp / h.maxHp) * 5;
-            if (h.hp < hero.atk * 2) score += 10;
-            if (score > bestScore) { bestScore = score; bestTarget = h; }
-          }
+          let score = (aggroRange - d) / aggroRange * 3;
+          score += (1 - h.hp / h.maxHp) * 5;
+          if (h.hp < hero.atk * 2) score += 10;
+          if (alliesNearby >= enemiesNearby) score += 3;
+          if (hpPct > 0.6) score += 2;
+          if (score > bestScore) { bestScore = score; bestTarget = h; }
         }
       }
 
       if (!bestTarget) {
-        const ownTower = state.towers.find(t => t.team === hero.team && !t.dead && t.lane === hero.assignedLane);
-        const nearOwnMinions = countAlliedMinionsNearby(state, hero, 300);
-        if (nearOwnMinions > 0 || (ownTower && dist(hero, ownTower) < 400)) {
-          hero.vx *= 0.3;
-          hero.vy *= 0.3;
-          hero.animState = 'idle';
+        for (const m of state.minions) {
+          if (m.team === hero.team || m.dead) continue;
+          const d = dist(hero, m);
+          if (d > 350) continue;
+          let score = (350 - d) / 350 * 2;
+          if (score > bestScore) { bestScore = score; bestTarget = m; }
         }
       }
     } else {
@@ -1417,13 +1417,14 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
     }
 
     if (!bestTarget) {
-      const minAlliesForTower = phase === 'lategame' ? 3 : 2;
+      const minAlliesForTower = phase === 'lategame' ? 2 : 1;
       for (const t of state.towers) {
         if (t.team === hero.team || t.dead) continue;
         const d = dist(hero, t);
-        if (d > 400) continue;
-        if (alliedHeroesNearby < minAlliesForTower - 1) continue;
-        if (!hasAlliedMinionAhead(state, hero, t)) continue;
+        if (d > 500) continue;
+        if (alliedHeroesNearby < minAlliesForTower) continue;
+        const nearMinions = countAlliedMinionsNearby(state, hero, 400);
+        if (nearMinions === 0 && phase !== 'lategame') continue;
         bestTarget = t;
       }
     }
@@ -1503,14 +1504,11 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
       const wp = waypoints[targetWpIdx];
 
       if (phase === 'laning') {
-        const nearOwnMinions = countAlliedMinionsNearby(state, hero, 400);
-        if (nearOwnMinions === 0) {
-          const angle = angleTo(hero, wp);
-          hero.vx = Math.cos(angle) * hero.spd * 1.2;
-          hero.vy = Math.sin(angle) * hero.spd * 1.2;
-          hero.facing = angle;
-          hero.animState = 'walk';
-        }
+        const angle = angleTo(hero, wp);
+        hero.vx = Math.cos(angle) * hero.spd * 1.3;
+        hero.vy = Math.sin(angle) * hero.spd * 1.3;
+        hero.facing = angle;
+        hero.animState = 'walk';
       } else {
         const angle = angleTo(hero, wp);
         hero.vx = Math.cos(angle) * hero.spd * 1.5;
