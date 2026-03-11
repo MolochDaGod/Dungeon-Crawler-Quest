@@ -1779,7 +1779,7 @@ export class VoxelRenderer {
           ctx.beginPath();
           ctx.arc(impactX, impactY, shockRadius, 0, Math.PI * 2);
           ctx.stroke();
-          const slamSeed = Math.floor(animTimer * 10);
+          const slamSeed = Math.floor(t * 10);
           for (let i = 0; i < 5; i++) {
             const sa = vfxSeededRand(slamSeed + i * 7) * Math.PI * 2;
             const sd = shockRadius * 0.5 + vfxSeededRand(slamSeed + i * 13 + 3) * shockRadius * 0.5;
@@ -1962,7 +1962,7 @@ export class VoxelRenderer {
 
         if (swing > 0.5) {
           const sparkCount = 6;
-          const swingSeed = Math.floor(animTimer * 10) + 50;
+          const swingSeed = Math.floor(t * 10) + 50;
           for (let s = 0; s < sparkCount; s++) {
             const sa = arcAngle - s * 0.12;
             const sr = reachDist + (vfxSeededRand(swingSeed + s * 11) - 0.5) * 12;
@@ -2005,7 +2005,7 @@ export class VoxelRenderer {
         ctx.arc(Math.cos(facing) * 20, Math.sin(facing) * 20, shockRadius, 0, Math.PI * 2);
         ctx.stroke();
 
-        const followSeed = Math.floor(animTimer * 10) + 200;
+        const followSeed = Math.floor(t * 10) + 200;
         for (let i = 0; i < 4; i++) {
           const fr1 = vfxSeededRand(followSeed + i * 7);
           const fr2 = vfxSeededRand(followSeed + i * 13 + 3);
@@ -2124,7 +2124,7 @@ export class VoxelRenderer {
             ctx.arc(arrowX, arrowY, impactRadius, 0, Math.PI * 2);
             ctx.stroke();
 
-            const arrowSeed = Math.floor(animTimer * 10) + 300;
+            const arrowSeed = Math.floor(t * 10) + 300;
             for (let s = 0; s < 4; s++) {
               const sa = facing + (s - 1.5) * 0.6;
               const sd = impactRadius + vfxSeededRand(arrowSeed + s * 11) * 5;
