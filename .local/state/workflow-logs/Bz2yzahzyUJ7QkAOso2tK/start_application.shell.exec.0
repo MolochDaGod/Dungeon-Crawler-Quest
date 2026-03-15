@@ -1,0 +1,79 @@
+[1G[0K⠙[1G[0K2:21:04 PM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+
+
+
+
+
+[1;1H[0J[2m2:22:41 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/game.tsx[22m
+
+
+
+
+
+
+[1;1H[0J[2m2:22:48 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/game.tsx[22m [33m(x2)[39m
+
+
+
+
+
+
+
+[1;1H[0J[2m2:22:58 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/game.tsx[22m [33m(x3)[39m
+
+
+
+
+
+
+
+
+[1;1H[0J[2m2:23:06 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/game.tsx[22m [33m(x4)[39m
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m2:23:13 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/game.tsx[22m [33m(x5)[39m
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m2:23:19 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/game.tsx[22m [33m(x6)[39m
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m2:23:24 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/game.tsx[22m [33m(x7)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m2:23:40 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/game.tsx[22m [33m(x8)[39m
