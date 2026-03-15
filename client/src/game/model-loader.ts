@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 
 export interface LoadedModel {
   scene: THREE.Group;
@@ -14,6 +16,8 @@ const loadingPromises = new Map<string, Promise<LoadedModel>>();
 
 const gltfLoader = new GLTFLoader();
 const fbxLoader = new FBXLoader();
+const objLoader = new OBJLoader();
+const mtlLoader = new MTLLoader();
 const textureLoader = new THREE.TextureLoader();
 
 export function getTexture(path: string): THREE.Texture {
@@ -72,6 +76,52 @@ export async function loadFBX(path: string, texturePath?: string): Promise<Loade
     }, undefined, reject);
   });
   loadingPromises.set(path, promise);
+  return promise;
+}
+
+export async function loadOBJ(objPath: string, mtlPath?: string, texturePath?: string): Promise<LoadedModel> {
+  if (modelCache.has(objPath)) {
+    const cached = modelCache.get(objPath)!;
+    return { scene: cached.scene.clone(), animations: cached.animations };
+  }
+  if (loadingPromises.has(objPath)) return loadingPromises.get(objPath)!;
+
+  const promise = new Promise<LoadedModel>((resolve, reject) => {
+    const onObjLoaded = (obj: THREE.Group) => {
+      if (texturePath) {
+        const tex = getTexture(texturePath);
+        obj.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach(m => { (m as THREE.MeshStandardMaterial).map = tex; });
+            } else {
+              (mesh.material as THREE.MeshStandardMaterial).map = tex;
+            }
+          }
+        });
+      }
+      const model: LoadedModel = { scene: obj, animations: [] };
+      modelCache.set(objPath, model);
+      loadingPromises.delete(objPath);
+      resolve({ scene: model.scene.clone(), animations: [] });
+    };
+
+    if (mtlPath) {
+      mtlLoader.load(mtlPath, (materials) => {
+        materials.preload();
+        const loader = new OBJLoader();
+        loader.setMaterials(materials);
+        loader.load(objPath, onObjLoaded, undefined, reject);
+      }, undefined, () => {
+        // Fallback: load OBJ without materials
+        objLoader.load(objPath, onObjLoaded, undefined, reject);
+      });
+    } else {
+      objLoader.load(objPath, onObjLoaded, undefined, reject);
+    }
+  });
+  loadingPromises.set(objPath, promise);
   return promise;
 }
 

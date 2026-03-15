@@ -405,15 +405,10 @@ export default function GamePage() {
         handleStopCommand(state);
       }
 
+      // A key: enter attack-move mode (next LMB click will attack-move to that position)
       if (key === 'a' && !e.repeat) {
-        state.autoAttackEnabled = !state.autoAttackEnabled;
-        if (!state.autoAttackEnabled) {
-          const player = state.heroes[state.playerHeroIndex];
-          if (player) {
-            player.targetId = null;
-            player.stopCommand = true;
-          }
-        }
+        state.cursorMode = 'attack';
+        (state as any)._attackMoveMode = true;
       }
 
       if (matchesKeyDown(bindings[KeybindAction.Dodge], e)) {
@@ -433,13 +428,9 @@ export default function GamePage() {
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility3], e)) { e.preventDefault(); handleLevelUpAbility(state, 2); }
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility4], e)) { e.preventDefault(); handleLevelUpAbility(state, 3); }
 
+      // Combat machine keys (only non-ability keys — Q/W/E/R are reserved for spells)
       if (key === 'shift') combatActor.send({ type: 'SHIFT_DOWN' });
-      if (key === 'r') combatActor.send({ type: 'R_DOWN' });
-      if (key === 'e') combatActor.send({ type: 'E_DOWN' });
       if (key === ' ') combatActor.send({ type: 'SPACE_DOWN' });
-      if (key === '1') combatActor.send({ type: 'KEY_1' });
-      if (key === '2') combatActor.send({ type: 'KEY_2' });
-      if (key === '3') combatActor.send({ type: 'KEY_3' });
       if (key === 'j') combatActor.send({ type: 'KEY_J' });
       if (key === 'k') combatActor.send({ type: 'KEY_K' });
       if (key === 'l') combatActor.send({ type: 'KEY_L' });
@@ -455,8 +446,6 @@ export default function GamePage() {
         handleBlock(state, false);
       }
       if (key === 'shift') combatActor.send({ type: 'SHIFT_UP' });
-      if (key === 'r') combatActor.send({ type: 'R_UP' });
-      if (key === 'e') combatActor.send({ type: 'E_UP' });
       if (key === ' ') combatActor.send({ type: 'SPACE_UP' });
     };
 
@@ -502,7 +491,13 @@ export default function GamePage() {
       if (e.button === 0) {
         combatActor.send({ type: 'LMB_DOWN' });
         const wp = getWorldPos(e);
-        if (mouseTarget.aoeIndicator.active) {
+
+        // Attack-move mode: A then LMB → move to click, auto-attack first enemy in range
+        if ((state as any)._attackMoveMode) {
+          (state as any)._attackMoveMode = false;
+          state.cursorMode = 'default';
+          handleAttackMoveClick(state, wp.x, wp.y);
+        } else if (mouseTarget.aoeIndicator.active) {
           const targetPos = mouseTarget.confirmAOETarget();
           if (targetPos) {
             const p = state.heroes[state.playerHeroIndex];
@@ -536,6 +531,7 @@ export default function GamePage() {
           state.cursorMode = 'default';
           handlePlayerAbility(state, abIdx);
         } else {
+          // Normal LMB: select/target entity at click position
         }
       }
       if (e.button === 1) {

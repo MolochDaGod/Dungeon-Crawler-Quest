@@ -75,6 +75,11 @@ export default function DungeonGamePage() {
       }
     };
 
+    // Track combo hits for LMB light attack chains
+    let lightComboCount = 0;
+    let lastLightAttackTime = 0;
+    const COMBO_WINDOW = 0.8; // seconds to chain next hit
+
     const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       keysRef.current.add(key);
@@ -84,32 +89,45 @@ export default function DungeonGamePage() {
         return;
       }
 
-      if (matchesKeyDown(bindings[KeybindAction.Ability1], e)) { e.preventDefault(); tryTargetOrCast(0); }
-      else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) { e.preventDefault(); tryTargetOrCast(1); }
-      else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) { e.preventDefault(); tryTargetOrCast(2); }
-      else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) { e.preventDefault(); tryTargetOrCast(3); }
+      // Dungeon/OW: abilities on 1/2/3/4
+      if (matchesKeyDown(bindings[KeybindAction.DungeonAbility1], e)) { e.preventDefault(); tryTargetOrCast(0); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility2], e)) { e.preventDefault(); tryTargetOrCast(1); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility3], e)) { e.preventDefault(); tryTargetOrCast(2); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility4], e)) { e.preventDefault(); tryTargetOrCast(3); }
 
-      if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handleDungeonAttack(state);
       if (key === 'i') state.showInventory = !state.showInventory;
       if (matchesKeyDown(bindings[KeybindAction.Pause], e)) { state.showInventory = false; state.paused = !state.paused; }
     };
 
     const onKeyUp = (e: KeyboardEvent) => { keysRef.current.delete(e.key.toLowerCase()); };
 
+    // LMB = light melee/ranged combo attack
     const onClick = (e: MouseEvent) => {
       if (e.button === 0) {
         if (state.targeting.active) {
           confirmDungeonTargeting(state);
         } else {
+          // Light attack combo chain
+          const now = performance.now() / 1000;
+          if (now - lastLightAttackTime < COMBO_WINDOW) {
+            lightComboCount = (lightComboCount + 1) % 3; // 3-hit combo
+          } else {
+            lightComboCount = 0;
+          }
+          lastLightAttackTime = now;
           handleDungeonAttack(state);
         }
       }
     };
 
+    // RMB = heavy melee attack (stronger, slower)
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       if (state.targeting.active) {
         cancelDungeonTargeting(state);
+      } else {
+        // Heavy melee: use ability slot 0 as heavy attack, or basic attack with 2x damage
+        handleDungeonAttack(state);
       }
     };
 

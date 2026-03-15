@@ -13,3 +13,6 @@ vite.config.ts.*
 .config
 
 .vercel
+
+# Large asset packs (managed locally, not in git)
+public/assets/packs/

@@ -598,24 +598,8 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   if (player && !player.dead) {
     const playerSpdMult = getSpeedMultiplier(player as any as CombatEntity);
     const playerRooted = isRooted(player as any as CombatEntity);
-    let mx = 0, my = 0;
-    if (keys.has('arrowup')) my = -1;
-    if (keys.has('arrowdown')) my = 1;
-    if (keys.has('arrowleft')) mx = -1;
-    if (keys.has('arrowright')) mx = 1;
-
-    if (!playerRooted && (mx !== 0 || my !== 0)) {
-      const len = Math.sqrt(mx * mx + my * my);
-      const speed = player.spd * 1.8 * playerSpdMult;
-      player.vx = (mx / len) * speed;
-      player.vy = (my / len) * speed;
-      player.facing = Math.atan2(my, mx);
-      player.moveTarget = null;
-      player.attackMoveTarget = null;
-      player.isAttackMoving = false;
-      player.stopCommand = false;
-      player.animState = 'walk';
-    } else if (!playerRooted && player.isAttackMoving && player.attackMoveTarget) {
+    // MOBA: No WASD/arrow movement — mouse right-click to move, A+LMB attack-move
+    if (!playerRooted && player.isAttackMoving && player.attackMoveTarget) {
       const d = dist(player, player.attackMoveTarget);
       const nearEnemy = findNearestEnemy(state, player, player.rng + 50);
       if (nearEnemy) {
