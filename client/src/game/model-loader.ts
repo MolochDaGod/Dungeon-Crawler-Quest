@@ -265,6 +265,18 @@ export const MODEL_PATHS = {
     mace: '/assets/models/weapons/Mace.glb',
     spellbook: '/assets/models/weapons/Spellbook.glb',
   },
+  // Asset pack textures
+  packTextures: {
+    crusadetown: '/assets/packs/crusadetown/texture/texture.png',
+    fabledtown: '/assets/packs/fabledtown/texture/Texture_MAp_ELfs.png',
+    legiontown: '/assets/packs/legiontown/TEXTURE/Texture_MAp.png',
+    bossgraveyard: '/assets/packs/bossgraveyard/texture/Texture_MAp_ruins.png',
+  },
+  // Ship models (pirate kit - glTF preferred)
+  ships: {
+    large: '/assets/packs/pirate-kit/Pirate Kit - Nov 2023/glTF/Ship_Large.gltf',
+    small: '/assets/packs/pirate-kit/Pirate Kit - Nov 2023/glTF/Ship_Small.gltf',
+  },
   textures: {
     tower: '/assets/textures/tower_texture.png',
     elf: '/assets/textures/elf_texture.png',

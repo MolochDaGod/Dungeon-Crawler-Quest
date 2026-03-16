@@ -32,10 +32,16 @@ export interface ZoneDef {
   connectedZoneIds: number[];
   npcPositions: ZoneSpawnPoint[];
   portalPositions: { x: number; y: number; targetZoneId: number }[];
+  /** Asset pack id for structures in this zone */
+  assetPack?: string;
+  /** Specific structure asset IDs to place in this zone */
+  structureAssets?: string[];
+  /** Island type for world map rendering */
+  islandType?: 'town' | 'port' | 'dungeon' | 'wilderness' | 'boss-arena' | 'village';
 }
 
-// Open world is 8000x8000 to give room for 8 distinct zones
-export const OPEN_WORLD_SIZE = 8000;
+// Open world expanded to 16000x16000 for island-based MMO with boats
+export const OPEN_WORLD_SIZE = 16000;
 
 export const ISLAND_ZONES: ZoneDef[] = [
   {
@@ -201,9 +207,210 @@ export const ISLAND_ZONES: ZoneDef[] = [
       { x: 5500, y: 7000, type: 'Skeleton', level: 18, respawnTime: 40, count: 5 },
       { x: 6500, y: 7200, type: 'Dragon', level: 22, respawnTime: 180, count: 1 },
     ],
-    connectedZoneIds: [3, 6],
+    connectedZoneIds: [3, 6, 8],
     npcPositions: [],
     portalPositions: [],
+    assetPack: 'bossgraveyard',
+    structureAssets: ['bg-ruin-1', 'bg-ruin-2', 'bg-ruin-3', 'bg-ruin-5', 'bg-ruin-8', 'bg-ruin-12', 'bg-ruin-15', 'bg-ruin-18', 'bg-ruin-21'],
+    islandType: 'boss-arena',
+  },
+
+  // ── New Island Zones (expanded world) ────────────────────────
+
+  {
+    id: 8,
+    name: 'Crusade Island',
+    bounds: { x: 9000, y: 2000, w: 2500, h: 2500 },
+    requiredLevel: 5,
+    isPvP: false,
+    isSafeZone: true,
+    terrainType: 'grass',
+    ambientColor: '#5a6a3a',
+    description: 'A fortified crusader stronghold. Faction vendors and trainers reside here.',
+    playerSpawns: [{ x: 10250, y: 3250 }],
+    monsterSpawns: [],
+    connectedZoneIds: [0, 9, 13],
+    npcPositions: [
+      { x: 10000, y: 3000 }, { x: 10500, y: 3000 }, { x: 10250, y: 2600 },
+      { x: 9800, y: 3500 }, { x: 10700, y: 3500 },
+    ],
+    portalPositions: [{ x: 9200, y: 3200, targetZoneId: 0 }],
+    assetPack: 'crusadetown',
+    structureAssets: [
+      'ct-fortress', 'ct-tower-01', 'ct-tower-03', 'ct-tower-05',
+      'ct-wall-01', 'ct-wall-02', 'ct-bridge', 'ct-barracks', 'ct-armory',
+      'ct-gates-1', 'ct-brazier', 'ct-firebell', 'ct-sentry',
+    ],
+    islandType: 'town',
+  },
+  {
+    id: 9,
+    name: 'Fabled Island',
+    bounds: { x: 12000, y: 4000, w: 2500, h: 2500 },
+    requiredLevel: 8,
+    isPvP: false,
+    isSafeZone: true,
+    terrainType: 'grass',
+    ambientColor: '#3a5a6a',
+    description: 'A mystical island of ancient towers and arcane knowledge.',
+    playerSpawns: [{ x: 13250, y: 5250 }],
+    monsterSpawns: [],
+    connectedZoneIds: [8, 10, 14],
+    npcPositions: [
+      { x: 13000, y: 5000 }, { x: 13500, y: 5000 }, { x: 13250, y: 4600 },
+      { x: 12800, y: 5400 },
+    ],
+    portalPositions: [{ x: 12200, y: 5200, targetZoneId: 8 }],
+    assetPack: 'fabledtown',
+    structureAssets: [
+      'ft-fortress', 'ft-tower-1', 'ft-tower-3', 'ft-tower-5',
+      'ft-wall-1', 'ft-bridge', 'ft-arsenal', 'ft-barracks',
+      'ft-brazier', 'ft-watchtower', 'ft-gates-1',
+    ],
+    islandType: 'town',
+  },
+  {
+    id: 10,
+    name: 'Legion Outpost',
+    bounds: { x: 9000, y: 7000, w: 2500, h: 2500 },
+    requiredLevel: 10,
+    isPvP: false,
+    isSafeZone: true,
+    terrainType: 'stone',
+    ambientColor: '#4a4a5a',
+    description: 'A military legion outpost. War drums echo across the stone walls.',
+    playerSpawns: [{ x: 10250, y: 8250 }],
+    monsterSpawns: [],
+    connectedZoneIds: [9, 11, 12],
+    npcPositions: [
+      { x: 10000, y: 8000 }, { x: 10500, y: 8000 }, { x: 10250, y: 7600 },
+      { x: 9800, y: 8500 }, { x: 10700, y: 8400 },
+    ],
+    portalPositions: [{ x: 9200, y: 8200, targetZoneId: 7 }],
+    assetPack: 'legiontown',
+    structureAssets: [
+      'lt-fortress', 'lt-tower-01', 'lt-tower-3', 'lt-tower-5',
+      'lt-wall-1', 'lt-bridge', 'lt-barracks', 'lt-arsenal',
+      'lt-drum', 'lt-brazier', 'lt-shed', 'lt-gates-1',
+    ],
+    islandType: 'town',
+  },
+  {
+    id: 11,
+    name: 'Pirate Cove',
+    bounds: { x: 12500, y: 8000, w: 3000, h: 2500 },
+    requiredLevel: 6,
+    isPvP: true,
+    isSafeZone: false,
+    terrainType: 'water',
+    ambientColor: '#1a3a5a',
+    description: 'A lawless pirate port. Ships dock here. PvP zone — trust no one.',
+    playerSpawns: [{ x: 14000, y: 9250 }],
+    monsterSpawns: [
+      { x: 13200, y: 8500, type: 'Skeleton', level: 6, respawnTime: 30, count: 3 },
+      { x: 14500, y: 8800, type: 'Spider', level: 7, respawnTime: 35, count: 2 },
+      { x: 13800, y: 9800, type: 'Skeleton', level: 8, respawnTime: 40, count: 3 },
+      { x: 15000, y: 9500, type: 'Orc Grunt', level: 9, respawnTime: 50, count: 2 },
+    ],
+    connectedZoneIds: [10, 12],
+    npcPositions: [
+      { x: 14000, y: 9000 }, { x: 13500, y: 9200 },
+    ],
+    portalPositions: [],
+    assetPack: 'pirate-kit',
+    structureAssets: [
+      'pk-ship-large', 'pk-ship-small', 'pk-dock', 'pk-dock-broken',
+      'pk-house-1', 'pk-house-2', 'pk-house-3', 'pk-sawmill',
+      'pk-cannon', 'pk-barrel', 'pk-chest-closed', 'pk-anchor',
+      'pk-cliff-1', 'pk-cliff-2', 'pk-palm-1', 'pk-palm-2', 'pk-palm-3',
+    ],
+    islandType: 'port',
+  },
+  {
+    id: 12,
+    name: 'Dungeon Depths',
+    bounds: { x: 9500, y: 11000, w: 2000, h: 2000 },
+    requiredLevel: 14,
+    isPvP: false,
+    isSafeZone: false,
+    terrainType: 'stone',
+    ambientColor: '#1a1a2a',
+    description: 'An underground dungeon complex. Dangerous monsters guard ancient treasure.',
+    playerSpawns: [{ x: 10500, y: 12000 }],
+    monsterSpawns: [
+      { x: 10000, y: 11500, type: 'Skeleton', level: 14, respawnTime: 30, count: 4 },
+      { x: 10800, y: 11300, type: 'Dark Mage', level: 15, respawnTime: 45, count: 2 },
+      { x: 10200, y: 12500, type: 'Golem', level: 16, respawnTime: 60, count: 2 },
+      { x: 11000, y: 12200, type: 'Lich', level: 18, respawnTime: 120, count: 1 },
+      { x: 10500, y: 11800, type: 'Skeleton', level: 15, respawnTime: 35, count: 5 },
+    ],
+    connectedZoneIds: [10, 11],
+    npcPositions: [{ x: 10500, y: 12800 }],
+    portalPositions: [{ x: 9600, y: 12000, targetZoneId: 10 }],
+    assetPack: 'modular-dungeon',
+    structureAssets: [
+      'md-floor', 'md-wall', 'md-wall-top', 'md-column', 'md-column-broken',
+      'md-entrance', 'md-stairs', 'md-barrel', 'md-bars', 'md-bones',
+      'md-chest', 'md-chest-gold', 'md-torch', 'md-torch-wall',
+      'md-candelabrum-tall', 'md-carpet', 'md-book-open',
+    ],
+    islandType: 'dungeon',
+  },
+  {
+    id: 13,
+    name: 'Graveyard of Titans',
+    bounds: { x: 12500, y: 1000, w: 2500, h: 2500 },
+    requiredLevel: 20,
+    isPvP: false,
+    isSafeZone: false,
+    terrainType: 'dirt',
+    ambientColor: '#2a1a1a',
+    description: 'Ancient ruins where fallen titans rest. The most powerful bosses dwell here.',
+    playerSpawns: [{ x: 13750, y: 2250 }],
+    monsterSpawns: [
+      { x: 13000, y: 1500, type: 'Golem', level: 20, respawnTime: 60, count: 3 },
+      { x: 14000, y: 1800, type: 'Dragon', level: 22, respawnTime: 120, count: 1 },
+      { x: 13500, y: 2500, type: 'Lich', level: 24, respawnTime: 150, count: 1 },
+      { x: 14500, y: 2200, type: 'Dragon', level: 25, respawnTime: 180, count: 1 },
+      { x: 13200, y: 3000, type: 'Golem', level: 22, respawnTime: 60, count: 4 },
+    ],
+    connectedZoneIds: [8, 14],
+    npcPositions: [],
+    portalPositions: [],
+    assetPack: 'bossgraveyard',
+    structureAssets: [
+      'bg-ruin-1', 'bg-ruin-2', 'bg-ruin-3', 'bg-ruin-4', 'bg-ruin-5',
+      'bg-ruin-6', 'bg-ruin-7', 'bg-ruin-8', 'bg-ruin-9', 'bg-ruin-10',
+      'bg-ruin-11', 'bg-ruin-12', 'bg-ruin-13', 'bg-ruin-14', 'bg-ruin-15',
+      'bg-ruin-16', 'bg-ruin-17', 'bg-ruin-18', 'bg-ruin-19', 'bg-ruin-20', 'bg-ruin-21',
+    ],
+    islandType: 'boss-arena',
+  },
+  {
+    id: 14,
+    name: 'Fisherman\'s Haven',
+    bounds: { x: 14500, y: 2000, w: 1500, h: 1500 },
+    requiredLevel: 3,
+    isPvP: false,
+    isSafeZone: true,
+    terrainType: 'water',
+    ambientColor: '#2a5a7a',
+    description: 'A quiet fishing village with a blacksmith, inn, and market stalls.',
+    playerSpawns: [{ x: 15250, y: 2750 }],
+    monsterSpawns: [],
+    connectedZoneIds: [9, 13],
+    npcPositions: [
+      { x: 15000, y: 2500 }, { x: 15400, y: 2500 }, { x: 15200, y: 2300 },
+      { x: 14800, y: 2800 },
+    ],
+    portalPositions: [{ x: 14600, y: 2700, targetZoneId: 9 }],
+    assetPack: 'medieval-village',
+    structureAssets: [
+      'mv-inn', 'mv-blacksmith', 'mv-house-1', 'mv-house-2', 'mv-house-3',
+      'mv-stable', 'mv-mill', 'mv-bell-tower', 'mv-well', 'mv-gazebo',
+      'mv-market-1', 'mv-market-2', 'mv-bonfire', 'mv-cart', 'mv-fence',
+    ],
+    islandType: 'village',
   },
 ];
 

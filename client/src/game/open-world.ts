@@ -467,6 +467,8 @@ const ZONE_RESOURCE_MAP: Record<string, string[]> = {
   water:  ['fishing', 'herbalism'],
   stone:  ['mining', 'scavenging'],
   dirt:   ['mining', 'logging', 'skinning'],
+  sand:   ['fishing', 'scavenging'],
+  ruins:  ['scavenging', 'mining'],
 };
 
 function generateResourceNodes(state: OpenWorldState): void {
