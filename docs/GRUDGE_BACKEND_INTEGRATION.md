@@ -330,3 +330,137 @@ async getMyNewData(): Promise<OSMyNewData> {
 | `dash.grudge-studio.com` | Dashboard, admin tools |
 | `grudgewarlords.com` | Game frontend |
 | `dungeon-crawler-quest.vercel.app` | This game (Vercel) |
+
+## Puter Cloud Services
+
+Puter.js adds a **serverless cloud layer** that supplements the Grudge backend. No API keys required — costs are handled by the user's Puter account ("User-Pays" model).
+
+### Setup
+
+Add the CDN script to your HTML (or `npm install @heyputer/puter.js`):
+
+```html
+<script src="https://js.puter.com/v2/"></script>
+```
+
+Import the wrapper module:
+
+```typescript
+import {
+  generateNPCDialogue,
+  syncPlayerToCloud,
+  loadPlayerFromCloud,
+  puterSignIn,
+  puterFetch,
+} from '@/game/puter-cloud';
+```
+
+### AI — NPC Dialogue & Lore Generation
+
+Puter provides free access to 200+ AI models (GPT-5, Claude, Gemini, DeepSeek, etc.) with zero API key setup.
+
+```typescript
+// Dynamic NPC dialogue
+const line = await generateNPCDialogue(
+  'Grimjaw',
+  'blacksmith in a besieged fortress',
+  'Player just defeated the Piglin warlord',
+);
+
+// Lore generation for items, zones, quests
+import { generateLore } from '@/game/puter-cloud';
+const lore = await generateLore('The Cursed Blade of Fabled Island', 60);
+
+// Voxel prompt generation for text-to-3D
+import { generateVoxelPrompt } from '@/game/puter-cloud';
+const prompt = await generateVoxelPrompt('undead pirate captain with glowing eyes');
+```
+
+### KV Store — NoSQL Cloud Persistence
+
+Use alongside localStorage for cloud-backed saves. No database setup needed.
+
+```typescript
+// Save all RPG systems to cloud (call every 30s or on events)
+await syncPlayerToCloud({
+  attributes: state.attributes,
+  equipment: state.equipment,
+  professions: state.professions,
+  resources: state.resources,
+});
+
+// Load from cloud at game init
+const cloudSave = await loadPlayerFromCloud();
+if (cloudSave) {
+  applyCloudSave(cloudSave);
+}
+
+// Simple key-value ops
+import { kvSave, kvLoad, kvIncrement } from '@/game/puter-cloud';
+await kvSave('player_settings', { musicVolume: 0.5 });
+const settings = await kvLoad<{ musicVolume: number }>('player_settings');
+await kvIncrement('total_kills', 1);
+```
+
+### Cloud Storage — Save Files & Replays
+
+```typescript
+import { cloudSaveFile, cloudLoadFile } from '@/game/puter-cloud';
+
+await cloudSaveFile('save_slot_1.json', JSON.stringify(gameState));
+const saved = await cloudLoadFile('save_slot_1.json');
+```
+
+### Auth — Puter Identity
+
+```typescript
+// Sign in with Puter (can layer on top of Discord/Web3Auth)
+const user = await puterSignIn();
+console.log(user.username, user.uuid);
+```
+
+### CORS-Free Networking
+
+Fetch ObjectStore or external APIs without CORS issues:
+
+```typescript
+const resp = await puterFetch('https://molochdagod.github.io/ObjectStore/api/v1/weapons.json');
+const data = await resp.json();
+```
+
+### Static Hosting — Deploy to *.puter.site
+
+```typescript
+import { deployToSite } from '@/game/puter-cloud';
+const url = await deployToSite('grudge-warlords', 'grudge-warlords/dist');
+// → https://grudge-warlords.puter.site
+```
+
+### Recommended Architecture Stack
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Game Client (Three.js / Vite / TypeScript)                 │
+├─────────────┬──────────────┬──────────────┬─────────────────┤
+│ ObjectStore │ Grudge       │ Puter Cloud  │ Vercel          │
+│ (Game Data) │ Backend      │ (AI + KV +   │ (Primary        │
+│ Static JSON │ (Auth +      │  Storage)    │  Hosting)       │
+│ GitHub Pages│  Persistence)│ No API keys  │ Auto-deploy     │
+│ Read-only   │ grudge-studio│ User-pays    │ CDN + Edge      │
+└─────────────┴──────────────┴──────────────┴─────────────────┘
+```
+
+**When to use each:**
+
+- **ObjectStore** — Static game definitions (weapons, skills, attributes, professions)
+- **Grudge Backend** — Player identity (Discord/Web3Auth), authoritative saves, multiplayer
+- **Puter Cloud** — AI features (NPC dialogue, lore), cloud KV backup saves, CORS-free fetch, quick static hosting
+- **Vercel** — Primary game hosting, auto-deploy from GitHub, edge CDN
+
+### Best Practices
+
+1. **Local-first, cloud-sync**: Always save to localStorage first, then sync to both Grudge backend and Puter KV
+2. **AI is supplementary**: All AI features must have static fallbacks — game works without Puter
+3. **Batch cloud operations**: Don't call `syncPlayerToCloud()` every frame — use 30s intervals or meaningful events
+4. **Check availability**: Use `isPuterAvailable()` before any Puter call
+5. **Use the right AI model**: `gpt-4.1-nano` for quick NPC barks, `claude-sonnet-4-6` for lore, `o4-mini` for complex logic
