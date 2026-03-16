@@ -89,6 +89,14 @@ const ENEMY_TEMPLATES: Record<string, {
   Golem:      { hp: 300, atk: 25, def: 20, spd: 30,  rng: 60,  color: '#a16207', xp: 60,  gold: 35,  isBoss: false, size: 16 },
   Dragon:     { hp: 800, atk: 40, def: 18, spd: 45,  rng: 150, color: '#dc2626', xp: 200, gold: 150, isBoss: true,  size: 24 },
   Lich:       { hp: 600, atk: 35, def: 12, spd: 40,  rng: 250, color: '#6b21a8', xp: 180, gold: 120, isBoss: true,  size: 20 },
+  // ── Dragons & Wyrms (T5-T7) ──
+  'Fire Drake':     { hp: 703,  atk: 30, def: 14, spd: 55,  rng: 120, color: '#ff6b2b', xp: 120, gold: 85,  isBoss: false, size: 18 },
+  'Frost Wyrm':     { hp: 856,  atk: 35, def: 20, spd: 42,  rng: 140, color: '#4fc3f7', xp: 160, gold: 100, isBoss: false, size: 22 },
+  'Shadow Dragon':  { hp: 1030, atk: 45, def: 25, spd: 48,  rng: 160, color: '#6a1b9a', xp: 280, gold: 200, isBoss: true,  size: 28 },
+  'Boar Dragon':    { hp: 886,  atk: 40, def: 28, spd: 35,  rng: 90,  color: '#5d4037', xp: 200, gold: 140, isBoss: false, size: 24 },
+  // ── Piglin Forces ──
+  'Piglin Grunt':   { hp: 200,  atk: 20, def: 10, spd: 48,  rng: 60,  color: '#c6a700', xp: 45,  gold: 25,  isBoss: false, size: 11 },
+  'Piglin Brute':   { hp: 350,  atk: 28, def: 16, spd: 42,  rng: 70,  color: '#8d6e00', xp: 75,  gold: 40,  isBoss: false, size: 14 },
 };
 
 // ── Interfaces ─────────────────────────────────────────────────
