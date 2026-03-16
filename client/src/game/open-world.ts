@@ -34,6 +34,29 @@ import {
   onZoneDiscovered, onMonsterKilled, onPlayerLevelUp, onPlayerDeath,
   updatePlayTime, getReputationRank, getReputationColor, ProgressEvent
 } from './player-progress';
+import {
+  WeaponSkillLoadout, buildWeaponLoadout, getAbilitiesWithWeapon,
+  getOSWeaponTypeKey, saveLoadout, applySavedSelections, buildAbilitiesFromLoadout
+} from './weapon-skills';
+import { HERO_WEAPONS } from './types';
+import {
+  PlayerAttributes, loadAttributes, saveAttributes, grantLevelUpPoints,
+  applyAttributeBonus, computeDerivedStats, allocatePoint, AttributeId,
+  getAttributeSummary, AttributeSummary
+} from './attributes';
+import {
+  PlayerProfessions, loadProfessions, saveProfessions,
+  performHarvest, gainProfessionXp, addResource,
+  ResourceInventory, loadResourceInventory, saveResourceInventory,
+  getProfessionSummaries, ProfessionSummaryItem,
+  GATHERING_PROFESSIONS
+} from './professions-system';
+import {
+  PlayerEquipment, loadEquipment, saveEquipment,
+  EquipmentBag, loadEquipmentBag, saveEquipmentBag,
+  equipItem, computeEquipmentStats, computeSetBonuses,
+  generateRandomEquipment, addToBag, SetBonus
+} from './equipment';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -170,9 +193,20 @@ export interface OWNPC {
   id: number;
   x: number; y: number;
   name: string;
-  type: 'merchant' | 'quest' | 'trainer';
+  type: 'merchant' | 'quest' | 'trainer' | 'crafter';
   zoneId: number;
   facing: number;
+}
+
+// Resource node for harvesting
+export interface OWResourceNode {
+  id: number;
+  x: number; y: number;
+  professionId: string;  // gathering profession: mining, logging, etc.
+  tier: number;
+  depleted: boolean;
+  respawnTimer: number;
+  zoneId: number;
 }
 
 // Respawn queue for dead spawn points
@@ -207,6 +241,21 @@ export interface OpenWorldState {
   playerProgress: PlayerProgress;
   pendingProgressEvents: ProgressEvent[];
   spawnRespawns: SpawnRespawn[];
+
+  // Weapon-based skill system
+  weaponLoadout: WeaponSkillLoadout | null;
+  weaponLoadoutReady: boolean;
+
+  // Attributes system
+  playerAttributes: PlayerAttributes;
+
+  // RPG systems
+  playerProfessions: PlayerProfessions;
+  resourceInventory: ResourceInventory;
+  playerEquipment: PlayerEquipment;
+  equipmentBag: EquipmentBag;
+  resourceNodes: OWResourceNode[];
+  harvestCooldown: number;
 
   // Terrain cache (only tiles near player are generated)
   terrainCache: Map<string, DungeonTileVoxelType>;
@@ -252,6 +301,13 @@ export interface OWHudState {
   worldBossName: string;
   worldBossHp: number;
   worldBossMaxHp: number;
+  // Weapon skill info
+  abilityNames: string[];
+  abilityDescriptions: string[];
+  weaponType: string;
+  weaponLoadoutReady: boolean;
+  // Attributes
+  attributeSummary: AttributeSummary;
 }
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -285,7 +341,9 @@ function getTerrainForPosition(wx: number, wy: number): DungeonTileVoxelType {
 
 export function createOpenWorldState(heroId: number): OpenWorldState {
   const hd = HEROES.find(h => h.id === heroId) || HEROES[0];
-  const stats = heroStatsAtLevel(hd, 1);
+  const baseStats = heroStatsAtLevel(hd, 1);
+  const playerAttrs = loadAttributes(hd.heroClass);
+  const stats = applyAttributeBonus(baseStats, playerAttrs, hd.heroClass);
 
   // Start in the Starting Village
   const startZone = ISLAND_ZONES[0];
@@ -339,17 +397,50 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     playerProgress: loadPlayerProgress(),
     pendingProgressEvents: [],
     spawnRespawns: [],
+    weaponLoadout: null,
+    weaponLoadoutReady: false,
+    playerAttributes: playerAttrs,
+    playerProfessions: loadProfessions(),
+    resourceInventory: loadResourceInventory(),
+    playerEquipment: loadEquipment(),
+    equipmentBag: loadEquipmentBag(),
+    resourceNodes: [],
+    harvestCooldown: 0,
     terrainCache: new Map(),
   };
 
-  // Generate NPCs from zone definitions
+  // Generate NPCs and resource nodes from zone definitions
   generateNPCs(state);
+  generateResourceNodes(state);
 
   // Initial zone discovery
   const enterEvents = onZoneDiscovered(state.playerProgress, startZone.id, startZone.name);
   state.pendingProgressEvents.push(...enterEvents);
 
+  // Initialize weapon loadout asynchronously
+  initWeaponLoadout(state, hd);
+
   return state;
+}
+
+async function initWeaponLoadout(state: OpenWorldState, hd: HeroData): Promise<void> {
+  try {
+    const raceClass = `${hd.race}_${hd.heroClass}`;
+    const weaponType = (HERO_WEAPONS as Record<string, string>)[raceClass]
+      || (HERO_WEAPONS as Record<string, string>)[hd.heroClass]
+      || 'swords';
+    const osKey = getOSWeaponTypeKey(weaponType);
+    const weaponId = hd.equippedWeaponId || null;
+    const loadout = await buildWeaponLoadout(osKey, weaponId, hd.race, hd.heroClass);
+    if (loadout) {
+      applySavedSelections(loadout);
+      state.weaponLoadout = loadout;
+      state.weaponLoadoutReady = true;
+      state.killFeed.push({ text: `Weapon skills loaded: ${weaponType}`, color: '#60a5fa', time: state.gameTime });
+    }
+  } catch {
+    // fallback to class abilities — already the default
+  }
 }
 
 function generateNPCs(state: OpenWorldState): void {
@@ -364,6 +455,107 @@ function generateNPCs(state: OpenWorldState): void {
         zoneId: zone.id,
         facing: Math.random() * Math.PI * 2,
       });
+    }
+  }
+}
+
+// ── Resource Nodes ─────────────────────────────────────────────
+
+const ZONE_RESOURCE_MAP: Record<string, string[]> = {
+  grass:  ['herbalism', 'logging'],
+  jungle: ['logging', 'herbalism', 'skinning'],
+  water:  ['fishing', 'herbalism'],
+  stone:  ['mining', 'scavenging'],
+  dirt:   ['mining', 'logging', 'skinning'],
+};
+
+function generateResourceNodes(state: OpenWorldState): void {
+  for (const zone of ISLAND_ZONES) {
+    if (zone.isSafeZone) continue;
+    const profTypes = ZONE_RESOURCE_MAP[zone.terrainType] || ['mining'];
+    const tier = Math.max(1, Math.min(8, Math.ceil(zone.requiredLevel / 3)));
+    const nodeCount = 4 + Math.floor(zone.bounds.w * zone.bounds.h / 1000000);
+
+    for (let i = 0; i < nodeCount; i++) {
+      const b = zone.bounds;
+      const x = b.x + 100 + Math.random() * (b.w - 200);
+      const y = b.y + 100 + Math.random() * (b.h - 200);
+      const profId = profTypes[i % profTypes.length];
+      state.resourceNodes.push({
+        id: state.nextId++,
+        x, y,
+        professionId: profId,
+        tier,
+        depleted: false,
+        respawnTimer: 0,
+        zoneId: zone.id,
+      });
+    }
+  }
+}
+
+/** Handle E key harvesting interaction */
+export function handleOWHarvest(state: OpenWorldState): void {
+  if (state.harvestCooldown > 0 || state.player.dead) return;
+  const p = state.player;
+
+  // Find nearest non-depleted resource node within range
+  let nearest: OWResourceNode | null = null;
+  let nearestDist = 80;
+  for (const node of state.resourceNodes) {
+    if (node.depleted) continue;
+    const d = distXY(p, node);
+    if (d < nearestDist) { nearestDist = d; nearest = node; }
+  }
+  if (!nearest) return;
+
+  const result = performHarvest(nearest.professionId, nearest.tier, state.playerProfessions);
+  if (!result) {
+    addText(state, p.x, p.y - 30, 'Too low level!', '#ef4444', 12);
+    return;
+  }
+
+  // Add resources to inventory
+  for (const r of result.resources) {
+    addResource(state.resourceInventory, r.name, r.tier, r.quantity);
+    addText(state, nearest.x, nearest.y - 20, `+${r.quantity} ${r.name}`, '#ffd700', 12);
+  }
+
+  // Grant gathering XP
+  const levelUp = gainProfessionXp(state.playerProfessions, 'gathering', nearest.professionId, result.xpGained);
+  addText(state, p.x, p.y - 15, `+${result.xpGained} XP`, '#60a5fa', 10);
+  if (levelUp.leveled) {
+    state.killFeed.push({ text: `${nearest.professionId} leveled to ${levelUp.newLevel}!`, color: '#ffd700', time: state.gameTime });
+  }
+
+  // Equipment drop chance
+  if (result.gearDrop) {
+    const drop = generateRandomEquipment(nearest.tier);
+    addToBag(state.equipmentBag, drop);
+    addText(state, nearest.x, nearest.y - 35, `GEAR: ${drop.name}!`, '#a855f7', 14);
+    state.killFeed.push({ text: `Found equipment: ${drop.name}`, color: '#a855f7', time: state.gameTime });
+    saveEquipmentBag(state.equipmentBag);
+  }
+
+  // Deplete node
+  nearest.depleted = true;
+  nearest.respawnTimer = 30 + nearest.tier * 10;
+  state.harvestCooldown = 1.5;
+  spawnParticles(state, nearest.x, nearest.y, '#ffd700', 8);
+
+  // Save
+  saveProfessions(state.playerProfessions);
+  saveResourceInventory(state.resourceInventory);
+}
+
+function updateResourceNodes(state: OpenWorldState, dt: number): void {
+  state.harvestCooldown = Math.max(0, state.harvestCooldown - dt);
+  for (const node of state.resourceNodes) {
+    if (node.depleted) {
+      node.respawnTimer -= dt;
+      if (node.respawnTimer <= 0) {
+        node.depleted = false;
+      }
     }
   }
 }
@@ -481,7 +673,9 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
 
   // Player update
   p.animTimer += dt;
-  p.mp = Math.min(p.maxMp, p.mp + dt * 3);
+  // Mana regen boosted by WIS
+  const derived = computeDerivedStats(state.playerAttributes);
+  p.mp = Math.min(p.maxMp, p.mp + dt * derived.manaRegen);
 
   const effectResult = updateStatusEffects(p as any as CombatEntity, dt);
   if (effectResult.damage > 0) {
@@ -524,6 +718,14 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   // Ability cooldowns
   for (let i = 0; i < p.abilityCooldowns.length; i++) {
     if (p.abilityCooldowns[i] > 0) p.abilityCooldowns[i] -= dt;
+  }
+
+  // Resource nodes
+  updateResourceNodes(state, dt);
+
+  // E key harvesting
+  if (keys.has('e')) {
+    handleOWHarvest(state);
   }
 
   // Spawn enemies near player
@@ -705,9 +907,23 @@ function killEnemy(state: OpenWorldState, enemy: OWEnemy): void {
     });
   }
 
+  // Equipment drop (bosses guaranteed, regular enemies 10-15%)
+  const dropChance = enemy.isBoss ? 1.0 : 0.10 + enemy.level * 0.003;
+  if (Math.random() < dropChance) {
+    const dropTier = Math.max(1, Math.min(8, Math.ceil(enemy.level / 3)));
+    const drop = generateRandomEquipment(dropTier);
+    addToBag(state.equipmentBag, drop);
+    addText(state, enemy.x, enemy.y - 30, drop.name, '#a855f7', 14);
+    state.killFeed.push({ text: `Loot: ${drop.name} (T${dropTier})`, color: '#a855f7', time: state.gameTime });
+    saveEquipmentBag(state.equipmentBag);
+  }
+
+  // Skinning XP from kills
+  const skinXp = Math.floor(enemy.level * 5);
+  gainProfessionXp(state.playerProfessions, 'gathering', 'skinning', skinXp);
+
   // Check world boss
   if (state.worldState.worldBoss.active && enemy.isBoss) {
-    // If near world boss location, count as world boss damage
     const wb = state.worldState.worldBoss;
     if (distXY(enemy, wb) < 200) {
       defeatWorldBoss(state.worldState);
@@ -786,7 +1002,8 @@ function checkLevelUp(state: OpenWorldState): void {
     p.xp -= xpForLevel(p.level);
     p.level++;
     const hd = HEROES[p.heroDataId];
-    const stats = heroStatsAtLevel(hd, p.level);
+    const baseStats = heroStatsAtLevel(hd, p.level);
+    const stats = applyAttributeBonus(baseStats, state.playerAttributes, hd.heroClass);
     const oldMaxHp = p.maxHp;
     p.maxHp = stats.hp + totalItemStat(p, 'hp');
     p.hp = Math.min(p.hp + (p.maxHp - oldMaxHp), p.maxHp);
@@ -796,9 +1013,13 @@ function checkLevelUp(state: OpenWorldState): void {
     p.maxMp = stats.mp + totalItemStat(p, 'mp');
     p.mp = Math.min(p.mp + 20, p.maxMp);
 
+    // Grant attribute points on level up
+    grantLevelUpPoints(state.playerAttributes);
+    saveAttributes(state.playerAttributes);
+
     addText(state, p.x, p.y - 40, `LEVEL ${p.level}!`, '#ffd700', 20);
     spawnParticles(state, p.x, p.y, '#ffd700', 20);
-    state.killFeed.push({ text: `Reached level ${p.level}!`, color: '#ffd700', time: state.gameTime });
+    state.killFeed.push({ text: `Reached level ${p.level}! (+3 attribute points)`, color: '#ffd700', time: state.gameTime });
 
     const progressEvents = onPlayerLevelUp(state.playerProgress, p.level);
     state.pendingProgressEvents.push(...progressEvents);
@@ -822,7 +1043,7 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
   if (p.dead || isStunned(p as any) || isSilenced(p as any)) return;
 
   const hd = HEROES[p.heroDataId];
-  const abilities = getHeroAbilities(hd.race, hd.heroClass);
+  const abilities = getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass);
   if (!abilities || !abilities[abilityIndex]) return;
 
   const ab = abilities[abilityIndex];
@@ -986,7 +1207,7 @@ export function startOWTargeting(state: OpenWorldState, abilityIndex: number): v
   const p = state.player;
   if (p.dead) return;
   const hd = HEROES[p.heroDataId];
-  const abilities = getHeroAbilities(hd.race, hd.heroClass);
+  const abilities = getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass);
   if (!abilities || !abilities[abilityIndex]) return;
   const ab = abilities[abilityIndex];
   if (p.abilityCooldowns[abilityIndex] > 0 || p.mp < ab.manaCost) return;
@@ -1014,6 +1235,20 @@ export function confirmOWTargeting(state: OpenWorldState): void {
 export function cancelOWTargeting(state: OpenWorldState): void {
   state.targeting.active = false;
   state.targeting.abilityIndex = -1;
+}
+
+/** Swap weapon and rebuild skill loadout */
+export async function swapOWWeapon(state: OpenWorldState, newWeaponType: string, weaponId: string | null): Promise<void> {
+  const hd = HEROES[state.player.heroDataId];
+  const osKey = getOSWeaponTypeKey(newWeaponType);
+  const loadout = await buildWeaponLoadout(osKey, weaponId, hd.race, hd.heroClass);
+  if (loadout) {
+    applySavedSelections(loadout);
+    state.weaponLoadout = loadout;
+    state.weaponLoadoutReady = true;
+    saveLoadout(loadout);
+    state.killFeed.push({ text: `Weapon changed: ${newWeaponType}`, color: '#60a5fa', time: state.gameTime });
+  }
 }
 
 // ── VFX Helpers ────────────────────────────────────────────────
@@ -1091,10 +1326,38 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
     worldBossName: ws.worldBoss.name,
     worldBossHp: ws.worldBoss.hp,
     worldBossMaxHp: ws.worldBoss.maxHp,
+    // Weapon skill info
+    abilityNames: getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass).map(a => a.name),
+    abilityDescriptions: getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass).map(a => a.description || ''),
+    weaponType: state.weaponLoadout?.weaponType || '',
+    weaponLoadoutReady: state.weaponLoadoutReady,
+    // Attribute info
+    attributeSummary: getAttributeSummary(state.playerAttributes),
   };
 }
 
-// ── Renderer ───────────────────────────────────────────────────
+/** Allocate an attribute point from the open world */
+export function allocateOWAttribute(state: OpenWorldState, attrId: AttributeId): boolean {
+  const success = allocatePoint(state.playerAttributes, attrId);
+  if (success) {
+    // Recalc player stats with new attribute values
+    const hd = HEROES[state.player.heroDataId];
+    const baseStats = heroStatsAtLevel(hd, state.player.level);
+    const stats = applyAttributeBonus(baseStats, state.playerAttributes, hd.heroClass);
+    const p = state.player;
+    const oldMaxHp = p.maxHp;
+    p.maxHp = stats.hp + totalItemStat(p, 'hp');
+    p.hp = Math.min(p.hp + (p.maxHp - oldMaxHp), p.maxHp);
+    p.atk = stats.atk + totalItemStat(p, 'atk');
+    p.def = stats.def + totalItemStat(p, 'def');
+    p.spd = stats.spd + totalItemStat(p, 'spd');
+    p.maxMp = stats.mp + totalItemStat(p, 'mp');
+    saveAttributes(state.playerAttributes);
+  }
+  return success;
+}
+
+// ── Renderer ─
 
 // Zone terrain color palettes
 const ZONE_FLOOR_COLORS: Record<string, { base: string; accent: string }> = {

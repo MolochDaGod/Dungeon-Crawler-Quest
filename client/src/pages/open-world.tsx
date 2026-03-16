@@ -7,8 +7,10 @@ import {
   OpenWorldState, OWHudState,
   createOpenWorldState, updateOpenWorld, getOWHudState,
   OpenWorldRenderer, handleOWAbility, handleOWAttack,
-  updateOWMouseWorld, startOWTargeting, confirmOWTargeting, cancelOWTargeting
+  updateOWMouseWorld, startOWTargeting, confirmOWTargeting, cancelOWTargeting,
+  allocateOWAttribute
 } from '@/game/open-world';
+import { AttributeId } from '@/game/attributes';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
 import { ProgressEvent } from '@/game/player-progress';
 import { loadKeybindings, matchesKeyDown, KeybindAction } from '@/game/keybindings';
@@ -24,6 +26,7 @@ export default function OpenWorldPage() {
   const [hud, setHud] = useState<OWHudState | null>(null);
   const [notifications, setNotifications] = useState<{ text: string; color: string; time: number }[]>([]);
   const [zoneBanner, setZoneBanner] = useState<string | null>(null);
+  const [showCharPanel, setShowCharPanel] = useState(false);
   const zoneBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
@@ -121,6 +124,7 @@ export default function OpenWorldPage() {
       else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) { e.preventDefault(); tryTargetOrCast(3); }
       if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handleOWAttack(state);
       if (key === 'i') state.showInventory = !state.showInventory;
+      if (key === 'c') setShowCharPanel(prev => !prev);
       if (key === '=') minimapZoomIn(minimapRef.current);
       if (key === '-') minimapZoomOut(minimapRef.current);
     };
@@ -176,6 +180,9 @@ export default function OpenWorldPage() {
   }, []);
 
   const heroData = HEROES.find(h => h.id === heroId);
+  // Use weapon-based ability names from HUD when available
+  const abilityNames = hud?.abilityNames || [];
+  const abilityDescs = hud?.abilityDescriptions || [];
   const abilities = heroData ? getHeroAbilities(heroData.race, heroData.heroClass) : [];
 
   return (
@@ -391,9 +398,11 @@ export default function OpenWorldPage() {
 
                 {/* Abilities */}
                 <div className="flex items-center" style={{ gap: 4 }}>
-                  {abilities.map((ab, i) => {
+                {abilities.map((ab, i) => {
                     const cd = hud.abilityCooldowns[i] || 0;
                     const onCd = cd > 0;
+                    const dispName = abilityNames[i] || ab.name;
+                    const dispDesc = abilityDescs[i] || ab.description;
                     return (
                       <button
                         key={i}
@@ -407,18 +416,18 @@ export default function OpenWorldPage() {
                           cursor: 'pointer',
                         }}
                         onClick={() => stateRef.current && handleOWAbility(stateRef.current, i)}
-                        title={`${ab.name}: ${ab.description}`}
+                        title={`${dispName}: ${dispDesc}`}
                       >
-                        {ABILITY_ICONS[ab.name] ? (
+                        {ABILITY_ICONS[dispName] || ABILITY_ICONS[ab.name] ? (
                           <img
-                            src={ABILITY_ICONS[ab.name]}
-                            alt={ab.name}
+                            src={ABILITY_ICONS[dispName] || ABILITY_ICONS[ab.name]}
+                            alt={dispName}
                             className="absolute inset-0 w-full h-full object-cover"
                             style={{ filter: onCd ? 'grayscale(100%) brightness(0.4)' : 'none' }}
                             draggable={false}
                           />
                         ) : (
-                          <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{ab.name.substring(0, 2)}</span>
+                          <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{dispName.substring(0, 2)}</span>
                         )}
                         <span className="absolute text-[9px] font-bold z-10" style={{ top: 2, left: 4, color: '#ddd', textShadow: '0 0 3px #000, 0 0 3px #000' }}>{ab.key}</span>
                         {onCd && (
@@ -486,6 +495,91 @@ export default function OpenWorldPage() {
               </div>
             </div>
           </div>
+
+          {/* Character Panel (C key) */}
+          {showCharPanel && hud.attributeSummary && (
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
+              style={{
+                width: 420,
+                background: 'linear-gradient(to bottom, rgba(15,10,5,0.98), rgba(8,4,0,0.98))',
+                border: '2px solid #c5a059',
+                borderRadius: 8,
+                padding: 16,
+                boxShadow: '0 0 40px rgba(0,0,0,0.9)',
+                maxHeight: '80vh',
+                overflowY: 'auto',
+              }}
+            >
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-black text-[#c5a059]">Character</h2>
+                <button
+                  className="text-gray-400 hover:text-white text-lg cursor-pointer"
+                  onClick={() => setShowCharPanel(false)}
+                >×</button>
+              </div>
+
+              {/* Attributes */}
+              <div className="mb-3">
+                <div className="text-xs font-bold text-[#c5a059] mb-1 border-b border-[#333] pb-1">
+                  ATTRIBUTES {hud.attributeSummary.unspentPoints > 0 && <span className="text-green-400">({hud.attributeSummary.unspentPoints} pts)</span>}
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  {hud.attributeSummary.attrs.map(attr => (
+                    <div key={attr.id} className="flex items-center justify-between px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                      <span className="text-[10px] font-bold" style={{ color: attr.color }}>{attr.short}</span>
+                      <span className="text-[10px] text-white font-bold">{attr.total}</span>
+                      {hud.attributeSummary.unspentPoints > 0 && (
+                        <button
+                          className="text-[10px] text-green-400 font-bold hover:text-green-300 cursor-pointer px-1"
+                          onClick={() => {
+                            if (stateRef.current) {
+                              allocateOWAttribute(stateRef.current, attr.id as AttributeId);
+                            }
+                          }}
+                        >+</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Derived Stats */}
+              <div className="mb-3">
+                <div className="text-xs font-bold text-[#c5a059] mb-1 border-b border-[#333] pb-1">DERIVED STATS</div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px]">
+                  <div className="text-gray-400">Bonus HP: <span className="text-green-400 font-bold">{hud.attributeSummary.derived.bonusHp}</span></div>
+                  <div className="text-gray-400">Bonus MP: <span className="text-blue-400 font-bold">{hud.attributeSummary.derived.bonusMp}</span></div>
+                  <div className="text-gray-400">Phys ATK: <span className="text-red-400 font-bold">+{hud.attributeSummary.derived.bonusAtk}</span></div>
+                  <div className="text-gray-400">Mag ATK: <span className="text-purple-400 font-bold">+{hud.attributeSummary.derived.bonusMagicDmg}</span></div>
+                  <div className="text-gray-400">DEF: <span className="text-blue-400 font-bold">+{hud.attributeSummary.derived.bonusDef}</span></div>
+                  <div className="text-gray-400">SPD: <span className="text-green-400 font-bold">+{hud.attributeSummary.derived.bonusSpd}</span></div>
+                  <div className="text-gray-400">Crit: <span className="text-yellow-400 font-bold">{hud.attributeSummary.derived.critChance.toFixed(1)}%</span></div>
+                  <div className="text-gray-400">Evasion: <span className="text-teal-400 font-bold">{hud.attributeSummary.derived.evasionChance.toFixed(1)}%</span></div>
+                  <div className="text-gray-400">Heal Pwr: <span className="text-emerald-400 font-bold">x{hud.attributeSummary.derived.healPower.toFixed(2)}</span></div>
+                  <div className="text-gray-400">Ability: <span className="text-orange-400 font-bold">x{hud.attributeSummary.derived.abilityBonus.toFixed(2)}</span></div>
+                </div>
+              </div>
+
+              {/* Weapon Skills */}
+              {hud.weaponLoadoutReady && (
+                <div className="mb-3">
+                  <div className="text-xs font-bold text-[#c5a059] mb-1 border-b border-[#333] pb-1">WEAPON SKILLS ({hud.weaponType})</div>
+                  <div className="flex flex-col gap-0.5">
+                    {abilityNames.map((name, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[10px] px-2 py-0.5" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                        <span className="text-[#c5a059] font-bold w-3">{i + 1}</span>
+                        <span className="text-white font-bold">{name}</span>
+                        <span className="text-gray-500 flex-1 truncate">{abilityDescs[i]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-[9px] text-gray-600 text-center">Press C to close</div>
+            </div>
+          )}
 
           {/* Game Over */}
           {hud.gameOver && (

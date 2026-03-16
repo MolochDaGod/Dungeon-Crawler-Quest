@@ -14,6 +14,7 @@ export interface HeroData {
   mp: number;
   quote: string;
   isSecret?: boolean;
+  equippedWeaponId?: string;
 }
 
 export interface AbilityDef {
@@ -826,8 +827,26 @@ export const ABILITY_ICONS: Record<string, string> = {
   'Smoke Bomb': '/assets/abilities/shadow_step.png',
 };
 
+// ObjectStore weapon skill names get generic icons by pattern
 export function getAbilityIconPath(abilityName: string): string | null {
-  return ABILITY_ICONS[abilityName] || null;
+  if (ABILITY_ICONS[abilityName]) return ABILITY_ICONS[abilityName];
+  // Pattern match for weapon skills from ObjectStore
+  const lower = abilityName.toLowerCase();
+  if (lower.includes('slash') || lower.includes('strike') || lower.includes('chop')) return '/assets/abilities/blade_storm.png';
+  if (lower.includes('thrust') || lower.includes('impale') || lower.includes('pierce')) return '/assets/abilities/piercing_strike.png';
+  if (lower.includes('parry') || lower.includes('block') || lower.includes('guard') || lower.includes('shield')) return '/assets/abilities/rally.png';
+  if (lower.includes('dodge') || lower.includes('roll') || lower.includes('dash') || lower.includes('step') || lower.includes('vault') || lower.includes('leap')) return '/assets/abilities/wind_walk.png';
+  if (lower.includes('shot') || lower.includes('bolt') || lower.includes('arrow') || lower.includes('snipe')) return '/assets/abilities/power_shot.png';
+  if (lower.includes('fire') || lower.includes('flame') || lower.includes('burn') || lower.includes('inferno')) return '/assets/abilities/fireball.png';
+  if (lower.includes('frost') || lower.includes('ice') || lower.includes('blizzard') || lower.includes('freeze')) return '/assets/abilities/frost_nova.png';
+  if (lower.includes('heal') || lower.includes('rejuv') || lower.includes('regen')) return '/assets/abilities/rally.png';
+  if (lower.includes('whirl') || lower.includes('spin') || lower.includes('cleave') || lower.includes('sweep')) return '/assets/abilities/blade_storm.png';
+  if (lower.includes('fear') || lower.includes('howl') || lower.includes('cry')) return '/assets/abilities/howl.png';
+  if (lower.includes('trap') || lower.includes('snare') || lower.includes('root')) return '/assets/abilities/trap.png';
+  if (lower.includes('stealth') || lower.includes('vanish') || lower.includes('invisible') || lower.includes('shadow')) return '/assets/abilities/shadow_step.png';
+  if (lower.includes('storm') || lower.includes('rain') || lower.includes('volley') || lower.includes('barrage')) return '/assets/abilities/storm_of_arrows.png';
+  if (lower.includes('meteor') || lower.includes('cataclysm') || lower.includes('explosion')) return '/assets/abilities/meteor.png';
+  return null;
 }
 
 export function getPortraitPath(race: string, heroClass: string, heroName?: string): string {
