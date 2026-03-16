@@ -11,6 +11,7 @@ import {
 import { VoxelRenderer, TerrainType } from './voxel';
 import { SpriteEffectSystem, SpriteEffectType } from './sprite-effects';
 import { globalAnimDirector } from './voxel-motion';
+import { loadMapData, MapData } from './map-data';
 import {
   StatusEffect, StatusEffectType, updateStatusEffects, applyStatusEffect,
   isStunned, isRooted, isSilenced, getSpeedMultiplier,
@@ -190,6 +191,9 @@ function generateDecorations(): { x: number; y: number; type: string; seed: numb
 }
 
 export function createInitialState(playerHeroId: number, playerTeam: number): MobaState {
+  // Load saved map from admin editor if available
+  const savedMap = loadMapData();
+
   initTowerPositions();
 
   const state: MobaState = {
@@ -213,8 +217,8 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     showShop: false,
     showScoreboard: false,
     killFeed: [],
-    terrainMap: generateTerrainMap(),
-    decorations: generateDecorations(),
+    terrainMap: savedMap ? savedMap.terrain : generateTerrainMap(),
+    decorations: savedMap ? savedMap.decorations.map(d => ({ x: d.x, y: d.y, type: d.type, seed: d.seed })) : generateDecorations(),
     jungleCamps: [],
     cursorMode: 'default',
     hoveredEntityId: null,
@@ -266,7 +270,7 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
   state.nexuses.push({ id: state.nextEntityId++, x: BASE_POSITIONS[0].x, y: BASE_POSITIONS[0].y, team: 0, hp: 3000, maxHp: 3000, dead: false, destroyed: false });
   state.nexuses.push({ id: state.nextEntityId++, x: BASE_POSITIONS[1].x, y: BASE_POSITIONS[1].y, team: 1, hp: 3000, maxHp: 3000, dead: false, destroyed: false });
 
-  createJungleCamps(state);
+  createJungleCamps(state, savedMap);
 
   return state;
 }
@@ -349,8 +353,11 @@ const JUNGLE_CAMP_POSITIONS: { x: number; y: number; type: 'small' | 'medium' | 
   { x: 2800, y: 800, type: 'small' },
 ];
 
-function createJungleCamps(state: MobaState) {
-  for (const pos of JUNGLE_CAMP_POSITIONS) {
+function createJungleCamps(state: MobaState, savedMap?: MapData | null) {
+  const campPositions = savedMap?.camps?.length
+    ? savedMap.camps.map(c => ({ x: c.x, y: c.y, type: c.type === 'boss' ? 'buff' as const : c.type }))
+    : JUNGLE_CAMP_POSITIONS;
+  for (const pos of campPositions) {
     const camp: JungleCamp = {
       id: state.nextEntityId++,
       x: pos.x, y: pos.y,

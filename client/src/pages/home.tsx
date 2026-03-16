@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Sword, Shield, Skull, Crown, Settings, Map, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid } from 'lucide-react';
+import { Sword, Shield, Skull, Crown, Settings, Map, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe } from 'lucide-react';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<'moba' | 'dungeon'>('moba');
+  const [selectedMode, setSelectedMode] = useState<'moba' | 'dungeon' | 'openworld'>('moba');
   const [titlePulse, setTitlePulse] = useState(false);
 
   useEffect(() => {
@@ -82,7 +82,11 @@ export default function Home() {
 
   const handlePlay = () => {
     localStorage.setItem('grudge_mode', selectedMode);
-    setLocation('/character-select');
+    if (selectedMode === 'openworld') {
+      setLocation('/character-select');
+    } else {
+      setLocation('/character-select');
+    }
   };
 
   return (
@@ -162,6 +166,22 @@ export default function Home() {
               Explore procedural dungeons. Fight monsters, find loot, and conquer the final boss.
             </p>
           </button>
+          <button
+            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
+              selectedMode === 'openworld'
+                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
+                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
+            }`}
+            onClick={() => setSelectedMode('openworld')}
+            data-testid="button-mode-openworld"
+          >
+            <Globe className="w-12 h-12" />
+            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>OPEN WORLD</span>
+            <span className="text-xs text-gray-400">MMO &bull; 8 Zones &bull; Day/Night</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
+              Explore a vast island. Fight zone monsters, earn reputation, and defeat world bosses.
+            </p>
+          </button>
         </div>
 
         <div className="flex flex-col gap-3 items-center mb-8">
@@ -172,7 +192,7 @@ export default function Home() {
             onClick={handlePlay}
             data-testid="button-play"
           >
-            {selectedMode === 'moba' ? 'ENTER THE ARENA' : 'DESCEND INTO DARKNESS'}
+            {selectedMode === 'moba' ? 'ENTER THE ARENA' : selectedMode === 'dungeon' ? 'DESCEND INTO DARKNESS' : 'EXPLORE THE WORLD'}
           </Button>
 
           <div className="flex gap-4 mt-2">
@@ -191,6 +211,14 @@ export default function Home() {
             >
               <Sword className="w-4 h-4" />
               <span>Entity Editor</span>
+            </button>
+            <button
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"
+              onClick={() => setLocation('/worldadmin')}
+              data-testid="button-world-admin"
+            >
+              <Globe className="w-4 h-4" />
+              <span>World Admin</span>
             </button>
           </div>
         </div>
@@ -234,7 +262,7 @@ export default function Home() {
                 <span><span className="text-gray-400">WASD</span> Camera</span>
               </div>
             </div>
-          ) : (
+          ) : selectedMode === 'dungeon' ? (
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
               <div className="flex items-center gap-2 text-gray-500 text-xs">
                 <Keyboard className="w-3.5 h-3.5 text-gray-600 shrink-0" />
@@ -259,6 +287,33 @@ export default function Home() {
               <div className="flex items-center gap-2 text-gray-500 text-xs">
                 <MousePointer2 className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                 <span><span className="text-gray-400">Scroll</span> Zoom</span>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+              <div className="flex items-center gap-2 text-gray-500 text-xs">
+                <Keyboard className="w-3.5 h-3.5 text-gray-600 shrink-0" />
+                <span><span className="text-gray-400">W A S D</span> Move</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs">
+                <Keyboard className="w-3.5 h-3.5 text-gray-600 shrink-0" />
+                <span><span className="text-gray-400">Q W E R</span> Abilities</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs">
+                <MousePointer2 className="w-3.5 h-3.5 text-gray-600 shrink-0" />
+                <span><span className="text-gray-400">LMB</span> Attack / Target</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs">
+                <Keyboard className="w-3.5 h-3.5 text-gray-600 shrink-0" />
+                <span><span className="text-gray-400">I</span> Inventory</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs">
+                <MousePointer2 className="w-3.5 h-3.5 text-gray-600 shrink-0" />
+                <span><span className="text-gray-400">Scroll</span> Zoom</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs">
+                <Keyboard className="w-3.5 h-3.5 text-gray-600 shrink-0" />
+                <span><span className="text-gray-400">+/-</span> Minimap Zoom</span>
               </div>
             </div>
           )}

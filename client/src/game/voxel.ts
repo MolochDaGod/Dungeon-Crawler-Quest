@@ -1202,34 +1202,59 @@ function buildMinionModel(color: string, minionType: string, animTimer: number):
   }
 
   if (minionType === 'siege' || minionType === 'super') {
-    const model = makeGrid(10, 7);
-    const legOff = Math.round(walk * 0.4);
+    // Tank voxel model - armored vehicle with treads and cannon
+    const model = makeGrid(10, 9);
     const isSup = minionType === 'super';
-    const armor = isSup ? '#c5a059' : metalDark;
-    const armorLight = isSup ? '#d4af37' : metal;
-    model[0][1][1 + (legOff > 0 ? 1 : 0)] = dark; model[0][1][5 - (legOff > 0 ? 1 : 0)] = dark;
-    model[0][5][1 - (legOff > 0 ? 0 : -1)] = dark; model[0][5][5 + (legOff > 0 ? 0 : -1)] = dark;
-    model[1][1][1] = dark; model[1][1][5] = dark; model[1][5][1] = dark; model[1][5][5] = dark;
-    for (let x = 1; x <= 5; x++) for (let y = 1; y <= 5; y++) model[2][y][x] = mid;
-    for (let x = 1; x <= 5; x++) for (let y = 1; y <= 5; y++) { model[3][y][x] = col; model[4][y][x] = col; }
-    for (let x = 0; x <= 6; x++) { model[3][0][x] = armor; model[3][6][x] = armor; model[4][0][x] = armor; model[4][6][x] = armor; }
-    for (let y = 0; y <= 6; y++) { model[3][y][0] = armor; model[3][y][6] = armor; model[4][y][0] = armor; model[4][y][6] = armor; }
-    for (let x = 1; x <= 5; x++) for (let y = 1; y <= 5; y++) model[5][y][x] = col;
-    for (let x = 2; x <= 4; x++) for (let y = 2; y <= 4; y++) model[5][y][x] = light;
-    model[5][0][3] = armorLight; model[5][6][3] = armorLight; model[5][3][0] = armorLight; model[5][3][6] = armorLight;
-    for (let x = 2; x <= 4; x++) for (let y = 2; y <= 4; y++) model[6][y][x] = col;
-    model[6][3][3] = light;
-    model[7][2][3] = '#ef4444'; model[7][4][3] = '#ef4444'; model[7][3][3] = bright;
-    model[8][3][3] = bright;
-    if (isSup) {
-      model[9][3][3] = '#ffd700';
-      model[6][3][0] = '#ef4444'; model[7][3][0] = '#ef4444';
-      model[6][3][6] = '#ef4444'; model[7][3][6] = '#ef4444';
+    const hull = isSup ? '#c5a059' : '#4a6741';
+    const hullDark = shade(hull, 0.7);
+    const hullLight = shade(hull, 1.2);
+    const tread = '#333333';
+    const treadLight = '#555555';
+    const barrel = '#6b7280';
+    const barrelDark = '#4b5563';
+    // Treads (left and right tracks)
+    const treadBob = Math.round(walk * 0.3);
+    for (let y = 0; y <= 8; y++) {
+      model[0][y][0] = tread; model[0][y][1] = treadLight;
+      model[0][y][7] = treadLight; model[0][y][8] = tread;
     }
-    model[3][0][1] = metalDark; model[3][0][2] = metal; model[3][0][3] = metalBright;
-    model[3][0][4] = metal; model[3][0][5] = metalDark;
-    model[4][0][2] = metalBright; model[4][0][3] = metalBright; model[4][0][4] = metalBright;
-    model[5][0][3] = metalBright; model[6][0][3] = metal;
+    if (treadBob > 0) {
+      model[0][0][0] = treadLight; model[0][8][8] = treadLight;
+    }
+    // Hull body (lower)
+    for (let x = 1; x <= 7; x++) for (let y = 1; y <= 7; y++) {
+      model[1][y][x] = hullDark;
+      model[2][y][x] = hull;
+    }
+    // Angled front armor
+    for (let x = 2; x <= 6; x++) { model[2][0][x] = hullLight; model[3][0][x] = hull; }
+    for (let x = 2; x <= 6; x++) { model[2][8][x] = hullDark; }
+    // Hull top
+    for (let x = 2; x <= 6; x++) for (let y = 2; y <= 6; y++) model[3][y][x] = hull;
+    // Turret base
+    for (let x = 3; x <= 5; x++) for (let y = 3; y <= 5; y++) model[4][y][x] = hullLight;
+    for (let x = 3; x <= 5; x++) for (let y = 3; y <= 5; y++) model[5][y][x] = hull;
+    // Turret top
+    model[6][4][4] = hullLight; model[6][3][4] = hull; model[6][5][4] = hull;
+    model[6][4][3] = hull; model[6][4][5] = hull;
+    // Cannon barrel extending forward
+    for (let y = 0; y <= 2; y++) { model[5][y][4] = barrel; model[4][y][4] = barrelDark; }
+    model[5][0][4] = shade(barrel, 1.3);
+    // Side armor plates
+    for (let y = 1; y <= 7; y++) { model[2][y][0] = metalDark; model[2][y][8] = metalDark; }
+    for (let y = 1; y <= 7; y++) { model[3][y][0] = metal; model[3][y][8] = metal; }
+    // Exhaust pipes
+    model[4][7][2] = '#444'; model[4][7][6] = '#444';
+    model[5][7][2] = '#555'; model[5][7][6] = '#555';
+    // Hatches
+    model[6][4][4] = '#888';
+    if (isSup) {
+      // Gold trim for super version
+      for (let y = 0; y <= 8; y++) { model[3][y][1] = '#c5a059'; model[3][y][7] = '#c5a059'; }
+      model[7][4][4] = '#ffd700';
+      // Side cannons
+      model[4][0][2] = barrel; model[4][0][6] = barrel;
+    }
     return model;
   }
 
@@ -1387,6 +1412,36 @@ function buildRockModel(seed: number): VoxelModel {
       }
     }
   }
+  return model;
+}
+
+function buildCampfireModel(animTimer: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 8; const w = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const wood = '#5a3a1a'; const woodDark = '#3a2210'; const stone = '#5a5a6a'; const stoneDark = '#3a3a4a';
+  // Stone ring base
+  model[0][0][1] = stone; model[0][0][2] = stoneDark; model[0][0][3] = stone;
+  model[0][1][0] = stoneDark; model[0][1][4] = stoneDark;
+  model[0][2][0] = stone; model[0][2][4] = stone;
+  model[0][3][0] = stoneDark; model[0][3][4] = stoneDark;
+  model[0][4][1] = stone; model[0][4][2] = stoneDark; model[0][4][3] = stone;
+  // Logs
+  model[1][1][2] = wood; model[1][2][1] = woodDark; model[1][2][3] = wood;
+  model[1][3][2] = woodDark; model[1][2][2] = '#1a0a00';
+  model[2][2][2] = '#1a0800';
+  // Animated fire
+  const flicker = Math.sin(animTimer * 12);
+  const flicker2 = Math.sin(animTimer * 15 + 1.5);
+  model[2][1][2] = '#ff4400'; model[2][3][2] = '#ff4400';
+  model[2][2][1] = '#ff6600'; model[2][2][3] = '#ff6600';
+  model[3][2][2] = '#ff8800'; model[3][1][2] = flicker > 0 ? '#ff6600' : null; model[3][3][2] = flicker2 > 0 ? '#ff6600' : null;
+  model[4][2][2] = '#ffaa00';
+  model[4][2][1] = flicker > 0.3 ? '#ff6600' : null; model[4][2][3] = flicker2 > 0.3 ? '#ff6600' : null;
+  model[5][2][2] = '#ffcc00';
+  model[5][1][2] = flicker > 0.5 ? '#ff8800' : null; model[5][3][2] = flicker2 > 0.5 ? '#ff8800' : null;
+  model[6][2][2] = flicker > 0.2 ? '#ffdd44' : '#ffcc00';
+  model[7][2][2] = flicker > 0.6 ? '#ffee88' : null;
   return model;
 }
 
@@ -2863,6 +2918,11 @@ export class VoxelRenderer {
       return offscreen;
     });
     ctx.drawImage(cached, x - 30, y - 60);
+  }
+
+  drawCampfireVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, animTimer: number) {
+    const model = buildCampfireModel(animTimer);
+    this.renderVoxelModel(ctx, x, y - 12, model, 3, 0);
   }
 
   drawRockVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {

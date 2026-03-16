@@ -13,6 +13,8 @@ import OpenWorldPage from "@/pages/open-world";
 import AnimationEditorPage from "@/pages/animation-editor";
 import AdminPage from "@/pages/admin";
 import EntityEditorPage from "@/pages/entity-editor";
+import MapAdminPage from "@/pages/map-admin";
+import WorldAdminPage from "@/pages/world-admin";
 import { useEffect } from "react";
 
 function Router() {
@@ -27,6 +29,8 @@ function Router() {
       <Route path="/animation-editor" component={AnimationEditorPage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/editor" component={EntityEditorPage} />
+      <Route path="/mapadmin" component={MapAdminPage} />
+      <Route path="/worldadmin" component={WorldAdminPage} />
       <Route component={NotFound} />
     </Switch>
   );
