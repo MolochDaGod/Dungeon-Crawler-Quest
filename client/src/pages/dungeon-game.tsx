@@ -78,7 +78,7 @@ export default function DungeonGamePage() {
       }
     };
 
-    const onKeyDown
+    const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       keysRef.current.add(key);
 
