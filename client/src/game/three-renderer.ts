@@ -987,43 +987,112 @@ export class ThreeRenderer {
         }
       }
     } else {
-      const size = minion.minionType === 'siege' ? 0.3 : 0.18;
       const teamColor = new THREE.Color(TEAM_COLORS[minion.team]);
 
-      const bodyGeo = new THREE.BoxGeometry(size, size * 1.3, size * 0.8);
-      const mat = new THREE.MeshStandardMaterial({
-        color: teamColor,
-        roughness: 0.55,
-        metalness: 0.2,
-        emissive: teamColor,
-        emissiveIntensity: 0.05,
-      });
-      const body = new THREE.Mesh(bodyGeo, mat);
-      body.castShadow = true;
-      body.position.y = size * 0.7;
-      body.name = 'body';
-      group.add(body);
-
-      const eyeSize = size * 0.12;
-      const eyeGeo = new THREE.SphereGeometry(eyeSize, 8, 8);
-      const eyeMat = new THREE.MeshStandardMaterial({
-        color: 0xffff88,
-        emissive: 0xffff44,
-        emissiveIntensity: 0.5,
-      });
-      for (const side of [-1, 1]) {
-        const eye = new THREE.Mesh(eyeGeo, eyeMat);
-        eye.position.set(side * size * 0.2, size * 0.9, size * 0.35);
-        group.add(eye);
-      }
-
       if (minion.minionType === 'ranged') {
-        const staffGeo = new THREE.CylinderGeometry(0.01, 0.015, size * 2, 4);
+        // Tall thin robed caster
+        const bodyGeo = new THREE.BoxGeometry(0.12, 0.35, 0.12);
+        const robeMat = new THREE.MeshStandardMaterial({
+          color: teamColor, roughness: 0.7, metalness: 0.05,
+          emissive: teamColor, emissiveIntensity: 0.08,
+        });
+        const body = new THREE.Mesh(bodyGeo, robeMat);
+        body.castShadow = true;
+        body.position.y = 0.25;
+        body.name = 'body';
+        group.add(body);
+
+        // Robe skirt (wider at bottom)
+        const skirtGeo = new THREE.ConeGeometry(0.14, 0.18, 6);
+        const skirt = new THREE.Mesh(skirtGeo, robeMat);
+        skirt.position.y = 0.1;
+        skirt.rotation.x = Math.PI;
+        group.add(skirt);
+
+        // Head
+        const headGeo = new THREE.SphereGeometry(0.06, 8, 8);
+        const headMat = new THREE.MeshStandardMaterial({ color: 0xddccaa, roughness: 0.6 });
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.y = 0.48;
+        group.add(head);
+
+        // Pointed hat
+        const hatGeo = new THREE.ConeGeometry(0.08, 0.14, 6);
+        const hatMat = new THREE.MeshStandardMaterial({ color: teamColor.clone().multiplyScalar(0.55), roughness: 0.5 });
+        const hat = new THREE.Mesh(hatGeo, hatMat);
+        hat.position.y = 0.59;
+        group.add(hat);
+
+        // Staff
+        const staffGeo = new THREE.CylinderGeometry(0.01, 0.015, 0.5, 4);
         const staffMat = new THREE.MeshStandardMaterial({ color: 0x6b4423 });
         const staff = new THREE.Mesh(staffGeo, staffMat);
-        staff.position.set(size * 0.4, size * 0.8, 0);
-        staff.rotation.z = 0.2;
+        staff.position.set(0.12, 0.3, 0);
+        staff.rotation.z = 0.15;
         group.add(staff);
+
+        // Staff gem
+        const gemGeo = new THREE.SphereGeometry(0.025, 6, 6);
+        const gemMat = new THREE.MeshStandardMaterial({
+          color: teamColor, emissive: teamColor, emissiveIntensity: 0.6, metalness: 0.5,
+        });
+        const gem = new THREE.Mesh(gemGeo, gemMat);
+        gem.position.set(0.13, 0.55, 0);
+        group.add(gem);
+      } else {
+        // Melee minion: wide, short, armored with shield + helmet
+        const size = minion.minionType === 'siege' ? 0.3 : 0.22;
+        const bodyGeo = new THREE.BoxGeometry(size * 1.4, size * 1.1, size * 1.2);
+        const armorMat = new THREE.MeshStandardMaterial({
+          color: 0x888888, roughness: 0.35, metalness: 0.6,
+          emissive: teamColor, emissiveIntensity: 0.05,
+        });
+        const body = new THREE.Mesh(bodyGeo, armorMat);
+        body.castShadow = true;
+        body.position.y = size * 0.65;
+        body.name = 'body';
+        group.add(body);
+
+        // Shoulder pauldrons
+        for (const side of [-1, 1]) {
+          const pauldronGeo = new THREE.SphereGeometry(size * 0.3, 6, 6);
+          const pauldron = new THREE.Mesh(pauldronGeo, armorMat);
+          pauldron.position.set(side * size * 0.8, size * 0.9, 0);
+          pauldron.scale.y = 0.6;
+          group.add(pauldron);
+        }
+
+        // Helmet
+        const helmetGeo = new THREE.SphereGeometry(size * 0.35, 8, 6);
+        const helmetMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.7, roughness: 0.3 });
+        const helmet = new THREE.Mesh(helmetGeo, helmetMat);
+        helmet.position.y = size * 1.35;
+        helmet.scale.y = 0.8;
+        group.add(helmet);
+
+        // Eyes through helmet
+        const eyeGeo = new THREE.SphereGeometry(size * 0.08, 6, 6);
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffff88, emissive: 0xffff44, emissiveIntensity: 0.5 });
+        for (const side of [-1, 1]) {
+          const eye = new THREE.Mesh(eyeGeo, eyeMat);
+          eye.position.set(side * size * 0.15, size * 1.35, size * 0.3);
+          group.add(eye);
+        }
+
+        // Shield on left
+        const shieldGeo = new THREE.BoxGeometry(size * 0.15, size * 0.8, size * 0.6);
+        const shieldMat = new THREE.MeshStandardMaterial({ color: teamColor, metalness: 0.4, roughness: 0.4 });
+        const shield = new THREE.Mesh(shieldGeo, shieldMat);
+        shield.position.set(-size * 0.85, size * 0.7, 0.05);
+        group.add(shield);
+
+        // Sword on right
+        const swordGeo = new THREE.BoxGeometry(0.02, 0.03, size * 1.2);
+        const swordMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+        const sword = new THREE.Mesh(swordGeo, swordMat);
+        sword.position.set(size * 0.85, size * 0.7, 0.1);
+        sword.rotation.x = -0.3;
+        group.add(sword);
       }
     }
 
@@ -2048,7 +2117,8 @@ export class ThreeRenderer {
 
       const body = e.group.getObjectByName('body');
       if (body) {
-        body.position.y = (minion.minionType === 'siege' ? 0.3 : 0.18) * 0.7 + Math.abs(Math.sin(time * 5 + minion.id)) * 0.015;
+        const baseY = minion.minionType === 'ranged' ? 0.25 : (minion.minionType === 'siege' ? 0.3 : 0.22) * 0.65;
+        body.position.y = baseY + Math.abs(Math.sin(time * 5 + minion.id)) * 0.015;
       }
 
       this.updateHealthBar(e, minion.hp, minion.maxHp, TEAM_COLORS[minion.team]);

@@ -5,6 +5,7 @@ import {
 } from './types';
 import { VoxelRenderer, DungeonTileVoxelType } from './voxel';
 import { globalAnimDirector } from './voxel-motion';
+import { SpriteEffectSystem, CLASS_SPELL_VFX } from './sprite-effects';
 import {
   StatusEffect, StatusEffectType, createStatusEffect, applyStatusEffect,
   updateStatusEffects, isStunned, isRooted, isSilenced, getSpeedMultiplier,
@@ -1294,6 +1295,13 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number, 
   p.abilityCooldowns[abilityIndex] = ab.cooldown;
   p.animState = 'ability';
 
+  // Trigger sprite-sheet VFX for this ability
+  const hd2 = HEROES[p.heroDataId];
+  const classVfx = CLASS_SPELL_VFX[hd2.heroClass];
+  if (classVfx && classVfx[abilityIndex] && (state as any)._spriteEffects) {
+    ((state as any)._spriteEffects as SpriteEffectSystem).playEffect(classVfx[abilityIndex], p.x, p.y, 1.5, 800);
+  }
+
   if (targetWorld && (ab.castType === 'ground_aoe' || ab.castType === 'skillshot' || ab.castType === 'line' || ab.castType === 'cone')) {
     p.facing = Math.atan2(targetWorld.y - p.y, targetWorld.x - p.x);
   }
@@ -1581,11 +1589,21 @@ export class DungeonRenderer {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
   private voxel: VoxelRenderer;
+  private spriteEffects: SpriteEffectSystem;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.voxel = new VoxelRenderer();
+    this.spriteEffects = new SpriteEffectSystem();
+  }
+
+  updateSpriteEffects(dt: number) {
+    this.spriteEffects.update(dt);
+  }
+
+  getSpriteEffects() {
+    return this.spriteEffects;
   }
 
   render(state: DungeonState) {
@@ -1631,6 +1649,9 @@ export class DungeonRenderer {
     for (const ft of state.floatingTexts) {
       if (isInPlayerVision(state, ft.x, ft.y)) this.renderFloatingText(ctx, ft);
     }
+
+    // Render sprite-sheet VFX
+    this.spriteEffects.render(ctx);
 
     ctx.restore();
 

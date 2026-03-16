@@ -9,7 +9,7 @@ import {
   JungleCamp, JungleMob, getHeroAbilities
 } from './types';
 import { VoxelRenderer, TerrainType } from './voxel';
-import { SpriteEffectSystem, SpriteEffectType } from './sprite-effects';
+import { SpriteEffectSystem, SpriteEffectType, CLASS_SPELL_VFX } from './sprite-effects';
 import { globalAnimDirector } from './voxel-motion';
 import { loadMapData, MapData } from './map-data';
 import {
@@ -1812,11 +1812,17 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   hero.animState = 'ability';
   hero.animTimer = 0;
 
+  // Legacy class VFX
   const classEffectMap: Record<string, string> = {
     Warrior: 'warrior_spin', Worg: 'fire_ability', Mage: 'mage_ability', Ranger: 'buff'
   };
   const effectType = classEffectMap[heroData.heroClass] || 'channel';
   state.pendingSpriteEffects.push({ type: effectType, x: hero.x, y: hero.y, scale: 0.8, duration: 600 });
+  // New sprite-sheet VFX from magic-sprites pack
+  const classVfx = CLASS_SPELL_VFX[heroData.heroClass];
+  if (classVfx && classVfx[abilityIndex]) {
+    state.pendingSpriteEffects.push({ type: classVfx[abilityIndex], x: hero.x, y: hero.y, scale: 1.5, duration: 800 });
+  }
 
   const abilityColor = CLASS_COLORS[heroData.heroClass] || '#ffffff';
   const statusEffects = getAbilityStatusEffects(ab.name, hero.id, hero.atk);

@@ -124,16 +124,16 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     const freq = 10;
     const phase = Math.sin(t * freq);
     const phase2 = Math.cos(t * freq);
-    const stride = 2.0;
-    const liftHeight = 1.0;
-    const bounce = Math.abs(Math.sin(t * freq * 2)) * 0.5;
-    const hipSway = Math.sin(t * freq) * 0.3;
-    const headBob = Math.sin(t * freq * 2 + 0.5) * 0.3;
+    const stride = 2.5;
+    const liftHeight = 1.4;
+    const bounce = Math.abs(Math.sin(t * freq * 2)) * 0.6;
+    const hipSway = Math.sin(t * freq) * 0.4;
+    const headBob = Math.sin(t * freq * 2 + 0.5) * 0.35;
     return {
       leftLeg: { ox: 0, oy: Math.round(phase * stride), oz: Math.round(Math.max(0, -phase) * liftHeight) },
       rightLeg: { ox: 0, oy: Math.round(-phase * stride), oz: Math.round(Math.max(0, phase) * liftHeight) },
-      leftArm: { ox: 0, oy: Math.round(-phase * 1.6), oz: Math.round(Math.abs(phase2) * 0.4) },
-      rightArm: { ox: 0, oy: Math.round(phase * 1.6), oz: Math.round(Math.abs(-phase2) * 0.4) },
+      leftArm: { ox: 0, oy: Math.round(-phase * 2.0), oz: Math.round(Math.abs(phase2) * 0.5) },
+      rightArm: { ox: 0, oy: Math.round(phase * 2.0), oz: Math.round(Math.abs(-phase2) * 0.5) },
       torso: { ox: 0, oy: 0, oz: Math.round(bounce) },
       head: { ox: 0, oy: 0, oz: Math.round(bounce * 0.7 + headBob) },
       weapon: { ox: 0, oy: Math.round(-phase * 0.5), oz: Math.round(bounce * 0.3) },
@@ -783,7 +783,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   const eye = race === 'Undead' ? '#ff4444' : race === 'Orc' ? '#ffaa00' : '#2244aa';
   const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
 
-  const W = 8, D = 8, H = 14;
+  const W = 8, D = 8, H = 16;
   const model: VoxelModel = [];
   for (let z = 0; z < H; z++) {
     model[z] = [];
@@ -804,131 +804,143 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     }
   };
 
+  // Athletic proportions: legs +1 voxel, torso +1 voxel → everything shifts up
   const bootColor = shade(armor.primary, 0.7);
   const bootAccent = shade(armor.primary, 0.85);
   const lL = poses.leftLeg, rL = poses.rightLeg;
+  // Left leg: 3 voxels tall (was 2)
   setV(0 + lL.oz, 2 + lL.oy, 2 + lL.ox, bootColor);
   setV(0 + lL.oz, 3 + lL.oy, 2 + lL.ox, bootColor);
   setV(0 + lL.oz, 2 + lL.oy, 3 + lL.ox, bootAccent);
   setV(1 + lL.oz, 2 + lL.oy, 2 + lL.ox, armor.secondary);
   setV(1 + lL.oz, 3 + lL.oy, 2 + lL.ox, armor.secondary);
-
+  setV(2 + lL.oz, 2 + lL.oy, 2 + lL.ox, armor.primary);
+  setV(2 + lL.oz, 3 + lL.oy, 2 + lL.ox, armor.primary);
+  // Right leg: 3 voxels tall (was 2)
   setV(0 + rL.oz, 2 + rL.oy, 5 + rL.ox, bootColor);
   setV(0 + rL.oz, 3 + rL.oy, 5 + rL.ox, bootColor);
   setV(0 + rL.oz, 2 + rL.oy, 4 + rL.ox, bootAccent);
   setV(1 + rL.oz, 2 + rL.oy, 5 + rL.ox, armor.secondary);
   setV(1 + rL.oz, 3 + rL.oy, 5 + rL.ox, armor.secondary);
+  setV(2 + rL.oz, 2 + rL.oy, 5 + rL.ox, armor.primary);
+  setV(2 + rL.oz, 3 + rL.oy, 5 + rL.ox, armor.primary);
 
+  // Torso shifted up by +1, extra row for taller build
   const tP = poses.torso;
   for (let x = 2; x <= 5; x++) {
     for (let y = 2; y <= 4; y++) {
-      setV(2 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
       setV(3 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
-      setV(4 + tP.oz, y + tP.oy, x + tP.ox, armor.secondary);
-      setV(5 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
+      setV(4 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
+      setV(5 + tP.oz, y + tP.oy, x + tP.ox, armor.secondary);
+      setV(6 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
+      setV(7 + tP.oz, y + tP.oy, x + tP.ox, armor.primary);
     }
   }
   for (let y = 2; y <= 4; y++) {
-    setV(3 + tP.oz, y + tP.oy, 1 + tP.ox, shade(armor.primary, 0.9));
-    setV(3 + tP.oz, y + tP.oy, 6 + tP.ox, shade(armor.primary, 0.9));
+    setV(4 + tP.oz, y + tP.oy, 1 + tP.ox, shade(armor.primary, 0.9));
+    setV(4 + tP.oz, y + tP.oy, 6 + tP.ox, shade(armor.primary, 0.9));
   }
-  setV(4 + tP.oz, 3 + tP.oy, 3 + tP.ox, shade(armor.secondary, 1.1));
-  setV(4 + tP.oz, 3 + tP.oy, 4 + tP.ox, shade(armor.secondary, 1.1));
+  setV(5 + tP.oz, 3 + tP.oy, 3 + tP.ox, shade(armor.secondary, 1.1));
+  setV(5 + tP.oz, 3 + tP.oy, 4 + tP.ox, shade(armor.secondary, 1.1));
 
   if (heroClass === 'Warrior') {
-    setV(5 + tP.oz, 2 + tP.oy, 2 + tP.ox, '#666666');
-    setV(5 + tP.oz, 4 + tP.oy, 2 + tP.ox, '#666666');
-    setV(5 + tP.oz, 2 + tP.oy, 5 + tP.ox, '#666666');
-    setV(5 + tP.oz, 4 + tP.oy, 5 + tP.ox, '#666666');
+    setV(7 + tP.oz, 2 + tP.oy, 2 + tP.ox, '#666666');
+    setV(7 + tP.oz, 4 + tP.oy, 2 + tP.ox, '#666666');
+    setV(7 + tP.oz, 2 + tP.oy, 5 + tP.ox, '#666666');
+    setV(7 + tP.oz, 4 + tP.oy, 5 + tP.ox, '#666666');
     for (let x = 2; x <= 5; x++) {
-      setV(4 + tP.oz, 2 + tP.oy, x + tP.ox, '#555555');
+      setV(6 + tP.oz, 2 + tP.oy, x + tP.ox, '#555555');
     }
-    setV(5 + tP.oz, 3 + tP.oy, 1 + tP.ox, shade(armor.secondary, 0.8));
-    setV(5 + tP.oz, 3 + tP.oy, 6 + tP.ox, shade(armor.secondary, 0.8));
-    setV(5 + tP.oz, 2 + tP.oy, 1 + tP.ox, shade(armor.secondary, 0.7));
-    setV(5 + tP.oz, 2 + tP.oy, 6 + tP.ox, shade(armor.secondary, 0.7));
+    setV(7 + tP.oz, 3 + tP.oy, 1 + tP.ox, shade(armor.secondary, 0.8));
+    setV(7 + tP.oz, 3 + tP.oy, 6 + tP.ox, shade(armor.secondary, 0.8));
+    setV(7 + tP.oz, 2 + tP.oy, 1 + tP.ox, shade(armor.secondary, 0.7));
+    setV(7 + tP.oz, 2 + tP.oy, 6 + tP.ox, shade(armor.secondary, 0.7));
   }
 
   if (heroClass === 'Mage') {
     for (let y = 2; y <= 4; y++) {
-      setV(2 + tP.oz, y + tP.oy, 2 + tP.ox, armor.secondary);
-      setV(2 + tP.oz, y + tP.oy, 5 + tP.ox, armor.secondary);
+      setV(3 + tP.oz, y + tP.oy, 2 + tP.ox, armor.secondary);
+      setV(3 + tP.oz, y + tP.oy, 5 + tP.ox, armor.secondary);
     }
   }
 
   if (heroClass === 'Ranger') {
-    setV(3 + tP.oz, 2 + tP.oy, 2 + tP.ox, '#2d4016');
-    setV(3 + tP.oz, 2 + tP.oy, 5 + tP.ox, '#2d4016');
+    setV(4 + tP.oz, 2 + tP.oy, 2 + tP.ox, '#2d4016');
+    setV(4 + tP.oz, 2 + tP.oy, 5 + tP.ox, '#2d4016');
   }
 
+  // Arms shifted up +1, extended 1 voxel longer
   const lA = poses.leftArm;
-  setV(5 + lA.oz, 2 + lA.oy, 1 + lA.ox, shade(armor.secondary, 0.9));
+  setV(7 + lA.oz, 2 + lA.oy, 1 + lA.ox, shade(armor.secondary, 0.9));
+  setV(6 + lA.oz, 2 + lA.oy, 1 + lA.ox, armor.secondary);
+  setV(5 + lA.oz, 2 + lA.oy, 1 + lA.ox, armor.secondary);
   setV(4 + lA.oz, 2 + lA.oy, 1 + lA.ox, armor.secondary);
-  setV(3 + lA.oz, 2 + lA.oy, 1 + lA.ox, armor.secondary);
-  setV(3 + lA.oz, 3 + lA.oy, 1 + lA.ox, armor.secondary);
-  setV(2 + lA.oz, 2 + lA.oy, 1 + lA.ox, skin);
-  setV(2 + lA.oz, 3 + lA.oy, 1 + lA.ox, skin);
+  setV(4 + lA.oz, 3 + lA.oy, 1 + lA.ox, armor.secondary);
+  setV(3 + lA.oz, 2 + lA.oy, 1 + lA.ox, skin);
+  setV(3 + lA.oz, 3 + lA.oy, 1 + lA.ox, skin);
 
   const rA = poses.rightArm;
-  setV(5 + rA.oz, 2 + rA.oy, 6 + rA.ox, shade(armor.secondary, 0.9));
+  setV(7 + rA.oz, 2 + rA.oy, 6 + rA.ox, shade(armor.secondary, 0.9));
+  setV(6 + rA.oz, 2 + rA.oy, 6 + rA.ox, armor.secondary);
+  setV(5 + rA.oz, 2 + rA.oy, 6 + rA.ox, armor.secondary);
   setV(4 + rA.oz, 2 + rA.oy, 6 + rA.ox, armor.secondary);
-  setV(3 + rA.oz, 2 + rA.oy, 6 + rA.ox, armor.secondary);
-  setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, armor.secondary);
-  setV(2 + rA.oz, 2 + rA.oy, 6 + rA.ox, skin);
-  setV(2 + rA.oz, 3 + rA.oy, 6 + rA.ox, skin);
+  setV(4 + rA.oz, 3 + rA.oy, 6 + rA.ox, armor.secondary);
+  setV(3 + rA.oz, 2 + rA.oy, 6 + rA.ox, skin);
+  setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, skin);
 
+  // Head shifted up +2
   const hP = poses.head;
   for (let x = 2; x <= 5; x++) {
     for (let y = 2; y <= 4; y++) {
-      setV(6 + hP.oz, y + hP.oy, x + hP.ox, skin);
-      setV(7 + hP.oz, y + hP.oy, x + hP.ox, skin);
       setV(8 + hP.oz, y + hP.oy, x + hP.ox, skin);
+      setV(9 + hP.oz, y + hP.oy, x + hP.ox, skin);
+      setV(10 + hP.oz, y + hP.oy, x + hP.ox, skin);
     }
   }
 
-  setV(7 + hP.oz, 2 + hP.oy, 2 + hP.ox, eye);
-  setV(7 + hP.oz, 2 + hP.oy, 5 + hP.ox, eye);
+  setV(9 + hP.oz, 2 + hP.oy, 2 + hP.ox, eye);
+  setV(9 + hP.oz, 2 + hP.oy, 5 + hP.ox, eye);
 
-  setV(6 + hP.oz, 2 + hP.oy, 3 + hP.ox, shade(skin, 0.85));
-  setV(6 + hP.oz, 2 + hP.oy, 4 + hP.ox, shade(skin, 0.85));
+  setV(8 + hP.oz, 2 + hP.oy, 3 + hP.ox, shade(skin, 0.85));
+  setV(8 + hP.oz, 2 + hP.oy, 4 + hP.ox, shade(skin, 0.85));
 
   for (let x = 2; x <= 5; x++) {
-    setV(9 + hP.oz, 3 + hP.oy, x + hP.ox, hair);
-    setV(9 + hP.oz, 4 + hP.oy, x + hP.ox, hair);
-    setV(8 + hP.oz, 4 + hP.oy, x + hP.ox, hair);
+    setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hair);
+    setV(11 + hP.oz, 4 + hP.oy, x + hP.ox, hair);
+    setV(10 + hP.oz, 4 + hP.oy, x + hP.ox, hair);
   }
-  setV(9 + hP.oz, 2 + hP.oy, 2 + hP.ox, hair);
-  setV(9 + hP.oz, 2 + hP.oy, 5 + hP.ox, hair);
+  setV(11 + hP.oz, 2 + hP.oy, 2 + hP.ox, hair);
+  setV(11 + hP.oz, 2 + hP.oy, 5 + hP.ox, hair);
 
   if (race === 'Dwarf') {
-    setV(6 + hP.oz, 2 + hP.oy, 2 + hP.ox, hair);
-    setV(6 + hP.oz, 2 + hP.oy, 5 + hP.ox, hair);
-    setV(5 + hP.oz, 2 + hP.oy, 3 + hP.ox, hair);
-    setV(5 + hP.oz, 2 + hP.oy, 4 + hP.ox, hair);
-    setV(5 + hP.oz, 3 + hP.oy, 3 + hP.ox, hair);
+    setV(8 + hP.oz, 2 + hP.oy, 2 + hP.ox, hair);
+    setV(8 + hP.oz, 2 + hP.oy, 5 + hP.ox, hair);
+    setV(7 + hP.oz, 2 + hP.oy, 3 + hP.ox, hair);
+    setV(7 + hP.oz, 2 + hP.oy, 4 + hP.ox, hair);
+    setV(7 + hP.oz, 3 + hP.oy, 3 + hP.ox, hair);
   }
   if (race === 'Elf') {
-    setV(8 + hP.oz, 1 + hP.oy, 2 + hP.ox, skin);
-    setV(8 + hP.oz, 1 + hP.oy, 5 + hP.ox, skin);
-    setV(9 + hP.oz, 1 + hP.oy, 2 + hP.ox, skin);
-    setV(9 + hP.oz, 1 + hP.oy, 5 + hP.ox, skin);
+    setV(10 + hP.oz, 1 + hP.oy, 2 + hP.ox, skin);
+    setV(10 + hP.oz, 1 + hP.oy, 5 + hP.ox, skin);
+    setV(11 + hP.oz, 1 + hP.oy, 2 + hP.ox, skin);
+    setV(11 + hP.oz, 1 + hP.oy, 5 + hP.ox, skin);
   }
   if (race === 'Orc') {
-    setV(7 + hP.oz, 3 + hP.oy, 1 + hP.ox, skin);
-    setV(7 + hP.oz, 3 + hP.oy, 6 + hP.ox, skin);
-    setV(6 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#445522');
-    setV(6 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#445522');
+    setV(9 + hP.oz, 3 + hP.oy, 1 + hP.ox, skin);
+    setV(9 + hP.oz, 3 + hP.oy, 6 + hP.ox, skin);
+    setV(8 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#445522');
+    setV(8 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#445522');
   }
   if (race === 'Undead') {
-    setV(7 + hP.oz, 3 + hP.oy, 3 + hP.ox, '#555555');
-    setV(7 + hP.oz, 3 + hP.oy, 4 + hP.ox, '#555555');
-    setV(8 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#3a3a3a');
+    setV(9 + hP.oz, 3 + hP.oy, 3 + hP.ox, '#555555');
+    setV(9 + hP.oz, 3 + hP.oy, 4 + hP.ox, '#555555');
+    setV(10 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#3a3a3a');
   }
   if (race === 'Barbarian' && !isPirate) {
-    setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, hair);
-    setV(10 + hP.oz, 3 + hP.oy, 4 + hP.ox, hair);
-    setV(9 + hP.oz, 3 + hP.oy, 2 + hP.ox, hair);
-    setV(9 + hP.oz, 3 + hP.oy, 5 + hP.ox, hair);
+    setV(12 + hP.oz, 3 + hP.oy, 3 + hP.ox, hair);
+    setV(12 + hP.oz, 3 + hP.oy, 4 + hP.ox, hair);
+    setV(11 + hP.oz, 3 + hP.oy, 2 + hP.ox, hair);
+    setV(11 + hP.oz, 3 + hP.oy, 5 + hP.ox, hair);
   }
 
   if (isPirate) {
@@ -936,31 +948,31 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     const hatBrim = '#222244';
     const hatBand = '#c5a059';
     for (let x = 1; x <= 6; x++) {
-      setV(9 + hP.oz, 3 + hP.oy, x + hP.ox, hatBrim);
-      setV(9 + hP.oz, 2 + hP.oy, x + hP.ox, hatBrim);
+      setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hatBrim);
+      setV(11 + hP.oz, 2 + hP.oy, x + hP.ox, hatBrim);
     }
     for (let x = 2; x <= 5; x++) {
-      setV(10 + hP.oz, 3 + hP.oy, x + hP.ox, hatColor);
-      setV(10 + hP.oz, 2 + hP.oy, x + hP.ox, hatColor);
-      setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hatColor);
+      setV(12 + hP.oz, 3 + hP.oy, x + hP.ox, hatColor);
+      setV(12 + hP.oz, 2 + hP.oy, x + hP.ox, hatColor);
+      setV(13 + hP.oz, 3 + hP.oy, x + hP.ox, hatColor);
     }
     for (let x = 3; x <= 4; x++) {
-      setV(12 + hP.oz, 3 + hP.oy, x + hP.ox, hatColor);
+      setV(14 + hP.oz, 3 + hP.oy, x + hP.ox, hatColor);
     }
-    setV(10 + hP.oz, 2 + hP.oy, 2 + hP.ox, hatBand);
-    setV(10 + hP.oz, 2 + hP.oy, 3 + hP.ox, hatBand);
-    setV(10 + hP.oz, 2 + hP.oy, 4 + hP.ox, hatBand);
-    setV(10 + hP.oz, 2 + hP.oy, 5 + hP.ox, hatBand);
+    setV(12 + hP.oz, 2 + hP.oy, 2 + hP.ox, hatBand);
+    setV(12 + hP.oz, 2 + hP.oy, 3 + hP.ox, hatBand);
+    setV(12 + hP.oz, 2 + hP.oy, 4 + hP.ox, hatBand);
+    setV(12 + hP.oz, 2 + hP.oy, 5 + hP.ox, hatBand);
 
     const beardColor = '#2a1a0a';
+    setV(8 + hP.oz, 2 + hP.oy, 3 + hP.ox, beardColor);
+    setV(8 + hP.oz, 2 + hP.oy, 4 + hP.ox, beardColor);
+    setV(7 + hP.oz, 2 + hP.oy, 3 + hP.ox, beardColor);
+    setV(7 + hP.oz, 2 + hP.oy, 4 + hP.ox, beardColor);
+    setV(7 + hP.oz, 3 + hP.oy, 3 + hP.ox, beardColor);
+    setV(7 + hP.oz, 3 + hP.oy, 4 + hP.ox, beardColor);
     setV(6 + hP.oz, 2 + hP.oy, 3 + hP.ox, beardColor);
     setV(6 + hP.oz, 2 + hP.oy, 4 + hP.ox, beardColor);
-    setV(5 + hP.oz, 2 + hP.oy, 3 + hP.ox, beardColor);
-    setV(5 + hP.oz, 2 + hP.oy, 4 + hP.ox, beardColor);
-    setV(5 + hP.oz, 3 + hP.oy, 3 + hP.ox, beardColor);
-    setV(5 + hP.oz, 3 + hP.oy, 4 + hP.ox, beardColor);
-    setV(4 + hP.oz, 2 + hP.oy, 3 + hP.ox, beardColor);
-    setV(4 + hP.oz, 2 + hP.oy, 4 + hP.ox, beardColor);
   }
 
   const wP = poses.weapon;
@@ -984,10 +996,10 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     }
 
     if (weaponType === 'sword_shield' || weaponType === 'axe_shield') {
-      setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, '#888888');
-      setV(10 + hP.oz, 3 + hP.oy, 4 + hP.ox, '#888888');
-      setV(10 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#888888');
-      setV(10 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#888888');
+      setV(12 + hP.oz, 3 + hP.oy, 3 + hP.ox, '#888888');
+      setV(12 + hP.oz, 3 + hP.oy, 4 + hP.ox, '#888888');
+      setV(12 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#888888');
+      setV(12 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#888888');
     }
   }
 
@@ -1061,10 +1073,10 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
       setV(12 + wP.oz, 2 + wP.oy, 0 + wP.ox, blend(armor.weapon, '#ffffff', poses.weaponGlow * 0.4));
     }
 
-    setV(10 + hP.oz, 3 + hP.oy, 3 + hP.ox, armor.secondary);
-    setV(10 + hP.oz, 3 + hP.oy, 4 + hP.ox, armor.secondary);
-    setV(11 + hP.oz, 3 + hP.oy, 3 + hP.ox, armor.weapon);
-    setV(11 + hP.oz, 3 + hP.oy, 4 + hP.ox, armor.weapon);
+    setV(12 + hP.oz, 3 + hP.oy, 3 + hP.ox, armor.secondary);
+    setV(12 + hP.oz, 3 + hP.oy, 4 + hP.ox, armor.secondary);
+    setV(13 + hP.oz, 3 + hP.oy, 3 + hP.ox, armor.weapon);
+    setV(13 + hP.oz, 3 + hP.oy, 4 + hP.ox, armor.weapon);
   }
 
   return model;
@@ -1259,46 +1271,80 @@ function buildMinionModel(color: string, minionType: string, animTimer: number):
   }
 
   if (minionType === 'ranged') {
-    const model = makeGrid(8, 5);
-    const legOff = Math.round(walk * 0.5);
+    // Tall, thin robed caster with staff and pointed hat
+    const model = makeGrid(10, 5);
+    const legOff = Math.round(walk * 0.4);
+    const robeColor = shade(col, 0.8);
+    const robeLight = shade(col, 1.1);
+    const hatColor = shade(col, 0.55);
+    const staffGem = bright;
+    // Thin legs
     model[0][2][1 + (legOff > 0 ? 1 : 0)] = dark;
     model[0][2][3 - (legOff > 0 ? 1 : 0)] = dark;
-    model[1][2][1] = mid; model[1][2][3] = mid;
-    model[1][2][2] = dark;
-    for (let x = 1; x <= 3; x++) model[2][2][x] = col;
-    model[2][1][2] = col; model[2][3][2] = col;
-    model[3][2][2] = col; model[3][1][2] = mid; model[3][3][2] = mid;
-    model[3][2][1] = mid; model[3][2][3] = mid;
-    model[4][2][0] = leather; model[4][2][4] = leather;
-    model[4][2][2] = light; model[4][1][2] = mid; model[4][3][2] = mid;
-    model[5][2][2] = light;
-    model[6][1][2] = bright; model[6][3][2] = bright; model[6][2][2] = light;
-    model[7][2][2] = bright;
-    const bowAngle = bob * 0.3;
-    model[3][0][0] = wood; model[4][0][0] = wood; model[5][0][0] = woodLight;
-    model[2][0][0] = wood; model[6][0][0] = wood;
-    if (bowAngle > 0) { model[3][0][1] = '#d4d4d8'; model[4][0][1] = '#d4d4d8'; model[5][0][1] = '#d4d4d8'; }
+    model[1][2][1] = dark; model[1][2][3] = dark;
+    // Wide robe skirt (z=2-3)
+    for (let x = 0; x <= 4; x++) { model[2][2][x] = robeColor; model[2][1][x] = robeColor; model[2][3][x] = robeColor; }
+    for (let x = 0; x <= 4; x++) { model[3][2][x] = robeLight; model[3][1][x] = robeColor; model[3][3][x] = robeColor; }
+    // Narrow torso with robe (z=4-5)
+    for (let x = 1; x <= 3; x++) { model[4][2][x] = col; model[4][1][x] = robeColor; model[4][3][x] = robeColor; }
+    model[5][2][2] = col; model[5][1][2] = robeColor; model[5][3][2] = robeColor;
+    model[5][2][1] = robeColor; model[5][2][3] = robeColor;
+    // Thin arms (z=4-5) sticking out
+    model[4][2][0] = mid; model[4][2][4] = mid;
+    model[5][2][0] = mid; model[5][2][4] = mid;
+    // Neck + head (z=6-7)
+    model[6][2][2] = light;
+    model[7][1][2] = bright; model[7][3][2] = bright; model[7][2][2] = light;
+    model[7][2][1] = light; model[7][2][3] = light;
+    // Pointed hat (z=8-9)
+    for (let x = 1; x <= 3; x++) { model[8][2][x] = hatColor; model[8][1][x] = hatColor; model[8][3][x] = hatColor; }
+    model[8][2][0] = hatColor; model[8][2][4] = hatColor;
+    model[9][2][2] = hatColor; model[9][1][2] = hatColor; model[9][3][2] = hatColor;
+    // Staff in left hand
+    const staffBob = Math.round(bob * 0.3);
+    for (let z = 1; z <= 8; z++) model[z][0][0] = z >= 7 ? staffGem : wood;
+    model[9][0][0] = bright;
+    if (bob > 0) model[9 + staffBob] && (model[9][0][0] = blend(staffGem, '#ffffff', Math.abs(bob) * 0.5));
     return model;
   }
 
-  const model = makeGrid(7, 5);
+  // Melee minion: wider, shorter, armored with shield + helmet
+  const model = makeGrid(7, 7);
   const legOff = Math.round(walk * 0.5);
-  model[0][2][1 + (legOff > 0 ? 1 : 0)] = dark;
-  model[0][2][3 - (legOff > 0 ? 1 : 0)] = dark;
-  model[0][2][2] = metalDark;
-  model[1][2][1] = mid; model[1][2][3] = mid; model[1][2][2] = dark;
-  for (let x = 1; x <= 3; x++) model[2][2][x] = col;
-  model[2][1][2] = col; model[2][3][2] = col;
-  model[3][2][2] = col; model[3][1][2] = mid; model[3][3][2] = mid;
-  model[3][2][1] = leather; model[3][2][3] = leather;
-  model[4][2][2] = light; model[4][1][2] = metal; model[4][3][2] = metal;
-  model[5][1][2] = bright; model[5][3][2] = bright; model[5][2][2] = light;
-  model[6][2][2] = bright;
+  // Wide stumpy legs (z=0)
+  model[0][3][1 + (legOff > 0 ? 1 : 0)] = dark; model[0][3][2 + (legOff > 0 ? 1 : 0)] = dark;
+  model[0][3][4 - (legOff > 0 ? 1 : 0)] = dark; model[0][3][5 - (legOff > 0 ? 1 : 0)] = dark;
+  // Armored legs (z=1)
+  model[1][3][1] = metalDark; model[1][3][2] = metalDark;
+  model[1][3][4] = metalDark; model[1][3][5] = metalDark;
+  // Wide armored torso (z=2-3) - 5 voxels wide
+  for (let x = 1; x <= 5; x++) for (let y = 2; y <= 4; y++) {
+    model[2][y][x] = metal; model[3][y][x] = metal;
+  }
+  // Core body color inside armor
+  for (let x = 2; x <= 4; x++) { model[2][3][x] = col; model[3][3][x] = col; }
+  // Shoulder pauldrons (z=3)
+  model[3][3][0] = metalBright; model[3][2][0] = metalDark;
+  model[3][3][6] = metalBright; model[3][2][6] = metalDark;
+  model[3][4][0] = metalDark; model[3][4][6] = metalDark;
+  // Arms (z=2-3)
+  model[2][3][0] = mid; model[2][3][6] = mid;
+  // Head (z=4-5)
+  model[4][3][2] = light; model[4][3][3] = light; model[4][3][4] = light;
+  model[4][2][3] = light; model[4][4][3] = light;
+  model[5][3][3] = bright; model[5][2][3] = bright; model[5][4][3] = bright;
+  // Helmet (z=5-6)
+  model[5][3][2] = metalBright; model[5][3][4] = metalBright;
+  model[6][3][3] = metal; model[6][2][3] = metalDark; model[6][4][3] = metalDark;
+  // Sword in right hand
   const swingOff = bob > 0.2 ? 1 : 0;
-  model[2][0][0] = metal; model[3][0][0] = metalBright;
-  model[4 + swingOff][0][0] = metalBright;
-  model[2][0][1] = metalDark;
-  model[2][4][3] = metalDark; model[2][4][4] = metal; model[3][4][4] = metal;
+  model[2][1][0] = metalBright; model[3][1][0] = metalBright;
+  model[4 + swingOff][1][0] = metalBright; model[5][1][0] = metalDark;
+  // Shield in left hand
+  for (let z = 2; z <= 4; z++) {
+    model[z][5][6] = metal; model[z][4][6] = metalDark;
+  }
+  model[3][5][6] = metalBright;
   return model;
 }
 

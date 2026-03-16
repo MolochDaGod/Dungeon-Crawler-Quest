@@ -104,6 +104,49 @@ export interface OpenWorldFloatingText {
   vy: number;
 }
 
+// ── Ability ──
+export interface OpenWorldAbility {
+  id: string;
+  name: string;
+  icon: string; // emoji/symbol for hotbar
+  description: string;
+  slot: 1 | 2 | 3 | 4;
+  cooldown: number; // seconds
+  mpCost: number;
+  damage: number; // multiplier of atk
+  range: number;
+  isAoE: boolean;
+  aoERadius: number;
+  effectType: 'fire_ball' | 'lightning' | 'sun_strike' | 'spikes' | 'shield_spell' | 'black_hole' | 'explosion' | 'fire_wall' | 'midas_touch' | 'lightning_bolt' | 'physical';
+}
+
+export const CLASS_ABILITIES: Record<string, OpenWorldAbility[]> = {
+  Warrior: [
+    { id: 'w1', name: 'Heroic Strike', icon: '⚔️', description: 'A powerful melee strike', slot: 1, cooldown: 4, mpCost: 15, damage: 2.0, range: 14, isAoE: false, aoERadius: 0, effectType: 'sun_strike' },
+    { id: 'w2', name: 'Shield Bash', icon: '🛡️', description: 'Stun and damage nearby enemy', slot: 2, cooldown: 8, mpCost: 25, damage: 1.5, range: 12, isAoE: false, aoERadius: 0, effectType: 'explosion' },
+    { id: 'w3', name: 'Whirlwind', icon: '🌀', description: 'Spin attack hitting all nearby', slot: 3, cooldown: 12, mpCost: 35, damage: 1.8, range: 16, isAoE: true, aoERadius: 16, effectType: 'fire_wall' },
+    { id: 'w4', name: 'Battle Cry', icon: '📯', description: 'Boost ATK for 10 seconds', slot: 4, cooldown: 20, mpCost: 40, damage: 0, range: 0, isAoE: false, aoERadius: 0, effectType: 'shield_spell' },
+  ],
+  Mage: [
+    { id: 'm1', name: 'Fireball', icon: '🔥', description: 'Hurl a ball of fire', slot: 1, cooldown: 3, mpCost: 20, damage: 2.5, range: 40, isAoE: true, aoERadius: 10, effectType: 'fire_ball' },
+    { id: 'm2', name: 'Lightning Bolt', icon: '⚡', description: 'Strike with lightning', slot: 2, cooldown: 6, mpCost: 30, damage: 3.0, range: 35, isAoE: false, aoERadius: 0, effectType: 'lightning' },
+    { id: 'm3', name: 'Black Hole', icon: '🕳️', description: 'Pull enemies to a point', slot: 3, cooldown: 15, mpCost: 50, damage: 2.0, range: 30, isAoE: true, aoERadius: 18, effectType: 'black_hole' },
+    { id: 'm4', name: 'Arcane Shield', icon: '✨', description: 'Absorb next 3 hits', slot: 4, cooldown: 18, mpCost: 35, damage: 0, range: 0, isAoE: false, aoERadius: 0, effectType: 'shield_spell' },
+  ],
+  Ranger: [
+    { id: 'r1', name: 'Power Shot', icon: '🏹', description: 'Long range piercing arrow', slot: 1, cooldown: 3, mpCost: 15, damage: 2.2, range: 50, isAoE: false, aoERadius: 0, effectType: 'lightning_bolt' },
+    { id: 'r2', name: 'Rain of Arrows', icon: '🌧️', description: 'Arrows rain on an area', slot: 2, cooldown: 10, mpCost: 35, damage: 1.5, range: 40, isAoE: true, aoERadius: 14, effectType: 'spikes' },
+    { id: 'r3', name: 'Trap', icon: '🪤', description: 'Place explosive trap', slot: 3, cooldown: 14, mpCost: 25, damage: 2.8, range: 20, isAoE: true, aoERadius: 8, effectType: 'explosion' },
+    { id: 'r4', name: 'Evasion', icon: '💨', description: 'Dodge all attacks for 3s', slot: 4, cooldown: 16, mpCost: 30, damage: 0, range: 0, isAoE: false, aoERadius: 0, effectType: 'midas_touch' },
+  ],
+  Worg: [
+    { id: 'wo1', name: 'Savage Bite', icon: '🐺', description: 'Ferocious melee bite', slot: 1, cooldown: 3, mpCost: 15, damage: 2.3, range: 14, isAoE: false, aoERadius: 0, effectType: 'spikes' },
+    { id: 'wo2', name: 'Howl', icon: '🌙', description: 'Terrify enemies, boost allies', slot: 2, cooldown: 10, mpCost: 30, damage: 0, range: 20, isAoE: true, aoERadius: 20, effectType: 'black_hole' },
+    { id: 'wo3', name: 'Pounce', icon: '🐾', description: 'Leap to target dealing damage', slot: 3, cooldown: 8, mpCost: 25, damage: 2.0, range: 30, isAoE: false, aoERadius: 0, effectType: 'fire_wall' },
+    { id: 'wo4', name: 'Feral Rage', icon: '🔴', description: 'Enter rage: +50% ATK for 8s', slot: 4, cooldown: 22, mpCost: 45, damage: 0, range: 0, isAoE: false, aoERadius: 0, effectType: 'fire_ball' },
+  ],
+};
+
 // ── Player state for open world ──
 export interface OpenWorldPlayerState {
   hp: number;
@@ -122,6 +165,9 @@ export interface OpenWorldPlayerState {
   attackTimer: number;
   attackCooldown: number;
   targetMonsterId: number | null;
+  abilityCooldowns: number[]; // cooldown remaining for slots 1-4
+  buffTimer: number; // remaining seconds for active buff
+  buffType: string | null; // which buff is active
 }
 
 // ═══════════════════════════════════════════════

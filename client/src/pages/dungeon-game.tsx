@@ -40,6 +40,8 @@ export default function DungeonGamePage() {
     stateRef.current = state;
     const renderer = new DungeonRenderer(canvas);
     rendererRef.current = renderer;
+    // Expose sprite effects to ability system
+    (state as any)._spriteEffects = renderer.getSpriteEffects();
 
     let lastTime = performance.now();
     let hudTimer = 0;
@@ -51,6 +53,7 @@ export default function DungeonGamePage() {
       lastTime = now;
 
       updateDungeon(state, dt, keysRef.current);
+      renderer.updateSpriteEffects(dt);
       renderer.render(state);
 
       hudTimer += dt;
