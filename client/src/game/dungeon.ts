@@ -148,6 +148,14 @@ export interface DungeonFloatingText {
   life: number; vy: number; size: number;
 }
 
+export interface ExitPortal {
+  x: number; y: number;
+  type: 'stairs' | 'reward';
+  active: boolean;
+  spawnTime: number; // gameTime when portal appeared
+  tileX: number; tileY: number;
+}
+
 export interface DungeonState {
   floor: number;
   tiles: DungeonTile[][];
@@ -175,6 +183,15 @@ export interface DungeonState {
   mouseWorld: Vec2;
   targeting: DungeonTargeting;
   spellEffects: DungeonSpellEffect[];
+  // Boss room exit portals (Enter the Gungeon style)
+  exitPortals: ExitPortal[];
+  bossRoomCleared: boolean;
+  bossRoomIndex: number; // which room is the boss room
+  // Hold-to-fire ranged
+  rangedFireTimer: number;
+  holdingFire: boolean;
+  // Melee cooldown
+  meleeCooldown: number;
 }
 
 export interface DungeonHudState {
@@ -298,6 +315,12 @@ export function createDungeonState(heroId: number): DungeonState {
       color: '#fff',
     },
     spellEffects: [],
+    exitPortals: [],
+    bossRoomCleared: false,
+    bossRoomIndex: -1,
+    rangedFireTimer: 0,
+    holdingFire: false,
+    meleeCooldown: 0,
   };
 
   generateFloor(state);
@@ -381,7 +404,10 @@ function generateFloor(state: DungeonState) {
       const bossType = state.floor >= 5 ? 'Dragon' : 'Lich';
       const template = ENEMY_TEMPLATES[bossType];
       state.enemies.push(createEnemy(state, bossType, template, cx, cy, scaleFactor));
-      state.tiles[room.y + room.h - 1][room.x + room.w - 1].type = 'stairs';
+      // NO stairs placed yet — they appear after boss is defeated (Enter the Gungeon style)
+      state.bossRoomIndex = i;
+      state.bossRoomCleared = false;
+      state.exitPortals = [];
     } else if (room.type === 'treasure') {
       state.chests.push({
         id: state.nextId++,
@@ -709,6 +735,15 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
   for (let i = 0; i < p.abilityCooldowns.length; i++) {
     if (p.abilityCooldowns[i] > 0) p.abilityCooldowns[i] -= dt;
   }
+  if (state.rangedFireTimer > 0) state.rangedFireTimer -= dt;
+  if (state.meleeCooldown > 0) state.meleeCooldown -= dt;
+
+  // Hold-to-fire ranged: fire at controlled rate while LMB is held
+  if (state.holdingFire && state.rangedFireTimer <= 0 && !p.dead && !isStunned(p as any)) {
+    const RANGED_FIRE_RATE = 0.35; // seconds between shots
+    handleDungeonAttack(state);
+    state.rangedFireTimer = RANGED_FIRE_RATE;
+  }
 
   revealAround(state, p.x, p.y, 5);
 
@@ -811,6 +846,46 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
   }
 
   updateHeroEnemies(state, dt);
+
+  // ═══ BOSS ROOM EXIT PORTALS (Enter the Gungeon style) ═══
+  checkBossRoomCleared(state);
+
+  // Check if player steps on exit portal
+  for (const portal of state.exitPortals) {
+    if (!portal.active) continue;
+    if (distXY(p, portal) < 25) {
+      if (portal.type === 'stairs') {
+        state.floor++;
+        if (state.floor > 10) {
+          state.gameOver = true;
+          state.gameWon = true;
+        } else {
+          generateFloor(state);
+          state.killFeed.push({ text: `Descended to Floor ${state.floor}`, color: '#ffd700', time: state.gameTime });
+        }
+        return;
+      } else if (portal.type === 'reward') {
+        // Reward portal: bonus gold + heal + item chance
+        const bonus = 50 + state.floor * 20;
+        p.gold += bonus;
+        p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.3);
+        p.mp = Math.min(p.maxMp, p.mp + p.maxMp * 0.5);
+        addDungeonText(state, p.x, p.y - 20, `+${bonus}g +30%HP`, '#ffd700', 18);
+        spawnDungeonParticles(state, p.x, p.y, '#ffd700', 20);
+        if (Math.random() < 0.5 && ITEMS.length > 0) {
+          const item = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+          const slot = p.items.findIndex(s => s === null);
+          if (slot !== -1) {
+            p.items[slot] = item;
+            applyDungeonItemStats(p, item);
+            addDungeonText(state, p.x, p.y - 40, item.name, '#a855f7', 16);
+          }
+        }
+        portal.active = false; // consume the reward portal
+        state.killFeed.push({ text: 'Reward claimed!', color: '#ffd700', time: state.gameTime });
+      }
+    }
+  }
 
   for (const proj of state.projectiles) {
     let target: { x: number; y: number; id: number } | null = null;
@@ -943,6 +1018,179 @@ function killDungeonHeroEnemy(state: DungeonState, he: DungeonHeroEnemy) {
     color: RACE_COLORS[heroData.race] || '#ffd700',
     time: state.gameTime
   });
+}
+
+function checkBossRoomCleared(state: DungeonState) {
+  if (state.bossRoomCleared || state.bossRoomIndex < 0) return;
+  const bossRoom = state.rooms[state.bossRoomIndex];
+  if (!bossRoom) return;
+
+  // Check if any living enemies remain in the boss room
+  const roomLeft = bossRoom.x * TILE_SIZE;
+  const roomRight = (bossRoom.x + bossRoom.w) * TILE_SIZE;
+  const roomTop = bossRoom.y * TILE_SIZE;
+  const roomBottom = (bossRoom.y + bossRoom.h) * TILE_SIZE;
+
+  const inRoom = (e: { x: number; y: number }) =>
+    e.x >= roomLeft && e.x <= roomRight && e.y >= roomTop && e.y <= roomBottom;
+
+  const livingEnemies = state.enemies.filter(e => !e.dead && inRoom(e));
+  const livingHeroEnemies = state.heroEnemies.filter(he => !he.dead && inRoom(he));
+
+  if (livingEnemies.length > 0 || livingHeroEnemies.length > 0) return;
+
+  // ═══ BOSS ROOM CLEARED! Spawn exit portals ═══
+  state.bossRoomCleared = true;
+  const cx = (bossRoom.x + bossRoom.w / 2) * TILE_SIZE;
+  const cy = (bossRoom.y + bossRoom.h / 2) * TILE_SIZE;
+
+  // Stairs portal (main exit to next floor) - right side of room
+  const stairsTX = bossRoom.x + bossRoom.w - 2;
+  const stairsTY = bossRoom.y + Math.floor(bossRoom.h / 2);
+  if (stairsTX < state.mapWidth && stairsTY < state.mapHeight) {
+    state.tiles[stairsTY][stairsTX].type = 'stairs';
+    state.exitPortals.push({
+      x: stairsTX * TILE_SIZE + TILE_SIZE / 2,
+      y: stairsTY * TILE_SIZE + TILE_SIZE / 2,
+      type: 'stairs',
+      active: true,
+      spawnTime: state.gameTime,
+      tileX: stairsTX,
+      tileY: stairsTY,
+    });
+  }
+
+  // Reward portal (bonus loot room) - left side of room
+  const rewardTX = bossRoom.x + 1;
+  const rewardTY = bossRoom.y + Math.floor(bossRoom.h / 2);
+  if (rewardTX >= 0 && rewardTY < state.mapHeight) {
+    state.exitPortals.push({
+      x: rewardTX * TILE_SIZE + TILE_SIZE / 2,
+      y: rewardTY * TILE_SIZE + TILE_SIZE / 2,
+      type: 'reward',
+      active: true,
+      spawnTime: state.gameTime,
+      tileX: rewardTX,
+      tileY: rewardTY,
+    });
+  }
+
+  // Big celebration effects
+  spawnDungeonParticles(state, cx, cy, '#ffd700', 30);
+  spawnDungeonParticles(state, cx - 40, cy, '#22c55e', 15);
+  spawnDungeonParticles(state, cx + 40, cy, '#8866ff', 15);
+  addDungeonText(state, cx, cy - 40, 'BOSS DEFEATED!', '#ffd700', 24);
+  addDungeonText(state, cx, cy - 60, 'Exits opened!', '#22c55e', 16);
+  state.killFeed.push({ text: 'Boss defeated! Exit portals appeared!', color: '#ffd700', time: state.gameTime });
+}
+
+const MELEE_RANGE = 60;
+const MELEE_CONE_ANGLE = Math.PI * 0.6; // ~108 degree cone
+const MELEE_DAMAGE_MULT = 1.8;
+const MELEE_KNOCKBACK = 120;
+const MELEE_COOLDOWN = 0.6;
+
+export function handleDungeonMeleeAttack(state: DungeonState) {
+  const p = state.player;
+  if (p.dead || isStunned(p as any)) return;
+  if (state.meleeCooldown > 0) return;
+
+  state.meleeCooldown = MELEE_COOLDOWN;
+  p.animState = 'attack';
+  globalAnimDirector.registerAttack(p.id, state.gameTime || 0);
+
+  // Face toward mouse
+  const mouseAngle = Math.atan2(state.mouseWorld.y - p.y, state.mouseWorld.x - p.x);
+  p.facing = mouseAngle;
+
+  // Melee swing VFX
+  addSpellEffect(state, p.x + Math.cos(mouseAngle) * 30, p.y + Math.sin(mouseAngle) * 30, 'cone_sweep', MELEE_RANGE, '#ff8844', 0.4, mouseAngle);
+  spawnDungeonParticles(state, p.x + Math.cos(mouseAngle) * 35, p.y + Math.sin(mouseAngle) * 35, '#ff6622', 6);
+
+  let hitCount = 0;
+  const hd = HEROES[p.heroDataId];
+
+  // Hit enemies in cone
+  for (const enemy of state.enemies) {
+    if (enemy.dead) continue;
+    const d = distXY(p, enemy);
+    if (d > MELEE_RANGE) continue;
+    const angle = angleBetween(p, enemy);
+    let angleDiff = Math.abs(angle - mouseAngle);
+    if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+    if (angleDiff > MELEE_CONE_ANGLE / 2) continue;
+
+    const result = combatCalcDamage(
+      { atk: p.atk, activeEffects: p.activeEffects },
+      { def: enemy.def, activeEffects: enemy.activeEffects },
+      Math.floor(p.atk * MELEE_DAMAGE_MULT)
+    );
+    enemy.hp -= result.finalDamage;
+    hitCount++;
+
+    // Knockback
+    const kbAngle = angleBetween(p, enemy);
+    const kbDist = MELEE_KNOCKBACK * (enemy.isBoss ? 0.3 : 1);
+    const newX = enemy.x + Math.cos(kbAngle) * kbDist;
+    const newY = enemy.y + Math.sin(kbAngle) * kbDist;
+    if (isWalkable(state, newX, newY)) {
+      enemy.x = newX;
+      enemy.y = newY;
+    } else if (isWalkable(state, newX, enemy.y)) {
+      enemy.x = newX;
+    } else if (isWalkable(state, enemy.x, newY)) {
+      enemy.y = newY;
+    }
+
+    const col = result.isCrit ? '#ffd700' : '#ff8844';
+    addDungeonText(state, enemy.x, enemy.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, col, result.isCrit ? 18 : 14);
+    spawnDungeonParticles(state, enemy.x, enemy.y, '#ff6644', 5);
+
+    const ls = hasLifesteal(p as any as CombatEntity);
+    if (ls > 0) p.hp = Math.min(p.maxHp, p.hp + Math.floor(result.finalDamage * ls));
+    if (enemy.hp <= 0) killDungeonEnemy(state, enemy);
+  }
+
+  // Hit hero enemies in cone
+  for (const he of state.heroEnemies) {
+    if (he.dead) continue;
+    const d = distXY(p, he);
+    if (d > MELEE_RANGE) continue;
+    const angle = angleBetween(p, he);
+    let angleDiff = Math.abs(angle - mouseAngle);
+    if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+    if (angleDiff > MELEE_CONE_ANGLE / 2) continue;
+
+    const result = combatCalcDamage(
+      { atk: p.atk, activeEffects: p.activeEffects },
+      { def: he.def, activeEffects: he.activeEffects },
+      Math.floor(p.atk * MELEE_DAMAGE_MULT)
+    );
+    if (he.shieldHp > 0) {
+      const abs = Math.min(he.shieldHp, result.finalDamage);
+      he.shieldHp -= abs;
+      result.finalDamage = Math.max(0, result.finalDamage - abs);
+    }
+    he.hp -= result.finalDamage;
+    hitCount++;
+
+    // Knockback hero enemies
+    const kbAngle = angleBetween(p, he);
+    const newX = he.x + Math.cos(kbAngle) * MELEE_KNOCKBACK * 0.7;
+    const newY = he.y + Math.sin(kbAngle) * MELEE_KNOCKBACK * 0.7;
+    if (isWalkable(state, newX, newY)) { he.x = newX; he.y = newY; }
+
+    addDungeonText(state, he.x, he.y - 15, `-${result.finalDamage}`, '#ff8844', 14);
+    spawnDungeonParticles(state, he.x, he.y, '#ff6644', 5);
+
+    const ls = hasLifesteal(p as any as CombatEntity);
+    if (ls > 0) p.hp = Math.min(p.maxHp, p.hp + Math.floor(result.finalDamage * ls));
+    if (he.hp <= 0) killDungeonHeroEnemy(state, he);
+  }
+
+  if (hitCount > 0) {
+    state.killFeed.push({ text: `Melee cleave hit ${hitCount} enemies!`, color: '#ff8844', time: state.gameTime });
+  }
 }
 
 function updateHeroEnemies(state: DungeonState, dt: number) {
@@ -1622,6 +1870,7 @@ export class DungeonRenderer {
 
     this.renderTiles(ctx, state, cam, W, H);
     this.renderChests(ctx, state);
+    this.renderExitPortals(ctx, state);
 
     this.renderTargetingIndicator(ctx, state);
 
@@ -1719,6 +1968,64 @@ export class DungeonRenderer {
     ctx.globalAlpha = 1;
 
     this.renderTorchGlow(ctx, state);
+  }
+
+  private renderExitPortals(ctx: CanvasRenderingContext2D, state: DungeonState) {
+    const t = state.gameTime;
+    for (const portal of state.exitPortals) {
+      if (!portal.active) continue;
+      if (!isInPlayerVision(state, portal.x, portal.y)) continue;
+
+      const age = t - portal.spawnTime;
+      const fadeIn = Math.min(1, age / 0.8); // fade in over 0.8s
+      const pulse = 0.6 + Math.sin(t * 3) * 0.3;
+      const isStairs = portal.type === 'stairs';
+      const baseColor = isStairs ? '#8866ff' : '#ffd700';
+      const glowColor = isStairs ? 'rgba(136,102,255,' : 'rgba(255,215,0,';
+
+      ctx.save();
+      ctx.globalAlpha = fadeIn;
+
+      // Outer glow
+      const gr = ctx.createRadialGradient(portal.x, portal.y, 0, portal.x, portal.y, 35);
+      gr.addColorStop(0, glowColor + (0.3 * pulse) + ')');
+      gr.addColorStop(0.5, glowColor + (0.15 * pulse) + ')');
+      gr.addColorStop(1, glowColor + '0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath();
+      ctx.arc(portal.x, portal.y, 35, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Portal ring (spinning)
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = fadeIn * pulse;
+      ctx.beginPath();
+      ctx.arc(portal.x, portal.y, 16 + Math.sin(t * 2) * 2, t * 2, t * 2 + Math.PI * 1.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(portal.x, portal.y, 12, -t * 3, -t * 3 + Math.PI);
+      ctx.stroke();
+
+      // Inner core
+      ctx.globalAlpha = fadeIn * 0.9;
+      ctx.fillStyle = baseColor;
+      ctx.beginPath();
+      ctx.arc(portal.x, portal.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label
+      ctx.globalAlpha = fadeIn;
+      ctx.fillStyle = baseColor;
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(isStairs ? 'NEXT FLOOR' : 'REWARD', portal.x, portal.y - 24);
+      ctx.font = '8px sans-serif';
+      ctx.fillStyle = '#aaa';
+      ctx.fillText(isStairs ? '(walk in)' : '(bonus loot)', portal.x, portal.y - 14);
+
+      ctx.restore();
+    }
   }
 
   private renderTorchGlow(ctx: CanvasRenderingContext2D, state: DungeonState) {

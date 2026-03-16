@@ -7,7 +7,7 @@ import {
 import {
   DungeonState, DungeonHudState,
   createDungeonState, updateDungeon, getDungeonHudState,
-  DungeonRenderer, handleDungeonAbility, handleDungeonAttack,
+  DungeonRenderer, handleDungeonAbility, handleDungeonAttack, handleDungeonMeleeAttack,
   updateDungeonMouseWorld, startDungeonTargeting, confirmDungeonTargeting, cancelDungeonTargeting
 } from '@/game/dungeon';
 import { EFFECT_COLORS, StatusEffect } from '@/game/combat';
@@ -78,12 +78,7 @@ export default function DungeonGamePage() {
       }
     };
 
-    // Track combo hits for LMB light attack chains
-    let lightComboCount = 0;
-    let lastLightAttackTime = 0;
-    const COMBO_WINDOW = 0.8; // seconds to chain next hit
-
-    const onKeyDown = (e: KeyboardEvent) => {
+    const onKeyDown
       const key = e.key.toLowerCase();
       keysRef.current.add(key);
 
@@ -104,33 +99,32 @@ export default function DungeonGamePage() {
 
     const onKeyUp = (e: KeyboardEvent) => { keysRef.current.delete(e.key.toLowerCase()); };
 
-    // LMB = light melee/ranged combo attack
-    const onClick = (e: MouseEvent) => {
+    // LMB hold = controlled ranged fire
+    const onMouseDown = (e: MouseEvent) => {
       if (e.button === 0) {
         if (state.targeting.active) {
           confirmDungeonTargeting(state);
         } else {
-          // Light attack combo chain
-          const now = performance.now() / 1000;
-          if (now - lastLightAttackTime < COMBO_WINDOW) {
-            lightComboCount = (lightComboCount + 1) % 3; // 3-hit combo
-          } else {
-            lightComboCount = 0;
-          }
-          lastLightAttackTime = now;
+          state.holdingFire = true;
+          // Fire first shot immediately
           handleDungeonAttack(state);
         }
       }
     };
 
-    // RMB = heavy melee attack (stronger, slower)
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) {
+        state.holdingFire = false;
+      }
+    };
+
+    // RMB = melee attack with knockback
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       if (state.targeting.active) {
         cancelDungeonTargeting(state);
       } else {
-        // Heavy melee: use ability slot 0 as heavy attack, or basic attack with 2x damage
-        handleDungeonAttack(state);
+        handleDungeonMeleeAttack(state);
       }
     };
 
@@ -144,7 +138,8 @@ export default function DungeonGamePage() {
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
-    canvas.addEventListener('click', onClick);
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mouseup', onMouseUp);
     canvas.addEventListener('contextmenu', onContextMenu);
     canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('wheel', onWheel);
@@ -154,7 +149,8 @@ export default function DungeonGamePage() {
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
-      canvas.removeEventListener('click', onClick);
+      canvas.removeEventListener('mousedown', onMouseDown);
+      canvas.removeEventListener('mouseup', onMouseUp);
       canvas.removeEventListener('contextmenu', onContextMenu);
       canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('wheel', onWheel);
@@ -386,6 +382,18 @@ export default function DungeonGamePage() {
                   <div style={{ color: '#888' }}>SPD <span className="font-bold" style={{ color: '#4ade80' }}>{hud.spd}</span></div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Attack mode indicators */}
+          <div className="absolute top-2 left-2 pointer-events-none flex flex-col" style={{ gap: 4 }}>
+            <div className="flex items-center" style={{ gap: 6, background: 'rgba(0,0,0,0.7)', border: '1px solid #555', borderRadius: 4, padding: '3px 8px' }}>
+              <span className="text-[10px] font-bold" style={{ color: '#4ade80' }}>LMB</span>
+              <span className="text-[10px]" style={{ color: '#aaa' }}>Hold &#x2192; Ranged</span>
+            </div>
+            <div className="flex items-center" style={{ gap: 6, background: 'rgba(0,0,0,0.7)', border: '1px solid #555', borderRadius: 4, padding: '3px 8px' }}>
+              <span className="text-[10px] font-bold" style={{ color: '#f87171' }}>RMB</span>
+              <span className="text-[10px]" style={{ color: '#aaa' }}>Melee + Knockback</span>
             </div>
           </div>
 
