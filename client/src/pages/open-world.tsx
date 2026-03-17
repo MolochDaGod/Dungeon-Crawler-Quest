@@ -8,8 +8,9 @@ import {
   createOpenWorldState, updateOpenWorld, getOWHudState,
   OpenWorldRenderer, handleOWAbility, handleOWAttack,
   updateOWMouseWorld, startOWTargeting, confirmOWTargeting, cancelOWTargeting,
-  allocateOWAttribute
+  allocateOWAttribute, acceptOWMission, claimOWMission, enterOWDungeon
 } from '@/game/open-world';
+import { getAvailableMissions } from '@/game/missions';
 import { AttributeId } from '@/game/attributes';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
 import { ProgressEvent } from '@/game/player-progress';
@@ -27,6 +28,7 @@ export default function OpenWorldPage() {
   const [notifications, setNotifications] = useState<{ text: string; color: string; time: number }[]>([]);
   const [zoneBanner, setZoneBanner] = useState<string | null>(null);
   const [showCharPanel, setShowCharPanel] = useState(false);
+  const [showMissions, setShowMissions] = useState(false);
   const zoneBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
@@ -125,6 +127,8 @@ export default function OpenWorldPage() {
       if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handleOWAttack(state);
       if (key === 'i') state.showInventory = !state.showInventory;
       if (key === 'c') setShowCharPanel(prev => !prev);
+      if (key === 'j') setShowMissions(prev => !prev);
+      if (key === 'f') enterOWDungeon(state);
       if (key === '=') minimapZoomIn(minimapRef.current);
       if (key === '-') minimapZoomOut(minimapRef.current);
     };
@@ -305,6 +309,30 @@ export default function OpenWorldPage() {
               );
             })}
           </div>
+
+          {/* Dungeon entrance prompt */}
+          {hud.nearbyDungeon && (
+            <div
+              className="absolute bottom-48 left-1/2 -translate-x-1/2 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to bottom, rgba(60,10,10,0.95), rgba(30,5,5,0.9))',
+                border: '2px solid #ef4444',
+                borderRadius: 8,
+                padding: '8px 20px',
+                boxShadow: '0 0 20px rgba(239,68,68,0.3)',
+              }}
+            >
+              <div className="text-center">
+                <div className="text-sm font-black text-red-400">{hud.nearbyDungeon.name}</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {hud.level >= hud.nearbyDungeon.requiredLevel
+                    ? <span>Press <span className="text-[#ffd700] font-bold">[F]</span> to enter</span>
+                    : <span className="text-red-500">Requires Level {hud.nearbyDungeon.requiredLevel}</span>
+                  }
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Active effects bar */}
           {hud.activeEffects.length > 0 && (
@@ -495,6 +523,95 @@ export default function OpenWorldPage() {
               </div>
             </div>
           </div>
+
+          {/* Missions Panel (J key) */}
+          {showMissions && (
+            <div
+              className="absolute top-20 right-4 pointer-events-auto"
+              style={{
+                width: 300,
+                maxHeight: '60vh',
+                overflowY: 'auto',
+                background: 'linear-gradient(to bottom, rgba(15,10,5,0.98), rgba(8,4,0,0.98))',
+                border: '2px solid #c5a059',
+                borderRadius: 8,
+                padding: 12,
+                boxShadow: '0 0 40px rgba(0,0,0,0.9)',
+              }}
+            >
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-black text-[#c5a059]">MISSIONS [J]</h3>
+                <button
+                  className="text-gray-400 hover:text-white text-lg cursor-pointer"
+                  onClick={() => setShowMissions(false)}
+                >×</button>
+              </div>
+
+              {/* Active missions */}
+              {hud.activeMissions.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[10px] font-bold text-gray-500 mb-1">ACTIVE</div>
+                  {hud.activeMissions.map(m => (
+                    <div key={m.id} className="mb-2 p-2 rounded" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-white">{m.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded" style={{
+                          background: m.status === 'complete' ? 'rgba(34,197,94,0.2)' : 'rgba(96,165,250,0.2)',
+                          color: m.status === 'complete' ? '#22c55e' : '#60a5fa',
+                          border: `1px solid ${m.status === 'complete' ? '#22c55e50' : '#60a5fa50'}`,
+                        }}>{m.status === 'complete' ? 'COMPLETE' : 'ACTIVE'}</span>
+                      </div>
+                      {m.objectives.map((o, oi) => (
+                        <div key={oi} className="flex justify-between text-[10px] mt-1">
+                          <span className="text-gray-400 capitalize">{o.type}: {o.target}</span>
+                          <span style={{ color: o.current >= o.required ? '#22c55e' : '#f59e0b' }}>
+                            {o.current}/{o.required}
+                          </span>
+                        </div>
+                      ))}
+                      {m.status === 'complete' && (
+                        <button
+                          className="mt-1 w-full text-[10px] font-bold py-1 rounded cursor-pointer"
+                          style={{ background: 'rgba(34,197,94,0.2)', color: '#22c55e', border: '1px solid #22c55e50' }}
+                          onClick={() => stateRef.current && claimOWMission(stateRef.current, m.id)}
+                        >CLAIM REWARD</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Available missions from current zone */}
+              {stateRef.current && (() => {
+                const available = getAvailableMissions(stateRef.current.missionLog, hud.zoneId, stateRef.current.player.level);
+                if (available.length === 0) return null;
+                return (
+                  <div>
+                    <div className="text-[10px] font-bold text-gray-500 mb-1">AVAILABLE</div>
+                    {available.slice(0, 5).map(m => (
+                      <div key={m.id} className="mb-1 p-2 rounded" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid #222' }}>
+                        <div className="text-xs font-bold text-gray-300">{m.name}</div>
+                        <div className="text-[9px] text-gray-500 mb-1">{m.description}</div>
+                        <div className="text-[9px] text-gray-600">
+                          Reward: {m.reward.xp} XP, {m.reward.gold}g
+                          {m.reward.equipmentTier && <span className="text-purple-400"> + T{m.reward.equipmentTier} gear</span>}
+                        </div>
+                        <button
+                          className="mt-1 w-full text-[10px] font-bold py-1 rounded cursor-pointer"
+                          style={{ background: 'rgba(96,165,250,0.15)', color: '#60a5fa', border: '1px solid #60a5fa50' }}
+                          onClick={() => stateRef.current && acceptOWMission(stateRef.current, m.id)}
+                        >ACCEPT</button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {hud.activeMissions.length === 0 && (
+                <div className="text-[10px] text-gray-600 text-center py-4">No active missions. Visit NPCs or press J to browse available quests.</div>
+              )}
+            </div>
+          )}
 
           {/* Character Panel (C key) */}
           {showCharPanel && hud.attributeSummary && (

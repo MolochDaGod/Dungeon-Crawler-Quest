@@ -77,6 +77,10 @@ export const ISLAND_ZONES: ZoneDef[] = [
       { x: 1800, y: 4200, type: 'Skeleton', level: 3, respawnTime: 45, count: 2 },
       { x: 2200, y: 4500, type: 'Slime', level: 2, respawnTime: 30, count: 4 },
       { x: 3000, y: 3800, type: 'Skeleton', level: 4, respawnTime: 60, count: 2 },
+      { x: 1600, y: 3600, type: 'Spider', level: 2, respawnTime: 25, count: 3 },
+      { x: 2800, y: 4200, type: 'Treant', level: 4, respawnTime: 60, count: 2 },
+      { x: 2100, y: 3800, type: 'Dire Wolf', level: 3, respawnTime: 35, count: 3 },
+      { x: 3200, y: 4600, type: 'Goblin Shaman', level: 5, respawnTime: 50, count: 1 },
     ],
     connectedZoneIds: [0, 2, 4],
     npcPositions: [{ x: 2500, y: 4800 }],
@@ -99,6 +103,9 @@ export const ISLAND_ZONES: ZoneDef[] = [
       { x: 6000, y: 4000, type: 'Golem', level: 7, respawnTime: 60, count: 2 },
       { x: 5200, y: 4500, type: 'Skeleton', level: 8, respawnTime: 45, count: 3 },
       { x: 4800, y: 3800, type: 'Slime', level: 6, respawnTime: 30, count: 4 },
+      { x: 5600, y: 4200, type: 'Wraith', level: 7, respawnTime: 50, count: 2 },
+      { x: 6200, y: 3700, type: 'Wraith', level: 8, respawnTime: 55, count: 2 },
+      { x: 4700, y: 4300, type: 'Imp', level: 6, respawnTime: 25, count: 4 },
     ],
     connectedZoneIds: [0, 3, 5],
     npcPositions: [{ x: 4700, y: 3200 }],
@@ -120,6 +127,10 @@ export const ISLAND_ZONES: ZoneDef[] = [
       { x: 4200, y: 800, type: 'Dragon', level: 10, respawnTime: 90, count: 1 },
       { x: 3800, y: 2000, type: 'Skeleton', level: 9, respawnTime: 45, count: 3 },
       { x: 4500, y: 1500, type: 'Golem', level: 10, respawnTime: 60, count: 2 },
+      { x: 3200, y: 1500, type: 'Bandit', level: 8, respawnTime: 35, count: 4 },
+      { x: 4000, y: 2500, type: 'Bandit', level: 9, respawnTime: 35, count: 3 },
+      { x: 4800, y: 1000, type: 'Bandit Chief', level: 10, respawnTime: 90, count: 1 },
+      { x: 3600, y: 2200, type: 'Harpy', level: 9, respawnTime: 40, count: 2 },
     ],
     connectedZoneIds: [0, 6, 7],
     npcPositions: [],
@@ -142,6 +153,9 @@ export const ISLAND_ZONES: ZoneDef[] = [
       { x: 2200, y: 1500, type: 'Golem', level: 11, respawnTime: 60, count: 2 },
       { x: 1000, y: 2200, type: 'Skeleton', level: 12, respawnTime: 45, count: 3 },
       { x: 2500, y: 900, type: 'Dragon', level: 14, respawnTime: 120, count: 1 },
+      { x: 600, y: 2000, type: 'Dire Wolf', level: 11, respawnTime: 40, count: 4 },
+      { x: 1800, y: 1400, type: 'Fire Drake', level: 12, respawnTime: 80, count: 1 },
+      { x: 2800, y: 1800, type: 'Corrupted Knight', level: 13, respawnTime: 55, count: 2 },
     ],
     connectedZoneIds: [1],
     npcPositions: [{ x: 1500, y: 2800 }],
@@ -185,6 +199,10 @@ export const ISLAND_ZONES: ZoneDef[] = [
       { x: 1500, y: 7000, type: 'Dragon', level: 17, respawnTime: 90, count: 2 },
       { x: 2500, y: 6500, type: 'Dragon', level: 18, respawnTime: 120, count: 1 },
       { x: 1000, y: 7200, type: 'Golem', level: 16, respawnTime: 60, count: 3 },
+      { x: 600, y: 6500, type: 'Imp', level: 15, respawnTime: 25, count: 5 },
+      { x: 2000, y: 6200, type: 'Harpy', level: 16, respawnTime: 40, count: 3 },
+      { x: 2800, y: 7200, type: 'Fire Drake', level: 17, respawnTime: 80, count: 1 },
+      { x: 1200, y: 7600, type: 'Imp', level: 16, respawnTime: 25, count: 4 },
     ],
     connectedZoneIds: [3],
     npcPositions: [],
@@ -319,6 +337,9 @@ export const ISLAND_ZONES: ZoneDef[] = [
       { x: 14500, y: 8800, type: 'Spider', level: 7, respawnTime: 35, count: 2 },
       { x: 13800, y: 9800, type: 'Skeleton', level: 8, respawnTime: 40, count: 3 },
       { x: 15000, y: 9500, type: 'Orc Grunt', level: 9, respawnTime: 50, count: 2 },
+      { x: 12800, y: 9200, type: 'Bandit', level: 7, respawnTime: 30, count: 3 },
+      { x: 14200, y: 9400, type: 'Sea Serpent', level: 9, respawnTime: 120, count: 1 },
+      { x: 15200, y: 8600, type: 'Spider', level: 8, respawnTime: 30, count: 3 },
     ],
     connectedZoneIds: [10, 12],
     npcPositions: [
@@ -502,4 +523,271 @@ export function updateZoneTracker(tracker: ZoneTracker, playerX: number, playerY
     return zone;
   }
   return null;
+}
+
+// ── Dungeon Entrances ──────────────────────────────────────────
+
+export interface DungeonEntrance {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  zoneId: number;
+  requiredLevel: number;
+  description: string;
+  difficulty: 'normal' | 'hard' | 'heroic';
+  icon: string;       // emoji for map display
+  floors: number;     // how many floors the dungeon has
+}
+
+export const DUNGEON_ENTRANCES: DungeonEntrance[] = [
+  {
+    id: 'forest-crypt',
+    name: 'Forest Crypt',
+    x: 1700, y: 4400,
+    zoneId: 1,
+    requiredLevel: 3,
+    description: 'A crumbling crypt hidden among the roots of ancient trees.',
+    difficulty: 'normal',
+    icon: '🏚️',
+    floors: 3,
+  },
+  {
+    id: 'swamp-cavern',
+    name: 'Swamp Cavern',
+    x: 5800, y: 3200,
+    zoneId: 2,
+    requiredLevel: 6,
+    description: 'A dank cavern beneath the cursed swamp. The air reeks of decay.',
+    difficulty: 'normal',
+    icon: '🕳️',
+    floors: 4,
+  },
+  {
+    id: 'mountain-mine',
+    name: 'Abandoned Mine',
+    x: 4600, y: 900,
+    zoneId: 3,
+    requiredLevel: 9,
+    description: 'An old mine overrun by golems and bandits.',
+    difficulty: 'hard',
+    icon: '⛏️',
+    floors: 5,
+  },
+  {
+    id: 'dragon-lair',
+    name: 'Dragon\'s Lair',
+    x: 2400, y: 1000,
+    zoneId: 4,
+    requiredLevel: 12,
+    description: 'The entrance to a dragon\'s underground lair. Heat radiates from within.',
+    difficulty: 'hard',
+    icon: '🐉',
+    floors: 5,
+  },
+  {
+    id: 'catacombs',
+    name: 'Catacombs',
+    x: 6200, y: 900,
+    zoneId: 5,
+    requiredLevel: 13,
+    description: 'Ancient catacombs stretching deep beneath the crypts.',
+    difficulty: 'hard',
+    icon: '💀',
+    floors: 6,
+  },
+  {
+    id: 'volcanic-caldera',
+    name: 'Volcanic Caldera',
+    x: 1200, y: 6800,
+    zoneId: 6,
+    requiredLevel: 16,
+    description: 'A descent into the molten heart of the volcano.',
+    difficulty: 'heroic',
+    icon: '🌋',
+    floors: 7,
+  },
+  {
+    id: 'titan-vault',
+    name: 'Titan\'s Vault',
+    x: 6200, y: 6200,
+    zoneId: 7,
+    requiredLevel: 19,
+    description: 'A sealed vault where ancient titans were imprisoned.',
+    difficulty: 'heroic',
+    icon: '🗿',
+    floors: 8,
+  },
+  {
+    id: 'pirate-grotto',
+    name: 'Pirate Grotto',
+    x: 14200, y: 9600,
+    zoneId: 11,
+    requiredLevel: 7,
+    description: 'A hidden sea cave filled with pirate treasure and traps.',
+    difficulty: 'normal',
+    icon: '🏴‍☠️',
+    floors: 3,
+  },
+  {
+    id: 'dungeon-depths',
+    name: 'The Deep Descent',
+    x: 10500, y: 11200,
+    zoneId: 12,
+    requiredLevel: 15,
+    description: 'The deepest level of the dungeon complex. No light reaches here.',
+    difficulty: 'heroic',
+    icon: '🕸️',
+    floors: 10,
+  },
+  {
+    id: 'piglin-warren',
+    name: 'Piglin Warren',
+    x: 6800, y: 11600,
+    zoneId: 15,
+    requiredLevel: 19,
+    description: 'The underground tunnels beneath the piglin outpost.',
+    difficulty: 'heroic',
+    icon: '🐗',
+    floors: 8,
+  },
+];
+
+export function getDungeonEntrancesInZone(zoneId: number): DungeonEntrance[] {
+  return DUNGEON_ENTRANCES.filter(d => d.zoneId === zoneId);
+}
+
+export function getDungeonEntranceNear(x: number, y: number, range: number): DungeonEntrance | null {
+  for (const d of DUNGEON_ENTRANCES) {
+    const dx = d.x - x, dy = d.y - y;
+    if (Math.sqrt(dx * dx + dy * dy) < range) return d;
+  }
+  return null;
+}
+
+// ── Roads (connections rendered as paths between zones) ────────
+
+export interface RoadSegment {
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  width: number;      // road width in world units
+  type: 'dirt' | 'stone' | 'bridge';
+}
+
+function zoneCenter(id: number): { x: number; y: number } {
+  const z = ISLAND_ZONES.find(z => z.id === id);
+  if (!z) return { x: 0, y: 0 };
+  return { x: z.bounds.x + z.bounds.w / 2, y: z.bounds.y + z.bounds.h / 2 };
+}
+
+// Auto-generate roads from zone connections
+export const ZONE_ROADS: RoadSegment[] = (() => {
+  const roads: RoadSegment[] = [];
+  const seen = new Set<string>();
+
+  for (const zone of ISLAND_ZONES) {
+    const from = zoneCenter(zone.id);
+    for (const connId of zone.connectedZoneIds) {
+      const key = [Math.min(zone.id, connId), Math.max(zone.id, connId)].join('-');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const to = zoneCenter(connId);
+      const dist = Math.sqrt((to.x - from.x) ** 2 + (to.y - from.y) ** 2);
+      roads.push({
+        from, to,
+        width: dist > 4000 ? 60 : 40,
+        type: dist > 5000 ? 'bridge' : zone.terrainType === 'stone' ? 'stone' : 'dirt',
+      });
+    }
+  }
+  return roads;
+})();
+
+// ── Buildings (placed structures in zones for rendering) ───────
+
+export interface BuildingPlacement {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  zoneId: number;
+  color: string;
+  roofColor: string;
+  type: 'fortress' | 'tower' | 'house' | 'shop' | 'wall' | 'dock' | 'ruin' | 'camp' | 'gate' | 'inn' | 'well' | 'mill';
+}
+
+// Auto-generate building placements from zone structureAssets
+export const ZONE_BUILDINGS: BuildingPlacement[] = (() => {
+  const buildings: BuildingPlacement[] = [];
+  const BTYPE: Record<string, { type: BuildingPlacement['type']; w: number; h: number; color: string; roofColor: string }> = {
+    fortress: { type: 'fortress', w: 120, h: 100, color: '#5a5040', roofColor: '#8a7050' },
+    tower:    { type: 'tower', w: 40, h: 40, color: '#6a6050', roofColor: '#907060' },
+    wall:     { type: 'wall', w: 80, h: 16, color: '#5a5a5a', roofColor: '#5a5a5a' },
+    house:    { type: 'house', w: 50, h: 40, color: '#6a5030', roofColor: '#a06030' },
+    shop:     { type: 'shop', w: 45, h: 35, color: '#5a6040', roofColor: '#7a9050' },
+    barracks: { type: 'house', w: 70, h: 50, color: '#5a4a3a', roofColor: '#7a5a3a' },
+    arsenal:  { type: 'shop', w: 60, h: 45, color: '#4a4a5a', roofColor: '#6a6a7a' },
+    dock:     { type: 'dock', w: 80, h: 20, color: '#5a4030', roofColor: '#5a4030' },
+    ship:     { type: 'dock', w: 60, h: 30, color: '#4a3020', roofColor: '#6a4030' },
+    ruin:     { type: 'ruin', w: 50, h: 50, color: '#4a4040', roofColor: '#3a3030' },
+    camp:     { type: 'camp', w: 30, h: 30, color: '#6a4020', roofColor: '#ff8c00' },
+    gate:     { type: 'gate', w: 50, h: 24, color: '#5a5040', roofColor: '#8a7050' },
+    inn:      { type: 'inn', w: 60, h: 50, color: '#6a5535', roofColor: '#a07040' },
+    well:     { type: 'well', w: 20, h: 20, color: '#5a5a6a', roofColor: '#4a4a5a' },
+    mill:     { type: 'mill', w: 50, h: 50, color: '#5a4a3a', roofColor: '#8a7a5a' },
+  };
+
+  for (const zone of ISLAND_ZONES) {
+    if (!zone.structureAssets || zone.structureAssets.length === 0) continue;
+    const b = zone.bounds;
+    const cx = b.x + b.w / 2;
+    const cy = b.y + b.h / 2;
+
+    for (let i = 0; i < zone.structureAssets.length; i++) {
+      const assetId = zone.structureAssets[i];
+      // Determine building type from asset id
+      let btype = BTYPE.house;
+      if (assetId.includes('fortress')) btype = BTYPE.fortress;
+      else if (assetId.includes('tower')) btype = BTYPE.tower;
+      else if (assetId.includes('wall')) btype = BTYPE.wall;
+      else if (assetId.includes('barracks') || assetId.includes('kazarm')) btype = BTYPE.barracks;
+      else if (assetId.includes('arsenal') || assetId.includes('armory') || assetId.includes('ammourry')) btype = BTYPE.arsenal;
+      else if (assetId.includes('gate')) btype = BTYPE.gate;
+      else if (assetId.includes('dock')) btype = BTYPE.dock;
+      else if (assetId.includes('ship')) btype = BTYPE.ship;
+      else if (assetId.includes('ruin')) btype = BTYPE.ruin;
+      else if (assetId.includes('brazier') || assetId.includes('fire') || assetId.includes('bonfire')) btype = BTYPE.camp;
+      else if (assetId.includes('inn')) btype = BTYPE.inn;
+      else if (assetId.includes('well')) btype = BTYPE.well;
+      else if (assetId.includes('mill') || assetId.includes('sawmill')) btype = BTYPE.mill;
+      else if (assetId.includes('house')) btype = BTYPE.house;
+      else if (assetId.includes('market') || assetId.includes('shop')) btype = BTYPE.shop;
+
+      // Place buildings in a pattern around zone center
+      const angle = (i / zone.structureAssets.length) * Math.PI * 2;
+      const radius = btype.type === 'fortress' ? 0 : 80 + i * 25;
+      const px = cx + Math.cos(angle) * radius;
+      const py = cy + Math.sin(angle) * radius;
+
+      buildings.push({
+        id: `${zone.id}-${assetId}`,
+        name: assetId,
+        x: Math.max(b.x + 30, Math.min(b.x + b.w - 30, px)),
+        y: Math.max(b.y + 30, Math.min(b.y + b.h - 30, py)),
+        w: btype.w,
+        h: btype.h,
+        zoneId: zone.id,
+        color: btype.color,
+        roofColor: btype.roofColor,
+        type: btype.type,
+      });
+    }
+  }
+  return buildings;
+})();
+
+export function getBuildingsInZone(zoneId: number): BuildingPlacement[] {
+  return ZONE_BUILDINGS.filter(b => b.zoneId === zoneId);
 }

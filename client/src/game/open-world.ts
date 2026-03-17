@@ -27,7 +27,9 @@ import {
 } from './world-state';
 import {
   ZoneDef, ISLAND_ZONES, OPEN_WORLD_SIZE, getZoneAtPosition, canEnterZone,
-  getZoneById, getZoneColor, ZoneTracker, createZoneTracker, updateZoneTracker
+  getZoneById, getZoneColor, ZoneTracker, createZoneTracker, updateZoneTracker,
+  DUNGEON_ENTRANCES, DungeonEntrance, getDungeonEntranceNear,
+  ZONE_ROADS, RoadSegment, ZONE_BUILDINGS, BuildingPlacement,
 } from './zones';
 import {
   PlayerProgress, createPlayerProgress, savePlayerProgress, loadPlayerProgress,
@@ -57,6 +59,12 @@ import {
   equipItem, computeEquipmentStats, computeSetBonuses,
   generateRandomEquipment, addToBag, SetBonus
 } from './equipment';
+import {
+  MissionLog, ActiveMission, MissionReward,
+  loadMissionLog, saveMissionLog, getAvailableMissions,
+  acceptMission, onMissionKill, onMissionCollect, onMissionExplore,
+  onMissionDungeonEnter, claimMission
+} from './missions';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -97,6 +105,17 @@ const ENEMY_TEMPLATES: Record<string, {
   // ── Piglin Forces ──
   'Piglin Grunt':   { hp: 200,  atk: 20, def: 10, spd: 48,  rng: 60,  color: '#c6a700', xp: 45,  gold: 25,  isBoss: false, size: 11 },
   'Piglin Brute':   { hp: 350,  atk: 28, def: 16, spd: 42,  rng: 70,  color: '#8d6e00', xp: 75,  gold: 40,  isBoss: false, size: 14 },
+  // ── New Enemies ──
+  'Bandit':           { hp: 120,  atk: 15, def: 6,  spd: 58,  rng: 55,  color: '#8b4513', xp: 30,  gold: 20,  isBoss: false, size: 10 },
+  'Bandit Chief':     { hp: 400,  atk: 25, def: 14, spd: 50,  rng: 65,  color: '#6b2e0a', xp: 120, gold: 80,  isBoss: true,  size: 14 },
+  'Sea Serpent':      { hp: 500,  atk: 30, def: 12, spd: 60,  rng: 120, color: '#0077be', xp: 150, gold: 90,  isBoss: true,  size: 22 },
+  'Wraith':           { hp: 130,  atk: 20, def: 3,  spd: 50,  rng: 100, color: '#b0b0d0', xp: 40,  gold: 25,  isBoss: false, size: 12 },
+  'Treant':           { hp: 250,  atk: 18, def: 18, spd: 25,  rng: 60,  color: '#2d5a1e', xp: 50,  gold: 15,  isBoss: false, size: 18 },
+  'Dire Wolf':        { hp: 110,  atk: 16, def: 5,  spd: 72,  rng: 50,  color: '#555566', xp: 28,  gold: 14,  isBoss: false, size: 11 },
+  'Corrupted Knight': { hp: 280,  atk: 24, def: 20, spd: 40,  rng: 55,  color: '#4a0e2e', xp: 65,  gold: 45,  isBoss: false, size: 13 },
+  'Harpy':            { hp: 100,  atk: 18, def: 4,  spd: 65,  rng: 90,  color: '#9966cc', xp: 35,  gold: 18,  isBoss: false, size: 10 },
+  'Imp':              { hp: 60,   atk: 14, def: 2,  spd: 70,  rng: 80,  color: '#ff4444', xp: 18,  gold: 10,  isBoss: false, size: 7  },
+  'Goblin Shaman':    { hp: 140,  atk: 22, def: 5,  spd: 42,  rng: 150, color: '#44aa44', xp: 55,  gold: 30,  isBoss: false, size: 9  },
 };
 
 // ── Interfaces ─────────────────────────────────────────────────
@@ -265,6 +284,9 @@ export interface OpenWorldState {
   resourceNodes: OWResourceNode[];
   harvestCooldown: number;
 
+  // Mission system
+  missionLog: MissionLog;
+
   // Terrain cache (only tiles near player are generated)
   terrainCache: Map<string, DungeonTileVoxelType>;
 }
@@ -290,6 +312,7 @@ export interface OWHudState {
   px: number; py: number;
   // Open-world additions
   zoneName: string;
+  zoneId: number;
   zonePvP: boolean;
   zoneSafe: boolean;
   worldTime: string;
@@ -316,6 +339,9 @@ export interface OWHudState {
   weaponLoadoutReady: boolean;
   // Attributes
   attributeSummary: AttributeSummary;
+  // Missions
+  activeMissions: { id: string; name: string; status: string; objectives: { type: string; target: string; current: number; required: number }[] }[];
+  nearbyDungeon: DungeonEntrance | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -414,6 +440,7 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     equipmentBag: loadEquipmentBag(),
     resourceNodes: [],
     harvestCooldown: 0,
+    missionLog: loadMissionLog(),
     terrainCache: new Map(),
   };
 
@@ -529,6 +556,12 @@ export function handleOWHarvest(state: OpenWorldState): void {
   for (const r of result.resources) {
     addResource(state.resourceInventory, r.name, r.tier, r.quantity);
     addText(state, nearest.x, nearest.y - 20, `+${r.quantity} ${r.name}`, '#ffd700', 12);
+    // Mission collect tracking
+    const collectComplete = onMissionCollect(state.missionLog, r.name);
+    for (const _mid of collectComplete) {
+      state.killFeed.push({ text: `MISSION COMPLETE!`, color: '#ffd700', time: state.gameTime });
+    }
+    if (collectComplete.length > 0) saveMissionLog(state.missionLog);
   }
 
   // Grant gathering XP
@@ -666,6 +699,13 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
     pushWorldEvent(state.worldState, 'zone_enter', newZone.name, newZone.description, 4);
     state.playerProgress.currentZoneName = newZone.name;
     state.killFeed.push({ text: `Entered: ${newZone.name}`, color: getZoneColor(newZone), time: state.gameTime });
+
+    // Mission explore tracking
+    const exploreComplete = onMissionExplore(state.missionLog, newZone.name);
+    for (const _mid of exploreComplete) {
+      state.killFeed.push({ text: `MISSION COMPLETE!`, color: '#ffd700', time: state.gameTime });
+    }
+    if (exploreComplete.length > 0) saveMissionLog(state.missionLog);
 
     if (!canEnterZone(p.level, newZone)) {
       state.killFeed.push({ text: `Warning: Level ${newZone.requiredLevel} recommended!`, color: '#ef4444', time: state.gameTime });
@@ -905,6 +945,13 @@ function killEnemy(state: OpenWorldState, enemy: OWEnemy): void {
     color: enemy.color,
     time: state.gameTime,
   });
+
+  // Mission tracking
+  const missionComplete = onMissionKill(state.missionLog, enemy.type, enemy.isBoss);
+  for (const mid of missionComplete) {
+    state.killFeed.push({ text: `MISSION COMPLETE!`, color: '#ffd700', time: state.gameTime });
+  }
+  if (missionComplete.length > 0) saveMissionLog(state.missionLog);
 
   // Schedule respawn
   const zone = ISLAND_ZONES.find(z => z.id === enemy.zoneId);
@@ -1247,6 +1294,55 @@ export function cancelOWTargeting(state: OpenWorldState): void {
   state.targeting.abilityIndex = -1;
 }
 
+/** Accept a mission from NPC */
+export function acceptOWMission(state: OpenWorldState, missionId: string): boolean {
+  const m = acceptMission(state.missionLog, missionId);
+  if (m) {
+    state.killFeed.push({ text: `Quest accepted: ${m.def.name}`, color: '#60a5fa', time: state.gameTime });
+    saveMissionLog(state.missionLog);
+    return true;
+  }
+  return false;
+}
+
+/** Claim completed mission rewards */
+export function claimOWMission(state: OpenWorldState, missionId: string): MissionReward | null {
+  const reward = claimMission(state.missionLog, missionId);
+  if (reward) {
+    state.player.xp += reward.xp;
+    state.player.gold += reward.gold;
+    state.playerProgress.reputation += reward.reputation;
+    state.killFeed.push({ text: `+${reward.xp} XP, +${reward.gold}g`, color: '#ffd700', time: state.gameTime });
+    if (reward.equipmentTier) {
+      const drop = generateRandomEquipment(reward.equipmentTier);
+      addToBag(state.equipmentBag, drop);
+      state.killFeed.push({ text: `Reward: ${drop.name}`, color: '#a855f7', time: state.gameTime });
+      saveEquipmentBag(state.equipmentBag);
+    }
+    checkLevelUp(state);
+    saveMissionLog(state.missionLog);
+    savePlayerProgress(state.playerProgress);
+    return reward;
+  }
+  return null;
+}
+
+/** Enter a dungeon from the open world */
+export function enterOWDungeon(state: OpenWorldState): DungeonEntrance | null {
+  const entrance = getDungeonEntranceNear(state.player.x, state.player.y, 80);
+  if (!entrance) return null;
+  if (state.player.level < entrance.requiredLevel) {
+    state.killFeed.push({ text: `Requires level ${entrance.requiredLevel}!`, color: '#ef4444', time: state.gameTime });
+    return null;
+  }
+  const dungeonComplete = onMissionDungeonEnter(state.missionLog, entrance.id);
+  for (const mid of dungeonComplete) {
+    state.killFeed.push({ text: `MISSION COMPLETE!`, color: '#ffd700', time: state.gameTime });
+  }
+  saveMissionLog(state.missionLog);
+  return entrance;
+}
+
 /** Swap weapon and rebuild skill loadout */
 export async function swapOWWeapon(state: OpenWorldState, newWeaponType: string, weaponId: string | null): Promise<void> {
   const hd = HEROES[state.player.heroDataId];
@@ -1317,6 +1413,7 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
     px: p.x, py: p.y,
     // OW additions
     zoneName: zone?.name ?? 'Wilderness',
+    zoneId: zone?.id ?? -1,
     zonePvP: zone?.isPvP ?? false,
     zoneSafe: zone?.isSafeZone ?? false,
     worldTime: getFormattedTime(ws),
@@ -1341,8 +1438,14 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
     abilityDescriptions: getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass).map(a => a.description || ''),
     weaponType: state.weaponLoadout?.weaponType || '',
     weaponLoadoutReady: state.weaponLoadoutReady,
-    // Attribute info
+  // Attribute info
     attributeSummary: getAttributeSummary(state.playerAttributes),
+    // Missions
+    activeMissions: state.missionLog.active.map(m => ({
+      id: m.def.id, name: m.def.name, status: m.status,
+      objectives: m.objectives.map(o => ({ type: o.type, target: o.target, current: o.current, required: o.required })),
+    })),
+    nearbyDungeon: getDungeonEntranceNear(p.x, p.y, 80),
   };
 }
 
@@ -1408,8 +1511,11 @@ export class OpenWorldRenderer {
     ctx.translate(-cam.x, -cam.y);
 
     this.renderTerrain(ctx, state, cam, W, H, brightness);
+    this.renderRoads(ctx, state, brightness);
     this.renderZoneBorders(ctx, state);
+    this.renderBuildings(ctx, state, brightness);
     this.renderPortals(ctx, state);
+    this.renderDungeonEntrances(ctx, state);
     this.renderNPCs(ctx, state, brightness);
     this.renderTargetingIndicator(ctx, state);
 
@@ -1469,14 +1575,201 @@ export class OpenWorldRenderer {
         ctx.fillStyle = baseColor;
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
-        // Tile decoration details
-        if (seed > 75) {
+        // Tile decoration details based on terrain type
+        const terrainType = zone.terrainType;
+        if (terrainType === 'grass' || terrainType === 'jungle') {
+          // Grass tufts
+          if (seed > 60) {
+            ctx.fillStyle = terrainType === 'jungle' ? 'rgba(0,100,20,0.3)' : 'rgba(60,150,40,0.25)';
+            const gx = x + (seed % 7) * 5 + 2;
+            const gy = y + ((seed * 3) % 7) * 5 + 2;
+            ctx.fillRect(gx, gy, 2, 5);
+            ctx.fillRect(gx + 4, gy + 1, 2, 4);
+          }
+          // Occasional flower
+          if (seed > 92) {
+            ctx.fillStyle = seed % 2 === 0 ? '#ff6b8a' : '#ffd700';
+            ctx.beginPath();
+            ctx.arc(x + 20 + (seed % 10), y + 20 + (seed % 8), 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (terrainType === 'stone') {
+          // Scattered rocks
+          if (seed > 65) {
+            ctx.fillStyle = 'rgba(100,100,120,0.3)';
+            ctx.fillRect(x + (seed % 12) * 3, y + ((seed * 7) % 12) * 3, 6, 4);
+          }
+          if (seed > 85) {
+            ctx.fillStyle = 'rgba(80,80,100,0.25)';
+            ctx.fillRect(x + 10 + (seed % 8) * 2, y + 5 + (seed % 6) * 4, 8, 5);
+          }
+        } else if (terrainType === 'water') {
+          // Water shimmer
+          if (seed > 50) {
+            const shimmer = 0.05 + Math.sin(Date.now() * 0.002 + tx * 3 + ty * 5) * 0.04;
+            ctx.fillStyle = `rgba(120,200,255,${shimmer})`;
+            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+          }
+        } else if (terrainType === 'dirt') {
+          // Dirt patches and pebbles
+          if (seed > 70) {
+            ctx.fillStyle = 'rgba(90,60,30,0.2)';
+            ctx.beginPath();
+            ctx.arc(x + 10 + (seed % 20), y + 10 + (seed % 18), 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (seed > 75) {
           ctx.fillStyle = `rgba(255,255,255,0.03)`;
           ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
         }
 
         ctx.globalAlpha = 1;
       }
+    }
+  }
+
+  private renderRoads(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
+    const p = state.player;
+    const ROAD_COLORS: Record<string, string> = {
+      dirt: '#7a5c3a', stone: '#8a8a9a', bridge: '#a07040',
+    };
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.3, brightness) * 0.6;
+    ctx.lineCap = 'round';
+
+    for (const road of ZONE_ROADS) {
+      // Cull distant roads
+      const midX = (road.fromX + road.toX) / 2;
+      const midY = (road.fromY + road.toY) / 2;
+      if (Math.abs(p.x - midX) > 1500 || Math.abs(p.y - midY) > 1500) continue;
+
+      // Road edge/border (wider, darker)
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = road.width + 4;
+      ctx.beginPath();
+      ctx.moveTo(road.fromX, road.fromY);
+      ctx.lineTo(road.toX, road.toY);
+      ctx.stroke();
+
+      // Road surface
+      ctx.strokeStyle = ROAD_COLORS[road.type] || ROAD_COLORS.dirt;
+      ctx.lineWidth = road.width;
+      ctx.beginPath();
+      ctx.moveTo(road.fromX, road.fromY);
+      ctx.lineTo(road.toX, road.toY);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  private renderBuildings(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
+    const p = state.player;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.3, brightness);
+
+    for (const bld of ZONE_BUILDINGS) {
+      // Cull distant buildings
+      if (Math.abs(p.x - bld.x) > 900 || Math.abs(p.y - bld.y) > 900) continue;
+
+      // Building body
+      ctx.fillStyle = bld.color;
+      ctx.fillRect(bld.x - bld.w / 2, bld.y - bld.h / 2, bld.w, bld.h);
+
+      // Roof
+      ctx.fillStyle = bld.roofColor;
+      ctx.beginPath();
+      ctx.moveTo(bld.x - bld.w / 2 - 4, bld.y - bld.h / 2);
+      ctx.lineTo(bld.x, bld.y - bld.h / 2 - 12);
+      ctx.lineTo(bld.x + bld.w / 2 + 4, bld.y - bld.h / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Door
+      ctx.fillStyle = 'rgba(40,20,10,0.7)';
+      ctx.fillRect(bld.x - 3, bld.y + bld.h / 2 - 8, 6, 8);
+
+      // Label (only when close)
+      const d = Math.abs(p.x - bld.x) + Math.abs(p.y - bld.y);
+      if (d < 200) {
+        ctx.fillStyle = '#ddd';
+        ctx.font = '8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 0.6;
+        ctx.fillText(bld.type, bld.x, bld.y - bld.h / 2 - 16);
+        ctx.globalAlpha = Math.max(0.3, brightness);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  private renderDungeonEntrances(ctx: CanvasRenderingContext2D, state: OpenWorldState): void {
+    const p = state.player;
+    const pulse = 0.5 + Math.sin(Date.now() * 0.003) * 0.3;
+
+    for (const entrance of DUNGEON_ENTRANCES) {
+      const d = distXY(p, entrance);
+      if (d > 900) continue;
+
+      ctx.save();
+      ctx.translate(entrance.x, entrance.y);
+
+      // Outer glow
+      ctx.globalAlpha = pulse * 0.2;
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(0, 0, 30, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cave opening (dark arch)
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#1a1a2e';
+      ctx.beginPath();
+      ctx.arc(0, 0, 18, Math.PI, 0);
+      ctx.lineTo(18, 10);
+      ctx.lineTo(-18, 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cave border
+      ctx.strokeStyle = '#6b4226';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 18, Math.PI, 0);
+      ctx.lineTo(18, 10);
+      ctx.lineTo(-18, 10);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Skull icon inside
+      ctx.fillStyle = '#ccc';
+      ctx.globalAlpha = 0.6 + pulse * 0.3;
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('💀', 0, 5);
+
+      // Dungeon name
+      ctx.fillStyle = '#ef4444';
+      ctx.globalAlpha = 0.8;
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillText(entrance.name, 0, -28);
+
+      // Level requirement
+      ctx.fillStyle = p.level >= entrance.requiredLevel ? '#aaa' : '#ef4444';
+      ctx.font = '8px sans-serif';
+      ctx.fillText(`Lv${entrance.requiredLevel}+`, 0, -20);
+
+      // Interaction prompt when nearby
+      if (d < 80) {
+        ctx.globalAlpha = 0.6 + Math.sin(Date.now() * 0.005) * 0.3;
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('[F] Enter', 0, 26);
+      }
+
+      ctx.restore();
     }
   }
 
