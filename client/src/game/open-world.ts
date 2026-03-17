@@ -65,6 +65,10 @@ import {
   acceptMission, onMissionKill, onMissionCollect, onMissionExplore,
   onMissionDungeonEnter, claimMission
 } from './missions';
+import {
+  GeneratedWorldData, GeneratedDecoration, GeneratedBuilding, GeneratedRoad,
+  loadGeneratedWorld,
+} from './ai-map-gen';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -289,6 +293,9 @@ export interface OpenWorldState {
 
   // Terrain cache (only tiles near player are generated)
   terrainCache: Map<string, DungeonTileVoxelType>;
+
+  // AI-generated world data (from world editor)
+  generatedWorld: GeneratedWorldData | null;
 }
 
 export interface OWHudState {
@@ -442,6 +449,7 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     harvestCooldown: 0,
     missionLog: loadMissionLog(),
     terrainCache: new Map(),
+    generatedWorld: loadGeneratedWorld(),
   };
 
   // Generate NPCs and resource nodes from zone definitions
@@ -1512,8 +1520,11 @@ export class OpenWorldRenderer {
 
     this.renderTerrain(ctx, state, cam, W, H, brightness);
     this.renderRoads(ctx, state, brightness);
+    this.renderGeneratedRoads(ctx, state, brightness);
     this.renderZoneBorders(ctx, state);
     this.renderBuildings(ctx, state, brightness);
+    this.renderGeneratedBuildings(ctx, state, brightness);
+    this.renderGeneratedDecorations(ctx, state, brightness);
     this.renderPortals(ctx, state);
     this.renderDungeonEntrances(ctx, state);
     this.renderNPCs(ctx, state, brightness);
@@ -1771,6 +1782,151 @@ export class OpenWorldRenderer {
 
       ctx.restore();
     }
+  }
+
+  // ── AI-Generated World Rendering ──────────────────────────────
+
+  private getGeneratedZoneData(state: OpenWorldState, zoneId: number) {
+    return state.generatedWorld?.zones.find(z => z.zoneId === zoneId) ?? null;
+  }
+
+  private renderGeneratedDecorations(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
+    if (!state.generatedWorld) return;
+    const p = state.player;
+    const viewRange = 900;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.3, brightness);
+
+    for (const zoneData of state.generatedWorld.zones) {
+      for (const deco of zoneData.decorations) {
+        if (Math.abs(p.x - deco.x) > viewRange || Math.abs(p.y - deco.y) > viewRange) continue;
+
+        const size = 10 * deco.scale;
+        ctx.save();
+        ctx.translate(deco.x, deco.y);
+        ctx.rotate(deco.rotation * Math.PI / 180);
+
+        if (deco.type.includes('tree') || deco.type === 'pine_tree' || deco.type === 'birch_tree') {
+          ctx.fillStyle = '#5a3a1a';
+          ctx.fillRect(-2 * deco.scale, 2 * deco.scale, 4 * deco.scale, 8 * deco.scale);
+          ctx.fillStyle = deco.type.includes('dead') ? '#6b5b4b' : '#2d7a2d';
+          ctx.beginPath();
+          ctx.moveTo(0, -size);
+          ctx.lineTo(-size * 0.7, size * 0.2);
+          ctx.lineTo(size * 0.7, size * 0.2);
+          ctx.closePath();
+          ctx.fill();
+        } else if (deco.type.includes('rock') || deco.type.includes('boulder') || deco.type === 'pebble') {
+          ctx.fillStyle = '#777';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, size * 0.7, size * 0.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (deco.type.includes('bush') || deco.type.includes('fern') || deco.type === 'plant' || deco.type === 'clover') {
+          ctx.fillStyle = '#3a8a3a';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, size * 0.6, size * 0.4, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (deco.type.includes('flower')) {
+          ctx.fillStyle = '#ff6b8a';
+          ctx.beginPath();
+          ctx.arc(0, 0, size * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (deco.type.includes('mushroom')) {
+          ctx.fillStyle = '#cc4444';
+          ctx.beginPath();
+          ctx.arc(0, -2, size * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#ddd';
+          ctx.fillRect(-1, -1, 2, 5);
+        } else if (deco.type.includes('grass')) {
+          ctx.fillStyle = 'rgba(60,150,40,0.5)';
+          ctx.fillRect(-2, -size * 0.3, 1, size * 0.6);
+          ctx.fillRect(1, -size * 0.4, 1, size * 0.5);
+        } else {
+          ctx.fillStyle = '#666';
+          ctx.fillRect(-size * 0.4, -size * 0.4, size * 0.8, size * 0.8);
+        }
+
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
+  private renderGeneratedBuildings(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
+    if (!state.generatedWorld) return;
+    const p = state.player;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.3, brightness);
+
+    for (const zoneData of state.generatedWorld.zones) {
+      for (const bld of zoneData.buildings) {
+        if (Math.abs(p.x - bld.x) > 900 || Math.abs(p.y - bld.y) > 900) continue;
+
+        ctx.fillStyle = bld.color;
+        ctx.fillRect(bld.x - bld.w / 2, bld.y - bld.h / 2, bld.w, bld.h);
+        ctx.fillStyle = bld.roofColor;
+        ctx.beginPath();
+        ctx.moveTo(bld.x - bld.w / 2 - 3, bld.y - bld.h / 2);
+        ctx.lineTo(bld.x, bld.y - bld.h / 2 - 10);
+        ctx.lineTo(bld.x + bld.w / 2 + 3, bld.y - bld.h / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(40,20,10,0.6)';
+        ctx.fillRect(bld.x - 2, bld.y + bld.h / 2 - 6, 4, 6);
+
+        const d = Math.abs(p.x - bld.x) + Math.abs(p.y - bld.y);
+        if (d < 150) {
+          ctx.fillStyle = '#bbb';
+          ctx.font = '7px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.globalAlpha = 0.5;
+          ctx.fillText(bld.type, bld.x, bld.y - bld.h / 2 - 14);
+          ctx.globalAlpha = Math.max(0.3, brightness);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  private renderGeneratedRoads(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
+    if (!state.generatedWorld) return;
+    const p = state.player;
+    const ROAD_COLORS: Record<string, string> = { dirt: '#7a5c3a', stone: '#8a8a9a', bridge: '#a07040' };
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.3, brightness) * 0.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const allRoads = [
+      ...state.generatedWorld.globalRoads,
+      ...state.generatedWorld.zones.flatMap(z => z.roads),
+    ];
+
+    for (const road of allRoads) {
+      if (road.points.length < 2) continue;
+      const midIdx = Math.floor(road.points.length / 2);
+      const mid = road.points[midIdx];
+      if (Math.abs(p.x - mid.x) > 1500 || Math.abs(p.y - mid.y) > 1500) continue;
+
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = road.width + 3;
+      ctx.beginPath();
+      ctx.moveTo(road.points[0].x, road.points[0].y);
+      for (let i = 1; i < road.points.length; i++) ctx.lineTo(road.points[i].x, road.points[i].y);
+      ctx.stroke();
+
+      ctx.strokeStyle = ROAD_COLORS[road.type] || ROAD_COLORS.dirt;
+      ctx.lineWidth = road.width;
+      ctx.beginPath();
+      ctx.moveTo(road.points[0].x, road.points[0].y);
+      for (let i = 1; i < road.points.length; i++) ctx.lineTo(road.points[i].x, road.points[i].y);
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 
   private renderZoneBorders(ctx: CanvasRenderingContext2D, state: OpenWorldState): void {

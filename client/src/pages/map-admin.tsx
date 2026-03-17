@@ -7,8 +7,12 @@ import {
   TILE_SIZE, GRID_SIZE,
 } from '../game/map-data';
 import { MAP_SIZE } from '../game/types';
+import {
+  aiTerrainFill, aiAutoScatter, MOBA_BIOME_PRESETS, BiomePreset,
+  GeneratedDecoration,
+} from '../game/ai-map-gen';
 
-type Tool = 'terrain' | 'height' | 'object' | 'camp' | 'lane' | 'collision' | 'erase' | 'select';
+type Tool = 'terrain' | 'height' | 'object' | 'camp' | 'lane' | 'collision' | 'erase' | 'select' | 'ai-fill' | 'ai-scatter';
 
 interface Camera { x: number; y: number; zoom: number; }
 
@@ -21,6 +25,8 @@ const TOOLS: { id: Tool; label: string; key: string }[] = [
   { id: 'collision', label: '🧱 Collision', key: '6' },
   { id: 'erase', label: '🗑 Erase', key: '7' },
   { id: 'select', label: '✋ Select', key: '8' },
+  { id: 'ai-fill', label: '🤖 AI Fill', key: '9' },
+  { id: 'ai-scatter', label: '🌿 AI Scatter', key: '0' },
 ];
 
 export default function MapAdminPage() {
@@ -46,6 +52,13 @@ export default function MapAdminPage() {
   const [showLanes, setShowLanes] = useState(true);
   const [gizmoMode, setGizmoMode] = useState<'move' | 'scale' | 'rotate'>('move');
   const [statusMsg, setStatusMsg] = useState('');
+  // AI tool state
+  const [aiBiomePreset, setAiBiomePreset] = useState<BiomePreset>(MOBA_BIOME_PRESETS[0]);
+  const [aiSeed, setAiSeed] = useState(42);
+  const [aiThreshold, setAiThreshold] = useState(0.5);
+  const [aiDensity, setAiDensity] = useState(1.0);
+  const [aiSelectStart, setAiSelectStart] = useState<{ tx: number; ty: number } | null>(null);
+  const [aiSelectEnd, setAiSelectEnd] = useState<{ tx: number; ty: number } | null>(null);
 
   const camRef = useRef<Camera>({ x: MAP_SIZE / 2, y: MAP_SIZE / 2, zoom: 0.15 });
   const isPanningRef = useRef(false);
@@ -254,6 +267,13 @@ export default function MapAdminPage() {
     pushUndo();
     isPaintingRef.current = true;
 
+    if (tool === 'ai-fill' || tool === 'ai-scatter') {
+      const { tx, ty } = worldToTile(wx, wy);
+      setAiSelectStart({ tx, ty });
+      setAiSelectEnd({ tx, ty });
+      isPaintingRef.current = false;
+      return;
+    }
     if (tool === 'terrain') paintTerrain(wx, wy, terrainType);
     else if (tool === 'height') paintHeight(wx, wy, heightValue);
     else if (tool === 'collision') paintCollision(wx, wy, true);
@@ -294,6 +314,14 @@ export default function MapAdminPage() {
           return deco;
         }),
       }));
+      return;
+    }
+
+    // AI drag selection update
+    if ((tool === 'ai-fill' || tool === 'ai-scatter') && aiSelectStart) {
+      const { wx: dwx, wy: dwy } = screenToWorld(sx, sy);
+      const { tx, ty } = worldToTile(dwx, dwy);
+      setAiSelectEnd({ tx, ty });
       return;
     }
 
@@ -625,6 +653,21 @@ export default function MapAdminPage() {
         ctx.fillText(i === 0 ? 'BLUE BASE' : 'RED BASE', bp.x, bp.y + 8);
       }
 
+      // AI selection rectangle
+      if (aiSelectStart && aiSelectEnd) {
+        const ax = Math.min(aiSelectStart.tx, aiSelectEnd.tx) * TILE_SIZE;
+        const ay = Math.min(aiSelectStart.ty, aiSelectEnd.ty) * TILE_SIZE;
+        const aw = (Math.abs(aiSelectEnd.tx - aiSelectStart.tx) + 1) * TILE_SIZE;
+        const ah = (Math.abs(aiSelectEnd.ty - aiSelectStart.ty) + 1) * TILE_SIZE;
+        ctx.strokeStyle = tool === 'ai-fill' ? '#06b6d4' : '#22c55e';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 4]);
+        ctx.strokeRect(ax, ay, aw, ah);
+        ctx.setLineDash([]);
+        ctx.fillStyle = (tool === 'ai-fill' ? 'rgba(6,182,212,0.08)' : 'rgba(34,197,94,0.08)');
+        ctx.fillRect(ax, ay, aw, ah);
+      }
+
       // Map boundary
       ctx.strokeStyle = 'rgba(255,255,255,0.3)';
       ctx.lineWidth = 4;
@@ -644,7 +687,7 @@ export default function MapAdminPage() {
     };
     animRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animRef.current);
-  }, [showGrid, showCollision, showCamps, showLanes, selectedDecoId, gizmoMode]);
+  }, [showGrid, showCollision, showCamps, showLanes, selectedDecoId, gizmoMode, aiSelectStart, aiSelectEnd, tool]);
 
   const handleSave = () => {
     saveMapData(mapData);
@@ -692,6 +735,45 @@ export default function MapAdminPage() {
     setStatusMsg('Map reset');
     setTimeout(() => setStatusMsg(''), 2000);
   };
+
+  // AI Fill apply
+  const applyAiFill = useCallback(() => {
+    if (!aiSelectStart || !aiSelectEnd) return;
+    pushUndo();
+    const newTerrain = aiTerrainFill(
+      mapRef.current.terrain, GRID_SIZE,
+      aiSelectStart.tx, aiSelectStart.ty, aiSelectEnd.tx, aiSelectEnd.ty,
+      aiBiomePreset.primaryTerrain, aiBiomePreset.secondaryTerrain,
+      aiSeed, aiThreshold,
+    );
+    setMapData(prev => ({ ...prev, terrain: newTerrain }));
+    setStatusMsg(`AI Fill applied: ${aiBiomePreset.name}`);
+    setTimeout(() => setStatusMsg(''), 2000);
+  }, [aiSelectStart, aiSelectEnd, aiBiomePreset, aiSeed, aiThreshold, pushUndo]);
+
+  // AI Scatter apply
+  const applyAiScatter = useCallback(() => {
+    if (!aiSelectStart || !aiSelectEnd) return;
+    pushUndo();
+    const generated = aiAutoScatter(
+      mapRef.current.terrain, TILE_SIZE,
+      aiSelectStart.tx, aiSelectStart.ty, aiSelectEnd.tx, aiSelectEnd.ty,
+      aiSeed, aiDensity,
+    );
+    const newDecos = generated.map((g: GeneratedDecoration, i: number) => ({
+      id: mapRef.current.nextDecoId + i,
+      x: g.x, y: g.y, type: g.type,
+      scale: g.scale, rotation: g.rotation,
+      seed: Math.floor(Math.random() * 10000),
+    }));
+    setMapData(prev => ({
+      ...prev,
+      decorations: [...prev.decorations, ...newDecos],
+      nextDecoId: prev.nextDecoId + newDecos.length,
+    }));
+    setStatusMsg(`AI Scatter: placed ${newDecos.length} objects`);
+    setTimeout(() => setStatusMsg(''), 2000);
+  }, [aiSelectStart, aiSelectEnd, aiSeed, aiDensity, pushUndo]);
 
   const selectedDeco = mapData.decorations.find(d => d.id === selectedDecoId);
 
@@ -878,6 +960,61 @@ export default function MapAdminPage() {
           <>
             <div className="text-xs text-gray-400 uppercase font-bold">Eraser</div>
             <p className="text-gray-500 text-[10px]">Click/drag to remove decorations and camps near cursor.</p>
+          </>
+        )}
+
+        {tool === 'ai-fill' && (
+          <>
+            <div className="text-xs text-gray-400 uppercase font-bold">AI Terrain Fill</div>
+            <p className="text-gray-500 text-[10px]">Click+drag to select a region, then apply a noise-based biome fill.</p>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Biome Preset</div>
+            <div className="space-y-1">
+              {MOBA_BIOME_PRESETS.map(bp => (
+                <button key={bp.name} onClick={() => setAiBiomePreset(bp)}
+                  className={`w-full text-left px-2 py-1 rounded text-[10px] ${aiBiomePreset.name === bp.name ? 'ring-2 ring-cyan-400 bg-gray-800' : 'bg-gray-800/50 hover:bg-gray-800'} text-gray-300`}>
+                  {bp.name}
+                </button>
+              ))}
+            </div>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Seed</div>
+            <input type="number" value={aiSeed} onChange={e => setAiSeed(Number(e.target.value))}
+              className="w-full bg-gray-800 text-white text-xs rounded px-2 py-1" />
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Noise Threshold</div>
+            <input type="range" min={0.1} max={0.9} step={0.05} value={aiThreshold}
+              onChange={e => setAiThreshold(Number(e.target.value))} className="w-full accent-cyan-500" />
+            <div className="text-cyan-400 text-xs text-center">{aiThreshold.toFixed(2)}</div>
+            {aiSelectStart && aiSelectEnd && (
+              <div className="mt-2 space-y-1">
+                <div className="text-[10px] text-gray-500">Selected: ({aiSelectStart.tx},{aiSelectStart.ty}) → ({aiSelectEnd.tx},{aiSelectEnd.ty})</div>
+                <button onClick={applyAiFill}
+                  className="w-full px-2 py-1.5 bg-cyan-700 rounded text-xs text-white font-bold hover:bg-cyan-600">
+                  🤖 Apply AI Fill
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {tool === 'ai-scatter' && (
+          <>
+            <div className="text-xs text-gray-400 uppercase font-bold">AI Auto-Scatter</div>
+            <p className="text-gray-500 text-[10px]">Click+drag to select a region, then auto-place decorations based on underlying terrain.</p>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Seed</div>
+            <input type="number" value={aiSeed} onChange={e => setAiSeed(Number(e.target.value))}
+              className="w-full bg-gray-800 text-white text-xs rounded px-2 py-1" />
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Density</div>
+            <input type="range" min={0.2} max={3.0} step={0.1} value={aiDensity}
+              onChange={e => setAiDensity(Number(e.target.value))} className="w-full accent-green-500" />
+            <div className="text-green-400 text-xs text-center">{aiDensity.toFixed(1)}x</div>
+            {aiSelectStart && aiSelectEnd && (
+              <div className="mt-2 space-y-1">
+                <div className="text-[10px] text-gray-500">Selected: ({aiSelectStart.tx},{aiSelectStart.ty}) → ({aiSelectEnd.tx},{aiSelectEnd.ty})</div>
+                <button onClick={applyAiScatter}
+                  className="w-full px-2 py-1.5 bg-green-700 rounded text-xs text-white font-bold hover:bg-green-600">
+                  🌿 Apply AI Scatter
+                </button>
+              </div>
+            )}
           </>
         )}
 
