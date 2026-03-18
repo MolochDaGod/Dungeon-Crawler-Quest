@@ -9,7 +9,7 @@ import {
   OpenWorldRenderer, handleOWAbility, handleOWAttack, handleOWHeavyAttack,
   updateOWMouseWorld, startOWTargeting, confirmOWTargeting, cancelOWTargeting,
   allocateOWAttribute, acceptOWMission, claimOWMission, enterOWDungeon,
-  handleOWDodge, handleOWTargetCycle
+  handleOWDodge, handleOWTargetCycle, closeNPCDialog
 } from '@/game/open-world';
 import { getAvailableMissions } from '@/game/missions';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
@@ -18,6 +18,7 @@ import { ProgressEvent } from '@/game/player-progress';
 import { loadKeybindings, matchesKeyDown, KeybindAction, KeybindConfig } from '@/game/keybindings';
 import hudFramePath from '@assets/hud-frame.png';
 import MainPanel from '@/components/MainPanel';
+import NpcDialog from '@/components/NpcDialog';
 
 export default function OpenWorldPage() {
   const [, setLocation] = useLocation();
@@ -120,6 +121,7 @@ export default function OpenWorldPage() {
       keysRef.current.add(key);
 
       if (key === 'escape') {
+        if (state.activeNPC) { closeNPCDialog(state); return; }
         if (state.targeting.active) { cancelOWTargeting(state); return; }
         setLocation('/');
         return;
@@ -672,6 +674,15 @@ export default function OpenWorldPage() {
                 <div className="text-[10px] text-gray-600 text-center py-4">No active missions. Visit NPCs or press J to browse available quests.</div>
               )}
             </div>
+          )}
+
+          {/* NPC Dialog */}
+          {hud.activeNPC && (
+            <NpcDialog
+              activeNPC={hud.activeNPC}
+              hud={hud}
+              stateRef={stateRef}
+            />
           )}
 
           {/* Character Panel (C key) — Full-screen dark-fantasy MainPanel */}

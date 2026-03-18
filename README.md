@@ -33,13 +33,16 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - MMO controls: WASD movement, Shift sprint, Space dodge roll, Tab target-cycling, E interact
 - Stamina system with sprint drain/regen and dodge roll cost
 - AI faction system, NPC interactions, quest givers
+- NPC dialog system with Shop/Quests/Train/Craft tabs, tier-scaled vendor inventories
+- 5 new voxel monsters: Tentacle Horror, Timber Wolf, Cave Bear, Pit Demon, Sky Hawk
 
 #### Combat & Visual Polish
 - **Animation FSM** (`ow-anim-fsm.ts`): priority-based state machine for player animation with interruptibility windows, blend-out, and auto-return. Replaces scattered `animState` writes with `tryTransition()` calls.
 - **Hit-stop (impact freeze)**: brief animation pause on melee/heavy hits — 40ms normal, 70ms crit, 60ms heavy attacks, 50ms boss hits. Freezes both attacker and target FSM/animTimer.
 - **Enemy animation parity**: attacking enemies now render AI slash VFX via `drawAISlashVFX()` with attackStyle→weaponType mapping (melee→sword, ranged→bow, aoe→staff). Boss enemies get enhanced impact flash and trail intensity.
 - **Effect pool** (`effect-pool.ts`): pre-allocated 128-slot VFX pool with zero per-frame allocation. Per-type visual curves (fadeOut, expandFade, popFade, pulseFade) compute opacity/scale each tick.
-- Weapon-leading melee slash: weapon rotation drives the swing, body lunges forward
+- **Melee knockback + hitstun**: melee hits push enemies to the edge of the slash arc and apply a brief stun (0.12–0.2s), scaling with combo step so players don't take damage mid-swing
+- Weapon-leading melee slash: weapon sweeps a ±40° arc in front of facing, body lunges forward
 - Weapon afterimage ghost trail during attacks
 - Widened VFX slash arc with increased reach
 - Spell combo system: chain abilities within 3s for stacking +8% damage (up to 5 stacks)
@@ -59,6 +62,7 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - Idle patrol circuits around home positions
 - Ranged enemies fire AoE telegraph attacks at higher levels
 - Walkability-aware movement
+- 30+ enemy types including 5 new voxel monsters with unique animations (tentacle writhe, wolf gallop, bear claw swipe, demon fire aura, hawk dive)
 
 ## RPG Systems
 
@@ -173,6 +177,7 @@ client/src/
 │   ├── ai-behaviors.ts        # Behavior trees: 13 leaf nodes, 7 archetype trees
 │   ├── zones.ts               # 16+ island zones with spawn points, NPC positions
 │   ├── missions.ts            # Quest/mission system with objectives and rewards
+│   ├── npc-shops.ts           # NPC shop system: buy/sell, respec, tier-scaled inventory
 │   ├── minimap.ts             # Real-time minimap renderer with zoom controls
 │   ├── puter-cloud.ts         # Puter.js cloud services (AI, KV, storage)
 │   ├── engine.ts              # MOBA game engine
@@ -194,7 +199,9 @@ client/src/
 │   └── settings.tsx           # Keybindings and settings
 ├── components/
 │   ├── MainPanel.tsx          # Full-screen 3-column character panel (C key)
-│   └── MainPanel.module.css   # Dark-fantasy CSS module for MainPanel
+│   ├── MainPanel.module.css   # Dark-fantasy CSS module for MainPanel
+│   ├── NpcDialog.tsx          # NPC interaction modal (Shop/Quests/Train/Craft tabs)
+│   └── NpcDialog.module.css   # Dark-fantasy CSS module for NPC dialog
 ```
 
 ## Development

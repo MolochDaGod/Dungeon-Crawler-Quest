@@ -187,6 +187,7 @@ async function savePlayerData(grudgeId: string, data: PlayerSaveData) {
 | Boat Ownership | `grudge_boat_state` | Yes | Medium |
 | World State | `grudge_world_state` | Yes | High |
 | Settings/Hotkeys | `grudge_settings` | Optional | Low |
+| NPC Shop History | `grudge_npc_shops` | Optional | Low |
 
 ### API Pattern for New Games
 
@@ -351,6 +352,23 @@ The following systems were added recently and need backend persistence:
 - 8 tabs wired to OWHudState: Equipment, Attributes, Class Skills, Weapon Skills, Upgrades, Crafting, Quests, Guild
 - All data flows from `getOWHudState()` → `OWHudState` → `<MainPanel>` props
 - Actions: `allocateOWAttribute()`, `claimOWMission()` dispatched via `stateRef`
+
+### NPC Interaction System (`npc-shops.ts`, `NpcDialog.tsx`)
+- Full NPC dialog with 4 tabs: Shop (buy/sell), Quests (accept/claim), Train (respec), Craft (recipes)
+- Tier-scaled vendor inventories generated per NPC zone
+- Integrated into open-world via `openNPCDialog()`/`closeNPCDialog()`, movement paused during dialog
+- **Persistence:** NPC shop refreshes on each visit — no save needed
+
+### New Voxel Monsters
+- 5 new enemy types with custom voxel art in `drawEnemyVoxel()`: Tentacle Horror, Timber Wolf, Cave Bear, Pit Demon, Sky Hawk
+- Each has distinctive animations: tentacle writhe, wolf gallop/bite, bear claw swipe, demon fire aura, hawk wing-beat/dive
+- Templates in `ENEMY_TEMPLATES`, spawns distributed across Forest, Swamp, Mountain, Dragon's Reach, and Volcano zones
+
+### Melee Knockback + Hitstun
+- Player melee attacks push hit enemies to the edge of the slash arc (range × 0.8)
+- Brief stun applied (0.12–0.2s) prevents enemies from counter-attacking mid-combo
+- Both knockback distance and stun duration scale with combo step (1→2→3)
+- Weapon trail now sweeps ±40° arc in front of facing instead of projecting linearly
 
 ## Checklist for New Game Integration
 

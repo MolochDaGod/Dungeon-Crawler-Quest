@@ -1730,10 +1730,14 @@ export class VoxelRenderer {
       const isFinisher = animState === 'combo_finisher';
 
       const trail = this.getWeaponTrail(eid);
-      const weaponDist = 12 + animTimer * 30;
-      const wx = x + Math.cos(facing) * weaponDist;
-      const wy = groundY - 10 + Math.sin(facing) * weaponDist * 0.5;
-      const wz = 8 + Math.sin(animTimer * 10) * 4;
+      // Weapon leads ahead of facing — sweep arc from -40° to +40° during attack
+      const atkProgress = Math.min(1, animTimer / 0.55);
+      const sweepArc = Math.PI * 0.44; // ±40° total sweep
+      const sweepAngle = facing + (-sweepArc + sweepArc * 2 * atkProgress);
+      const weaponReach = 16 + atkProgress * 28;
+      const wx = x + Math.cos(sweepAngle) * weaponReach;
+      const wy = groundY - 10 + Math.sin(sweepAngle) * weaponReach * 0.5;
+      const wz = 8 + Math.sin(atkProgress * Math.PI) * 6;
       trail.addPoint(wx, wy, wz, time);
       trail.update(time);
       drawWeaponTrail(ctx, trail.getPoints(), vfxColor, isFinisher ? 4 : 3, facing);
@@ -3334,6 +3338,323 @@ export class VoxelRenderer {
         ctx.restore();
         break;
       }
+
+      // ── New Voxel Monsters ─────────────────────────────────────
+
+      case 'Tentacle Horror': {
+        // Large purple-green tentacled horror with writhing arms
+        const writhe = Math.sin(t * 3) * 3;
+        const tentacleWave = (i: number) => Math.sin(t * 4 + i * 1.2) * 6;
+        // Bulbous head
+        setV(-6, -22, 12, 8, '#5e2a8a');
+        setV(-7, -20, 14, 5, '#4a1e6e');
+        // Glowing eyes (3 of them)
+        ctx.fillStyle = '#ff44ff';
+        ctx.shadowColor = '#ff44ff';
+        ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(-3 * scale, -19 * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(1 * scale, -20 * scale + bob, 1.2 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(4 * scale, -18 * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        // Body
+        setV(-5, -14, 10, 10, '#6b3a9a');
+        setV(-4, -10, 8, 6, '#5e2a8a');
+        // Tentacles (6 writhing arms)
+        for (let ti = 0; ti < 6; ti++) {
+          const baseAngle = -Math.PI * 0.6 + ti * (Math.PI * 1.2 / 5);
+          const tw = tentacleWave(ti);
+          const tx2 = Math.cos(baseAngle) * 8 + tw * 0.5;
+          const ty2 = -6 + ti * 2 + writhe * (ti % 2 === 0 ? 1 : -1);
+          const tentColor = ti % 2 === 0 ? '#7a4ab0' : '#5e2a8a';
+          ctx.strokeStyle = tentColor;
+          ctx.lineWidth = (2.5 - ti * 0.15) * scale;
+          ctx.beginPath();
+          ctx.moveTo(tx2 * 0.3 * scale, ty2 * scale + bob);
+          ctx.quadraticCurveTo(
+            (tx2 * 0.8 + tw * 0.3) * scale, (ty2 + 5) * scale + bob,
+            (tx2 * 1.2 + tw * 0.6) * scale, (ty2 + 10) * scale + bob
+          );
+          ctx.stroke();
+          // Sucker dots
+          if (ti < 4) {
+            ctx.fillStyle = '#9966cc';
+            ctx.beginPath();
+            ctx.arc((tx2 * 0.8 + tw * 0.3) * scale, (ty2 + 6) * scale + bob, 0.8 * scale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        // Slime drip VFX
+        if (isAttacking) {
+          ctx.globalAlpha = atkPhase * 0.6;
+          ctx.fillStyle = '#44ff88';
+          ctx.shadowColor = '#44ff88';
+          ctx.shadowBlur = 6;
+          for (let si = 0; si < 3; si++) {
+            const sd = 4 + si * 5 * atkPhase;
+            ctx.beginPath();
+            ctx.arc((sd * facingFlip) * scale, (-10 + si * 3) * scale + bob, (1.5 + atkPhase) * scale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        }
+        break;
+      }
+
+      case 'Timber Wolf': {
+        // Fast quadruped wolf with snout and tail
+        const gallop = Math.sin(t * 8) * 3;
+        const legPhase = Math.sin(t * 10);
+        const tailWag = Math.sin(t * 5) * 8;
+        const biteSnap = isAttacking ? Math.sin(atkPhase * Math.PI) * 4 : 0;
+        // Body (elongated horizontal)
+        setV(-7, -10, 14, 6, '#6b6b6b');
+        setV(-6, -8, 12, 4, '#5a5a5a');
+        // Head
+        setV(5, -14 + gallop * 0.3, 6, 5, '#7a7a7a');
+        // Snout
+        setV(9, -12 + gallop * 0.3 + biteSnap * 0.3, 4, 3, '#5a5a5a');
+        // Jaw (opens on attack)
+        setV(9, -10 + gallop * 0.3 + biteSnap, 4, 2, '#4a4a4a');
+        // Ears
+        setV(6, -16 + gallop * 0.3, 2, 3, '#555555');
+        setV(9, -16 + gallop * 0.3, 2, 3, '#555555');
+        // Eyes
+        ctx.fillStyle = '#ffcc00';
+        ctx.shadowColor = '#ffcc00';
+        ctx.shadowBlur = 4;
+        ctx.beginPath(); ctx.arc(8 * scale, (-13 + gallop * 0.3) * scale + bob, 1 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(10 * scale, (-13 + gallop * 0.3) * scale + bob, 1 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        // Legs (4 legs with gallop animation)
+        const fl = Math.round(legPhase * 2);
+        const rl = Math.round(-legPhase * 2);
+        setV(-5, -4 + fl, 2, 5, '#5a5a5a');
+        setV(-2, -4 + rl, 2, 5, '#5a5a5a');
+        setV(3, -4 + rl, 2, 5, '#5a5a5a');
+        setV(6, -4 + fl, 2, 5, '#5a5a5a');
+        // Tail
+        ctx.save();
+        ctx.translate(-7 * scale, -9 * scale + bob);
+        ctx.rotate((tailWag - 20) * Math.PI / 180);
+        ctx.fillStyle = '#6b6b6b';
+        ctx.fillRect(-1 * scale, 0, 2 * scale, -7 * scale);
+        ctx.restore();
+        // Belly highlight
+        setV(-5, -7, 10, 2, '#8a8a8a');
+        break;
+      }
+
+      case 'Cave Bear': {
+        // Massive brown bear standing semi-upright
+        const lumberBob = Math.sin(t * 2) * 2;
+        const claw = isAttacking ? Math.sin(atkPhase * Math.PI) * 12 : 0;
+        const breathe = Math.sin(t * 1.5) * 1;
+        // Large body
+        setV(-8, -18, 16, 14, '#5a3a1a');
+        setV(-7, -14, 14, 10, '#4a2e14');
+        // Head
+        setV(-5, -24 + lumberBob, 10, 7, '#6b4a2a');
+        setV(-4, -22 + lumberBob, 8, 4, '#5a3a1a');
+        // Snout
+        setV(-2, -20 + lumberBob, 5, 3, '#8a6a4a');
+        setV(-1, -19 + lumberBob, 3, 2, '#2a1a0a'); // nose
+        // Ears
+        setV(-5, -26 + lumberBob, 3, 3, '#5a3a1a');
+        setV(3, -26 + lumberBob, 3, 3, '#5a3a1a');
+        // Eyes
+        ctx.fillStyle = '#331100';
+        ctx.beginPath(); ctx.arc(-2 * scale, (-22 + lumberBob) * scale + bob, 1 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3 * scale, (-22 + lumberBob) * scale + bob, 1 * scale, 0, Math.PI * 2); ctx.fill();
+        // Arms with claw swipe on attack
+        setV(-11, -16 + claw * 0.3 + breathe, 4, 10, '#4a2e14');
+        setV(7, -16 - claw * 0.3 + breathe, 4, 10, '#4a2e14');
+        // Claws
+        ctx.strokeStyle = '#d4d4d4';
+        ctx.lineWidth = 1.5 * scale;
+        for (let ci = 0; ci < 3; ci++) {
+          const cx2 = -11 + ci * 1.5;
+          ctx.beginPath();
+          ctx.moveTo(cx2 * scale, (-6 + claw * 0.3) * scale + bob);
+          ctx.lineTo((cx2 - 0.5) * scale, (-3 + claw * 0.3) * scale + bob);
+          ctx.stroke();
+        }
+        for (let ci = 0; ci < 3; ci++) {
+          const cx2 = 8 + ci * 1.5;
+          ctx.beginPath();
+          ctx.moveTo(cx2 * scale, (-6 - claw * 0.3) * scale + bob);
+          ctx.lineTo((cx2 + 0.5) * scale, (-3 - claw * 0.3) * scale + bob);
+          ctx.stroke();
+        }
+        // Legs (thick)
+        setV(-6, -4, 5, 6, '#4a2e14');
+        setV(2, -4, 5, 6, '#4a2e14');
+        // Belly lighter patch
+        setV(-4, -12, 8, 6, '#7a5a3a');
+        break;
+      }
+
+      case 'Pit Demon': {
+        // Tall red demon with horns, wings, and fire aura
+        const demonBob = Math.sin(t * 2.5) * 2;
+        const wingFlap = Math.sin(t * 3.5) * 12;
+        const fireFlicker = 0.5 + Math.sin(t * 10) * 0.3;
+        const hornGlow = 0.6 + Math.sin(t * 6) * 0.2;
+        // Head
+        setV(-5, -26 + demonBob, 10, 6, '#aa1111');
+        setV(-4, -24 + demonBob, 8, 4, '#881111');
+        // Horns (curved up)
+        ctx.fillStyle = '#331111';
+        ctx.beginPath();
+        ctx.moveTo(-5 * scale, (-26 + demonBob) * scale + bob);
+        ctx.lineTo(-7 * scale, (-32 + demonBob) * scale + bob);
+        ctx.lineTo(-4 * scale, (-28 + demonBob) * scale + bob);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(5 * scale, (-26 + demonBob) * scale + bob);
+        ctx.lineTo(7 * scale, (-32 + demonBob) * scale + bob);
+        ctx.lineTo(4 * scale, (-28 + demonBob) * scale + bob);
+        ctx.fill();
+        // Horn glow tips
+        ctx.fillStyle = `rgba(255,100,0,${hornGlow})`;
+        ctx.shadowColor = '#ff4400';
+        ctx.shadowBlur = 6;
+        ctx.beginPath(); ctx.arc(-7 * scale, (-32 + demonBob) * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(7 * scale, (-32 + demonBob) * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        // Eyes
+        ctx.fillStyle = '#ff3300';
+        ctx.shadowColor = '#ff3300';
+        ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(-2 * scale, (-24 + demonBob) * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3 * scale, (-24 + demonBob) * scale + bob, 1.5 * scale, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        // Body
+        setV(-7, -20, 14, 14, '#cc2222');
+        setV(-6, -16, 12, 10, '#aa1111');
+        setV(-5, -6, 10, 4, '#881111');
+        // Wings
+        ctx.save();
+        ctx.translate(-7 * scale, (-18 + demonBob) * scale + bob);
+        ctx.rotate(-wingFlap * Math.PI / 180);
+        ctx.fillStyle = '#661111';
+        ctx.fillRect(-14 * scale, -3 * scale, 14 * scale, 5 * scale);
+        ctx.fillStyle = '#881111';
+        ctx.fillRect(-12 * scale, -1 * scale, 10 * scale, 3 * scale);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(7 * scale, (-18 + demonBob) * scale + bob);
+        ctx.rotate(wingFlap * Math.PI / 180);
+        ctx.fillStyle = '#661111';
+        ctx.fillRect(0, -3 * scale, 14 * scale, 5 * scale);
+        ctx.fillStyle = '#881111';
+        ctx.fillRect(2 * scale, -1 * scale, 10 * scale, 3 * scale);
+        ctx.restore();
+        // Arms
+        const armSwing2 = isAttacking ? Math.sin(atkPhase * Math.PI) * 8 : Math.sin(t * 2) * 2;
+        setV(-10, -18 + armSwing2, 3, 8, '#881111');
+        setV(7, -18 - armSwing2, 3, 8, '#881111');
+        // Legs
+        setV(-4, -2, 3, 6, '#881111');
+        setV(2, -2, 3, 6, '#881111');
+        // Fire aura when attacking
+        if (isAttacking && atkPhase > 0.2) {
+          ctx.globalAlpha = atkPhase * fireFlicker;
+          ctx.fillStyle = '#ff6600';
+          ctx.shadowColor = '#ff4400';
+          ctx.shadowBlur = 15;
+          for (let fi = 0; fi < 8; fi++) {
+            const fa = t * 4 + fi * Math.PI / 4;
+            const fr = 12 + fi * 2 * atkPhase;
+            ctx.beginPath();
+            ctx.arc(Math.cos(fa) * fr * scale, (Math.sin(fa) * fr - 12) * scale + bob, (2 + atkPhase * 2) * scale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        }
+        break;
+      }
+
+      case 'Sky Hawk': {
+        // Flying hawk with spread wings, swoops to attack
+        const soar = Math.sin(t * 2) * 6;
+        const wingBeat = Math.sin(t * 5) * 18;
+        const dive = isAttacking ? Math.sin(atkPhase * Math.PI) * 8 : 0;
+        ctx.save();
+        ctx.translate(0, soar - dive);
+        // Body (compact oval)
+        setV(-3, -12, 6, 8, '#8b6914');
+        setV(-2, -10, 4, 5, '#7a5a10');
+        // Head
+        setV(-2, -16, 4, 5, '#9a7a20');
+        // Beak
+        ctx.fillStyle = '#cc8800';
+        ctx.beginPath();
+        ctx.moveTo(2 * scale * facingFlip, -14 * scale + bob);
+        ctx.lineTo(5 * scale * facingFlip, -13 * scale + bob);
+        ctx.lineTo(2 * scale * facingFlip, -12 * scale + bob);
+        ctx.fill();
+        // Eyes
+        ctx.fillStyle = '#000000';
+        ctx.beginPath(); ctx.arc(0, -14 * scale + bob, 0.8 * scale, 0, Math.PI * 2); ctx.fill();
+        // Wings (large spread)
+        ctx.save();
+        ctx.translate(-3 * scale, -11 * scale + bob);
+        ctx.rotate(-wingBeat * Math.PI / 180);
+        ctx.fillStyle = '#6b5010';
+        ctx.fillRect(-16 * scale, -1.5 * scale, 16 * scale, 3 * scale);
+        // Wing feather tips
+        ctx.fillStyle = '#5a4008';
+        ctx.fillRect(-18 * scale, -2 * scale, 4 * scale, 4 * scale);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(3 * scale, -11 * scale + bob);
+        ctx.rotate(wingBeat * Math.PI / 180);
+        ctx.fillStyle = '#6b5010';
+        ctx.fillRect(0, -1.5 * scale, 16 * scale, 3 * scale);
+        ctx.fillStyle = '#5a4008';
+        ctx.fillRect(14 * scale, -2 * scale, 4 * scale, 4 * scale);
+        ctx.restore();
+        // Tail feathers
+        ctx.fillStyle = '#5a4008';
+        ctx.beginPath();
+        ctx.moveTo(-1 * scale, -4 * scale + bob);
+        ctx.lineTo(-3 * scale, 2 * scale + bob);
+        ctx.lineTo(3 * scale, 2 * scale + bob);
+        ctx.lineTo(1 * scale, -4 * scale + bob);
+        ctx.fill();
+        // Talons
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1 * scale;
+        ctx.beginPath();
+        ctx.moveTo(-1 * scale, -4 * scale + bob);
+        ctx.lineTo(-2 * scale, 0 + bob);
+        ctx.lineTo(-1 * scale, 2 * scale + bob);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(1 * scale, -4 * scale + bob);
+        ctx.lineTo(2 * scale, 0 + bob);
+        ctx.lineTo(1 * scale, 2 * scale + bob);
+        ctx.stroke();
+        // Dive trail VFX when attacking
+        if (isAttacking && atkPhase > 0.1) {
+          ctx.globalAlpha = (1 - atkPhase) * 0.5;
+          ctx.strokeStyle = '#ccaa44';
+          ctx.lineWidth = 2 * scale;
+          ctx.shadowColor = '#ccaa44';
+          ctx.shadowBlur = 4;
+          ctx.beginPath();
+          ctx.moveTo(0, -8 * scale + bob);
+          ctx.lineTo(-3 * scale * facingFlip, (-8 + dive * 1.5) * scale + bob);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+        break;
+      }
+
       default: {
         ctx.fillStyle = '#888';
         ctx.beginPath();
@@ -3354,7 +3675,8 @@ export class VoxelRenderer {
       const isMeleeType = !enemyTypeLC.includes('mage') && !enemyTypeLC.includes('lich') &&
                           !enemyTypeLC.includes('drake') && !enemyTypeLC.includes('wyrm') &&
                           !enemyTypeLC.includes('wraith') && !enemyTypeLC.includes('harpy') &&
-                          !enemyTypeLC.includes('imp') && !enemyTypeLC.includes('shaman');
+                          !enemyTypeLC.includes('imp') && !enemyTypeLC.includes('shaman') &&
+                          !enemyTypeLC.includes('demon') && !enemyTypeLC.includes('hawk');
       if (isMeleeType) {
         ctx.save();
         ctx.scale(facingFlip, 1);

@@ -150,6 +150,12 @@ const ENEMY_TEMPLATES: Record<string, {
   // ── Phase 5: New Bosses ──
   'Infernal Colossus':  { hp: 1500, atk: 50, def: 30, spd: 28,  rng: 90,  color: '#ff3300', xp: 400, gold: 300, isBoss: true,  size: 32, attackStyle: 'aoe' },
   'Lich King':          { hp: 1200, atk: 55, def: 20, spd: 35,  rng: 250, color: '#220066', xp: 500, gold: 400, isBoss: true,  size: 28, attackStyle: 'aoe' },
+  // ── New Voxel Monsters ──
+  'Tentacle Horror':    { hp: 320,  atk: 22, def: 10, spd: 35,  rng: 80,  color: '#5e2a8a', xp: 80,  gold: 50,  isBoss: false, size: 18, attackStyle: 'melee' },
+  'Timber Wolf':        { hp: 140,  atk: 18, def: 6,  spd: 78,  rng: 50,  color: '#6b6b6b', xp: 32,  gold: 16,  isBoss: false, size: 13, attackStyle: 'melee' },
+  'Cave Bear':          { hp: 400,  atk: 28, def: 16, spd: 38,  rng: 65,  color: '#5a3a1a', xp: 90,  gold: 55,  isBoss: false, size: 20, attackStyle: 'melee' },
+  'Pit Demon':          { hp: 550,  atk: 35, def: 14, spd: 50,  rng: 100, color: '#aa1111', xp: 140, gold: 90,  isBoss: false, size: 22, attackStyle: 'aoe' },
+  'Sky Hawk':           { hp: 120,  atk: 20, def: 4,  spd: 82,  rng: 110, color: '#8b6914', xp: 35,  gold: 20,  isBoss: false, size: 14, attackStyle: 'ranged' },
 };
 
 // ── Interfaces ─────────────────────────────────────────────────
@@ -280,6 +286,15 @@ export interface OWNPC {
   type: 'merchant' | 'quest' | 'trainer' | 'crafter';
   zoneId: number;
   facing: number;
+  dialogue: string[];   // greeting lines (randomly picked)
+  shopTier: number;     // controls equipment tier sold
+}
+
+export type NPCDialogTab = 'shop' | 'quests' | 'train' | 'craft';
+
+export interface ActiveNPCDialog {
+  npc: OWNPC;
+  tab: NPCDialogTab;
 }
 
 // Resource node for harvesting
@@ -344,6 +359,9 @@ export interface OpenWorldState {
   equipmentBag: EquipmentBag;
   resourceNodes: OWResourceNode[];
   harvestCooldown: number;
+
+  // NPC dialog
+  activeNPC: ActiveNPCDialog | null;
 
   // Animation FSM
   animFSM: OWAnimFSM;
@@ -426,6 +444,8 @@ export interface OWHudState {
   dodgeCooldown: number;
   lockedTargetId: number | null;
   nearbyInteractable: string | null; // label for "Press E" prompt
+  // NPC dialog
+  activeNPC: ActiveNPCDialog | null;
   // Equipment
   equipSlots: { slot: string; label: string; icon: string; item: { name: string; tier: number; atk: number; def: number; hp: number; setName: string } | null }[];
   bagItems: { id: string; name: string; slot: string; tier: number; atk: number; def: number; hp: number }[];
@@ -552,6 +572,7 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     equipmentBag: loadEquipmentBag(),
     resourceNodes: [],
     harvestCooldown: 0,
+    activeNPC: null,
     animFSM: new OWAnimFSM(),
     effectPool: new EffectPool(128),
     missionLog: loadMissionLog(),
@@ -603,17 +624,47 @@ async function initWeaponLoadout(state: OpenWorldState, hd: HeroData): Promise<v
   }
 }
 
+// NPC name + dialogue tables per zone
+const NPC_LORE: Record<number, { merchant: { name: string; dialogue: string[] }; trainer: { name: string; dialogue: string[] }; quest: { name: string; dialogue: string[] }; crafter: { name: string; dialogue: string[] } }> = {
+  0: {
+    merchant: { name: 'Griselda the Peddler', dialogue: ['Looking to buy or sell?', 'Fresh wares from the capital!', 'Gold speaks louder than steel.'] },
+    trainer:  { name: 'Orin Deepmind', dialogue: ['Seeking to refine your talents?', 'Wisdom begins with knowing oneself.', 'I can reset your attributes… for a price.'] },
+    quest:    { name: 'Elder Maren', dialogue: ['The village needs your aid, adventurer.', 'Dark tidings from the forest…', 'Will you answer the call?'] },
+    crafter:  { name: 'Forge-Master Dunn', dialogue: ['Bring materials and I\'ll craft wonders.', 'The anvil waits for no one.', 'Quality takes time and ore.'] },
+  },
+  1: {
+    merchant: { name: 'Whisper Merchant', dialogue: ['Sssh… fine goods, low prices.'] },
+    trainer:  { name: 'Ranger Lysse', dialogue: ['The forest teaches patience.'] },
+    quest:    { name: 'Scout Thorn', dialogue: ['The woods crawl with danger.'] },
+    crafter:  { name: 'Woodcarver Elm', dialogue: ['Bring me timber and I\'ll shape it.'] },
+  },
+};
+const DEFAULT_NPC_LORE = {
+  merchant: { name: 'Traveling Merchant', dialogue: ['Wares for sale!'] },
+  trainer:  { name: 'Wandering Sage', dialogue: ['I can help you respec.'] },
+  quest:    { name: 'Adventurer', dialogue: ['Need something done?'] },
+  crafter:  { name: 'Tinker', dialogue: ['Got materials?'] },
+};
+
 function generateNPCs(state: OpenWorldState): void {
   for (const zone of ISLAND_ZONES) {
+    const typeOrder: OWNPC['type'][] = zone.isSafeZone
+      ? ['merchant', 'trainer', 'quest', 'crafter']
+      : ['quest'];
     for (let i = 0; i < zone.npcPositions.length; i++) {
       const pos = zone.npcPositions[i];
+      const npcType = typeOrder[i % typeOrder.length];
+      const lore = (NPC_LORE[zone.id] || DEFAULT_NPC_LORE)[npcType] || DEFAULT_NPC_LORE[npcType];
+      const shopTier = Math.max(1, Math.min(8, Math.ceil(zone.requiredLevel / 3)));
       state.npcs.push({
         id: state.nextId++,
         x: pos.x, y: pos.y,
-        name: zone.isSafeZone ? (i === 0 ? 'Merchant' : i === 1 ? 'Trainer' : 'Quest Giver') : 'Wanderer',
-        type: zone.isSafeZone ? (i === 0 ? 'merchant' : i === 1 ? 'trainer' : 'quest') : 'quest',
+        name: lore.name,
+        type: npcType,
         zoneId: zone.id,
         facing: Math.random() * Math.PI * 2,
+        dialogue: lore.dialogue,
+        shopTier,
       });
     }
   }
@@ -731,13 +782,26 @@ function handleOWInteract(state: OpenWorldState): void {
   // Try NPC interaction
   for (const npc of state.npcs) {
     if (distXY(p, npc) < 60) {
-      state.killFeed.push({ text: `Talking to ${npc.name}...`, color: '#ffd700', time: state.gameTime });
+      openNPCDialog(state, npc);
       return;
     }
   }
 
   // Fall through to harvesting
   handleOWHarvest(state);
+}
+
+// ── NPC Dialog Open / Close ────────────────────────────────────
+
+export function openNPCDialog(state: OpenWorldState, npc: OWNPC): void {
+  const defaultTab: NPCDialogTab = npc.type === 'merchant' ? 'shop' : npc.type === 'trainer' ? 'train' : npc.type === 'crafter' ? 'craft' : 'quests';
+  state.activeNPC = { npc, tab: defaultTab };
+  const greeting = npc.dialogue[Math.floor(Math.random() * npc.dialogue.length)] || `Talking to ${npc.name}...`;
+  state.killFeed.push({ text: greeting, color: '#ffd700', time: state.gameTime });
+}
+
+export function closeNPCDialog(state: OpenWorldState): void {
+  state.activeNPC = null;
 }
 
 /** Space key: dodge roll with i-frames */
@@ -999,8 +1063,14 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
     p.stamina = Math.min(p.maxStamina, p.stamina + 15 * dt);
   }
 
+  // ── Skip movement while NPC dialog is open ──
+  if (state.activeNPC) {
+    p.vx = 0; p.vy = 0;
+    // Still update camera, particles, etc. but skip combat/movement
+  }
+
   // ── Movement (weather affects speed) ──
-  if (!isStunned(p as any as CombatEntity) && p.dodgeTimer <= 0) {
+  if (!state.activeNPC && !isStunned(p as any as CombatEntity) && p.dodgeTimer <= 0) {
     let mx = 0, my = 0;
     if (keys.has(kUp)) my = -1;
     if (keys.has(kDown)) my = 1;
@@ -1722,6 +1792,10 @@ function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number,
   const p = state.player;
   let hits = 0;
   let anyCrit = false;
+  // Knockback scales with combo step: step1 = 0.6, step2 = 0.75, step3/finisher = 1.0
+  const comboKB = p.comboStep <= 1 ? 0.6 : p.comboStep === 2 ? 0.75 : 1.0;
+  const knockbackDist = range * 0.8 * comboKB;
+  const stunDuration = 0.2 * comboKB;
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
     const d = distXY(p, enemy);
@@ -1746,6 +1820,18 @@ function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number,
     incrementCombo(state);
     enemy.hitStopTimer = result.isCrit ? 0.07 : 0.04;
     hits++;
+
+    // ── Knockback: push enemy to edge of slash arc ──
+    const pushAngle = angleBetween(p, enemy);
+    const targetDist = Math.max(d, knockbackDist);
+    const nx = p.x + Math.cos(pushAngle) * targetDist;
+    const ny = p.y + Math.sin(pushAngle) * targetDist;
+    if (isWalkableOW(nx, ny)) {
+      enemy.x = nx;
+      enemy.y = ny;
+    }
+    // Brief hitstun so enemies can't immediately counter
+    applyStatusEffect(enemy as any as CombatEntity, createStatusEffect(StatusEffectType.Stun, stunDuration, p.id, 0));
 
     // Melee slow
     if (slowDuration > 0) {
@@ -2210,6 +2296,7 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
     dodgeCooldown: p.dodgeCooldown,
     lockedTargetId: p.lockedTargetId,
     nearbyInteractable: getNearbyInteractableLabel(state),
+    activeNPC: state.activeNPC,
     // Equipment
     equipSlots: (() => {
       const SLOTS: { id: string; label: string; icon: string }[] = [
