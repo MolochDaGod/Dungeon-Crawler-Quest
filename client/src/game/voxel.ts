@@ -201,20 +201,29 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
     }
 
     if (heroClass === 'Warrior' || heroClass === 'Worg') {
-      const windUp = atkProgress < 0.35 ? atkProgress / 0.35 : 0;
-      const swing = atkProgress >= 0.35 && atkProgress < 0.65 ? (atkProgress - 0.35) / 0.3 : 0;
-      const followThru = atkProgress >= 0.65 ? (atkProgress - 0.65) / 0.35 : 0;
+      // Weapon-leading melee slash: weapon moves first, body follows
+      const windUp = atkProgress < 0.3 ? atkProgress / 0.3 : 0;
+      const swing = atkProgress >= 0.3 && atkProgress < 0.6 ? (atkProgress - 0.3) / 0.3 : 0;
+      const followThru = atkProgress >= 0.6 ? (atkProgress - 0.6) / 0.4 : 0;
       const easeSwing = swing > 0 ? Math.sin(swing * Math.PI * 0.5) : 0;
-      const weaponRot = Math.max(-90, Math.min(0, windUp * 10 - easeSwing * 100 + followThru * 30));
+      // Weapon rotation leads more aggressively
+      const weaponRot = Math.max(-120, Math.min(10, windUp * 20 - easeSwing * 130 + followThru * 40));
+      // Forward lunge: body lurches into the swing
+      const lungeFwd = easeSwing * 3.5 - followThru * 1.5;
       return {
-        leftLeg: { ox: 0, oy: Math.round(easeSwing * 1.5 - followThru * 0.5), oz: Math.round(easeSwing * 0.5) },
-        rightLeg: { ox: 0, oy: Math.round(-easeSwing * 1 + windUp * 0.5), oz: 0 },
-        leftArm: { ox: Math.round(-windUp * 1 + easeSwing * 3), oy: Math.round(-easeSwing * 1), oz: Math.round(easeSwing * 2) },
-        rightArm: { ox: Math.round(-windUp * 0.5 + followThru * 0.5), oy: 0, oz: Math.round(windUp * 1 + easeSwing * 0.5) },
-        torso: { ox: Math.round(easeSwing * 1.5 - followThru * 0.5), oy: 0, oz: 0, rotation: -windUp * 10 + easeSwing * 15 - followThru * 5 },
-        head: { ox: Math.round(easeSwing * 0.5), oy: 0, oz: 0 },
-        weapon: { ox: Math.round(-windUp * 1 + easeSwing * 4 - followThru * 2), oy: Math.round(-easeSwing * 2 + followThru * 1), oz: Math.round(windUp * 4 - easeSwing * 3 + followThru * 1), rotation: weaponRot },
-        weaponGlow: swing > 0.15 ? 1.0 : windUp > 0.5 ? 0.5 : followThru > 0 ? 0.3 : 0
+        leftLeg: { ox: Math.round(lungeFwd * 0.5), oy: Math.round(easeSwing * 2 - followThru * 0.8), oz: Math.round(easeSwing * 0.8) },
+        rightLeg: { ox: Math.round(-lungeFwd * 0.3), oy: Math.round(-easeSwing * 1.2 + windUp * 0.6), oz: 0 },
+        leftArm: { ox: Math.round(-windUp * 2 + easeSwing * 5 - followThru * 1.5), oy: Math.round(-easeSwing * 1.5), oz: Math.round(windUp * 1.5 + easeSwing * 3) },
+        rightArm: { ox: Math.round(-windUp * 0.8 + followThru * 0.5), oy: 0, oz: Math.round(windUp * 1.5 + easeSwing * 0.8) },
+        torso: { ox: Math.round(lungeFwd), oy: 0, oz: Math.round(-easeSwing * 0.3), rotation: -windUp * 15 + easeSwing * 22 - followThru * 8 },
+        head: { ox: Math.round(lungeFwd * 0.6 + easeSwing * 0.5), oy: 0, oz: 0 },
+        weapon: {
+          ox: Math.round(-windUp * 2 + easeSwing * 7 - followThru * 3),
+          oy: Math.round(-easeSwing * 3 + followThru * 1.5),
+          oz: Math.round(windUp * 6 - easeSwing * 4 + followThru * 1.5),
+          rotation: weaponRot
+        },
+        weaponGlow: swing > 0.1 ? 1.0 : windUp > 0.4 ? 0.6 : followThru > 0 ? 0.35 : 0
       };
     }
     if (heroClass === 'Ranger') {
@@ -1728,6 +1737,29 @@ export class VoxelRenderer {
       trail.addPoint(wx, wy, wz, time);
       trail.update(time);
       drawWeaponTrail(ctx, trail.getPoints(), vfxColor, isFinisher ? 4 : 3, facing);
+
+      // Weapon afterimage ghosts — draw faded copies at older weapon positions
+      const pts = trail.getPoints();
+      if (pts.length >= 3) {
+        ctx.save();
+        const ghostCount = Math.min(4, pts.length - 1);
+        for (let gi = 1; gi <= ghostCount; gi++) {
+          const pt = pts[pts.length - 1 - gi];
+          if (!pt) continue;
+          const ghostAlpha = (1 - gi / (ghostCount + 1)) * 0.25;
+          ctx.globalAlpha = ghostAlpha;
+          ctx.strokeStyle = vfxColor;
+          ctx.lineWidth = 2.5 - gi * 0.4;
+          ctx.shadowColor = vfxColor;
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 3 + (1 - gi / ghostCount) * 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
     } else {
       const trail = this.weaponTrails.get(eid);
       if (trail) { trail.update(time); if (trail.getPoints().length > 0) drawWeaponTrail(ctx, trail.getPoints(), vfxColor, 2, facing); }
@@ -2024,8 +2056,9 @@ export class VoxelRenderer {
           ctx.restore();
         }
       } else {
-      const swing = atkProgress >= 0.3 && atkProgress < 0.6 ? (atkProgress - 0.3) / 0.3 : 0;
-      const followThru = atkProgress >= 0.6 ? Math.min(1, (atkProgress - 0.6) / 0.25) : 0;
+      // Enhanced weapon-leading slash arc — wider, more aggressive
+      const swing = atkProgress >= 0.25 && atkProgress < 0.55 ? (atkProgress - 0.25) / 0.3 : 0;
+      const followThru = atkProgress >= 0.55 ? Math.min(1, (atkProgress - 0.55) / 0.3) : 0;
       const primaryColor = heroClass === 'Warrior' ? '#ef4444' : '#f97316';
       const secondaryColor = heroClass === 'Warrior' ? '#fca5a5' : '#fdba74';
 
@@ -2033,10 +2066,10 @@ export class VoxelRenderer {
         ctx.save();
         ctx.translate(x, y - 10);
 
-        const arcStart = facing - Math.PI * 0.75;
-        const arcEnd = facing + Math.PI * 0.55;
+        const arcStart = facing - Math.PI * 0.85;
+        const arcEnd = facing + Math.PI * 0.65;
         const arcAngle = arcStart + (arcEnd - arcStart) * swing;
-        const reachDist = 24 + swing * 20;
+        const reachDist = 28 + swing * 24;
 
         ctx.strokeStyle = primaryColor;
         ctx.lineWidth = 4 + swing * 3;

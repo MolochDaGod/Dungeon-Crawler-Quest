@@ -122,6 +122,15 @@ const ENEMY_TEMPLATES: Record<string, {
   'Harpy':            { hp: 100,  atk: 18, def: 4,  spd: 65,  rng: 90,  color: '#9966cc', xp: 35,  gold: 18,  isBoss: false, size: 10, attackStyle: 'ranged' },
   'Imp':              { hp: 60,   atk: 14, def: 2,  spd: 70,  rng: 80,  color: '#ff4444', xp: 18,  gold: 10,  isBoss: false, size: 7,  attackStyle: 'ranged' },
   'Goblin Shaman':    { hp: 140,  atk: 22, def: 5,  spd: 42,  rng: 150, color: '#44aa44', xp: 55,  gold: 30,  isBoss: false, size: 9,  attackStyle: 'aoe' },
+  // ── Phase 5: New Enemy Heroes ──
+  'Berserker':          { hp: 280,  atk: 30, def: 8,  spd: 62,  rng: 55,  color: '#cc2222', xp: 70,  gold: 40,  isBoss: false, size: 13, attackStyle: 'melee' },
+  'Dark Archer':        { hp: 150,  atk: 24, def: 6,  spd: 55,  rng: 220, color: '#2a4a2a', xp: 55,  gold: 30,  isBoss: false, size: 10, attackStyle: 'ranged' },
+  'Necromancer':        { hp: 200,  atk: 28, def: 5,  spd: 38,  rng: 180, color: '#4a0066', xp: 80,  gold: 50,  isBoss: false, size: 11, attackStyle: 'aoe' },
+  'Iron Sentinel':      { hp: 450,  atk: 20, def: 30, spd: 25,  rng: 60,  color: '#6a6a8a', xp: 90,  gold: 55,  isBoss: false, size: 16, attackStyle: 'melee' },
+  'Plague Rat Swarm':   { hp: 100,  atk: 12, def: 2,  spd: 75,  rng: 45,  color: '#7a6a30', xp: 25,  gold: 12,  isBoss: false, size: 8,  attackStyle: 'melee' },
+  // ── Phase 5: New Bosses ──
+  'Infernal Colossus':  { hp: 1500, atk: 50, def: 30, spd: 28,  rng: 90,  color: '#ff3300', xp: 400, gold: 300, isBoss: true,  size: 32, attackStyle: 'aoe' },
+  'Lich King':          { hp: 1200, atk: 55, def: 20, spd: 35,  rng: 250, color: '#220066', xp: 500, gold: 400, isBoss: true,  size: 28, attackStyle: 'aoe' },
 };
 
 // ── Interfaces ─────────────────────────────────────────────────
@@ -182,6 +191,17 @@ export interface OWPlayer {
   comboTimer: number;
   heavyAttackCooldown: number;
   meleeAnimTimer: number;
+  // MMO controls
+  stamina: number;
+  maxStamina: number;
+  sprinting: boolean;
+  dodgeTimer: number;       // >0 = currently in dodge roll
+  dodgeCooldown: number;    // >0 = dodge on CD
+  dodgeInvuln: boolean;     // true during dodge i-frames
+  lockedTargetId: number | null;
+  // Spell combo
+  spellComboCount: number;  // consecutive ability casts
+  spellComboTimer: number;  // resets combo after window expires
 }
 
 export interface OWProjectile {
@@ -365,6 +385,20 @@ export interface OWHudState {
   // Missions
   activeMissions: { id: string; name: string; status: string; objectives: { type: string; target: string; current: number; required: number }[] }[];
   nearbyDungeon: DungeonEntrance | null;
+  // MMO controls
+  stamina: number;
+  maxStamina: number;
+  sprinting: boolean;
+  dodgeCooldown: number;
+  lockedTargetId: number | null;
+  nearbyInteractable: string | null; // label for "Press E" prompt
+  // Equipment
+  equipSlots: { slot: string; label: string; icon: string; item: { name: string; tier: number; atk: number; def: number; hp: number; setName: string } | null }[];
+  bagItems: { id: string; name: string; slot: string; tier: number; atk: number; def: number; hp: number }[];
+  setBonuses: { setName: string; pieces: number }[];
+  // Professions
+  gatheringProfs: { id: string; name: string; icon: string; color: string; level: number; xp: number; xpToNext: number; tier: number; tierName: string; tierColor: string }[];
+  craftingProfs: { id: string; name: string; icon: string; color: string; level: number; xp: number; xpToNext: number; tier: number; tierName: string; tierColor: string }[];
 }
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -434,6 +468,15 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
       comboTimer: 0,
       heavyAttackCooldown: 0,
       meleeAnimTimer: 0,
+      stamina: 100,
+      maxStamina: 100,
+      sprinting: false,
+      dodgeTimer: 0,
+      spellComboCount: 0,
+      spellComboTimer: 0,
+      dodgeCooldown: 0,
+      dodgeInvuln: false,
+      lockedTargetId: null,
     },
     enemies: [],
     npcs: [],
@@ -623,6 +666,70 @@ export function handleOWHarvest(state: OpenWorldState): void {
   saveResourceInventory(state.resourceInventory);
 }
 
+/** Unified E-key interaction: harvest, NPC, dungeon entrance */
+function handleOWInteract(state: OpenWorldState): void {
+  if (state.player.dead) return;
+  const p = state.player;
+
+  // Try dungeon entrance first (closest priority)
+  const entrance = getDungeonEntranceNear(p.x, p.y, 80);
+  if (entrance && distXY(p, entrance) < 60) {
+    enterOWDungeon(state);
+    return;
+  }
+
+  // Try NPC interaction
+  for (const npc of state.npcs) {
+    if (distXY(p, npc) < 60) {
+      state.killFeed.push({ text: `Talking to ${npc.name}...`, color: '#ffd700', time: state.gameTime });
+      return;
+    }
+  }
+
+  // Fall through to harvesting
+  handleOWHarvest(state);
+}
+
+/** Space key: dodge roll with i-frames */
+export function handleOWDodge(state: OpenWorldState): void {
+  const p = state.player;
+  if (p.dead || p.dodgeCooldown > 0 || p.dodgeTimer > 0 || isStunned(p as any)) return;
+  if (p.stamina < 20) return; // costs 20 stamina
+  p.stamina -= 20;
+  p.dodgeTimer = 0.3;
+  p.dodgeCooldown = 1.0;
+  p.dodgeInvuln = true;
+  p.animState = 'dodge';
+  p.animTimer = 0;
+  p.meleeAnimTimer = 0; // cancel melee if mid-swing
+  spawnParticles(state, p.x, p.y, '#9a8a6a', 6);
+}
+
+/** Tab key: cycle through nearby enemies for target lock */
+export function handleOWTargetCycle(state: OpenWorldState): void {
+  const p = state.player;
+  if (p.dead) return;
+
+  // Gather living enemies within aggro range, sorted by distance
+  const nearby = state.enemies
+    .filter(e => !e.dead && distXY(p, e) < AGGRO_RANGE * 2)
+    .sort((a, b) => distXY(p, a) - distXY(p, b));
+
+  if (nearby.length === 0) {
+    p.lockedTargetId = null;
+    return;
+  }
+
+  // Find current locked index
+  const curIdx = p.lockedTargetId !== null
+    ? nearby.findIndex(e => e.id === p.lockedTargetId)
+    : -1;
+
+  // Cycle to next
+  const nextIdx = (curIdx + 1) % nearby.length;
+  p.lockedTargetId = nearby[nextIdx].id;
+}
+
 function updateResourceNodes(state: OpenWorldState, dt: number): void {
   state.harvestCooldown = Math.max(0, state.harvestCooldown - dt);
   for (const node of state.resourceNodes) {
@@ -771,8 +878,40 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
     addText(state, p.x, p.y - 20, `+${Math.floor(effectResult.heal)}`, '#22c55e', 12);
   }
 
-  // Movement (weather affects speed)
-  if (!isStunned(p as any as CombatEntity)) {
+  // ── Dodge Roll Update ──
+  if (p.dodgeTimer > 0) {
+    p.dodgeTimer -= dt;
+    const dodgeSpeed = 400;
+    const dodgeNx = p.x + Math.cos(p.facing) * dodgeSpeed * dt;
+    const dodgeNy = p.y + Math.sin(p.facing) * dodgeSpeed * dt;
+    if (isWalkableOW(dodgeNx, p.y)) p.x = dodgeNx;
+    if (isWalkableOW(p.x, dodgeNy)) p.y = dodgeNy;
+    p.animState = 'dodge';
+    p.dodgeInvuln = p.dodgeTimer > 0.05; // i-frames for most of roll
+    // Spawn dust trail
+    if (Math.random() < 0.6) {
+      state.particles.push({
+        x: p.x - Math.cos(p.facing) * 8 + (Math.random() - 0.5) * 6,
+        y: p.y - Math.sin(p.facing) * 8 + (Math.random() - 0.5) * 6,
+        vx: (Math.random() - 0.5) * 20, vy: -15 - Math.random() * 15,
+        life: 0.3, maxLife: 0.3, color: '#9a8a6a', size: 3 + Math.random() * 2,
+      });
+    }
+    if (p.dodgeTimer <= 0) { p.dodgeInvuln = false; }
+  }
+  if (p.dodgeCooldown > 0) p.dodgeCooldown -= dt;
+
+  // ── Sprint / Stamina ──
+  p.sprinting = keys.has('shift') && p.stamina > 0 && !p.dead;
+  if (p.sprinting && (keys.has('w') || keys.has('s') || keys.has('a') || keys.has('d'))) {
+    p.stamina = Math.max(0, p.stamina - 25 * dt);
+  } else {
+    // Regen stamina when not sprinting
+    p.stamina = Math.min(p.maxStamina, p.stamina + 15 * dt);
+  }
+
+  // ── Movement (weather affects speed) ──
+  if (!isStunned(p as any as CombatEntity) && p.dodgeTimer <= 0) {
     let mx = 0, my = 0;
     if (keys.has('w') || keys.has('arrowup')) my = -1;
     if (keys.has('s') || keys.has('arrowdown')) my = 1;
@@ -780,9 +919,10 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
     if (keys.has('d') || keys.has('arrowright')) mx = 1;
 
     const spdMult = getSpeedMultiplier(p as any as CombatEntity) * getWeatherSpeedMod(state.worldState);
+    const sprintMult = p.sprinting ? 1.6 : 1.0;
     if (!isRooted(p as any as CombatEntity) && (mx !== 0 || my !== 0)) {
       const len = Math.sqrt(mx * mx + my * my);
-      const speed = p.spd * 2 * spdMult;
+      const speed = p.spd * 2 * spdMult * sprintMult;
       p.vx = (mx / len) * speed;
       p.vy = (my / len) * speed;
       p.facing = Math.atan2(my, mx);
@@ -799,6 +939,14 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
     if (isWalkableOW(p.x, ny)) p.y = ny;
   }
 
+  // ── Validate locked target ──
+  if (p.lockedTargetId !== null) {
+    const lockedEnemy = state.enemies.find(e => e.id === p.lockedTargetId && !e.dead);
+    if (!lockedEnemy || distXY(p, lockedEnemy) > DESPAWN_RADIUS) {
+      p.lockedTargetId = null;
+    }
+  }
+
   // Ability cooldowns
   for (let i = 0; i < p.abilityCooldowns.length; i++) {
     if (p.abilityCooldowns[i] > 0) p.abilityCooldowns[i] -= dt;
@@ -811,13 +959,18 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   }
   if (p.meleeAnimTimer > 0) p.meleeAnimTimer -= dt;
   if (p.heavyAttackCooldown > 0) p.heavyAttackCooldown -= dt;
+  // Spell combo decay
+  if (p.spellComboTimer > 0) {
+    p.spellComboTimer -= dt;
+    if (p.spellComboTimer <= 0) { p.spellComboCount = 0; }
+  }
 
   // Resource nodes
   updateResourceNodes(state, dt);
 
-  // E key harvesting
+  // E key: interact (harvest, NPC, dungeon entrance)
   if (keys.has('e')) {
-    handleOWHarvest(state);
+    handleOWInteract(state);
   }
 
   // Spawn enemies near player
@@ -961,7 +1114,7 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
           const tg = enemy.aoeTelegraph;
           addSpellEffect(state, tg.x, tg.y, 'enemy_aoe_blast', tg.radius, enemy.color, 0.5);
           const dd = distXY(p, { x: tg.x, y: tg.y });
-          if (dd < tg.radius) {
+          if (dd < tg.radius && !p.dodgeInvuln) {
             const result = combatCalcDamage(
               { atk: enemy.atk, activeEffects: [] },
               { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp },
@@ -972,6 +1125,8 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
             p.hp -= dmg;
             addText(state, p.x, p.y - 20, `-${dmg}`, '#ef4444', 14);
             spawnParticles(state, p.x, p.y, '#ef4444', 5);
+          } else if (p.dodgeInvuln && dd < tg.radius) {
+            addText(state, p.x, p.y - 20, 'DODGE', '#ffd700', 12);
           }
           enemy.aoeTelegraph = null;
           enemy.attackTimer = 2.0;
@@ -992,7 +1147,7 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
             const lungeX = enemy.x + Math.cos(enemy.facing) * 8;
             const lungeY = enemy.y + Math.sin(enemy.facing) * 8;
             if (isWalkableOW(lungeX, lungeY)) { enemy.x = lungeX; enemy.y = lungeY; }
-            if (d < enemy.rng + 20) {
+            if (d < enemy.rng + 20 && !p.dodgeInvuln) {
               const result = combatCalcDamage(
                 { atk: enemy.atk, activeEffects: [] },
                 { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp },
@@ -1003,27 +1158,41 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
               p.hp -= dmg;
               addText(state, p.x, p.y - 20, `-${dmg}`, '#ef4444', 14);
               spawnParticles(state, p.x, p.y, '#ef4444', 3);
+            } else if (p.dodgeInvuln && d < enemy.rng + 20) {
+              addText(state, p.x, p.y - 20, 'DODGE', '#ffd700', 12);
             }
             addSpellEffect(state, enemy.x + Math.cos(enemy.facing) * (enemy.size + 10), enemy.y + Math.sin(enemy.facing) * (enemy.size + 10), 'enemy_slash', enemy.size + 15, enemy.color, 0.25, enemy.facing);
             enemy.attackTimer = 1.2 / spdMult;
 
           } else if (enemy.attackStyle === 'ranged') {
-            // Ranged: straight-line non-homing projectile toward player current position
-            const angle = angleBetween(enemy, p);
-            state.projectiles.push({
-              id: state.nextId++,
-              x: enemy.x, y: enemy.y,
-              targetId: p.id,
-              damage: enemy.atk,
-              speed: 350,
-              color: enemy.color,
-              size: enemy.isBoss ? 5 : 3,
-              sourceIsPlayer: false,
-              homing: false,
-              vx: Math.cos(angle) * 350,
-              vy: Math.sin(angle) * 350,
-            });
-            enemy.attackTimer = 1.4 / spdMult;
+            // Ranged: occasionally fire AOE telegraph instead of projectile
+            const useAoe = enemy.level >= 5 && Math.random() < 0.25;
+            if (useAoe) {
+              enemy.aoeTelegraph = {
+                x: p.x + (Math.random() - 0.5) * 40,
+                y: p.y + (Math.random() - 0.5) * 40,
+                timer: 1.0,
+                radius: 45 + enemy.level,
+              };
+              addSpellEffect(state, enemy.aoeTelegraph.x, enemy.aoeTelegraph.y, 'enemy_aoe_telegraph', enemy.aoeTelegraph.radius, enemy.color, 1.0);
+              enemy.attackTimer = 1.0;
+            } else {
+              const angle = angleBetween(enemy, p);
+              state.projectiles.push({
+                id: state.nextId++,
+                x: enemy.x, y: enemy.y,
+                targetId: p.id,
+                damage: enemy.atk,
+                speed: 350,
+                color: enemy.color,
+                size: enemy.isBoss ? 5 : 3,
+                sourceIsPlayer: false,
+                homing: false,
+                vx: Math.cos(angle) * 350,
+                vy: Math.sin(angle) * 350,
+              });
+              enemy.attackTimer = 1.4 / spdMult;
+            }
 
           } else {
             // AOE: telegraph then blast
@@ -1037,21 +1206,52 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
             enemy.attackTimer = 0.8;
           }
         }
-      } else if (!isRooted(enemy as any as CombatEntity)) {
+    } else if (!isRooted(enemy as any as CombatEntity)) {
         const spdMult = getSpeedMultiplier(enemy as any as CombatEntity);
-        const angle = angleBetween(enemy, p);
-        enemy.x += Math.cos(angle) * enemy.spd * spdMult * dt;
-        enemy.y += Math.sin(angle) * enemy.spd * spdMult * dt;
+        let moveAngle = angleBetween(enemy, p);
+
+        // Ranged kiting: ranged enemies try to maintain distance
+        if (enemy.attackStyle === 'ranged' && d < enemy.rng * 0.5) {
+          moveAngle = angleBetween(p, enemy); // flee away
+        }
+
+        // Steering: separation from nearby enemies to avoid overlap
+        let sepX = 0, sepY = 0;
+        for (const other of state.enemies) {
+          if (other === enemy || other.dead) continue;
+          const od = distXY(enemy, other);
+          if (od < 30 && od > 0.1) {
+            const repel = (30 - od) / 30;
+            sepX += (enemy.x - other.x) / od * repel * 0.5;
+            sepY += (enemy.y - other.y) / od * repel * 0.5;
+          }
+        }
+
+        const speed = enemy.spd * spdMult;
+        let nx = enemy.x + Math.cos(moveAngle) * speed * dt + sepX * speed * dt;
+        let ny = enemy.y + Math.sin(moveAngle) * speed * dt + sepY * speed * dt;
+        if (isWalkableOW(nx, enemy.y)) enemy.x = nx;
+        if (isWalkableOW(enemy.x, ny)) enemy.y = ny;
+        enemy.facing = moveAngle;
         enemy.animState = 'walk';
       }
     } else {
-      // Idle wander near home
+      // Patrol: idle enemies walk a small circuit around home
       enemy.animState = 'idle';
-      if (Math.random() < 0.005) {
-        const angle = Math.random() * Math.PI * 2;
-        enemy.x += Math.cos(angle) * 10;
-        enemy.y += Math.sin(angle) * 10;
-        enemy.facing = angle;
+      const patrolPhase = (state.gameTime + enemy.id * 1.7) % 12;
+      const patrolRadius = 40;
+      if (patrolPhase < 3) {
+        const patrolAngle = ((state.gameTime * 0.5 + enemy.id * 2.3) % (Math.PI * 2));
+        const tx = enemy.homeX + Math.cos(patrolAngle) * patrolRadius;
+        const ty = enemy.homeY + Math.sin(patrolAngle) * patrolRadius;
+        const toHome = distXY(enemy, { x: tx, y: ty });
+        if (toHome > 5) {
+          const angle = angleBetween(enemy, { x: tx, y: ty });
+          enemy.x += Math.cos(angle) * enemy.spd * 0.3 * dt;
+          enemy.y += Math.sin(angle) * enemy.spd * 0.3 * dt;
+          enemy.facing = angle;
+          enemy.animState = 'walk';
+        }
       }
     }
   }
@@ -1151,8 +1351,8 @@ function updateProjectiles(state: OpenWorldState, dt: number): void {
       proj.x += proj.vx * dt;
       proj.y += proj.vy * dt;
 
-      // Check collision with player (enemy projectiles)
-      if (!proj.sourceIsPlayer && !p.dead && distXY(proj, p) < 15) {
+      // Check collision with player (enemy projectiles) — dodge rolls avoid
+      if (!proj.sourceIsPlayer && !p.dead && !p.dodgeInvuln && distXY(proj, p) < 15) {
         handleProjectileHit(state, proj, p);
         proj.targetId = -1;
         continue;
@@ -1269,6 +1469,15 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
   p.abilityCooldowns[abilityIndex] = ab.cooldown;
   p.animState = 'ability';
 
+  // Spell combo tracking — casting within 3s window stacks
+  if (p.spellComboTimer > 0) {
+    p.spellComboCount = Math.min(p.spellComboCount + 1, 5);
+  } else {
+    p.spellComboCount = 1;
+  }
+  p.spellComboTimer = 3.0;
+  const comboBonus = 1.0 + p.spellComboCount * 0.08; // up to +40% at 5 stacks
+
   if (targetWorld && (ab.castType === 'ground_aoe' || ab.castType === 'skillshot' || ab.castType === 'line' || ab.castType === 'cone')) {
     p.facing = Math.atan2(targetWorld.y - p.y, targetWorld.x - p.x);
   }
@@ -1276,17 +1485,32 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
   const nearest = findNearestEnemy(state, p, ab.range + 100);
   const abilityColor = CLASS_COLORS[hd.heroClass] || '#fff';
 
-  addSpellEffect(state, p.x, p.y, 'cast_circle', 25, abilityColor, 0.5);
+  // Enhanced cast channeling VFX
+  addSpellEffect(state, p.x, p.y, 'cast_circle', 25 + p.spellComboCount * 3, abilityColor, 0.5);
+  // Channeling particle burst
+  for (let ci = 0; ci < 4 + p.spellComboCount * 2; ci++) {
+    const ca = (ci / (4 + p.spellComboCount * 2)) * Math.PI * 2;
+    state.particles.push({
+      x: p.x + Math.cos(ca) * 20, y: p.y + Math.sin(ca) * 20,
+      vx: -Math.cos(ca) * 40, vy: -Math.sin(ca) * 40 - 20,
+      life: 0.4, maxLife: 0.4, color: abilityColor, size: 2,
+    });
+  }
+  if (p.spellComboCount >= 3) {
+    addText(state, p.x, p.y - 45, `x${p.spellComboCount} SPELL COMBO`, '#ffd700', 14);
+  }
 
   switch (ab.type) {
     case 'damage': {
       if (nearest) {
-        const dmg = ab.damage + p.atk * 0.8;
+        const dmg = (ab.damage + p.atk * 0.8) * comboBonus;
         const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, dmg, 0.1);
         nearest.hp -= result.finalDamage;
-        addText(state, nearest.x, nearest.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, result.isCrit ? '#ffd700' : abilityColor, 14);
-        spawnParticles(state, nearest.x, nearest.y, abilityColor, 8);
-        addSpellEffect(state, nearest.x, nearest.y, 'impact_ring', 30, abilityColor, 0.4);
+        addText(state, nearest.x, nearest.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, result.isCrit ? '#ffd700' : abilityColor, result.isCrit ? 18 : 14);
+        spawnParticles(state, nearest.x, nearest.y, abilityColor, 10 + p.spellComboCount * 2);
+        addSpellEffect(state, nearest.x, nearest.y, 'impact_ring', 35 + p.spellComboCount * 4, abilityColor, 0.5);
+        triggerScreenShake(state, 3 + p.spellComboCount, 0.12);
+        triggerHitFlash(state, nearest.id);
         const effects = getAbilityStatusEffects(ab.name, p.id, p.atk);
         for (const eff of effects) applyStatusEffect(nearest as any as CombatEntity, eff);
         if (nearest.hp <= 0) killEnemy(state, nearest);
@@ -1303,20 +1527,24 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
         addSpellEffect(state, cx, cy, 'aoe_blast', ab.radius, abilityColor, 0.6);
       }
 
+      let aoeHits = 0;
       for (const e of state.enemies) {
         if (e.dead) continue;
         if (distXY({ x: cx, y: cy }, e) < ab.radius) {
-          const dmg = ab.damage + p.atk * 0.6;
+          const dmg = (ab.damage + p.atk * 0.6) * comboBonus;
           const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: e.def, activeEffects: e.activeEffects }, dmg);
           e.hp -= result.finalDamage;
           addText(state, e.x, e.y - 15, `-${result.finalDamage}`, abilityColor, 12);
-          addSpellEffect(state, e.x, e.y, 'impact_ring', 20, abilityColor, 0.3);
+          addSpellEffect(state, e.x, e.y, 'impact_ring', 24 + p.spellComboCount * 3, abilityColor, 0.35);
+          triggerHitFlash(state, e.id);
           const effects = getAbilityStatusEffects(ab.name, p.id, p.atk);
           for (const eff of effects) applyStatusEffect(e as any as CombatEntity, eff);
           if (e.hp <= 0) killEnemy(state, e);
+          aoeHits++;
         }
       }
-      spawnParticles(state, cx, cy, abilityColor, 20);
+      if (aoeHits > 0) triggerScreenShake(state, 4 + aoeHits, 0.15);
+      spawnParticles(state, cx, cy, abilityColor, 20 + p.spellComboCount * 4);
       break;
     }
     case 'buff': {
@@ -1503,6 +1731,11 @@ export function handleOWHeavyAttack(state: OpenWorldState): void {
 }
 
 function findNearestEnemy(state: OpenWorldState, from: { x: number; y: number }, range: number): OWEnemy | null {
+  // Prefer locked target if within range
+  if (state.player.lockedTargetId !== null) {
+    const locked = state.enemies.find(e => e.id === state.player.lockedTargetId && !e.dead);
+    if (locked && distXY(from, locked) < range) return locked;
+  }
   let nearest: OWEnemy | null = null;
   let nearestDist = range;
   for (const e of state.enemies) {
@@ -1768,6 +2001,22 @@ function addSpellEffect(state: OpenWorldState, x: number, y: number, type: OWSpe
   state.spellEffects.push({ x, y, type, life: duration, maxLife: duration, radius, color, angle, data });
 }
 
+function getNearbyInteractableLabel(state: OpenWorldState): string | null {
+  const p = state.player;
+  // Dungeon entrance
+  const ent = getDungeonEntranceNear(p.x, p.y, 80);
+  if (ent && distXY(p, ent) < 60) return `Enter ${ent.name}`;
+  // NPC
+  for (const npc of state.npcs) {
+    if (distXY(p, npc) < 60) return `Talk to ${npc.name}`;
+  }
+  // Resource node
+  for (const node of state.resourceNodes) {
+    if (!node.depleted && distXY(p, node) < 80) return `Harvest (${node.professionId})`;
+  }
+  return null;
+}
+
 // ── HUD State ──────────────────────────────────────────────────
 
 export function getOWHudState(state: OpenWorldState): OWHudState {
@@ -1835,6 +2084,44 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
       objectives: m.objectives.map(o => ({ type: o.type, target: o.target, current: o.current, required: o.required })),
     })),
     nearbyDungeon: getDungeonEntranceNear(p.x, p.y, 80),
+    // MMO controls
+    stamina: p.stamina,
+    maxStamina: p.maxStamina,
+    sprinting: p.sprinting,
+    dodgeCooldown: p.dodgeCooldown,
+    lockedTargetId: p.lockedTargetId,
+    nearbyInteractable: getNearbyInteractableLabel(state),
+    // Equipment
+    equipSlots: (() => {
+      const SLOTS: { id: string; label: string; icon: string }[] = [
+        { id: 'helm', label: 'Helm', icon: '🪖' },
+        { id: 'shoulder', label: 'Shoulder', icon: '🦺' },
+        { id: 'chest', label: 'Chest', icon: '👘' },
+        { id: 'hands', label: 'Hands', icon: '🧤' },
+        { id: 'feet', label: 'Feet', icon: '👟' },
+        { id: 'ring', label: 'Ring', icon: '💍' },
+        { id: 'necklace', label: 'Necklace', icon: '📿' },
+        { id: 'mainhand', label: 'Main Hand', icon: '⚔️' },
+        { id: 'offhand', label: 'Off-Hand', icon: '🛡️' },
+      ];
+      return SLOTS.map(s => {
+        const item = state.playerEquipment.slots[s.id as keyof typeof state.playerEquipment.slots];
+        return {
+          slot: s.id, label: s.label, icon: s.icon,
+          item: item ? { name: item.name, tier: item.tier, atk: item.atk, def: item.def, hp: item.hp, setName: item.setName } : null,
+        };
+      });
+    })(),
+    bagItems: state.equipmentBag.items.slice(0, 20).map(i => ({ id: i.id, name: i.name, slot: i.slot, tier: i.tier, atk: i.atk, def: i.def, hp: i.hp })),
+    setBonuses: computeSetBonuses(state.playerEquipment).map(b => ({ setName: b.setName, pieces: b.pieces })),
+    // Professions
+    ...(() => {
+      const ps = getProfessionSummaries(state.playerProfessions);
+      return {
+        gatheringProfs: ps.gathering.map(g => ({ id: g.id, name: g.name, icon: g.icon, color: g.color, level: g.level, xp: g.xp, xpToNext: g.xpToNext, tier: g.tier, tierName: g.tierName, tierColor: g.tierColor })),
+        craftingProfs: ps.crafting.map(c => ({ id: c.id, name: c.name, icon: c.icon, color: c.color, level: c.level, xp: c.xp, xpToNext: c.xpToNext, tier: c.tier, tierName: c.tierName, tierColor: c.tierColor })),
+      };
+    })(),
   };
 }
 

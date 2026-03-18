@@ -38,14 +38,20 @@ export enum KeybindAction {
   DungeonAbility2 = 'DungeonAbility2',
   DungeonAbility3 = 'DungeonAbility3',
   DungeonAbility4 = 'DungeonAbility4',
+  // MMO controls
+  Sprint = 'Sprint',
+  DodgeRoll = 'DodgeRoll',
+  Interact = 'Interact',
+  TargetLock = 'TargetLock',
 }
 
 export const ACTION_CATEGORIES: Record<string, KeybindAction[]> = {
   Movement: [KeybindAction.MoveUp, KeybindAction.MoveDown, KeybindAction.MoveLeft, KeybindAction.MoveRight, KeybindAction.StopMove],
   'MOBA Combat': [KeybindAction.Attack, KeybindAction.AttackMove, KeybindAction.MoveToTarget, KeybindAction.Dodge, KeybindAction.DashAttack, KeybindAction.Block],
   'MOBA Abilities (Q/W/E/R)': [KeybindAction.Ability1, KeybindAction.Ability2, KeybindAction.Ability3, KeybindAction.Ability4],
-  'Dungeon/OW Combat': [KeybindAction.LightAttack, KeybindAction.HeavyAttack],
+  'Dungeon/OW Combat': [KeybindAction.LightAttack, KeybindAction.HeavyAttack, KeybindAction.DodgeRoll, KeybindAction.Sprint],
   'Dungeon/OW Abilities (1-4)': [KeybindAction.DungeonAbility1, KeybindAction.DungeonAbility2, KeybindAction.DungeonAbility3, KeybindAction.DungeonAbility4],
+  'Interaction': [KeybindAction.Interact, KeybindAction.TargetLock],
   'Level Up': [KeybindAction.LevelUpAbility1, KeybindAction.LevelUpAbility2, KeybindAction.LevelUpAbility3, KeybindAction.LevelUpAbility4],
   Items: [KeybindAction.Item1, KeybindAction.Item2, KeybindAction.Item3, KeybindAction.Item4, KeybindAction.Item5, KeybindAction.Item6],
   Camera: [KeybindAction.CameraPan, KeybindAction.CenterCamera, KeybindAction.ZoomIn, KeybindAction.ZoomOut],
@@ -91,6 +97,10 @@ export const ACTION_LABELS: Record<KeybindAction, string> = {
   [KeybindAction.DungeonAbility2]: 'Ability 2 (2)',
   [KeybindAction.DungeonAbility3]: 'Ability 3 (3)',
   [KeybindAction.DungeonAbility4]: 'Ability 4 (4)',
+  [KeybindAction.Sprint]: 'Sprint (Shift)',
+  [KeybindAction.DodgeRoll]: 'Dodge Roll (Space)',
+  [KeybindAction.Interact]: 'Interact (E)',
+  [KeybindAction.TargetLock]: 'Target Lock (Tab)',
 };
 
 export interface KeyBind {
@@ -152,6 +162,10 @@ export function getDefaultBindings(): KeybindConfig {
     [KeybindAction.DungeonAbility2]: makeKeyBind('2'),
     [KeybindAction.DungeonAbility3]: makeKeyBind('3'),
     [KeybindAction.DungeonAbility4]: makeKeyBind('4'),
+    [KeybindAction.Sprint]: makeKeyBind('shift'),
+    [KeybindAction.DodgeRoll]: makeKeyBind(' '),
+    [KeybindAction.Interact]: makeKeyBind('e'),
+    [KeybindAction.TargetLock]: makeKeyBind('tab'),
   };
 }
 
