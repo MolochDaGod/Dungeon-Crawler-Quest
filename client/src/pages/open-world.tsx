@@ -6,13 +6,14 @@ import {
 import {
   OpenWorldState, OWHudState,
   createOpenWorldState, updateOpenWorld, getOWHudState,
-  OpenWorldRenderer, handleOWAbility, handleOWAttack,
+  OpenWorldRenderer, handleOWAbility, handleOWAttack, handleOWHeavyAttack,
   updateOWMouseWorld, startOWTargeting, confirmOWTargeting, cancelOWTargeting,
   allocateOWAttribute, acceptOWMission, claimOWMission, enterOWDungeon
 } from '@/game/open-world';
 import { getAvailableMissions } from '@/game/missions';
 import { AttributeId } from '@/game/attributes';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
+import { initGLBSprites } from '@/game/glb-sprites';
 import { ProgressEvent } from '@/game/player-progress';
 import { loadKeybindings, matchesKeyDown, KeybindAction } from '@/game/keybindings';
 import hudFramePath from '@assets/hud-frame.png';
@@ -47,6 +48,9 @@ export default function OpenWorldPage() {
     stateRef.current = state;
     const renderer = new OpenWorldRenderer(canvas);
     rendererRef.current = renderer;
+
+    // Initialize GLB effect sprites in background
+    initGLBSprites('/effects/');
 
     let lastTime = performance.now();
     let hudTimer = 0;
@@ -144,7 +148,8 @@ export default function OpenWorldPage() {
 
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
-      if (state.targeting.active) cancelOWTargeting(state);
+      if (state.targeting.active) { cancelOWTargeting(state); return; }
+      handleOWHeavyAttack(state);
     };
 
     const onMouseMove = (e: MouseEvent) => {

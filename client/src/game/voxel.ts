@@ -1179,7 +1179,7 @@ export function buildHeroModelWithPoses(race: string, heroClass: string, customP
   xformV(6, 2, 4, hP, 3.5, 3, 6.5, eye);
 
   const wCx = 0, wCy = 1, wCz = 5;
-  if (weaponType === 'sword') {
+  if (weaponType === 'sword_shield') {
     xformV(2, 1, 0, wP, wCx, wCy, wCz, '#c5a059', true);
     for (let z = 3; z <= 8; z++) xformV(z, 1, 0, wP, wCx, wCy, wCz, '#c0c0c0', true);
   } else if (weaponType === 'staff') {
@@ -1790,7 +1790,7 @@ export class VoxelRenderer {
       const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
       const lungePlan = globalAnimDirector.planAttack(heroClass, weaponType, eid, facing);
       lungePlan.slashArc *= 1.2;
-      lungePlan.screenShake = true;
+      lungePlan.screenShake = 4;
       const lungeProgress = Math.min(1, animTimer / lungePlan.duration);
       drawAISlashVFX(ctx, x, groundY - 8, lungePlan, lungeProgress, time);
     }
@@ -3312,6 +3312,47 @@ export class VoxelRenderer {
         ctx.arc(2, -2 + bob, 2, 0, Math.PI * 2);
         ctx.fill();
         break;
+      }
+    }
+
+    // Enemy melee attack slash VFX overlay
+    if (isAttacking && atkPhase > 0.1) {
+      const enemyTypeLC = enemyType.toLowerCase();
+      const isMeleeType = !enemyTypeLC.includes('mage') && !enemyTypeLC.includes('lich') &&
+                          !enemyTypeLC.includes('drake') && !enemyTypeLC.includes('wyrm') &&
+                          !enemyTypeLC.includes('wraith') && !enemyTypeLC.includes('harpy') &&
+                          !enemyTypeLC.includes('imp') && !enemyTypeLC.includes('shaman');
+      if (isMeleeType) {
+        ctx.save();
+        ctx.scale(facingFlip, 1);
+        const slashDist = (size + 8) * (0.5 + atkPhase * 0.5);
+        const slashArcStart = -Math.PI * 0.4;
+        const slashArcEnd = Math.PI * 0.4;
+        const slashAngle = slashArcStart + (slashArcEnd - slashArcStart) * atkPhase;
+        ctx.globalAlpha = (1 - atkPhase) * 0.7;
+        const slashColor = isBoss ? '#ffd700' : (enemyType === 'Spider' ? '#ff4444' : enemyType === 'Slime' ? '#22ff22' : '#dddddd');
+        ctx.strokeStyle = slashColor;
+        ctx.lineWidth = 2 + atkPhase * 2;
+        ctx.shadowColor = slashColor;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(0, bob - 5, slashDist, slashArcStart, slashAngle);
+        ctx.stroke();
+        if (enemyType === 'Spider' || enemyType === 'Dire Wolf') {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = (1 - atkPhase) * 0.4;
+          for (let cl = 0; cl < 3; cl++) {
+            const cla = -0.2 + cl * 0.15;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(cla) * 4, bob - 5 + Math.sin(cla) * 4);
+            ctx.lineTo(Math.cos(cla) * slashDist * 0.8, bob - 5 + Math.sin(cla) * slashDist * 0.8);
+            ctx.stroke();
+          }
+        }
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.restore();
       }
     }
 

@@ -69,6 +69,7 @@ import {
   GeneratedWorldData, GeneratedDecoration, GeneratedBuilding, GeneratedRoad,
   loadGeneratedWorld,
 } from './ai-map-gen';
+import { drawGLBProjectile, drawGLBSprite, CLASS_PROJECTILE_SPRITE } from './glb-sprites';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -92,34 +93,35 @@ const ZONE_TERRAIN: Record<string, DungeonTileVoxelType> = {
 const ENEMY_TEMPLATES: Record<string, {
   hp: number; atk: number; def: number; spd: number; rng: number;
   color: string; xp: number; gold: number; isBoss: boolean; size: number;
+  attackStyle: 'melee' | 'ranged' | 'aoe';
 }> = {
-  Slime:      { hp: 80,  atk: 8,  def: 2,  spd: 40,  rng: 50,  color: '#22c55e', xp: 15,  gold: 8,   isBoss: false, size: 8  },
-  Skeleton:   { hp: 100, atk: 12, def: 5,  spd: 55,  rng: 60,  color: '#d4d4d8', xp: 25,  gold: 12,  isBoss: false, size: 10 },
-  'Orc Grunt':{ hp: 150, atk: 18, def: 8,  spd: 50,  rng: 60,  color: '#65a30d', xp: 35,  gold: 18,  isBoss: false, size: 12 },
-  'Dark Mage':{ hp: 90,  atk: 22, def: 4,  spd: 45,  rng: 200, color: '#7c3aed', xp: 40,  gold: 22,  isBoss: false, size: 10 },
-  Spider:     { hp: 70,  atk: 14, def: 3,  spd: 70,  rng: 50,  color: '#78716c', xp: 20,  gold: 10,  isBoss: false, size: 9  },
-  Golem:      { hp: 300, atk: 25, def: 20, spd: 30,  rng: 60,  color: '#a16207', xp: 60,  gold: 35,  isBoss: false, size: 16 },
-  Dragon:     { hp: 800, atk: 40, def: 18, spd: 45,  rng: 150, color: '#dc2626', xp: 200, gold: 150, isBoss: true,  size: 24 },
-  Lich:       { hp: 600, atk: 35, def: 12, spd: 40,  rng: 250, color: '#6b21a8', xp: 180, gold: 120, isBoss: true,  size: 20 },
+  Slime:      { hp: 80,  atk: 8,  def: 2,  spd: 40,  rng: 50,  color: '#22c55e', xp: 15,  gold: 8,   isBoss: false, size: 8,  attackStyle: 'melee' },
+  Skeleton:   { hp: 100, atk: 12, def: 5,  spd: 55,  rng: 60,  color: '#d4d4d8', xp: 25,  gold: 12,  isBoss: false, size: 10, attackStyle: 'melee' },
+  'Orc Grunt':{ hp: 150, atk: 18, def: 8,  spd: 50,  rng: 60,  color: '#65a30d', xp: 35,  gold: 18,  isBoss: false, size: 12, attackStyle: 'melee' },
+  'Dark Mage':{ hp: 90,  atk: 22, def: 4,  spd: 45,  rng: 200, color: '#7c3aed', xp: 40,  gold: 22,  isBoss: false, size: 10, attackStyle: 'aoe' },
+  Spider:     { hp: 70,  atk: 14, def: 3,  spd: 70,  rng: 50,  color: '#78716c', xp: 20,  gold: 10,  isBoss: false, size: 9,  attackStyle: 'melee' },
+  Golem:      { hp: 300, atk: 25, def: 20, spd: 30,  rng: 60,  color: '#a16207', xp: 60,  gold: 35,  isBoss: false, size: 16, attackStyle: 'melee' },
+  Dragon:     { hp: 800, atk: 40, def: 18, spd: 45,  rng: 150, color: '#dc2626', xp: 200, gold: 150, isBoss: true,  size: 24, attackStyle: 'aoe' },
+  Lich:       { hp: 600, atk: 35, def: 12, spd: 40,  rng: 250, color: '#6b21a8', xp: 180, gold: 120, isBoss: true,  size: 20, attackStyle: 'aoe' },
   // ── Dragons & Wyrms (T5-T7) ──
-  'Fire Drake':     { hp: 703,  atk: 30, def: 14, spd: 55,  rng: 120, color: '#ff6b2b', xp: 120, gold: 85,  isBoss: false, size: 18 },
-  'Frost Wyrm':     { hp: 856,  atk: 35, def: 20, spd: 42,  rng: 140, color: '#4fc3f7', xp: 160, gold: 100, isBoss: false, size: 22 },
-  'Shadow Dragon':  { hp: 1030, atk: 45, def: 25, spd: 48,  rng: 160, color: '#6a1b9a', xp: 280, gold: 200, isBoss: true,  size: 28 },
-  'Boar Dragon':    { hp: 886,  atk: 40, def: 28, spd: 35,  rng: 90,  color: '#5d4037', xp: 200, gold: 140, isBoss: false, size: 24 },
+  'Fire Drake':     { hp: 703,  atk: 30, def: 14, spd: 55,  rng: 120, color: '#ff6b2b', xp: 120, gold: 85,  isBoss: false, size: 18, attackStyle: 'ranged' },
+  'Frost Wyrm':     { hp: 856,  atk: 35, def: 20, spd: 42,  rng: 140, color: '#4fc3f7', xp: 160, gold: 100, isBoss: false, size: 22, attackStyle: 'ranged' },
+  'Shadow Dragon':  { hp: 1030, atk: 45, def: 25, spd: 48,  rng: 160, color: '#6a1b9a', xp: 280, gold: 200, isBoss: true,  size: 28, attackStyle: 'aoe' },
+  'Boar Dragon':    { hp: 886,  atk: 40, def: 28, spd: 35,  rng: 90,  color: '#5d4037', xp: 200, gold: 140, isBoss: false, size: 24, attackStyle: 'melee' },
   // ── Piglin Forces ──
-  'Piglin Grunt':   { hp: 200,  atk: 20, def: 10, spd: 48,  rng: 60,  color: '#c6a700', xp: 45,  gold: 25,  isBoss: false, size: 11 },
-  'Piglin Brute':   { hp: 350,  atk: 28, def: 16, spd: 42,  rng: 70,  color: '#8d6e00', xp: 75,  gold: 40,  isBoss: false, size: 14 },
+  'Piglin Grunt':   { hp: 200,  atk: 20, def: 10, spd: 48,  rng: 60,  color: '#c6a700', xp: 45,  gold: 25,  isBoss: false, size: 11, attackStyle: 'melee' },
+  'Piglin Brute':   { hp: 350,  atk: 28, def: 16, spd: 42,  rng: 70,  color: '#8d6e00', xp: 75,  gold: 40,  isBoss: false, size: 14, attackStyle: 'melee' },
   // ── New Enemies ──
-  'Bandit':           { hp: 120,  atk: 15, def: 6,  spd: 58,  rng: 55,  color: '#8b4513', xp: 30,  gold: 20,  isBoss: false, size: 10 },
-  'Bandit Chief':     { hp: 400,  atk: 25, def: 14, spd: 50,  rng: 65,  color: '#6b2e0a', xp: 120, gold: 80,  isBoss: true,  size: 14 },
-  'Sea Serpent':      { hp: 500,  atk: 30, def: 12, spd: 60,  rng: 120, color: '#0077be', xp: 150, gold: 90,  isBoss: true,  size: 22 },
-  'Wraith':           { hp: 130,  atk: 20, def: 3,  spd: 50,  rng: 100, color: '#b0b0d0', xp: 40,  gold: 25,  isBoss: false, size: 12 },
-  'Treant':           { hp: 250,  atk: 18, def: 18, spd: 25,  rng: 60,  color: '#2d5a1e', xp: 50,  gold: 15,  isBoss: false, size: 18 },
-  'Dire Wolf':        { hp: 110,  atk: 16, def: 5,  spd: 72,  rng: 50,  color: '#555566', xp: 28,  gold: 14,  isBoss: false, size: 11 },
-  'Corrupted Knight': { hp: 280,  atk: 24, def: 20, spd: 40,  rng: 55,  color: '#4a0e2e', xp: 65,  gold: 45,  isBoss: false, size: 13 },
-  'Harpy':            { hp: 100,  atk: 18, def: 4,  spd: 65,  rng: 90,  color: '#9966cc', xp: 35,  gold: 18,  isBoss: false, size: 10 },
-  'Imp':              { hp: 60,   atk: 14, def: 2,  spd: 70,  rng: 80,  color: '#ff4444', xp: 18,  gold: 10,  isBoss: false, size: 7  },
-  'Goblin Shaman':    { hp: 140,  atk: 22, def: 5,  spd: 42,  rng: 150, color: '#44aa44', xp: 55,  gold: 30,  isBoss: false, size: 9  },
+  'Bandit':           { hp: 120,  atk: 15, def: 6,  spd: 58,  rng: 55,  color: '#8b4513', xp: 30,  gold: 20,  isBoss: false, size: 10, attackStyle: 'melee' },
+  'Bandit Chief':     { hp: 400,  atk: 25, def: 14, spd: 50,  rng: 65,  color: '#6b2e0a', xp: 120, gold: 80,  isBoss: true,  size: 14, attackStyle: 'melee' },
+  'Sea Serpent':      { hp: 500,  atk: 30, def: 12, spd: 60,  rng: 120, color: '#0077be', xp: 150, gold: 90,  isBoss: true,  size: 22, attackStyle: 'ranged' },
+  'Wraith':           { hp: 130,  atk: 20, def: 3,  spd: 50,  rng: 100, color: '#b0b0d0', xp: 40,  gold: 25,  isBoss: false, size: 12, attackStyle: 'ranged' },
+  'Treant':           { hp: 250,  atk: 18, def: 18, spd: 25,  rng: 60,  color: '#2d5a1e', xp: 50,  gold: 15,  isBoss: false, size: 18, attackStyle: 'melee' },
+  'Dire Wolf':        { hp: 110,  atk: 16, def: 5,  spd: 72,  rng: 50,  color: '#555566', xp: 28,  gold: 14,  isBoss: false, size: 11, attackStyle: 'melee' },
+  'Corrupted Knight': { hp: 280,  atk: 24, def: 20, spd: 40,  rng: 55,  color: '#4a0e2e', xp: 65,  gold: 45,  isBoss: false, size: 13, attackStyle: 'melee' },
+  'Harpy':            { hp: 100,  atk: 18, def: 4,  spd: 65,  rng: 90,  color: '#9966cc', xp: 35,  gold: 18,  isBoss: false, size: 10, attackStyle: 'ranged' },
+  'Imp':              { hp: 60,   atk: 14, def: 2,  spd: 70,  rng: 80,  color: '#ff4444', xp: 18,  gold: 10,  isBoss: false, size: 7,  attackStyle: 'ranged' },
+  'Goblin Shaman':    { hp: 140,  atk: 22, def: 5,  spd: 42,  rng: 150, color: '#44aa44', xp: 55,  gold: 30,  isBoss: false, size: 9,  attackStyle: 'aoe' },
 };
 
 // ── Interfaces ─────────────────────────────────────────────────
@@ -151,6 +153,8 @@ export interface OWEnemy {
   spawnIndex: number;    // which monsterSpawn this came from
   respawnTimer: number;  // countdown after death
   level: number;
+  attackStyle: 'melee' | 'ranged' | 'aoe';
+  aoeTelegraph: { x: number; y: number; timer: number; radius: number } | null;
 }
 
 export interface OWPlayer {
@@ -174,6 +178,10 @@ export interface OWPlayer {
   ccImmunityTimers: Map<StatusEffectType, number>;
   shieldHp: number;
   kills: number;
+  comboStep: number;
+  comboTimer: number;
+  heavyAttackCooldown: number;
+  meleeAnimTimer: number;
 }
 
 export interface OWProjectile {
@@ -185,6 +193,10 @@ export interface OWProjectile {
   color: string;
   size: number;
   sourceIsPlayer: boolean;
+  homing: boolean;
+  vx: number;
+  vy: number;
+  glbSprite?: string;
 }
 
 export interface OWParticle {
@@ -197,12 +209,12 @@ export interface OWParticle {
 export interface OWFloatingText {
   x: number; y: number;
   text: string; color: string;
-  life: number; vy: number; size: number;
+  life: number; maxLife: number; vy: number; size: number;
 }
 
 export interface OWSpellEffect {
   x: number; y: number;
-  type: 'cast_circle' | 'impact_ring' | 'aoe_blast' | 'skillshot_trail' | 'cone_sweep' | 'dash_trail';
+  type: 'cast_circle' | 'impact_ring' | 'aoe_blast' | 'skillshot_trail' | 'cone_sweep' | 'dash_trail' | 'melee_slash' | 'melee_lunge' | 'heavy_slash' | 'enemy_slash' | 'enemy_aoe_telegraph' | 'enemy_aoe_blast';
   life: number; maxLife: number;
   radius: number;
   color: string;
@@ -257,6 +269,10 @@ export interface OpenWorldState {
   floatingTexts: OWFloatingText[];
   spellEffects: OWSpellEffect[];
   camera: { x: number; y: number; zoom: number };
+  screenShake: { timer: number; intensity: number };
+  hitFlash: Map<number, number>;  // entityId → flash remaining
+  comboDisplay: { count: number; timer: number };
+  ambientParticles: OWParticle[];
   nextId: number;
   gameOver: boolean;
   paused: boolean;
@@ -414,6 +430,10 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
       ccImmunityTimers: new Map(),
       shieldHp: 0,
       kills: 0,
+      comboStep: 0,
+      comboTimer: 0,
+      heavyAttackCooldown: 0,
+      meleeAnimTimer: 0,
     },
     enemies: [],
     npcs: [],
@@ -422,6 +442,10 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     floatingTexts: [],
     spellEffects: [],
     camera: { x: spawn.x, y: spawn.y, zoom: 1.2 },
+    screenShake: { timer: 0, intensity: 0 },
+    hitFlash: new Map(),
+    comboDisplay: { count: 0, timer: 0 },
+    ambientParticles: [],
     nextId: 100,
     gameOver: false,
     paused: false,
@@ -680,6 +704,8 @@ function spawnEnemiesNearPlayer(state: OpenWorldState): void {
           spawnIndex: si,
           respawnTimer: 0,
           level: ms.level,
+          attackStyle: template.attackStyle,
+          aoeTelegraph: null,
         });
       }
     }
@@ -778,6 +804,14 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
     if (p.abilityCooldowns[i] > 0) p.abilityCooldowns[i] -= dt;
   }
 
+  // Melee combo timers
+  if (p.comboTimer > 0) {
+    p.comboTimer -= dt;
+    if (p.comboTimer <= 0) { p.comboStep = 0; }
+  }
+  if (p.meleeAnimTimer > 0) p.meleeAnimTimer -= dt;
+  if (p.heavyAttackCooldown > 0) p.heavyAttackCooldown -= dt;
+
   // Resource nodes
   updateResourceNodes(state, dt);
 
@@ -840,6 +874,30 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
     spawnParticles(state, p.x, p.y, '#ef4444', 20);
   }
 
+  // Ambient VFX
+  updateAmbientParticles(state, dt);
+
+  // Screen shake decay
+  if (state.screenShake.timer > 0) {
+    state.screenShake.timer -= dt;
+    if (state.screenShake.timer <= 0) { state.screenShake.intensity = 0; }
+  }
+
+  // Hit flash decay
+  const flashToDelete: number[] = [];
+  state.hitFlash.forEach((timer, id) => {
+    const remaining = timer - dt;
+    if (remaining <= 0) flashToDelete.push(id);
+    else state.hitFlash.set(id, remaining);
+  });
+  for (const id of flashToDelete) state.hitFlash.delete(id);
+
+  // Combo display decay
+  if (state.comboDisplay.timer > 0) {
+    state.comboDisplay.timer -= dt;
+    if (state.comboDisplay.timer <= 0) resetCombo(state);
+  }
+
   // Camera follow
   state.camera.x += (p.x - state.camera.x) * 0.1;
   state.camera.y += (p.y - state.camera.y) * 0.1;
@@ -895,23 +953,89 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
       enemy.targetId = p.id;
       enemy.facing = angleBetween(enemy, p);
 
+      // AOE telegraph update
+      if (enemy.aoeTelegraph) {
+        enemy.aoeTelegraph.timer -= dt;
+        if (enemy.aoeTelegraph.timer <= 0) {
+          // AOE fires!
+          const tg = enemy.aoeTelegraph;
+          addSpellEffect(state, tg.x, tg.y, 'enemy_aoe_blast', tg.radius, enemy.color, 0.5);
+          const dd = distXY(p, { x: tg.x, y: tg.y });
+          if (dd < tg.radius) {
+            const result = combatCalcDamage(
+              { atk: enemy.atk, activeEffects: [] },
+              { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp },
+              enemy.atk * 1.3
+            );
+            let dmg = result.finalDamage;
+            if (p.shieldHp > 0) { const abs = Math.min(p.shieldHp, dmg); p.shieldHp -= abs; dmg -= abs; }
+            p.hp -= dmg;
+            addText(state, p.x, p.y - 20, `-${dmg}`, '#ef4444', 14);
+            spawnParticles(state, p.x, p.y, '#ef4444', 5);
+          }
+          enemy.aoeTelegraph = null;
+          enemy.attackTimer = 2.0;
+        }
+        enemy.animState = 'attack';
+        continue;
+      }
+
       if (d <= enemy.rng + 10) {
         enemy.animState = 'attack';
         globalAnimDirector.registerAttack(enemy.id, state.gameTime);
         enemy.attackTimer -= dt;
         if (enemy.attackTimer <= 0) {
           const spdMult = getSpeedMultiplier(enemy as any as CombatEntity);
-          state.projectiles.push({
-            id: state.nextId++,
-            x: enemy.x, y: enemy.y,
-            targetId: p.id,
-            damage: enemy.atk,
-            speed: enemy.rng > 100 ? 400 : 300,
-            color: enemy.color,
-            size: enemy.isBoss ? 5 : 3,
-            sourceIsPlayer: false,
-          });
-          enemy.attackTimer = 1.2 / spdMult;
+
+          if (enemy.attackStyle === 'melee') {
+            // Melee: instant cone damage + slash VFX + small lunge
+            const lungeX = enemy.x + Math.cos(enemy.facing) * 8;
+            const lungeY = enemy.y + Math.sin(enemy.facing) * 8;
+            if (isWalkableOW(lungeX, lungeY)) { enemy.x = lungeX; enemy.y = lungeY; }
+            if (d < enemy.rng + 20) {
+              const result = combatCalcDamage(
+                { atk: enemy.atk, activeEffects: [] },
+                { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp },
+                enemy.atk
+              );
+              let dmg = result.finalDamage;
+              if (p.shieldHp > 0) { const abs = Math.min(p.shieldHp, dmg); p.shieldHp -= abs; dmg -= abs; }
+              p.hp -= dmg;
+              addText(state, p.x, p.y - 20, `-${dmg}`, '#ef4444', 14);
+              spawnParticles(state, p.x, p.y, '#ef4444', 3);
+            }
+            addSpellEffect(state, enemy.x + Math.cos(enemy.facing) * (enemy.size + 10), enemy.y + Math.sin(enemy.facing) * (enemy.size + 10), 'enemy_slash', enemy.size + 15, enemy.color, 0.25, enemy.facing);
+            enemy.attackTimer = 1.2 / spdMult;
+
+          } else if (enemy.attackStyle === 'ranged') {
+            // Ranged: straight-line non-homing projectile toward player current position
+            const angle = angleBetween(enemy, p);
+            state.projectiles.push({
+              id: state.nextId++,
+              x: enemy.x, y: enemy.y,
+              targetId: p.id,
+              damage: enemy.atk,
+              speed: 350,
+              color: enemy.color,
+              size: enemy.isBoss ? 5 : 3,
+              sourceIsPlayer: false,
+              homing: false,
+              vx: Math.cos(angle) * 350,
+              vy: Math.sin(angle) * 350,
+            });
+            enemy.attackTimer = 1.4 / spdMult;
+
+          } else {
+            // AOE: telegraph then blast
+            enemy.aoeTelegraph = {
+              x: p.x + (Math.random() - 0.5) * 30,
+              y: p.y + (Math.random() - 0.5) * 30,
+              timer: 0.8,
+              radius: enemy.isBoss ? 80 : 55,
+            };
+            addSpellEffect(state, enemy.aoeTelegraph.x, enemy.aoeTelegraph.y, 'enemy_aoe_telegraph', enemy.aoeTelegraph.radius, enemy.color, 0.8);
+            enemy.attackTimer = 0.8;
+          }
         }
       } else if (!isRooted(enemy as any as CombatEntity)) {
         const spdMult = getSpeedMultiplier(enemy as any as CombatEntity);
@@ -941,8 +1065,10 @@ function killEnemy(state: OpenWorldState, enemy: OWEnemy): void {
   state.player.kills++;
   state.playerProgress.totalGoldEarned += enemy.goldValue;
 
-  addText(state, enemy.x, enemy.y - 15, `+${enemy.goldValue}g`, '#ffd700', 12);
-  spawnParticles(state, enemy.x, enemy.y, enemy.color, 12);
+  addText(state, enemy.x, enemy.y - 15, `+${enemy.goldValue}g`, '#ffd700', 14);
+  addText(state, enemy.x + 15, enemy.y - 25, `+${enemy.xpValue} XP`, '#a855f7', 11);
+  spawnDeathBurst(state, enemy.x, enemy.y, enemy.color, enemy.isBoss);
+  triggerScreenShake(state, enemy.isBoss ? 10 : 4, enemy.isBoss ? 0.3 : 0.15);
   checkLevelUp(state);
 
   const progressEvents = onMonsterKilled(state.playerProgress, enemy.isBoss);
@@ -1003,60 +1129,85 @@ function updateProjectiles(state: OpenWorldState, dt: number): void {
   const p = state.player;
 
   for (const proj of state.projectiles) {
-    let target: { x: number; y: number; id: number } | null = null;
-    if (proj.sourceIsPlayer) {
-      target = state.enemies.find(e => e.id === proj.targetId && !e.dead) || null;
-    } else {
-      target = proj.targetId === p.id && !p.dead ? p : null;
-    }
-
-    if (!target) { proj.targetId = -1; continue; }
-
-    const angle = angleBetween(proj, target);
-    proj.x += Math.cos(angle) * proj.speed * dt;
-    proj.y += Math.sin(angle) * proj.speed * dt;
-
-    if (distXY(proj, target) < 15) {
+    if (proj.homing) {
+      // Homing projectile (player abilities)
+      let target: { x: number; y: number; id: number } | null = null;
       if (proj.sourceIsPlayer) {
-        const enemy = state.enemies.find(e => e.id === target!.id);
-        if (enemy) {
-          const result = combatCalcDamage(
-            { atk: p.atk, activeEffects: p.activeEffects },
-            { def: enemy.def, activeEffects: enemy.activeEffects },
-            proj.damage
-          );
-          enemy.hp -= result.finalDamage;
-          const col = result.isCrit ? '#ffd700' : '#ffffff';
-          addText(state, enemy.x, enemy.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, col, result.isCrit ? 16 : 12);
-          spawnParticles(state, enemy.x, enemy.y, '#ff6666', 3);
-
-          const ls = hasLifesteal(p as any as CombatEntity);
-          if (ls > 0) {
-            const heal = Math.floor(result.finalDamage * ls);
-            p.hp = Math.min(p.maxHp, p.hp + heal);
-          }
-          if (enemy.hp <= 0) killEnemy(state, enemy);
-        }
+        target = state.enemies.find(e => e.id === proj.targetId && !e.dead) || null;
       } else {
-        const result = combatCalcDamage(
-          { atk: 15, activeEffects: [] },
-          { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp },
-          proj.damage
-        );
-        if (p.shieldHp > 0) {
-          const abs = Math.min(p.shieldHp, result.finalDamage);
-          p.shieldHp -= abs;
-          result.finalDamage = Math.max(0, result.finalDamage - abs);
-        }
-        p.hp -= result.finalDamage;
-        addText(state, p.x, p.y - 20, `-${result.finalDamage}`, '#ef4444', 14);
-        spawnParticles(state, p.x, p.y, '#ef4444', 3);
+        target = proj.targetId === p.id && !p.dead ? p : null;
       }
-      proj.targetId = -1;
+      if (!target) { proj.targetId = -1; continue; }
+      const angle = angleBetween(proj, target);
+      proj.x += Math.cos(angle) * proj.speed * dt;
+      proj.y += Math.sin(angle) * proj.speed * dt;
+
+      if (distXY(proj, target) < 15) {
+        handleProjectileHit(state, proj, target);
+        proj.targetId = -1;
+      }
+    } else {
+      // Straight-line projectile (dodgeable)
+      proj.x += proj.vx * dt;
+      proj.y += proj.vy * dt;
+
+      // Check collision with player (enemy projectiles)
+      if (!proj.sourceIsPlayer && !p.dead && distXY(proj, p) < 15) {
+        handleProjectileHit(state, proj, p);
+        proj.targetId = -1;
+        continue;
+      }
+      // Check collision with enemies (player projectiles)
+      if (proj.sourceIsPlayer) {
+        for (const e of state.enemies) {
+          if (e.dead) continue;
+          if (distXY(proj, e) < e.size + 5) {
+            handleProjectileHit(state, proj, e);
+            proj.targetId = -1;
+            break;
+          }
+        }
+      }
+      // Despawn after traveling too far
+      if (proj.x < -100 || proj.y < -100 || proj.x > OPEN_WORLD_SIZE + 100 || proj.y > OPEN_WORLD_SIZE + 100) {
+        proj.targetId = -1;
+      }
     }
   }
 
   state.projectiles = state.projectiles.filter(pr => pr.targetId !== -1);
+}
+
+function handleProjectileHit(state: OpenWorldState, proj: OWProjectile, target: { x: number; y: number; id: number }): void {
+  const p = state.player;
+  if (proj.sourceIsPlayer) {
+    const enemy = state.enemies.find(e => e.id === target.id);
+    if (enemy) {
+      const result = combatCalcDamage(
+        { atk: p.atk, activeEffects: p.activeEffects },
+        { def: enemy.def, activeEffects: enemy.activeEffects },
+        proj.damage
+      );
+      enemy.hp -= result.finalDamage;
+      const col = result.isCrit ? '#ffd700' : '#ffffff';
+      addText(state, enemy.x, enemy.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, col, result.isCrit ? 16 : 12);
+      spawnParticles(state, enemy.x, enemy.y, '#ff6666', 3);
+      const ls = hasLifesteal(p as any as CombatEntity);
+      if (ls > 0) { const heal = Math.floor(result.finalDamage * ls); p.hp = Math.min(p.maxHp, p.hp + heal); }
+      if (enemy.hp <= 0) killEnemy(state, enemy);
+    }
+  } else {
+    const result = combatCalcDamage(
+      { atk: 15, activeEffects: [] },
+      { def: p.def, activeEffects: p.activeEffects, shieldHp: p.shieldHp },
+      proj.damage
+    );
+    let dmg = result.finalDamage;
+    if (p.shieldHp > 0) { const abs = Math.min(p.shieldHp, dmg); p.shieldHp -= abs; dmg -= abs; }
+    p.hp -= dmg;
+    addText(state, p.x, p.y - 20, `-${dmg}`, '#ef4444', 14);
+    spawnParticles(state, p.x, p.y, '#ef4444', 3);
+  }
 }
 
 // ── Level Up ───────────────────────────────────────────────────
@@ -1227,26 +1378,128 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
   addText(state, p.x, p.y - 30, ab.name, abilityColor, 16);
 }
 
+// ── Melee Arc Damage Helper ─────────────────────────────────────
+
+const MELEE_RANGE = 65;
+const COMBO_WINDOW = 0.5;
+
+function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number, damage: number, slowDuration: number, slowPct: number): number {
+  const p = state.player;
+  let hits = 0;
+  for (const enemy of state.enemies) {
+    if (enemy.dead) continue;
+    const d = distXY(p, enemy);
+    if (d > range + enemy.size) continue;
+    const angle = angleBetween(p, enemy);
+    let diff = angle - p.facing;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    if (Math.abs(diff) > coneAngle / 2) continue;
+
+    const result = combatCalcDamage(
+      { atk: p.atk, activeEffects: p.activeEffects },
+      { def: enemy.def, activeEffects: enemy.activeEffects },
+      damage
+    );
+    enemy.hp -= result.finalDamage;
+    const col = result.isCrit ? '#ffd700' : '#ffffff';
+    addText(state, enemy.x, enemy.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, col, result.isCrit ? 16 : 12);
+    spawnParticles(state, enemy.x, enemy.y, '#ff6666', 4);
+    triggerHitFlash(state, enemy.id);
+    incrementCombo(state);
+    hits++;
+
+    // Melee slow
+    if (slowDuration > 0) {
+      applyStatusEffect(enemy as any as CombatEntity, createStatusEffect(StatusEffectType.Slow, slowDuration, p.id, slowPct));
+    }
+
+    const ls = hasLifesteal(p as any as CombatEntity);
+    if (ls > 0) {
+      const heal = Math.floor(result.finalDamage * ls);
+      p.hp = Math.min(p.maxHp, p.hp + heal);
+    }
+    if (enemy.hp <= 0) killEnemy(state, enemy);
+  }
+  if (hits > 0) triggerScreenShake(state, 3 + hits, 0.12);
+  return hits;
+}
+
 export function handleOWAttack(state: OpenWorldState): void {
   const p = state.player;
-  if (p.dead || isStunned(p as any)) return;
+  if (p.dead || isStunned(p as any) || p.meleeAnimTimer > 0) return;
 
-  const nearest = findNearestEnemy(state, p, p.rng + 50);
-  if (nearest) {
-    state.projectiles.push({
-      id: state.nextId++,
-      x: p.x, y: p.y,
-      targetId: nearest.id,
-      damage: p.atk,
-      speed: 500,
-      color: CLASS_COLORS[HEROES[p.heroDataId].heroClass] || '#fff',
-      size: 4,
-      sourceIsPlayer: true,
-    });
-    p.animState = 'attack';
-    p.facing = angleBetween(p, nearest);
-    globalAnimDirector.registerAttack(p.id, state.gameTime);
+  const hd = HEROES[p.heroDataId];
+  const abilityColor = CLASS_COLORS[hd.heroClass] || '#ef4444';
+
+  // Auto-face nearest enemy if one is close
+  const nearest = findNearestEnemy(state, p, MELEE_RANGE + 40);
+  if (nearest) p.facing = angleBetween(p, nearest);
+
+  // Combo chain
+  if (p.comboTimer > 0 && p.comboStep < 3) {
+    p.comboStep++;
+  } else {
+    p.comboStep = 1;
   }
+  p.comboTimer = COMBO_WINDOW;
+
+  if (p.comboStep === 1) {
+    // Forward slash: lunge 20px, 60° cone
+    const nx = p.x + Math.cos(p.facing) * 20;
+    const ny = p.y + Math.sin(p.facing) * 20;
+    if (isWalkableOW(nx, ny)) { p.x = nx; p.y = ny; }
+    meleeArcDamage(state, Math.PI / 3, MELEE_RANGE, p.atk * 1.0, 0.3, 0.3);
+    addSpellEffect(state, p.x + Math.cos(p.facing) * 30, p.y + Math.sin(p.facing) * 30, 'melee_slash', 40, abilityColor, 0.25, p.facing);
+    p.animState = 'attack';
+    p.meleeAnimTimer = 0.25;
+  } else if (p.comboStep === 2) {
+    // Back slash: slight backstep, 90° cone, more damage
+    const nx = p.x - Math.cos(p.facing) * 8;
+    const ny = p.y - Math.sin(p.facing) * 8;
+    if (isWalkableOW(nx, ny)) { p.x = nx; p.y = ny; }
+    meleeArcDamage(state, Math.PI / 2, MELEE_RANGE + 10, p.atk * 1.2, 0.3, 0.3);
+    const slashColor = hd.heroClass === 'Mage' ? '#a855f7' : hd.heroClass === 'Ranger' ? '#22c55e' : '#f59e0b';
+    addSpellEffect(state, p.x + Math.cos(p.facing) * 30, p.y + Math.sin(p.facing) * 30, 'melee_slash', 50, slashColor, 0.25, p.facing);
+    p.animState = 'attack';
+    p.meleeAnimTimer = 0.25;
+  } else {
+    // Lunge: dash 50px forward, narrow thrust, highest damage
+    const nx = p.x + Math.cos(p.facing) * 50;
+    const ny = p.y + Math.sin(p.facing) * 50;
+    if (isWalkableOW(nx, ny)) { p.x = nx; p.y = ny; }
+    meleeArcDamage(state, Math.PI / 4, MELEE_RANGE + 20, p.atk * 1.8, 0.4, 0.35);
+    addSpellEffect(state, p.x, p.y, 'melee_lunge', 60, '#ffd700', 0.3, p.facing, { startX: p.x - Math.cos(p.facing) * 50, startY: p.y - Math.sin(p.facing) * 50 });
+    p.animState = 'lunge_slash';
+    p.meleeAnimTimer = 0.3;
+    p.comboStep = 0;
+    p.comboTimer = 0;
+  }
+
+  globalAnimDirector.registerAttack(p.id, state.gameTime);
+}
+
+export function handleOWHeavyAttack(state: OpenWorldState): void {
+  const p = state.player;
+  if (p.dead || isStunned(p as any) || p.meleeAnimTimer > 0 || p.heavyAttackCooldown > 0) return;
+
+  const hd = HEROES[p.heroDataId];
+  const nearest = findNearestEnemy(state, p, MELEE_RANGE + 40);
+  if (nearest) p.facing = angleBetween(p, nearest);
+
+  // Heavy overhead slash: wide arc, strong slow
+  const heavyHits = meleeArcDamage(state, Math.PI * 0.6, MELEE_RANGE + 15, p.atk * 1.5, 0.5, 0.4);
+  addSpellEffect(state, p.x + Math.cos(p.facing) * 25, p.y + Math.sin(p.facing) * 25, 'heavy_slash', 55, '#ef4444', 0.35, p.facing);
+  if (heavyHits > 0) triggerScreenShake(state, 6, 0.2);
+  spawnParticles(state, p.x + Math.cos(p.facing) * 30, p.y + Math.sin(p.facing) * 30, '#ffd700', 6);
+
+  p.animState = 'combo_finisher';
+  p.meleeAnimTimer = 0.4;
+  p.heavyAttackCooldown = 1.2;
+  p.comboStep = 0;
+  p.comboTimer = 0;
+
+  globalAnimDirector.registerAttack(p.id, state.gameTime);
 }
 
 function findNearestEnemy(state: OpenWorldState, from: { x: number; y: number }, range: number): OWEnemy | null {
@@ -1368,7 +1621,7 @@ export async function swapOWWeapon(state: OpenWorldState, newWeaponType: string,
 // ── VFX Helpers ────────────────────────────────────────────────
 
 function addText(state: OpenWorldState, x: number, y: number, text: string, color: string, size: number): void {
-  state.floatingTexts.push({ x, y, text, color, life: 1.5, vy: -35, size });
+  state.floatingTexts.push({ x, y, text, color, life: 1.5, maxLife: 1.5, vy: -35, size });
 }
 
 function spawnParticles(state: OpenWorldState, x: number, y: number, color: string, count: number): void {
@@ -1381,6 +1634,134 @@ function spawnParticles(state: OpenWorldState, x: number, y: number, color: stri
       color, size: 3,
     });
   }
+}
+
+// ── Screen Shake ───────────────────────────────────────────────
+
+function triggerScreenShake(state: OpenWorldState, intensity: number, duration: number): void {
+  if (intensity > state.screenShake.intensity) {
+    state.screenShake.intensity = intensity;
+    state.screenShake.timer = duration;
+  }
+}
+
+// ── Hit Flash ──────────────────────────────────────────────────
+
+function triggerHitFlash(state: OpenWorldState, entityId: number): void {
+  state.hitFlash.set(entityId, 0.12);
+}
+
+// ── Combo Display ──────────────────────────────────────────────
+
+function incrementCombo(state: OpenWorldState): void {
+  state.comboDisplay.count++;
+  state.comboDisplay.timer = 2.0;
+}
+
+function resetCombo(state: OpenWorldState): void {
+  state.comboDisplay.count = 0;
+  state.comboDisplay.timer = 0;
+}
+
+// ── Enhanced Death VFX ─────────────────────────────────────────
+
+function spawnDeathBurst(state: OpenWorldState, x: number, y: number, color: string, isBoss: boolean): void {
+  const count = isBoss ? 40 : 18;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.3;
+    const speed = 60 + Math.random() * (isBoss ? 200 : 120);
+    state.particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 40,
+      life: 0.6 + Math.random() * 0.4,
+      maxLife: 1.0,
+      color, size: 2 + Math.random() * (isBoss ? 4 : 2),
+    });
+  }
+  // Gold coin particles
+  for (let i = 0; i < 6; i++) {
+    state.particles.push({
+      x: x + (Math.random() - 0.5) * 10,
+      y: y + (Math.random() - 0.5) * 10,
+      vx: (Math.random() - 0.5) * 80,
+      vy: -80 - Math.random() * 60,
+      life: 1.0, maxLife: 1.0,
+      color: '#ffd700', size: 3,
+    });
+  }
+  // XP orb particles (purple, float upward)
+  for (let i = 0; i < 4; i++) {
+    state.particles.push({
+      x: x + (Math.random() - 0.5) * 20,
+      y: y + (Math.random() - 0.5) * 20,
+      vx: (Math.random() - 0.5) * 30,
+      vy: -50 - Math.random() * 40,
+      life: 1.2, maxLife: 1.2,
+      color: '#a855f7', size: 4,
+    });
+  }
+  // Impact ring spell effect
+  addSpellEffect(state, x, y, 'impact_ring', isBoss ? 60 : 30, color, 0.4);
+}
+
+// ── Ambient Particles ──────────────────────────────────────────
+
+function updateAmbientParticles(state: OpenWorldState, dt: number): void {
+  const p = state.player;
+  const zone = getZoneAtPosition(p.x, p.y);
+  const terrain = zone?.terrainType ?? '';
+  const ws = state.worldState;
+  const isNight = !isDayTime(ws);
+
+  // Spawn ambient particles periodically
+  if (state.ambientParticles.length < 30 && Math.random() < dt * 3) {
+    const ox = (Math.random() - 0.5) * 600;
+    const oy = (Math.random() - 0.5) * 600;
+    if (terrain === 'grass' || terrain === 'jungle') {
+      if (isNight) {
+        // Fireflies at night
+        state.ambientParticles.push({
+          x: p.x + ox, y: p.y + oy,
+          vx: (Math.random() - 0.5) * 15,
+          vy: (Math.random() - 0.5) * 15 - 5,
+          life: 3 + Math.random() * 3, maxLife: 6,
+          color: '#aaff44', size: 2,
+        });
+      } else {
+        // Floating pollen/dust
+        state.ambientParticles.push({
+          x: p.x + ox, y: p.y + oy,
+          vx: (Math.random() - 0.5) * 8 + 3,
+          vy: (Math.random() - 0.5) * 5 - 2,
+          life: 4 + Math.random() * 3, maxLife: 7,
+          color: 'rgba(255,255,200,0.5)', size: 1.5,
+        });
+      }
+    } else if (terrain === 'stone' || terrain === 'dirt') {
+      // Dust motes
+      state.ambientParticles.push({
+        x: p.x + ox, y: p.y + oy,
+        vx: (Math.random() - 0.5) * 10,
+        vy: -3 - Math.random() * 5,
+        life: 3 + Math.random() * 2, maxLife: 5,
+        color: 'rgba(180,160,130,0.4)', size: 1.5,
+      });
+    }
+  }
+
+  // Update ambient particles
+  for (const ap of state.ambientParticles) {
+    ap.x += ap.vx * dt;
+    ap.y += ap.vy * dt;
+    // Fireflies wiggle
+    if (ap.color === '#aaff44') {
+      ap.vx += (Math.random() - 0.5) * 30 * dt;
+      ap.vy += (Math.random() - 0.5) * 30 * dt;
+    }
+    ap.life -= dt;
+  }
+  state.ambientParticles = state.ambientParticles.filter(ap => ap.life > 0);
 }
 
 function addSpellEffect(state: OpenWorldState, x: number, y: number, type: OWSpellEffect['type'], radius: number, color: string, duration: number, angle = 0, data?: any): void {
@@ -1515,6 +1896,17 @@ export class OpenWorldRenderer {
 
     ctx.save();
     ctx.translate(W / 2, H / 2);
+
+    // Screen shake offset
+    let shakeX = 0, shakeY = 0;
+    if (state.screenShake.timer > 0) {
+      const decay = state.screenShake.timer * 10;
+      const inten = state.screenShake.intensity * Math.min(1, decay);
+      shakeX = (Math.random() - 0.5) * inten;
+      shakeY = (Math.random() - 0.5) * inten;
+      ctx.translate(shakeX, shakeY);
+    }
+
     ctx.scale(cam.zoom, cam.zoom);
     ctx.translate(-cam.x, -cam.y);
 
@@ -1530,6 +1922,9 @@ export class OpenWorldRenderer {
     this.renderNPCs(ctx, state, brightness);
     this.renderTargetingIndicator(ctx, state);
 
+    // Ambient particles (behind entities)
+    for (const ap of state.ambientParticles) this.renderAmbientParticle(ctx, ap);
+
     // Enemies sorted by Y for depth
     const sorted = state.enemies.filter(e => !e.dead).sort((a, b) => a.y - b.y);
     for (const enemy of sorted) this.renderEnemy(ctx, enemy, state, brightness);
@@ -1538,7 +1933,7 @@ export class OpenWorldRenderer {
 
     for (const se of state.spellEffects) this.renderSpellEffect(ctx, se);
 
-    for (const proj of state.projectiles) this.renderProjectile(ctx, proj);
+    for (const proj of state.projectiles) this.renderProjectile(ctx, proj, state.gameTime);
     for (const pt of state.particles) this.renderParticle(ctx, pt);
     for (const ft of state.floatingTexts) this.renderFloatingText(ctx, ft);
 
@@ -1552,6 +1947,10 @@ export class OpenWorldRenderer {
       ctx.fillStyle = `rgba(0,0,30,${(0.5 - brightness) * 0.6})`;
       ctx.fillRect(0, 0, W, H);
     }
+
+    // HUD overlays (screen space)
+    this.renderComboDisplay(ctx, state, W, H);
+    this.renderHeavyCooldownIndicator(ctx, state, W, H);
   }
 
   private renderTerrain(ctx: CanvasRenderingContext2D, state: OpenWorldState, cam: { x: number; y: number; zoom: number }, W: number, H: number, brightness: number): void {
@@ -1651,24 +2050,24 @@ export class OpenWorldRenderer {
 
     for (const road of ZONE_ROADS) {
       // Cull distant roads
-      const midX = (road.fromX + road.toX) / 2;
-      const midY = (road.fromY + road.toY) / 2;
+      const midX = (road.from.x + road.to.x) / 2;
+      const midY = (road.from.y + road.to.y) / 2;
       if (Math.abs(p.x - midX) > 1500 || Math.abs(p.y - midY) > 1500) continue;
 
       // Road edge/border (wider, darker)
       ctx.strokeStyle = 'rgba(0,0,0,0.2)';
       ctx.lineWidth = road.width + 4;
       ctx.beginPath();
-      ctx.moveTo(road.fromX, road.fromY);
-      ctx.lineTo(road.toX, road.toY);
+      ctx.moveTo(road.from.x, road.from.y);
+      ctx.lineTo(road.to.x, road.to.y);
       ctx.stroke();
 
       // Road surface
       ctx.strokeStyle = ROAD_COLORS[road.type] || ROAD_COLORS.dirt;
       ctx.lineWidth = road.width;
       ctx.beginPath();
-      ctx.moveTo(road.fromX, road.fromY);
-      ctx.lineTo(road.toX, road.toY);
+      ctx.moveTo(road.from.x, road.from.y);
+      ctx.lineTo(road.to.x, road.to.y);
       ctx.stroke();
     }
 
@@ -2040,13 +2439,33 @@ export class OpenWorldRenderer {
     ctx.save();
     ctx.globalAlpha = Math.max(0.3, brightness);
 
+    // Hit flash: white overlay when enemy just took damage
+    const flashTimer = state.hitFlash.get(enemy.id) ?? 0;
+    if (flashTimer > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-atop';
+    }
+
     this.voxel.drawEnemyVoxel(ctx, enemy.x, enemy.y, enemy.type, enemy.facing, enemy.animState, enemy.animTimer, enemy.size, enemy.isBoss);
+
+    // White flash overlay on hit
+    if (flashTimer > 0) {
+      ctx.restore();
+      ctx.save();
+      ctx.translate(enemy.x, enemy.y);
+      ctx.globalAlpha = flashTimer * 6;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, -enemy.size * 0.5, enemy.size + 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     ctx.globalAlpha = 1;
     ctx.save();
     ctx.translate(enemy.x, enemy.y);
 
-    // Health bar
+    // Health bar (enhanced with border)
     this.renderHealthBar(ctx, 0, -enemy.size - 8, enemy.size, enemy.hp, enemy.maxHp, enemy.color);
 
     // Level indicator
@@ -2072,6 +2491,16 @@ export class OpenWorldRenderer {
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(enemy.type, 0, -enemy.size - 22);
+    }
+
+    // Aggro indicator (red eye when chasing player)
+    if (enemy.targetId !== null) {
+      ctx.fillStyle = '#ff4444';
+      ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.01) * 0.3;
+      ctx.beginPath();
+      ctx.arc(0, -enemy.size - 4, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
 
     ctx.restore();
@@ -2131,7 +2560,13 @@ export class OpenWorldRenderer {
     ctx.fillRect(x - hw, y, hw * 2 * pct, 4);
   }
 
-  private renderProjectile(ctx: CanvasRenderingContext2D, proj: OWProjectile): void {
+  private renderProjectile(ctx: CanvasRenderingContext2D, proj: OWProjectile, gameTime: number): void {
+    // Try GLB sprite for projectiles with sprite tags
+    if (proj.glbSprite) {
+      const drawn = drawGLBProjectile(ctx, proj.glbSprite, proj.x, proj.y, gameTime, 0.5, proj.color);
+      if (drawn) return;
+    }
+    // Fallback: glowing circle
     ctx.fillStyle = proj.color;
     ctx.shadowColor = proj.color;
     ctx.shadowBlur = 6;
@@ -2152,12 +2587,138 @@ export class OpenWorldRenderer {
   }
 
   private renderFloatingText(ctx: CanvasRenderingContext2D, ft: OWFloatingText): void {
-    ctx.fillStyle = ft.color;
-    ctx.globalAlpha = Math.min(1, ft.life * 2);
+    const alpha = Math.min(1, ft.life * 2);
+    const age = ft.maxLife - ft.life;
+    // Pop-in scale animation
+    const popScale = age < 0.1 ? 0.6 + (age / 0.1) * 0.6 : age < 0.2 ? 1.2 - (age - 0.1) / 0.1 * 0.2 : 1.0;
+    const isCrit = ft.text.includes('CRIT');
+    const isGold = ft.color === '#ffd700';
+
+    ctx.save();
+    ctx.translate(ft.x, ft.y);
+    ctx.scale(popScale, popScale);
+    ctx.globalAlpha = alpha;
+
+    // Glow for crits and important text
+    if (isCrit || isGold || ft.size >= 16) {
+      ctx.shadowColor = ft.color;
+      ctx.shadowBlur = isCrit ? 12 : 6;
+    }
+
+    // Outline for readability
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+    ctx.lineWidth = 3;
     ctx.font = `bold ${ft.size}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(ft.text, ft.x, ft.y);
-    ctx.globalAlpha = 1;
+    ctx.strokeText(ft.text, 0, 0);
+
+    ctx.fillStyle = ft.color;
+    ctx.fillText(ft.text, 0, 0);
+    ctx.shadowBlur = 0;
+
+    // Extra sparkle for crits
+    if (isCrit && age < 0.3) {
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = (0.3 - age) * 3;
+      for (let i = 0; i < 4; i++) {
+        const sa = (i / 4) * Math.PI * 2 + age * 10;
+        ctx.beginPath();
+        ctx.arc(Math.cos(sa) * 15, Math.sin(sa) * 10, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  private renderAmbientParticle(ctx: CanvasRenderingContext2D, ap: OWParticle): void {
+    const alpha = Math.min(1, ap.life / ap.maxLife) * 0.6;
+    const isFirefly = ap.color === '#aaff44';
+
+    ctx.save();
+    if (isFirefly) {
+      // Pulsing glow
+      const pulse = 0.4 + Math.sin(Date.now() * 0.008 + ap.x * 0.1) * 0.6;
+      ctx.globalAlpha = alpha * pulse;
+      ctx.fillStyle = ap.color;
+      ctx.shadowColor = '#aaff44';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(ap.x, ap.y, ap.size + 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // Core
+      ctx.globalAlpha = alpha * pulse * 1.5;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ap.x, ap.y, ap.size * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = ap.color;
+      ctx.beginPath();
+      ctx.arc(ap.x, ap.y, ap.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  private renderComboDisplay(ctx: CanvasRenderingContext2D, state: OpenWorldState, W: number, H: number): void {
+    if (state.comboDisplay.count < 2) return;
+    const combo = state.comboDisplay;
+    const alpha = Math.min(1, combo.timer * 2);
+    const popScale = combo.timer > 1.8 ? 1.2 : 1.0;
+
+    ctx.save();
+    ctx.translate(W - 120, H * 0.35);
+    ctx.scale(popScale, popScale);
+    ctx.globalAlpha = alpha;
+
+    // Combo text
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 4;
+    ctx.strokeText(`${combo.count}`, 0, 0);
+    const comboColor = combo.count >= 10 ? '#ffd700' : combo.count >= 5 ? '#f97316' : '#ef4444';
+    ctx.fillStyle = comboColor;
+    ctx.fillText(`${combo.count}`, 0, 0);
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 3;
+    ctx.strokeText('COMBO', 0, 18);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('COMBO', 0, 18);
+
+    // Timer bar
+    const barW = 50;
+    const pct = combo.timer / 2.0;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(-barW / 2, 24, barW, 4);
+    ctx.fillStyle = comboColor;
+    ctx.fillRect(-barW / 2, 24, barW * pct, 4);
+
+    ctx.restore();
+  }
+
+  private renderHeavyCooldownIndicator(ctx: CanvasRenderingContext2D, state: OpenWorldState, W: number, H: number): void {
+    const cd = state.player.heavyAttackCooldown;
+    if (cd <= 0) return;
+
+    const cx = W / 2, cy = H / 2 + 30;
+    const maxCd = 1.2;
+    const pct = cd / maxCd;
+
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 14, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - pct));
+    ctx.stroke();
+    ctx.restore();
   }
 
   private renderTargetingIndicator(ctx: CanvasRenderingContext2D, state: OpenWorldState): void {
@@ -2308,6 +2869,147 @@ export class OpenWorldRenderer {
         ctx.beginPath();
         ctx.moveTo(se.x, se.y);
         ctx.lineTo(se.x + Math.cos(angle) * len, se.y + Math.sin(angle) * len);
+        ctx.stroke();
+        break;
+      }
+      case 'melee_slash': {
+        // Glowing arc slash in front of player
+        const slashProgress = 1 - t;
+        const arcStart = se.angle - Math.PI * 0.4;
+        const arcEnd = se.angle + Math.PI * 0.4;
+        const arcAngle = arcStart + (arcEnd - arcStart) * slashProgress;
+        const reachDist = se.radius * (0.7 + slashProgress * 0.3);
+        ctx.globalAlpha = t * 0.8;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 4 + slashProgress * 3;
+        ctx.shadowColor = se.color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, reachDist, arcStart, arcAngle);
+        ctx.stroke();
+        // Secondary trail
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = t * 0.4;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, reachDist + 5, arcStart + 0.1, arcAngle - 0.1);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        break;
+      }
+      case 'melee_lunge': {
+        // Dash trail from start to current position
+        const startX = se.data?.startX ?? se.x;
+        const startY = se.data?.startY ?? se.y;
+        ctx.globalAlpha = t * 0.6;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 6 * t;
+        ctx.shadowColor = se.color;
+        ctx.shadowBlur = 15;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(se.x, se.y);
+        ctx.stroke();
+        // Thrust point
+        const tipX = se.x + Math.cos(se.angle) * 15;
+        const tipY = se.y + Math.sin(se.angle) * 15;
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = t;
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.lineCap = 'butt';
+        break;
+      }
+      case 'heavy_slash': {
+        // Wide heavy overhead arc
+        const hp = 1 - t;
+        const hArcStart = se.angle - Math.PI * 0.55;
+        const hArcEnd = se.angle + Math.PI * 0.55;
+        const hArcAngle = hArcStart + (hArcEnd - hArcStart) * hp;
+        const hReach = se.radius * (0.6 + hp * 0.4);
+        ctx.globalAlpha = t * 0.9;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 6 + hp * 4;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, hReach, hArcStart, hArcAngle);
+        ctx.stroke();
+        // Impact flash at end
+        if (hp > 0.7) {
+          ctx.fillStyle = '#ffd700';
+          ctx.globalAlpha = (1 - hp) * 3;
+          ctx.beginPath();
+          ctx.arc(se.x + Math.cos(se.angle) * hReach, se.y + Math.sin(se.angle) * hReach, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        break;
+      }
+      case 'enemy_slash': {
+        // Enemy melee slash: quick arc from enemy position
+        const ep = 1 - t;
+        const eArcStart = se.angle - Math.PI * 0.35;
+        const eArcEnd = se.angle + Math.PI * 0.35;
+        const eArcAngle = eArcStart + (eArcEnd - eArcStart) * ep;
+        ctx.globalAlpha = t * 0.7;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 3 + ep * 3;
+        ctx.shadowColor = se.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, se.radius * (0.5 + ep * 0.5), eArcStart, eArcAngle);
+        ctx.stroke();
+        // Claw marks
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = t * 0.3;
+        for (let cl = 0; cl < 3; cl++) {
+          const clAngle = se.angle + (cl - 1) * 0.15;
+          ctx.beginPath();
+          ctx.moveTo(se.x + Math.cos(clAngle) * 5, se.y + Math.sin(clAngle) * 5);
+          ctx.lineTo(se.x + Math.cos(clAngle) * (se.radius * ep), se.y + Math.sin(clAngle) * (se.radius * ep));
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        break;
+      }
+      case 'enemy_aoe_telegraph': {
+        // Blinking circle warning on ground
+        const blink = Math.sin(Date.now() * 0.015) > 0 ? 0.5 : 0.2;
+        ctx.globalAlpha = blink * t;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, se.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Fill
+        ctx.globalAlpha = 0.08 * t;
+        ctx.fillStyle = se.color;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, se.radius, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+      case 'enemy_aoe_blast': {
+        // Expanding blast ring
+        const bp = 1 - t;
+        const blastR = se.radius * (0.3 + bp * 0.7);
+        ctx.globalAlpha = t * 0.6;
+        ctx.fillStyle = se.color;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, blastR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3 * t;
+        ctx.globalAlpha = t * 0.8;
+        ctx.beginPath();
+        ctx.arc(se.x, se.y, blastR, 0, Math.PI * 2);
         ctx.stroke();
         break;
       }

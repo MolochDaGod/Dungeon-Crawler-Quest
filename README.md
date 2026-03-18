@@ -24,6 +24,16 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - AI faction system, NPC interactions
 - Full RPG progression (see RPG Systems below)
 
+#### Combat & Visual Polish
+- Screen shake on melee hits, heavy attacks, and kills
+- Hit flash overlay on damaged enemies with aggro indicator
+- Combo counter system with timer bar and color-coded display
+- Styled floating damage numbers with pop-in animation, crit glow, and outline
+- Death burst VFX: radial particles, gold coin pops, XP orbs, impact ring
+- Ambient atmosphere: firefly and dust mote particle systems
+- Heavy attack cooldown arc indicator
+- GLB/GLTF 3D model sprite loader for voxel-style assets
+
 ## RPG Systems
 
 All game data is sourced from the **Grudge ObjectStore API** (`https://molochdagod.github.io/ObjectStore`).
@@ -113,7 +123,8 @@ client/src/
 │   ├── dungeon-engine.ts      # Dungeon crawler engine
 │   ├── types.ts               # Shared types, heroes, abilities
 │   ├── voxel.ts               # Voxel rendering system
-│   └── voxel-motion.ts        # Animation primitives
+│   ├── voxel-motion.ts        # Animation primitives
+│   └── glb-sprites.ts         # GLB/GLTF 3D model sprite loader
 ├── pages/
 │   ├── open-world.tsx         # Open World UI & game loop
 │   ├── game.tsx               # MOBA UI
