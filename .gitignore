@@ -16,3 +16,4 @@ vite.config.ts.*
 
 # Large asset packs (managed locally, not in git)
 public/assets/packs/
+.env*.local
