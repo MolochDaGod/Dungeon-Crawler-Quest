@@ -182,6 +182,10 @@ async function savePlayerData(grudgeId: string, data: PlayerSaveData) {
 | Resource Inventory | `grudge_resource_inventory` | Yes | Medium |
 | Equipment | `grudge_player_equipment` | Yes | High |
 | Equipment Bag | `grudge_equipment_bag` | Yes | Medium |
+| Mission Log | `grudge_mission_log` | Yes | High |
+| Zone Progress | `grudge_zone_progress` | Yes | Medium |
+| Boat Ownership | `grudge_boat_state` | Yes | Medium |
+| World State | `grudge_world_state` | Yes | High |
 | Settings/Hotkeys | `grudge_settings` | Optional | Low |
 
 ### API Pattern for New Games
@@ -305,6 +309,49 @@ async getMyNewData(): Promise<OSMyNewData> {
 }
 ```
 
+## New Systems (Phase 6-7)
+
+The following systems were added recently and need backend persistence:
+
+### Terrain Heightmap (`terrain-heightmap.ts`)
+- WorldHeightmap with TerrainLayer enum (grass, sand, stone, snow, volcanic, water)
+- Road carving and spawn zone generation
+- Walkability grid baked from heightmap — delegates `isWalkableOW()`
+- **Persistence:** Terrain is procedural from zone defs — no save needed
+
+### Boats (`boats.ts`)
+- 3 boat tiers: Raft (100g), Sloop (500g), Galleon (2000g)
+- Dock generation from zone coastal edges, mount/dismount mechanics
+- **Persistence:** Save owned boat tier and gold to `grudge_boat_state`
+
+### Pathfinding (`pathfinding.ts`)
+- A* on 40px grid with 8-directional movement, octile heuristic
+- Path smoothing via LOS checks, configurable patrol route generation
+- **Persistence:** Runtime only — no save needed
+
+### Spawner System (`spawner-system.ts`)
+- 5 spawner types: roaming, static, event-linked, boss, patrol
+- Per-zone configs for all 16 zones, respawn timers
+- Event-linked spawners activate during zone events
+- **Persistence:** Spawner state resets on load — save kill counts for quests only
+
+### Zone Events (`zone-events.ts`)
+- 6 event types: invasion, harvest rush, escort, defense, boss spawn, treasure hunt
+- Cooldown and trigger lifecycle, kill feed integration
+- **Persistence:** Save completed event history to `grudge_zone_progress`
+
+### AI Behaviors (`ai-behaviors.ts`)
+- Behavior tree architecture: Sequence, Selector, Cooldown, Inverter composite nodes
+- 13 leaf behavior nodes (patrol, chase, attack, flee, heal, etc.)
+- 7 archetype trees: melee_grunt, ranged_sniper, healer_support, tank_guardian, etc.
+- **Persistence:** Runtime only — behavior resets on zone reload
+
+### MainPanel UI (`components/MainPanel.tsx`)
+- Full-screen 3-column dark-fantasy character panel replacing old 520px modal
+- 8 tabs wired to OWHudState: Equipment, Attributes, Class Skills, Weapon Skills, Upgrades, Crafting, Quests, Guild
+- All data flows from `getOWHudState()` → `OWHudState` → `<MainPanel>` props
+- Actions: `allocateOWAttribute()`, `claimOWMission()` dispatched via `stateRef`
+
 ## Checklist for New Game Integration
 
 - [ ] Copy `grudge-api.ts` as your ObjectStore client (or import from shared package)
@@ -314,7 +361,7 @@ async getMyNewData(): Promise<OSMyNewData> {
 - [ ] Fetch all game data at init, not per frame
 - [ ] Integrate Discord/Web3Auth via Grudge Backend for player identity
 - [ ] Use localStorage as primary save with backend sync
-- [ ] Batch saves — don't hit the backend on every minor change
+- [ ] Batch saves — don’t hit the backend on every minor change
 - [ ] Save on meaningful events (level up, equip, craft completion)
 - [ ] Add periodic background sync (30s interval recommended)
 - [ ] Handle auth token refresh and expiry gracefully

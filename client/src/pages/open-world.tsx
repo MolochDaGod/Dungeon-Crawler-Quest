@@ -12,12 +12,12 @@ import {
   handleOWDodge, handleOWTargetCycle
 } from '@/game/open-world';
 import { getAvailableMissions } from '@/game/missions';
-import { AttributeId } from '@/game/attributes';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
 import { initGLBSprites } from '@/game/glb-sprites';
 import { ProgressEvent } from '@/game/player-progress';
 import { loadKeybindings, matchesKeyDown, KeybindAction } from '@/game/keybindings';
 import hudFramePath from '@assets/hud-frame.png';
+import MainPanel from '@/components/MainPanel';
 
 export default function OpenWorldPage() {
   const [, setLocation] = useLocation();
@@ -30,7 +30,6 @@ export default function OpenWorldPage() {
   const [notifications, setNotifications] = useState<{ text: string; color: string; time: number }[]>([]);
   const [zoneBanner, setZoneBanner] = useState<string | null>(null);
   const [showCharPanel, setShowCharPanel] = useState(false);
-  const [charTab, setCharTab] = useState<'equip'|'attrs'|'class'|'weapon'|'crafting'|'quests'|'guild'>('equip');
   const [showMissions, setShowMissions] = useState(false);
   const zoneBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -673,261 +672,17 @@ export default function OpenWorldPage() {
             </div>
           )}
 
-          {/* Character Panel (C key) — Full tabbed dark-fantasy panel */}
+          {/* Character Panel (C key) — Full-screen dark-fantasy MainPanel */}
           {showCharPanel && hud.attributeSummary && (
-            <div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
-              style={{
-                width: 520,
-                background: 'linear-gradient(to bottom, rgba(12,8,4,0.99), rgba(6,3,0,0.99))',
-                border: '2px solid #c5a059',
-                borderRadius: 10,
-                boxShadow: '0 0 60px rgba(0,0,0,0.95), inset 0 0 30px rgba(197,160,89,0.05)',
-                maxHeight: '82vh',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-2" style={{ borderBottom: '1px solid #c5a05940' }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded flex items-center justify-center text-sm font-black"
-                    style={{ background: `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, #111)`, border: '1px solid #c5a059', color: '#fff' }}>
-                    {hud.heroClass.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="text-sm font-black text-[#c5a059]">{hud.heroName}</div>
-                    <div className="text-[9px] text-gray-500">Lv{hud.level} {hud.heroRace} {hud.heroClass}</div>
-                  </div>
-                </div>
-                <button className="text-gray-400 hover:text-white text-lg cursor-pointer" onClick={() => setShowCharPanel(false)}>×</button>
-              </div>
-
-              {/* Tab bar */}
-              <div className="flex px-2 pt-1" style={{ gap: 2, borderBottom: '1px solid #c5a05930' }}>
-                {([['equip','Equipment'],['attrs','Attributes'],['class','Class'],['weapon','Weapon'],['crafting','Crafting'],['quests','Quests'],['guild','Guild']] as const).map(([id, label]) => (
-                  <button key={id}
-                    className="text-[10px] font-bold px-2.5 py-1.5 rounded-t cursor-pointer transition-all"
-                    style={{
-                      background: charTab === id ? 'rgba(197,160,89,0.15)' : 'transparent',
-                      color: charTab === id ? '#c5a059' : '#666',
-                      borderBottom: charTab === id ? '2px solid #c5a059' : '2px solid transparent',
-                    }}
-                    onClick={() => setCharTab(id)}
-                  >{label}</button>
-                ))}
-              </div>
-
-              {/* Tab content */}
-              <div className="flex-1 overflow-y-auto p-3" style={{ fontSize: 10 }}>
-
-                {/* ── Equipment Tab ── */}
-                {charTab === 'equip' && (
-                  <div>
-                    <div className="grid grid-cols-3 gap-1.5 mb-3">
-                      {hud.equipSlots.map(es => (
-                        <div key={es.slot} className="rounded p-1.5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
-                          <div className="text-[9px] text-gray-500 mb-0.5">{es.icon} {es.label}</div>
-                          {es.item ? (
-                            <div>
-                              <div className="text-[10px] font-bold text-white truncate">{es.item.name}</div>
-                              <div className="text-[9px] text-gray-400">T{es.item.tier} {es.item.setName}</div>
-                              <div className="flex gap-2 text-[8px] mt-0.5">
-                                {es.item.atk > 0 && <span className="text-red-400">+{es.item.atk} ATK</span>}
-                                {es.item.def > 0 && <span className="text-blue-400">+{es.item.def} DEF</span>}
-                                {es.item.hp > 0 && <span className="text-green-400">+{es.item.hp} HP</span>}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-[9px] text-gray-600 italic">Empty</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    {hud.setBonuses.length > 0 && (
-                      <div className="mb-2">
-                        <div className="text-[9px] font-bold text-[#c5a059] mb-1">SET BONUSES</div>
-                        {hud.setBonuses.map((sb, i) => (
-                          <div key={i} className="text-[9px] text-purple-400">{sb.setName} ({sb.pieces}pc active)</div>
-                        ))}
-                      </div>
-                    )}
-                    {hud.bagItems.length > 0 && (
-                      <div>
-                        <div className="text-[9px] font-bold text-gray-500 mb-1">BAG ({hud.bagItems.length} items)</div>
-                        <div className="grid grid-cols-2 gap-1">
-                          {hud.bagItems.slice(0, 10).map(bi => (
-                            <div key={bi.id} className="text-[9px] px-1.5 py-0.5 rounded truncate" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid #222', color: '#aaa' }}>
-                              T{bi.tier} {bi.name}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ── Attributes Tab ── */}
-                {charTab === 'attrs' && (
-                  <div>
-                    <div className="text-[9px] font-bold text-[#c5a059] mb-1">
-                      ATTRIBUTES {hud.attributeSummary.unspentPoints > 0 && <span className="text-green-400">({hud.attributeSummary.unspentPoints} points available)</span>}
-                    </div>
-                    <div className="grid grid-cols-2 gap-1 mb-3">
-                      {hud.attributeSummary.attrs.map(attr => (
-                        <div key={attr.id} className="flex items-center justify-between px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                          <span className="font-bold" style={{ color: attr.color }}>{attr.short}</span>
-                          <span className="text-white font-bold">{attr.total}</span>
-                          {hud.attributeSummary.unspentPoints > 0 && (
-                            <button className="text-green-400 font-bold hover:text-green-300 cursor-pointer px-1"
-                              onClick={() => stateRef.current && allocateOWAttribute(stateRef.current, attr.id as AttributeId)}
-                            >+</button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="text-[9px] font-bold text-[#c5a059] mb-1">DERIVED STATS</div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                      <div className="text-gray-400">Bonus HP: <span className="text-green-400 font-bold">{hud.attributeSummary.derived.bonusHp}</span></div>
-                      <div className="text-gray-400">Bonus MP: <span className="text-blue-400 font-bold">{hud.attributeSummary.derived.bonusMp}</span></div>
-                      <div className="text-gray-400">Phys ATK: <span className="text-red-400 font-bold">+{hud.attributeSummary.derived.bonusAtk}</span></div>
-                      <div className="text-gray-400">Mag ATK: <span className="text-purple-400 font-bold">+{hud.attributeSummary.derived.bonusMagicDmg}</span></div>
-                      <div className="text-gray-400">DEF: <span className="text-blue-400 font-bold">+{hud.attributeSummary.derived.bonusDef}</span></div>
-                      <div className="text-gray-400">SPD: <span className="text-green-400 font-bold">+{hud.attributeSummary.derived.bonusSpd}</span></div>
-                      <div className="text-gray-400">Crit: <span className="text-yellow-400 font-bold">{hud.attributeSummary.derived.critChance.toFixed(1)}%</span></div>
-                      <div className="text-gray-400">Evasion: <span className="text-teal-400 font-bold">{hud.attributeSummary.derived.evasionChance.toFixed(1)}%</span></div>
-                      <div className="text-gray-400">Heal Pwr: <span className="text-emerald-400 font-bold">x{hud.attributeSummary.derived.healPower.toFixed(2)}</span></div>
-                      <div className="text-gray-400">Ability: <span className="text-orange-400 font-bold">x{hud.attributeSummary.derived.abilityBonus.toFixed(2)}</span></div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Class Skills Tab ── */}
-                {charTab === 'class' && (
-                  <div>
-                    <div className="text-[9px] font-bold text-[#c5a059] mb-1">{hud.heroClass.toUpperCase()} CLASS ABILITIES</div>
-                    {abilities.map((ab, i) => (
-                      <div key={i} className="flex items-center gap-2 px-2 py-1.5 mb-1 rounded" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #222' }}>
-                        {ABILITY_ICONS[ab.name] ? (
-                          <img src={ABILITY_ICONS[ab.name]} alt={ab.name} className="w-7 h-7 rounded" style={{ border: '1px solid #c5a05980' }} draggable={false} />
-                        ) : (
-                          <div className="w-7 h-7 rounded flex items-center justify-center text-[10px] font-bold" style={{ background: `${CLASS_COLORS[hud.heroClass]}30`, border: '1px solid #c5a05980', color: CLASS_COLORS[hud.heroClass] }}>{ab.name.substring(0, 2)}</div>
-                        )}
-                        <div className="flex-1">
-                          <div className="font-bold text-white">{ab.name} <span className="text-gray-500">[{ab.key}]</span></div>
-                          <div className="text-[9px] text-gray-400">{ab.description} • {ab.manaCost} MP • {ab.cooldown}s CD</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* ── Weapon Skills Tab ── */}
-                {charTab === 'weapon' && (
-                  <div>
-                    <div className="text-[9px] font-bold text-[#c5a059] mb-1">
-                      WEAPON SKILLS {hud.weaponType && <span className="text-gray-500">({hud.weaponType})</span>}
-                    </div>
-                    {hud.weaponLoadoutReady ? (
-                      abilityNames.map((name, i) => (
-                        <div key={i} className="flex items-center gap-2 px-2 py-1.5 mb-1 rounded" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #222' }}>
-                          <span className="text-[#c5a059] font-bold w-4 text-center">{i + 1}</span>
-                          <div className="flex-1">
-                            <div className="font-bold text-white">{name}</div>
-                            <div className="text-[9px] text-gray-400">{abilityDescs[i]}</div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-gray-500 text-center py-4">No weapon loadout active. Equip a weapon to unlock skills.</div>
-                    )}
-                  </div>
-                )}
-
-                {/* ── Crafting / Professions Tab ── */}
-                {charTab === 'crafting' && (
-                  <div>
-                    <div className="text-[9px] font-bold text-[#c5a059] mb-1">GATHERING</div>
-                    {hud.gatheringProfs.map(g => (
-                      <div key={g.id} className="flex items-center gap-2 px-2 py-1 mb-1 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                        <span style={{ fontSize: 14 }}>{g.icon}</span>
-                        <div className="flex-1">
-                          <div className="flex justify-between">
-                            <span className="font-bold" style={{ color: g.color }}>{g.name}</span>
-                            <span className="text-gray-400">Lv{g.level}</span>
-                          </div>
-                          <div className="h-1.5 rounded-full overflow-hidden mt-0.5" style={{ background: '#222' }}>
-                            <div className="h-full" style={{ width: `${(g.xp / g.xpToNext) * 100}%`, background: g.color }} />
-                          </div>
-                          <div className="text-[8px] text-gray-500 mt-0.5">Tier {g.tier} — <span style={{ color: g.tierColor }}>{g.tierName}</span></div>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="text-[9px] font-bold text-[#c5a059] mb-1 mt-2">CRAFTING</div>
-                    {hud.craftingProfs.map(c => (
-                      <div key={c.id} className="flex items-center gap-2 px-2 py-1 mb-1 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                        <span style={{ fontSize: 14 }}>{c.icon}</span>
-                        <div className="flex-1">
-                          <div className="flex justify-between">
-                            <span className="font-bold" style={{ color: c.color }}>{c.name}</span>
-                            <span className="text-gray-400">Lv{c.level}</span>
-                          </div>
-                          <div className="h-1.5 rounded-full overflow-hidden mt-0.5" style={{ background: '#222' }}>
-                            <div className="h-full" style={{ width: `${(c.xp / c.xpToNext) * 100}%`, background: c.color }} />
-                          </div>
-                          <div className="text-[8px] text-gray-500 mt-0.5">Tier {c.tier} — <span style={{ color: c.tierColor }}>{c.tierName}</span></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* ── Quests Tab ── */}
-                {charTab === 'quests' && (
-                  <div>
-                    {hud.activeMissions.length > 0 ? (
-                      hud.activeMissions.map(m => (
-                        <div key={m.id} className="mb-2 p-2 rounded" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-white">{m.name}</span>
-                            <span className="text-[8px] px-1.5 py-0.5 rounded" style={{
-                              background: m.status === 'complete' ? 'rgba(34,197,94,0.2)' : 'rgba(96,165,250,0.2)',
-                              color: m.status === 'complete' ? '#22c55e' : '#60a5fa',
-                            }}>{m.status === 'complete' ? 'COMPLETE' : 'ACTIVE'}</span>
-                          </div>
-                          {m.objectives.map((o, oi) => (
-                            <div key={oi} className="flex justify-between mt-0.5">
-                              <span className="text-gray-400 capitalize">{o.type}: {o.target}</span>
-                              <span style={{ color: o.current >= o.required ? '#22c55e' : '#f59e0b' }}>{o.current}/{o.required}</span>
-                            </div>
-                          ))}
-                          {m.status === 'complete' && (
-                            <button className="mt-1 w-full font-bold py-1 rounded cursor-pointer" style={{ background: 'rgba(34,197,94,0.2)', color: '#22c55e', border: '1px solid #22c55e50' }}
-                              onClick={() => stateRef.current && claimOWMission(stateRef.current, m.id)}
-                            >CLAIM REWARD</button>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-gray-500 text-center py-4">No active quests. Visit NPCs to find missions.</div>
-                    )}
-                  </div>
-                )}
-
-                {/* ── Guild Tab ── */}
-                {charTab === 'guild' && (
-                  <div className="text-center py-6">
-                    <div className="text-lg mb-1" style={{ color: '#c5a059' }}>⚔</div>
-                    <div className="text-[11px] font-bold text-[#c5a059] mb-1">GUILD</div>
-                    <div className="text-[9px] text-gray-500">Guild features coming soon. Form crews, claim territory, and compete for faction dominance.</div>
-                  </div>
-                )}
-
-              </div>
-
-              {/* Footer */}
-              <div className="text-[8px] text-gray-600 text-center py-1" style={{ borderTop: '1px solid #c5a05920' }}>Press C to close</div>
-            </div>
+            <MainPanel
+              hud={hud}
+              stateRef={stateRef}
+              heroData={heroData}
+              abilities={abilities}
+              abilityNames={abilityNames}
+              abilityDescs={abilityDescs}
+              onClose={() => setShowCharPanel(false)}
+            />
           )}
 
           {/* Game Over */}

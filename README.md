@@ -4,6 +4,8 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 
 **Live:** [dungeon-crawler-quest.vercel.app](https://dungeon-crawler-quest.vercel.app)
 
+**Backend:** [grudge-studio.com](https://grudge-studio.com) · **Dashboard:** [dash.grudge-studio.com](https://dash.grudge-studio.com) · **ObjectStore:** [molochdagod.github.io/ObjectStore](https://molochdagod.github.io/ObjectStore)
+
 ## Game Modes
 
 ### MOBA (5v5)
@@ -19,13 +21,18 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - Inventory and loot system
 
 ### Open World MMO
-- Multi-zone seamless world with day/night cycle
-- 6 terrain biomes with dynamic weather
-- AI faction system, NPC interactions
+- 16000×16000 island-based world with 16+ zones, day/night cycle, dynamic weather
+- Heightmap terrain system with 6 terrain layers (grass, sand, stone, snow, volcanic, water)
+- Road carving, spawn zones, and walkability grid baked from heightmap
+- Boat system with 3 tiers (Raft, Sloop, Galleon), dock generation, mount/dismount mechanics
+- A* pathfinding on 40px grid with octile heuristic, path smoothing, LOS checks, patrol routes
+- Spawner system with 5 types (roaming, static, event, boss, patrol) and per-zone configs
+- Zone event system with 6 event types (invasion, harvest, escort, defense, boss, treasure)
+- AI behavior trees: Sequence/Selector/Cooldown/Inverter nodes, 13 leaf behaviors, 7 archetype trees
 - Full RPG progression (see RPG Systems below)
 - MMO controls: WASD movement, Shift sprint, Space dodge roll, Tab target-cycling, E interact
 - Stamina system with sprint drain/regen and dodge roll cost
-- 7 new enemy types across 3 zones including 2 large bosses (Infernal Colossus, Lich King)
+- AI faction system, NPC interactions, quest givers
 
 #### Combat & Visual Polish
 - Weapon-leading melee slash: weapon rotation drives the swing, body lunges forward
@@ -86,14 +93,20 @@ All game data is sourced from the **Grudge ObjectStore API** (`https://molochdag
 - Equipment bag for unequipped items, full persistence
 
 ### Character Panel (C key)
-Full 7-tab dark fantasy panel with gold accent theme:
-- **Equipment** — 9 equip slots, drag-equip from bag, set bonus tracker
-- **Attributes** — 8 primary stats with +/− allocation, derived stats display
-- **Class Skills** — Active class ability viewer
-- **Weapon Skills** — Dynamic loadout based on equipped weapon
-- **Crafting** — Recipe browser with material requirements
-- **Quests** — Active and completed quest log
-- **Guild** — Guild info and membership
+Full-screen 3-column dark-fantasy UI with Cinzel/Crimson Text/JetBrains Mono fonts:
+- **Top Bar** — HP/MP/SP resource bars, player name and level, close button
+- **Left Column** (260px) — Character preview, core stats (ATK/DEF/SPD), derived stats, progress tracker (reputation, zones, kills, bosses)
+- **Center Column** — 8 tabbed panels:
+  - **Equipment** — 8 equip slots in grid layout, character silhouette, set bonus tracker
+  - **Attributes** — 8 primary stats with +/− allocation, emoji icons, derived bonuses grid
+  - **Class Skills** — Abilities grouped by slot tier, damage/CD/MP/effect chip badges
+  - **Weapon Skills** — Dynamic loadout based on equipped weapon type
+  - **Upgrades** — Placeholder for gear/ability upgrade system
+  - **Crafting** — Gathering & crafting profession bars with XP progress, crafting station grid
+  - **Quests** — Active quest cards with progress bars, claim reward buttons
+  - **Guild** — Guild crest, member list placeholder
+- **Right Column** (280px) — 6-column inventory grid (36 slots), gold display, trash zone
+- **Bottom Bar** — 10-slot hotbar with ability cooldown overlays and keybind labels
 
 ### Controls (Open World)
 - **WASD** — Movement (W always moves away from camera)
@@ -147,19 +160,35 @@ client/src/
 │   ├── crafting.ts            # Recipe generation & crafting logic
 │   ├── equipment.ts           # Equipment slots, tiers, set bonuses
 │   ├── open-world.ts          # Open World game state, MMO controls, AI, combat
+│   ├── open-world-types.ts    # Monster templates, zone configs, dungeon entrances
+│   ├── terrain-heightmap.ts   # WorldHeightmap with 6 terrain layers, walkability grid
+│   ├── boats.ts               # 3-tier boat system, docks, mount/dismount
+│   ├── pathfinding.ts         # A* on 40px grid, octile heuristic, path smoothing, LOS
+│   ├── spawner-system.ts      # 5 spawner types, per-zone configs, event linking
+│   ├── zone-events.ts         # 6 event types, cooldown lifecycle, kill tracking
+│   ├── ai-behaviors.ts        # Behavior trees: 13 leaf nodes, 7 archetype trees
+│   ├── zones.ts               # 16+ island zones with spawn points, NPC positions
+│   ├── missions.ts            # Quest/mission system with objectives and rewards
+│   ├── minimap.ts             # Real-time minimap renderer with zoom controls
+│   ├── puter-cloud.ts         # Puter.js cloud services (AI, KV, storage)
 │   ├── engine.ts              # MOBA game engine
-│   ├── dungeon-engine.ts      # Dungeon crawler engine
-│   ├── types.ts               # Shared types, heroes, abilities
+│   ├── dungeon.ts             # Dungeon crawler engine
+│   ├── types.ts               # Shared types, 26 heroes, abilities
 │   ├── voxel.ts               # Voxel rendering, weapon animations, VFX
 │   ├── voxel-motion.ts        # Animation primitives
 │   └── glb-sprites.ts         # GLB/GLTF 3D model sprite loader
 ├── pages/
-│   ├── open-world.tsx         # Open World UI, HUD, C panel, game loop
+│   ├── open-world.tsx         # Open World UI, HUD, game loop
 │   ├── game.tsx               # MOBA UI
-│   ├── dungeon.tsx            # Dungeon UI
-│   ├── editor.tsx             # Entity/Animation editor
-│   └── admin.tsx              # Admin editor suite
-└── components/                # Shared UI components
+│   ├── dungeon-game.tsx       # Dungeon UI
+│   ├── character-select.tsx   # Hero selection screen
+│   ├── world-editor.tsx       # World editor for zone design
+│   ├── map-admin.tsx          # MOBA map admin editor
+│   ├── admin.tsx              # Admin editor suite
+│   └── settings.tsx           # Keybindings and settings
+├── components/
+│   ├── MainPanel.tsx          # Full-screen 3-column character panel (C key)
+│   └── MainPanel.module.css   # Dark-fantasy CSS module for MainPanel
 ```
 
 ## Development
@@ -176,6 +205,19 @@ Deployed automatically via Vercel on push to `main`.
 ```bash
 git push origin main
 ```
+
+### Grudge Studio Infrastructure
+
+| Service | Domain | Purpose |
+|---------|--------|---------|
+| Vercel | `dungeon-crawler-quest.vercel.app` | Primary game hosting, auto-deploy from GitHub |
+| ObjectStore | `molochdagod.github.io/ObjectStore` | Static game data API (weapons, skills, attributes) |
+| Grudge Backend | `api.grudge-studio.com` | Auth (Discord/Web3Auth), player saves, multiplayer |
+| Dashboard | `dash.grudge-studio.com` | Admin tools and backend dashboard |
+| Cloudflare | `grudge-studio.com` | DNS, CDN, backend routing |
+| Puter Cloud | puter.js | AI (NPC dialogue, lore), KV storage, cloud saves |
+
+See [docs/GRUDGE_BACKEND_INTEGRATION.md](docs/GRUDGE_BACKEND_INTEGRATION.md) for full backend integration guide.
 
 ## License
 
