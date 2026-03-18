@@ -4,6 +4,7 @@
   position: fixed;
   inset: 0;
   z-index: 9998;
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   font-family: 'Crimson Text', Georgia, serif;

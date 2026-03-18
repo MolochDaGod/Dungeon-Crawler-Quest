@@ -2307,6 +2307,7 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
         { id: 'feet', label: 'Feet', icon: '👟' },
         { id: 'ring', label: 'Ring', icon: '💍' },
         { id: 'necklace', label: 'Necklace', icon: '📿' },
+        { id: 'cape', label: 'Cape', icon: '🧣' },
         { id: 'mainhand', label: 'Main Hand', icon: '⚔️' },
         { id: 'offhand', label: 'Off-Hand', icon: '🛡️' },
       ];

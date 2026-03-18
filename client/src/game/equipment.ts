@@ -11,7 +11,7 @@ import { PlayerAttributes, AttributeId } from './attributes';
 
 // ── Equipment Slot Types ───────────────────────────────────────
 
-export type EquipSlot = 'helm' | 'shoulder' | 'chest' | 'hands' | 'feet' | 'ring' | 'necklace' | 'mainhand' | 'offhand';
+export type EquipSlot = 'helm' | 'shoulder' | 'chest' | 'hands' | 'feet' | 'ring' | 'necklace' | 'cape' | 'mainhand' | 'offhand';
 
 export const EQUIP_SLOTS: { id: EquipSlot; label: string; icon: string }[] = [
   { id: 'helm', label: 'Helm', icon: '🪖' },
@@ -21,6 +21,7 @@ export const EQUIP_SLOTS: { id: EquipSlot; label: string; icon: string }[] = [
   { id: 'feet', label: 'Feet', icon: '👟' },
   { id: 'ring', label: 'Ring', icon: '💍' },
   { id: 'necklace', label: 'Necklace', icon: '📿' },
+  { id: 'cape', label: 'Cape', icon: '🧣' },
   { id: 'mainhand', label: 'Main Hand', icon: '⚔️' },
   { id: 'offhand', label: 'Off-Hand', icon: '🛡️' },
 ];
@@ -73,7 +74,7 @@ export function createPlayerEquipment(): PlayerEquipment {
   return {
     slots: {
       helm: null, shoulder: null, chest: null, hands: null,
-      feet: null, ring: null, necklace: null,
+      feet: null, ring: null, necklace: null, cape: null,
       mainhand: null, offhand: null,
     },
   };

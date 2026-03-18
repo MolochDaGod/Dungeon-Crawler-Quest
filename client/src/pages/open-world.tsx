@@ -33,6 +33,7 @@ export default function OpenWorldPage() {
   const [showCharPanel, setShowCharPanel] = useState(false);
   const [showMissions, setShowMissions] = useState(false);
   const zoneBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const uiBlocksInputRef = useRef(false);
 
   const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
 
@@ -58,13 +59,15 @@ export default function OpenWorldPage() {
     let hudTimer = 0;
     let lastZoneName = '';
     let animId = 0;
+    const emptyKeys = new Set<string>();
 
     const gameLoop = (now: number) => {
       const rawDt = (now - lastTime) / 1000;
       const dt = Math.min(rawDt, 0.05);
       lastTime = now;
 
-      updateOpenWorld(state, dt, keysRef.current, bindings);
+      const activeKeys = (uiBlocksInputRef.current || state.activeNPC) ? emptyKeys : keysRef.current;
+      updateOpenWorld(state, dt, activeKeys, bindings);
       renderer.render(state);
 
       // Render minimap on top
@@ -118,10 +121,23 @@ export default function OpenWorldPage() {
 
     const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
+
+      // When a full-screen UI panel is open, only allow panel-close keys
+      if (uiBlocksInputRef.current || state.activeNPC) {
+        if (key === 'escape') {
+          if (state.activeNPC) { closeNPCDialog(state); return; }
+          setShowCharPanel(false);
+          setShowMissions(false);
+          return;
+        }
+        if (matchesKeyDown(bindings[KeybindAction.ToggleCharPanel], e)) { setShowCharPanel(prev => !prev); return; }
+        if (matchesKeyDown(bindings[KeybindAction.ToggleMissions], e)) { setShowMissions(prev => !prev); return; }
+        return; // Block all other game keys
+      }
+
       keysRef.current.add(key);
 
       if (key === 'escape') {
-        if (state.activeNPC) { closeNPCDialog(state); return; }
         if (state.targeting.active) { cancelOWTargeting(state); return; }
         setLocation('/');
         return;
@@ -194,6 +210,13 @@ export default function OpenWorldPage() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Block game input when a full-screen UI panel is open
+  useEffect(() => {
+    const blocking = showCharPanel || showMissions;
+    uiBlocksInputRef.current = blocking;
+    if (blocking) keysRef.current.clear();
+  }, [showCharPanel, showMissions]);
 
   const heroData = HEROES.find(h => h.id === heroId);
   // Use weapon-based ability names from HUD when available
