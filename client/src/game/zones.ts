@@ -135,6 +135,13 @@ export const ISLAND_ZONES: ZoneDef[] = [
     connectedZoneIds: [0, 6, 7],
     npcPositions: [],
     portalPositions: [{ x: 4800, y: 600, targetZoneId: 7 }],
+    assetPack: 'stone-terrain',
+    structureAssets: [
+      'st-big-1', 'st-big-2', 'st-big-3', 'st-big-4', 'st-big-5',
+      'st-lit-1', 'st-lit-2', 'st-lit-3', 'st-lit-4', 'st-lit-5',
+      'mn-mine-1', 'mn-mine-2', 'mn-coal', 'mn-gold-1', 'mn-crystal-1',
+    ],
+    islandType: 'wilderness',
   },
   {
     id: 4,
@@ -209,6 +216,13 @@ export const ISLAND_ZONES: ZoneDef[] = [
     connectedZoneIds: [3],
     npcPositions: [],
     portalPositions: [{ x: 300, y: 7500, targetZoneId: 7 }],
+    assetPack: 'volcano',
+    structureAssets: [
+      'vl-volcano-1', 'vl-volcano-2', 'vl-volcano-3', 'vl-volcano-4', 'vl-volcano-5',
+      'vl-boulder-1', 'vl-boulder-2', 'vl-boulder-3', 'vl-boulder-4', 'vl-boulder-5',
+      'vl-boulder-6', 'vl-boulder-7', 'vl-boulder-8',
+    ],
+    islandType: 'wilderness',
   },
   {
     id: 7,
@@ -382,10 +396,17 @@ export const ISLAND_ZONES: ZoneDef[] = [
     portalPositions: [{ x: 9600, y: 12000, targetZoneId: 10 }],
     assetPack: 'modular-dungeon',
     structureAssets: [
+      // modular-dungeon core
       'md-floor', 'md-wall', 'md-wall-top', 'md-column', 'md-column-broken',
       'md-entrance', 'md-stairs', 'md-barrel', 'md-bars', 'md-bones',
       'md-chest', 'md-chest-gold', 'md-torch', 'md-torch-wall',
       'md-candelabrum-tall', 'md-carpet', 'md-book-open',
+      // kaykit-dungeon extras
+      'kd-barrel-lg', 'kd-barrel-lg-dec', 'kd-barrel-sm', 'kd-barrel-stack',
+      'kd-barrier', 'kd-barrier-half', 'kd-barrier-corner', 'kd-barrier-column',
+      'kd-bed-decorated', 'kd-candle-lit', 'kd-candle-triple',
+      'kd-box-lg', 'kd-box-sm', 'kd-box-stack',
+      'kd-bottle-brown', 'kd-bottle-green',
     ],
     islandType: 'dungeon',
   },
@@ -468,6 +489,16 @@ export const ISLAND_ZONES: ZoneDef[] = [
     connectedZoneIds: [7, 12],
     npcPositions: [],
     portalPositions: [{ x: 5200, y: 11200, targetZoneId: 7 }],
+    assetPack: 'orc-fortress',
+    structureAssets: [
+      // orc-fortress walls & towers
+      'of-fortress', 'of-tower-1', 'of-tower-2', 'of-tower-3',
+      'of-wall-1', 'of-wall-2', 'of-bridge', 'of-barracks', 'of-arsenal',
+      'of-gates-1', 'of-drum', 'of-brazier', 'of-shed',
+      // orc-settlement buildings
+      'os-tavern', 'os-smithy', 'os-brewery', 'os-prison',
+      'os-huts', 'os-tent-1', 'os-tent-2', 'os-fountain-1', 'os-statue-1',
+    ],
     islandType: 'wilderness',
   },
 ];

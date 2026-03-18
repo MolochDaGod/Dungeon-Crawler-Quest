@@ -351,6 +351,216 @@ export const FURNITURE_PACK: AssetPack = {
   ],
 };
 
+// ── Orc Settlement (Piglin Outpost town) ───────────────────────
+
+const OS = `${P}/orc-settlement/fbx/full`;
+
+export const ORC_SETTLEMENT_PACK: AssetPack = {
+  id: 'orc-settlement',
+  name: 'Orc Settlement',
+  description: 'Orcish village structures for the Piglin Outpost',
+  basePath: `${P}/orc-settlement`,
+  texturePath: `${P}/orc-settlement/texture`,
+  assets: [
+    fbx('os-tavern', 'Tavern', `${OS}/tavern.fbx`, 'structure', ['building', 'tavern', 'orc'], 0.02),
+    fbx('os-smithy', 'Smithy', `${OS}/smithy.fbx`, 'structure', ['building', 'smith', 'orc'], 0.02),
+    fbx('os-brewery', 'Brewery', `${OS}/brewery.fbx`, 'structure', ['building', 'brewery', 'orc'], 0.02),
+    fbx('os-bakery', 'Bakery', `${OS}/bakery.fbx`, 'structure', ['building', 'bakery', 'orc'], 0.02),
+    fbx('os-herbalist', 'Herbalist Hut', `${OS}/herbalist_hut.fbx`, 'structure', ['building', 'herbalist', 'orc'], 0.02),
+    fbx('os-prison', 'Prison', `${OS}/prison.fbx`, 'structure', ['building', 'prison', 'orc'], 0.02),
+    fbx('os-huts', 'Huts', `${OS}/huts.fbx`, 'structure', ['building', 'hut', 'orc'], 0.02),
+    fbx('os-alchemist', 'Alchemist House', `${OS}/alhemisht_house.fbx`, 'structure', ['building', 'alchemist', 'orc'], 0.02),
+    fbx('os-bridge', 'Bridge', `${OS}/bridge_full.fbx`, 'structure', ['bridge', 'orc'], 0.02),
+    fbx('os-tent-1', 'Tent 1', `${OS}/tent_1.fbx`, 'structure', ['tent', 'camp', 'orc'], 0.02),
+    fbx('os-tent-2', 'Tent 2', `${OS}/tent_2.fbx`, 'structure', ['tent', 'camp', 'orc'], 0.02),
+    fbx('os-fountain-1', 'Fountain 1', `${OS}/fontan_1.fbx`, 'prop', ['fountain', 'orc'], 0.02),
+    fbx('os-fountain-2', 'Fountain 2', `${OS}/fontan_2.fbx`, 'prop', ['fountain', 'orc'], 0.02),
+    fbx('os-statue-1', 'Statue 1', `${OS}/statue_1.fbx`, 'prop', ['statue', 'orc'], 0.02),
+    fbx('os-statue-2', 'Statue 2', `${OS}/statue_2.fbx`, 'prop', ['statue', 'orc'], 0.02),
+    fbx('os-lamp-1', 'Lamp 1', `${OS}/lamP_1.fbx`, 'prop', ['light', 'lamp', 'orc'], 0.02),
+    fbx('os-lamp-2', 'Lamp 2', `${OS}/lamp_2.fbx`, 'prop', ['light', 'lamp', 'orc'], 0.02),
+    fbx('os-counter', 'Counter', `${OS}/counter.fbx`, 'prop', ['counter', 'shop', 'orc'], 0.02),
+    fbx('os-pointer', 'Pointer Sign', `${OS}/pointer.fbx`, 'prop', ['sign', 'orc'], 0.02),
+  ],
+};
+
+// ── Orc Fortress (Piglin Outpost walls/towers) ─────────────────
+
+const OF = `${P}/orc-fortress/FBX/full`;
+
+export const ORC_FORTRESS_PACK: AssetPack = {
+  id: 'orc-fortress',
+  name: 'Orc Fortress',
+  description: 'Military orc fortress for Piglin Outpost defenses',
+  basePath: `${P}/orc-fortress`,
+  texturePath: `${P}/orc-fortress/TEXTURE`,
+  assets: [
+    fbx('of-fortress', 'Fortress', `${OF}/FORTRESS_FULL.fbx`, 'structure', ['fortress', 'orc'], 0.02),
+    fbx('of-tower-1', 'Tower 1', `${OF}/_TOWER_01.fbx`, 'structure', ['tower', 'orc'], 0.02),
+    fbx('of-tower-2', 'Tower 2', `${OF}/_TOWER_02.fbx`, 'structure', ['tower', 'orc'], 0.02),
+    fbx('of-tower-3', 'Tower 3', `${OF}/TOWER_3_FULL.fbx`, 'structure', ['tower', 'orc'], 0.02),
+    fbx('of-tower-4', 'Tower 4', `${OF}/TOWER_4_FULL.fbx`, 'structure', ['tower', 'orc'], 0.02),
+    fbx('of-tower-5', 'Tower 5', `${OF}/TOWER_5_FULL.fbx`, 'structure', ['tower', 'orc'], 0.02),
+    fbx('of-wall-1', 'Wall 1', `${OF}/WALL_1_FULL.fbx`, 'wall', ['wall', 'orc'], 0.02),
+    fbx('of-wall-2', 'Wall 2', `${OF}/_WALL_2_01.fbx`, 'wall', ['wall', 'orc'], 0.02),
+    fbx('of-bridge', 'Bridge', `${OF}/BRIDGE_FULL.fbx`, 'structure', ['bridge', 'orc'], 0.02),
+    fbx('of-barracks', 'Barracks', `${OF}/_BARRACKS.fbx`, 'structure', ['building', 'barracks', 'orc'], 0.02),
+    fbx('of-arsenal', 'Arsenal', `${OF}/_ARSENAL.fbx`, 'structure', ['building', 'arsenal', 'orc'], 0.02),
+    fbx('of-gates-1', 'Gates 1', `${OF}/_MINNOR_GATES_01.fbx`, 'structure', ['gate', 'orc'], 0.02),
+    fbx('of-gates-2', 'Gates 2', `${OF}/_MINNOR_GATES_02.fbx`, 'structure', ['gate', 'orc'], 0.02),
+    fbx('of-drum', 'Alarm Drum', `${OF}/_ALARM_DRUM.fbx`, 'prop', ['drum', 'alarm', 'orc'], 0.02),
+    fbx('of-brazier', 'Brazier', `${OF}/_BRAZIER_01.fbx`, 'prop', ['light', 'fire', 'orc'], 0.02),
+    fbx('of-shed', 'Shed', `${OF}/_SHED_01.fbx`, 'structure', ['building', 'shed', 'orc'], 0.02),
+  ],
+};
+
+// ── Volcano (Volcano Rim terrain) ──────────────────────────────
+
+const VL = `${P}/volcano/Fbx`;
+
+export const VOLCANO_PACK: AssetPack = {
+  id: 'volcano',
+  name: 'Volcano Terrain',
+  description: 'Volcanic boulders and volcano models for Volcano Rim zone',
+  basePath: `${P}/volcano`,
+  texturePath: `${P}/volcano/Texture`,
+  assets: [
+    ...Array.from({ length: 10 }, (_, i) =>
+      fbx(`vl-volcano-${i + 1}`, `Volcano ${i + 1}`, `${VL}/Volcanoe_0${i + 1}.fbx`, 'terrain', ['volcano', 'mountain'], 0.02)),
+    ...Array.from({ length: 10 }, (_, i) =>
+      fbx(`vl-boulder-${i + 1}`, `Boulder ${i + 1}`, `${VL}/Boulder_0${i + 1}.fbx`, 'terrain', ['boulder', 'rock', 'volcano'], 0.02)),
+  ],
+};
+
+// ── Stone Terrain (Mountain Pass) ──────────────────────────────
+
+const ST = `${P}/stone-terrain/Fbx`;
+
+export const STONE_TERRAIN_PACK: AssetPack = {
+  id: 'stone-terrain',
+  name: 'Stone Terrain',
+  description: 'Stone formations for Mountain Pass and rocky zones',
+  basePath: `${P}/stone-terrain`,
+  texturePath: `${P}/stone-terrain/Texture`,
+  assets: [
+    ...Array.from({ length: 10 }, (_, i) => {
+      const n = String(i + 1).padStart(3, '0');
+      return fbx(`st-big-${i + 1}`, `Big Stone ${i + 1}`, `${ST}/Stone_big_${n}.fbx`, 'terrain', ['stone', 'rock', 'big'], 0.02);
+    }),
+    ...Array.from({ length: 10 }, (_, i) => {
+      const n = String(i + 1).padStart(3, '0');
+      return fbx(`st-lit-${i + 1}`, `Small Stone ${i + 1}`, `${ST}/Stone_lit_${n}.fbx`, 'terrain', ['stone', 'rock', 'small'], 0.02);
+    }),
+  ],
+};
+
+// ── Mine (Mining profession nodes) ─────────────────────────────
+
+const MN = `${P}/mine/fbx/full`;
+
+export const MINE_PACK: AssetPack = {
+  id: 'mine',
+  name: 'Mine & Resources',
+  description: 'Mining nodes, crystals, ore veins, tools',
+  basePath: `${P}/mine`,
+  texturePath: `${P}/mine/texture`,
+  assets: [
+    fbx('mn-mine-1', 'Mine Entrance 1', `${MN}/_mine_1.fbx`, 'structure', ['mine', 'entrance'], 0.02),
+    fbx('mn-mine-2', 'Mine Entrance 2', `${MN}/_mine_2.fbx`, 'structure', ['mine', 'entrance'], 0.02),
+    fbx('mn-mine-3', 'Mine Shaft 3', `${MN}/_mine_3.fbx`, 'structure', ['mine'], 0.02),
+    fbx('mn-mine-4', 'Mine Shaft 4', `${MN}/_mine_4.fbx`, 'structure', ['mine'], 0.02),
+    fbx('mn-coal', 'Coal Deposit', `${MN}/_coal_1.fbx`, 'resource-node', ['mining', 'coal', 'ore'], 0.02),
+    fbx('mn-gold-1', 'Gold Vein 1', `${MN}/_gold_1.fbx`, 'resource-node', ['mining', 'gold', 'ore'], 0.02),
+    fbx('mn-gold-2', 'Gold Vein 2', `${MN}/_gold_2.fbx`, 'resource-node', ['mining', 'gold', 'ore'], 0.02),
+    fbx('mn-crystal-1', 'Crystal 1', `${MN}/_crystal_1.fbx`, 'resource-node', ['mining', 'crystal'], 0.02),
+    fbx('mn-crystal-2', 'Crystal 2', `${MN}/_crystal_2.fbx`, 'resource-node', ['mining', 'crystal'], 0.02),
+    fbx('mn-crystal-3', 'Crystal 3', `${MN}/_crystal_3.fbx`, 'resource-node', ['mining', 'crystal'], 0.02),
+    fbx('mn-sapphire-1', 'Sapphire 1', `${MN}/_sapfir_1.fbx`, 'resource-node', ['mining', 'gem', 'sapphire'], 0.02),
+    fbx('mn-sapphire-2', 'Sapphire 2', `${MN}/_sapfir_2.fbx`, 'resource-node', ['mining', 'gem', 'sapphire'], 0.02),
+    fbx('mn-stone-coal', 'Stone + Coal', `${MN}/_stone_coal.fbx`, 'resource-node', ['mining', 'coal'], 0.02),
+    fbx('mn-stone-gold', 'Stone + Gold', `${MN}/_stone_gold.fbx`, 'resource-node', ['mining', 'gold'], 0.02),
+    fbx('mn-stone-diamond', 'Stone + Diamond', `${MN}/_stone_diamond.fbx`, 'resource-node', ['mining', 'diamond'], 0.02),
+    fbx('mn-stone-emerald', 'Stone + Emerald', `${MN}/_stone_emerald.fbx`, 'resource-node', ['mining', 'emerald'], 0.02),
+    fbx('mn-pick-1', 'Pickaxe 1', `${MN}/_pick_1.fbx`, 'prop', ['tool', 'pickaxe', 'mining'], 0.02),
+    fbx('mn-pick-2', 'Pickaxe 2', `${MN}/_pick_2.fbx`, 'prop', ['tool', 'pickaxe', 'mining'], 0.02),
+    fbx('mn-wheelbarrow-coal', 'Wheelbarrow Coal', `${MN}/_wheelbarrow_coal.fbx`, 'prop', ['wheelbarrow', 'mining'], 0.02),
+    fbx('mn-wheelbarrow-gold', 'Wheelbarrow Gold', `${MN}/_wheelbarrow_gold.fbx`, 'prop', ['wheelbarrow', 'mining'], 0.02),
+    fbx('mn-wood-1', 'Wood Pile 1', `${MN}/_wood_1.fbx`, 'resource-node', ['logging', 'wood'], 0.02),
+    fbx('mn-wood-2', 'Wood Pile 2', `${MN}/_wood_2.fbx`, 'resource-node', ['logging', 'wood'], 0.02),
+    fbx('mn-sawmill', 'Sawmill', `${MN}/_samwill.fbx`, 'structure', ['building', 'sawmill', 'logging'], 0.02),
+  ],
+};
+
+// ── Defense Towers (MOBA / Tower Defense) ──────────────────────
+
+const DT = `${P}/defense-towers/fbx/fbx_full`;
+
+export const DEFENSE_TOWER_PACK: AssetPack = {
+  id: 'defense-towers',
+  name: 'Defense Towers',
+  description: 'Tower defense models with 4 tiers per type',
+  basePath: `${P}/defense-towers`,
+  texturePath: `${P}/defense-towers/texture`,
+  assets: [
+    ...[1, 2, 3, 4].map(lvl => fbx(`dt-archer-${lvl}`, `Archer Tower Lv${lvl}`, `${DT}/_archers_tower_LVL_${lvl}.fbx`, 'tower', ['tower', 'archer', `lv${lvl}`], 0.02)),
+    ...[1, 2, 3, 4].map(lvl => fbx(`dt-cannon-${lvl}`, `Cannon Tower Lv${lvl}`, `${DT}/_Cannon_tower_LVL_${lvl}.fbx`, 'tower', ['tower', 'cannon', `lv${lvl}`], 0.02)),
+    ...[1, 2, 3, 4].map(lvl => {
+      const name = lvl === 3 ? '_Ballist_tower_LVL_3' : `_Ballista_tower_LVL_${lvl}`;
+      return fbx(`dt-ballista-${lvl}`, `Ballista Tower Lv${lvl}`, `${DT}/${name}.fbx`, 'tower', ['tower', 'ballista', `lv${lvl}`], 0.02);
+    }),
+    ...[1, 2, 3, 4].map(lvl => {
+      const name = lvl === 3 ? '_Frostly_tower_LVL_3' : `_Frosty_tower_LVL_${lvl}`;
+      return fbx(`dt-frost-${lvl}`, `Frost Tower Lv${lvl}`, `${DT}/${name}.fbx`, 'tower', ['tower', 'frost', `lv${lvl}`], 0.02);
+    }),
+    ...[1, 2, 3, 4].map(lvl => fbx(`dt-wizard-${lvl}`, `Wizard Tower Lv${lvl}`, `${DT}/_Wizard_tower_LVL_${lvl}.fbx`, 'tower', ['tower', 'wizard', `lv${lvl}`], 0.02)),
+  ],
+};
+
+// ── KayKit Dungeon Remastered ──────────────────────────────────
+
+const KD = `${P}/kaykit-dungeon/KayKit_DungeonRemastered_1.1_FREE/Assets/gltf`;
+
+export const KAYKIT_DUNGEON_PACK: AssetPack = {
+  id: 'kaykit-dungeon',
+  name: 'KayKit Dungeon Remastered',
+  description: 'High-quality dungeon props, barriers, beds, bottles, candles',
+  basePath: `${P}/kaykit-dungeon`,
+  texturePath: `${P}/kaykit-dungeon`,
+  assets: [
+    gltf('kd-barrel-lg', 'Large Barrel', `${KD}/barrel_large.gltf`, 'prop', ['barrel', 'dungeon']),
+    gltf('kd-barrel-lg-dec', 'Decorated Barrel', `${KD}/barrel_large_decorated.gltf`, 'prop', ['barrel', 'dungeon']),
+    gltf('kd-barrel-sm', 'Small Barrel', `${KD}/barrel_small.gltf`, 'prop', ['barrel', 'dungeon']),
+    gltf('kd-barrel-stack', 'Barrel Stack', `${KD}/barrel_small_stack.gltf`, 'prop', ['barrel', 'dungeon']),
+    gltf('kd-barrier', 'Barrier', `${KD}/barrier.gltf`, 'dungeon-structure', ['barrier', 'dungeon']),
+    gltf('kd-barrier-half', 'Barrier Half', `${KD}/barrier_half.gltf`, 'dungeon-structure', ['barrier', 'dungeon']),
+    gltf('kd-barrier-corner', 'Barrier Corner', `${KD}/barrier_corner.gltf`, 'dungeon-structure', ['barrier', 'dungeon']),
+    gltf('kd-barrier-column', 'Barrier Column', `${KD}/barrier_column.gltf`, 'dungeon-structure', ['barrier', 'column', 'dungeon']),
+    gltf('kd-bed-decorated', 'Decorated Bed', `${KD}/bed_decorated.gltf`, 'furniture', ['bed', 'dungeon']),
+    gltf('kd-bed-frame', 'Bed Frame', `${KD}/bed_frame.gltf`, 'furniture', ['bed', 'dungeon']),
+    gltf('kd-bed-floor', 'Floor Bed', `${KD}/bed_floor.gltf`, 'furniture', ['bed', 'dungeon']),
+    gltf('kd-candle-lit', 'Candle Lit', `${KD}/candle_lit.gltf`, 'prop', ['candle', 'light', 'dungeon']),
+    gltf('kd-candle-triple', 'Triple Candle', `${KD}/candle_triple.gltf`, 'prop', ['candle', 'light', 'dungeon']),
+    gltf('kd-box-lg', 'Large Box', `${KD}/box_large.gltf`, 'prop', ['box', 'container', 'dungeon']),
+    gltf('kd-box-sm', 'Small Box', `${KD}/box_small.gltf`, 'prop', ['box', 'container', 'dungeon']),
+    gltf('kd-box-stack', 'Stacked Boxes', `${KD}/box_stacked.gltf`, 'prop', ['box', 'container', 'dungeon']),
+    gltf('kd-bottle-brown', 'Brown Bottle', `${KD}/bottle_A_brown.gltf`, 'prop', ['bottle', 'potion', 'dungeon']),
+    gltf('kd-bottle-green', 'Green Bottle', `${KD}/bottle_A_green.gltf`, 'prop', ['bottle', 'potion', 'dungeon']),
+  ],
+};
+
+// ── Campfire ───────────────────────────────────────────────────
+
+const CF = `${P}/campfire`;
+
+export const CAMPFIRE_PACK: AssetPack = {
+  id: 'campfire',
+  name: 'Campfire Spooky Stories',
+  description: 'Campfire scene with characters and effects',
+  basePath: CF,
+  texturePath: CF,
+  assets: [],  // Contains non-model assets (scenes/prefabs) — referenced by path
+};
+
 // ── All Packs ──────────────────────────────────────────────────
 
 export const ALL_ASSET_PACKS: AssetPack[] = [
@@ -362,6 +572,15 @@ export const ALL_ASSET_PACKS: AssetPack[] = [
   MEDIEVAL_VILLAGE_PACK,
   MODULAR_DUNGEON_PACK,
   FURNITURE_PACK,
+  // New packs
+  ORC_SETTLEMENT_PACK,
+  ORC_FORTRESS_PACK,
+  VOLCANO_PACK,
+  STONE_TERRAIN_PACK,
+  MINE_PACK,
+  DEFENSE_TOWER_PACK,
+  KAYKIT_DUNGEON_PACK,
+  CAMPFIRE_PACK,
 ];
 
 /** Flat list of every asset for quick lookups */
