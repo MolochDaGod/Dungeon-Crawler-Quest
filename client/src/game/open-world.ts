@@ -70,6 +70,14 @@ import {
   loadGeneratedWorld,
 } from './ai-map-gen';
 import { drawGLBProjectile, drawGLBSprite, CLASS_PROJECTILE_SPRITE } from './glb-sprites';
+import { WorldHeightmap, createWorldHeightmap } from './terrain-heightmap';
+import {
+  BoatState, createBoatState, BoatDock, BOAT_DOCKS,
+  shouldMount, mountBoat, shouldDismount, dismountBoat, updateBoatPosition,
+} from './boats';
+import { SpawnerManager, createSpawnerManager, SpawnRequest } from './spawner-system';
+import { ZoneEventManager, createZoneEventManager, EventUpdate } from './zone-events';
+import { behaviorTick, assignArchetype, clearBehaviorCache, getArchetype, AIEntity, AITarget } from './ai-behaviors';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -332,6 +340,13 @@ export interface OpenWorldState {
 
   // AI-generated world data (from world editor)
   generatedWorld: GeneratedWorldData | null;
+
+  // Phase 6-7 systems
+  heightmap: WorldHeightmap;
+  boatState: BoatState;
+  boatDocks: BoatDock[];
+  spawnerManager: SpawnerManager;
+  eventManager: ZoneEventManager;
 }
 
 export interface OWHudState {
@@ -416,8 +431,11 @@ function angleBetween(a: { x: number; y: number }, b: { x: number; y: number }):
   return Math.atan2(b.y - a.y, b.x - a.x);
 }
 
-// Simple open-world walkability: within bounds, not in collision zone
+// Simple open-world walkability — delegates to heightmap when available, falls back to bounds check
+let _activeHeightmap: WorldHeightmap | null = null;
+let _activeBoatMounted = false;
 function isWalkableOW(x: number, y: number): boolean {
+  if (_activeHeightmap) return _activeHeightmap.isWalkable(x, y, _activeBoatMounted);
   return x >= 10 && y >= 10 && x < OPEN_WORLD_SIZE - 10 && y < OPEN_WORLD_SIZE - 10;
 }
 
@@ -517,7 +535,17 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     missionLog: loadMissionLog(),
     terrainCache: new Map(),
     generatedWorld: loadGeneratedWorld(),
+    heightmap: null as any, // initialized below
+    boatState: createBoatState(),
+    boatDocks: BOAT_DOCKS,
+    spawnerManager: null as any, // initialized below
+    eventManager: createZoneEventManager(),
   };
+
+  // Initialize heightmap from generated world data
+  state.heightmap = createWorldHeightmap(state.generatedWorld);
+  // Build spawner defs from zone data + heightmap
+  state.spawnerManager = createSpawnerManager(state.heightmap);
 
   // Generate NPCs and resource nodes from zone definitions
   generateNPCs(state);
@@ -861,6 +889,26 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   }
 
   if (p.dead) return;
+
+  // Sync heightmap for isWalkableOW delegate
+  _activeHeightmap = state.heightmap;
+  _activeBoatMounted = state.boatState?.mounted ?? false;
+
+  // Boat mount/dismount logic
+  if (shouldMount(p.x, p.y, state.boatState, state.heightmap)) {
+    mountBoat(state.boatState, p.x, p.y);
+    state.killFeed.push({ text: 'Mounted boat', color: '#4fc3f7', time: state.gameTime });
+  } else if (shouldDismount(p.x, p.y, state.boatState, state.heightmap)) {
+    dismountBoat(state.boatState);
+    state.killFeed.push({ text: 'Dismounted boat', color: '#4fc3f7', time: state.gameTime });
+  }
+  updateBoatPosition(state.boatState, p.x, p.y);
+
+  // Zone event updates
+  const eventUpdates = state.eventManager.update(dt, p.level, state.spawnerManager);
+  for (const eu of eventUpdates) {
+    state.killFeed.push({ text: eu.message, color: eu.color, time: state.gameTime });
+  }
 
   // Player update
   p.animTimer += dt;
@@ -1312,6 +1360,12 @@ function killEnemy(state: OpenWorldState, enemy: OWEnemy): void {
   // Skinning XP from kills
   const skinXp = Math.floor(enemy.level * 5);
   gainProfessionXp(state.playerProfessions, 'gathering', 'skinning', skinXp);
+
+  // Track kill for zone events
+  state.eventManager.onKill();
+
+  // Clear AI behavior cache for dead enemy
+  clearBehaviorCache(enemy.id);
 
   // Check world boss
   if (state.worldState.worldBoss.active && enemy.isBoss) {
