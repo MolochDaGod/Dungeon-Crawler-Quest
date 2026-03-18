@@ -23,9 +23,17 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - 6 terrain biomes with dynamic weather
 - AI faction system, NPC interactions
 - Full RPG progression (see RPG Systems below)
+- MMO controls: WASD movement, Shift sprint, Space dodge roll, Tab target-cycling, E interact
+- Stamina system with sprint drain/regen and dodge roll cost
+- 7 new enemy types across 3 zones including 2 large bosses (Infernal Colossus, Lich King)
 
 #### Combat & Visual Polish
-- Screen shake on melee hits, heavy attacks, and kills
+- Weapon-leading melee slash: weapon rotation drives the swing, body lunges forward
+- Weapon afterimage ghost trail during attacks
+- Widened VFX slash arc with increased reach
+- Spell combo system: chain abilities within 3s for stacking +8% damage (up to 5 stacks)
+- Channeling particle burst VFX scaled by combo count
+- Screen shake on melee hits, heavy attacks, ability damage, and kills
 - Hit flash overlay on damaged enemies with aggro indicator
 - Combo counter system with timer bar and color-coded display
 - Styled floating damage numbers with pop-in animation, crit glow, and outline
@@ -33,6 +41,13 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - Ambient atmosphere: firefly and dust mote particle systems
 - Heavy attack cooldown arc indicator
 - GLB/GLTF 3D model sprite loader for voxel-style assets
+
+#### AI Behavior
+- Enemy separation steering to prevent stacking
+- Ranged enemies kite when player closes distance
+- Idle patrol circuits around home positions
+- Ranged enemies fire AoE telegraph attacks at higher levels
+- Walkability-aware movement
 
 ## RPG Systems
 
@@ -71,10 +86,23 @@ All game data is sourced from the **Grudge ObjectStore API** (`https://molochdag
 - Equipment bag for unequipped items, full persistence
 
 ### Character Panel (C key)
-- Attribute allocation with +/− buttons
-- Derived stats display
-- Weapon skill loadout viewer
-- Accessible in Open World mode
+Full 7-tab dark fantasy panel with gold accent theme:
+- **Equipment** — 9 equip slots, drag-equip from bag, set bonus tracker
+- **Attributes** — 8 primary stats with +/− allocation, derived stats display
+- **Class Skills** — Active class ability viewer
+- **Weapon Skills** — Dynamic loadout based on equipped weapon
+- **Crafting** — Recipe browser with material requirements
+- **Quests** — Active and completed quest log
+- **Guild** — Guild info and membership
+
+### Controls (Open World)
+- **WASD** — Movement (W always moves away from camera)
+- **Shift** — Sprint (1.6× speed, drains stamina)
+- **Space** — Dodge roll (i-frames, 20 stamina cost, 1.5s cooldown)
+- **Tab** — Cycle nearby enemy targets
+- **E** — Interact (dungeon entrances, NPCs, harvest nodes)
+- **C** — Character panel
+- **1-5** — Abilities
 
 ## ObjectStore API Integration
 
@@ -118,15 +146,15 @@ client/src/
 │   ├── professions-system.ts  # Gathering & crafting professions
 │   ├── crafting.ts            # Recipe generation & crafting logic
 │   ├── equipment.ts           # Equipment slots, tiers, set bonuses
-│   ├── open-world.ts          # Open World game state & logic
+│   ├── open-world.ts          # Open World game state, MMO controls, AI, combat
 │   ├── engine.ts              # MOBA game engine
 │   ├── dungeon-engine.ts      # Dungeon crawler engine
 │   ├── types.ts               # Shared types, heroes, abilities
-│   ├── voxel.ts               # Voxel rendering system
+│   ├── voxel.ts               # Voxel rendering, weapon animations, VFX
 │   ├── voxel-motion.ts        # Animation primitives
 │   └── glb-sprites.ts         # GLB/GLTF 3D model sprite loader
 ├── pages/
-│   ├── open-world.tsx         # Open World UI & game loop
+│   ├── open-world.tsx         # Open World UI, HUD, C panel, game loop
 │   ├── game.tsx               # MOBA UI
 │   ├── dungeon.tsx            # Dungeon UI
 │   ├── editor.tsx             # Entity/Animation editor
