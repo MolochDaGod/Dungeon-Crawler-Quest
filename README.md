@@ -35,6 +35,7 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - AI faction system, NPC interactions, quest givers
 - NPC dialog system with Shop/Quests/Train/Craft tabs, tier-scaled vendor inventories
 - 5 new voxel monsters: Tentacle Horror, Timber Wolf, Cave Bear, Pit Demon, Sky Hawk
+- **46 voxel asset library** via ObjectStore: 11 trees, 7 rocks, 4 mountains, 6 terrain props, 8 structures, 5 animals, 5 enemies
 
 #### Combat & Visual Polish
 - **Animation FSM** (`ow-anim-fsm.ts`): priority-based state machine for player animation with interruptibility windows, blend-out, and auto-return. Replaces scattered `animState` writes with `tryTransition()` calls.
@@ -141,7 +142,8 @@ Base URL: https://molochdagod.github.io/ObjectStore
 | `/api/v1/attributes.json` | Attribute definitions, formulas, icons |
 | `/api/v1/professions.json` | Profession trees, milestones, XP tables |
 | `/api/v1/armor.json` | Armor sets, materials, stats |
-| `/api/v1/equipment.json` | Equipment slot config, tier multipliers |
+|| `/api/v1/equipment.json` | Equipment slot config, tier multipliers |
+|| `/api/v1/voxelAssets.json` | Voxel asset catalog: trees, rocks, mountains, terrain props, structures, animals, enemies |
 
 See [docs/GRUDGE_BACKEND_INTEGRATION.md](docs/GRUDGE_BACKEND_INTEGRATION.md) for full integration guide and best practices.
 
@@ -149,7 +151,7 @@ See [docs/GRUDGE_BACKEND_INTEGRATION.md](docs/GRUDGE_BACKEND_INTEGRATION.md) for
 
 - **Frontend:** React, TypeScript, Tailwind CSS, Shadcn UI
 - **3D Rendering:** Three.js with voxel art pipeline
-- **2D Rendering:** Custom HTML5 Canvas with fog of war
+- **2D Rendering:** Custom HTML5 Canvas with fog of war, 29 new voxel model builders
 - **Routing:** Wouter
 - **Animation:** GSAP, custom voxel-motion library
 - **Physics:** cannon-es
@@ -196,6 +198,7 @@ client/src/
 │   ├── world-editor.tsx       # World editor for zone design
 │   ├── map-admin.tsx          # MOBA map admin editor
 │   ├── admin.tsx              # Admin editor suite
+│   ├── entity-editor.tsx      # Entity editor: Heroes, Minions, Monsters, Structures, Effects, Environment, Animals
 │   └── settings.tsx           # Keybindings and settings
 ├── components/
 │   ├── MainPanel.tsx          # Full-screen 3-column character panel (C key)

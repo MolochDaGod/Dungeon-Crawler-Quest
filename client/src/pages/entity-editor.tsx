@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { VoxelRenderer } from "@/game/voxel";
 import { SpriteEffectSystem, SpriteEffectType } from "@/game/sprite-effects";
+import { EffectPool, EffectType } from "@/game/effect-pool";
 import { sampleMotion, generateSmoothedAnimation, BODY_PART_CENTERS, type MotionPrimitive, type Keyframe as MotionKeyframe, type BodyPartPose, type FullPose } from "@/game/voxel-motion";
 import { HEROES, RACE_COLORS, CLASS_COLORS, CLASS_ABILITIES, ITEMS, HeroData } from "@/game/types";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import {
   Swords, User, Sparkles, TreePine, Castle, Bug, Footprints,
   Copy, Eye, EyeOff, Zap, ChevronLeft, ChevronRight,
   Plus, Minus, Clock, Layers, Film, Move, RotateCw, Maximize2,
-  Camera, Wand2
+  Camera, Wand2, Mountain, Bird
 } from "lucide-react";
 
 const RACES = ["Human", "Barbarian", "Dwarf", "Elf", "Orc", "Undead"];
@@ -33,10 +34,19 @@ const SPRITE_EFFECT_TYPES: SpriteEffectType[] = [
   'mage_ability', 'mage_attack', 'frost', 'channel', 'magic_impact',
   'fire_ability', 'warrior_spin', 'shield', 'buff', 'melee_impact',
   'fire_attack', 'ultimate', 'dash', 'undead', 'charging',
-  'holy', 'dark_magic', 'shadow', 'ice', 'healing'
+  'holy', 'dark_magic', 'shadow', 'ice', 'healing',
+  // Magic-sprites VFX pack
+  'lightning', 'lightning_bolt', 'midas_touch', 'sun_strike', 'explosion',
+  'spikes', 'fire_wall', 'shield_spell', 'black_hole', 'fire_ball',
 ];
 
-type TabId = "heroes" | "minions" | "monsters" | "structures" | "effects" | "environment";
+const CANVAS_EFFECT_TYPES: EffectType[] = [
+  'cast_circle', 'impact_ring', 'aoe_blast', 'skillshot_trail',
+  'cone_sweep', 'dash_trail', 'melee_slash', 'melee_lunge',
+  'heavy_slash', 'enemy_slash', 'enemy_aoe_telegraph', 'enemy_aoe_blast',
+];
+
+type TabId = "heroes" | "minions" | "monsters" | "structures" | "effects" | "environment" | "animals";
 type GizmoMode = "move" | "rotate" | "scale";
 type BrushId = "pose" | "wave" | "pulse" | "spin" | "bounce" | "tremble";
 
@@ -74,6 +84,7 @@ const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "structures", label: "Structures", icon: Castle },
   { id: "effects", label: "Effects", icon: Sparkles },
   { id: "environment", label: "Environment", icon: TreePine },
+  { id: "animals", label: "Animals", icon: Bird },
 ];
 
 interface EditorState {
@@ -92,8 +103,15 @@ interface EditorState {
   effectType: SpriteEffectType;
   effectScale: number;
   effectDuration: number;
-  structSubType: "tower" | "nexus";
-  envSubType: "tree" | "rock";
+  canvasEffectColor: string;
+  canvasEffectRadius: number;
+  structSubType: "tower" | "nexus" | "house" | "bridge" | "well" | "shrine" | "gate" | "wall";
+  envSubType: "tree" | "rock" | "mountain" | "terrain_prop";
+  treeType: "standard" | "pine" | "willow" | "palm" | "dead" | "mushroom";
+  rockType: "standard" | "crystal" | "mossy_boulder" | "stalagmite";
+  mountainType: "peak" | "cliff" | "mesa" | "hill";
+  terrainPropType: "bush" | "flower_patch" | "grass_tuft" | "mushroom_cluster" | "barrel" | "hay_bale";
+  animalType: "deer" | "boar" | "horse" | "hawk" | "fish";
 }
 
 function LabeledSlider({ label, value, min, max, step, onChange, suffix }: {
@@ -784,7 +802,17 @@ function StructuresPanel({ state, setState }: {
   state: EditorState; setState: (s: Partial<EditorState>) => void;
 }) {
   const structType = state.structSubType;
-  const setStructType = (v: "tower" | "nexus") => setState({ structSubType: v });
+
+  const STRUCTURE_TYPES: { id: EditorState['structSubType']; label: string }[] = [
+    { id: 'tower', label: 'Tower' },
+    { id: 'nexus', label: 'Nexus' },
+    { id: 'house', label: 'House' },
+    { id: 'bridge', label: 'Bridge' },
+    { id: 'well', label: 'Well' },
+    { id: 'shrine', label: 'Shrine' },
+    { id: 'gate', label: 'Gate' },
+    { id: 'wall', label: 'Wall' },
+  ];
 
   const towerStats: Record<number, { hp: number; atk: number; rng: number }> = {
     0: { hp: 2000, atk: 120, rng: 700 },
@@ -792,24 +820,22 @@ function StructuresPanel({ state, setState }: {
     2: { hp: 3000, atk: 180, rng: 700 },
   };
 
-  const stats = structType === "tower" ? (towerStats[state.towerTier] || towerStats[0]) : { hp: 5000, atk: 0, rng: 0 };
+  const hasTeamColor = ['tower', 'nexus', 'house', 'shrine', 'gate', 'wall'].includes(structType);
+  const teamColor = structType === 'nexus' ? state.nexusTeamColor : state.towerTeamColor;
+  const setTeamColor = (v: string) => setState(structType === 'nexus' ? { nexusTeamColor: v } : { towerTeamColor: v });
 
   return (
     <div className="space-y-4">
       <SectionHeader title="Structure Type" />
-      <div className="grid grid-cols-2 gap-2">
-        <Button size="sm" data-testid="btn-struct-tower"
-          variant={structType === "tower" ? "default" : "outline"}
-          className={`text-xs ${structType === "tower" ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-          onClick={() => setStructType("tower")}>
-          Tower
-        </Button>
-        <Button size="sm" data-testid="btn-struct-nexus"
-          variant={structType === "nexus" ? "default" : "outline"}
-          className={`text-xs ${structType === "nexus" ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-          onClick={() => setStructType("nexus")}>
-          Nexus
-        </Button>
+      <div className="grid grid-cols-4 gap-2">
+        {STRUCTURE_TYPES.map(st => (
+          <Button key={st.id} size="sm" data-testid={`btn-struct-${st.id}`}
+            variant={structType === st.id ? "default" : "outline"}
+            className={`text-xs ${structType === st.id ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+            onClick={() => setState({ structSubType: st.id })}>
+            {st.label}
+          </Button>
+        ))}
       </div>
 
       {structType === "tower" && (
@@ -828,54 +854,64 @@ function StructuresPanel({ state, setState }: {
         </>
       )}
 
-      <SectionHeader title="Team Color" />
-      <ColorPicker label="Team" value={structType === "tower" ? state.towerTeamColor : state.nexusTeamColor}
-        onChange={v => setState(structType === "tower" ? { towerTeamColor: v } : { nexusTeamColor: v })} />
-      <div className="grid grid-cols-5 gap-2 mt-2">
-        {TEAM_COLORS.map(c => (
-          <button key={c} data-testid={`btn-struct-color-${c.slice(1)}`}
-            className={`h-8 rounded border transition-all ${
-              (structType === "tower" ? state.towerTeamColor : state.nexusTeamColor) === c
-                ? 'border-amber-500 ring-1 ring-amber-500/50' : 'border-gray-700 hover:border-gray-500'}`}
-            style={{ backgroundColor: c }}
-            onClick={() => setState(structType === "tower" ? { towerTeamColor: c } : { nexusTeamColor: c })} />
-        ))}
-      </div>
-
-      <SectionHeader title="Stats" />
-      <div className="grid grid-cols-3 gap-2">
-        {Object.entries(stats).map(([key, val]) => (
-          <div key={key} className="bg-black/20 rounded p-2 text-center">
-            <div className="text-[10px] text-gray-500 uppercase">{key}</div>
-            <div className="text-amber-300 font-mono text-sm">{val}</div>
+      {hasTeamColor && (
+        <>
+          <SectionHeader title="Team Color" />
+          <ColorPicker label="Team" value={teamColor} onChange={setTeamColor} />
+          <div className="grid grid-cols-5 gap-2 mt-2">
+            {TEAM_COLORS.map(c => (
+              <button key={c} data-testid={`btn-struct-color-${c.slice(1)}`}
+                className={`h-8 rounded border transition-all ${
+                  teamColor === c ? 'border-amber-500 ring-1 ring-amber-500/50' : 'border-gray-700 hover:border-gray-500'}`}
+                style={{ backgroundColor: c }}
+                onClick={() => setTeamColor(c)} />
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
+
+      {structType === "tower" && (
+        <>
+          <SectionHeader title="Stats" />
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(towerStats[state.towerTier] || towerStats[0]).map(([key, val]) => (
+              <div key={key} className="bg-black/20 rounded p-2 text-center">
+                <div className="text-[10px] text-gray-500 uppercase">{key}</div>
+                <div className="text-amber-300 font-mono text-sm">{val}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <SectionHeader title="Properties" />
       <div className="bg-black/20 rounded p-3 text-xs space-y-2">
-        {structType === "tower" ? (
+        <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-amber-400 capitalize">{structType}</span></div>
+        {structType === "tower" && (
           <>
-            <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-amber-400">Tower T{state.towerTier + 1}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">True Sight</span><span className="text-green-400">Yes</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Targets Heroes</span><span className="text-red-400">When minion-attacking</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Ramp Damage</span><span className="text-orange-400">+25% per hit</span></div>
           </>
-        ) : (
+        )}
+        {structType === "nexus" && (
           <>
-            <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-amber-400">Nexus</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Invulnerable</span><span className="text-red-400">Until towers fall</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">HP Regen</span><span className="text-green-400">5/s</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Game Over</span><span className="text-purple-400">When destroyed</span></div>
+          </>
+        )}
+        {!['tower', 'nexus'].includes(structType) && (
+          <>
+            <div className="flex justify-between"><span className="text-gray-500">Collision</span><span className="text-red-400">Yes</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Destructible</span><span className="text-gray-400">{['wall', 'gate'].includes(structType) ? 'Yes' : 'No'}</span></div>
           </>
         )}
       </div>
 
       <Button variant="outline" className="w-full text-xs" data-testid="btn-export-structure"
         onClick={() => {
-          const data = structType === "tower"
-            ? { type: "tower", tier: state.towerTier, teamColor: state.towerTeamColor, stats }
-            : { type: "nexus", teamColor: state.nexusTeamColor, stats };
+          const data: Record<string, any> = { type: structType };
+          if (structType === 'tower') { data.tier = state.towerTier; data.teamColor = state.towerTeamColor; }
+          else if (hasTeamColor) { data.teamColor = teamColor; }
           navigator.clipboard.writeText(JSON.stringify(data, null, 2));
         }}>
         <Copy className="w-3 h-3 mr-1" /> Export Structure Data
@@ -884,9 +920,10 @@ function StructuresPanel({ state, setState }: {
   );
 }
 
-function EffectsPanel({ state, setState, onPlayEffect }: {
+function EffectsPanel({ state, setState, onPlayEffect, onPlayCanvasEffect }: {
   state: EditorState; setState: (s: Partial<EditorState>) => void;
   onPlayEffect: (type: SpriteEffectType, scale: number, durationMs: number) => void;
+  onPlayCanvasEffect: (type: EffectType) => void;
 }) {
   const effectInfo: Record<string, { label: string; category: string }> = {
     mage_ability: { label: "Magic Spell", category: "Magic" },
@@ -909,13 +946,76 @@ function EffectsPanel({ state, setState, onPlayEffect }: {
     shadow: { label: "Midnight", category: "Dark" },
     ice: { label: "Freezing", category: "Elemental" },
     healing: { label: "Magic Bubbles", category: "Healing" },
+    // Magic-sprites VFX pack
+    lightning: { label: "Lightning", category: "Elemental" },
+    lightning_bolt: { label: "Lightning Bolt", category: "Elemental" },
+    midas_touch: { label: "Midas Touch", category: "Magic" },
+    sun_strike: { label: "Sun Strike", category: "Light" },
+    explosion: { label: "Explosion", category: "Impact" },
+    spikes: { label: "Spikes", category: "Physical" },
+    fire_wall: { label: "Fire Wall", category: "Elemental" },
+    shield_spell: { label: "Shield Spell", category: "Defensive" },
+    black_hole: { label: "Black Hole", category: "Dark" },
+    fire_ball: { label: "Fire Ball", category: "Elemental" },
+  };
+
+  const canvasEffectInfo: Record<EffectType, { label: string; category: string; color: string }> = {
+    cast_circle: { label: 'Cast Circle', category: 'Spell', color: '#8b5cf6' },
+    impact_ring: { label: 'Impact Ring', category: 'Hit', color: '#ef4444' },
+    aoe_blast: { label: 'AoE Blast', category: 'Spell', color: '#f97316' },
+    skillshot_trail: { label: 'Skillshot Trail', category: 'Projectile', color: '#22c55e' },
+    cone_sweep: { label: 'Cone Sweep', category: 'Melee', color: '#ef4444' },
+    dash_trail: { label: 'Dash Trail', category: 'Movement', color: '#06b6d4' },
+    melee_slash: { label: 'Melee Slash', category: 'Melee', color: '#ef4444' },
+    melee_lunge: { label: 'Melee Lunge', category: 'Melee', color: '#ffd700' },
+    heavy_slash: { label: 'Heavy Slash', category: 'Melee', color: '#ef4444' },
+    enemy_slash: { label: 'Enemy Slash', category: 'Enemy', color: '#ff6666' },
+    enemy_aoe_telegraph: { label: 'AoE Telegraph', category: 'Enemy', color: '#ff4444' },
+    enemy_aoe_blast: { label: 'Enemy AoE', category: 'Enemy', color: '#ff6600' },
   };
 
   const categories = Array.from(new Set(Object.values(effectInfo).map(e => e.category)));
+  const canvasCategories = Array.from(new Set(Object.values(canvasEffectInfo).map(e => e.category)));
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Effect Type" />
+      {/* ── Canvas VFX (geometric effects) ── */}
+      <SectionHeader title="Canvas VFX" />
+      <div className="space-y-2">
+        {canvasCategories.map(cat => (
+          <div key={cat}>
+            <p className="text-[10px] text-gray-500 uppercase mb-1">{cat}</p>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {CANVAS_EFFECT_TYPES.filter(e => canvasEffectInfo[e]?.category === cat).map(e => (
+                <Button key={e} size="sm" data-testid={`btn-canvas-fx-${e}`}
+                  variant="outline"
+                  className="text-[10px] h-6 px-2 border-gray-700 hover:border-amber-600"
+                  onClick={() => onPlayCanvasEffect(e)}>
+                  <span className="w-2 h-2 rounded-full mr-1 inline-block" style={{ backgroundColor: canvasEffectInfo[e]?.color }} />
+                  {canvasEffectInfo[e]?.label || e}
+                </Button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <ColorPicker label="Color" value={state.canvasEffectColor} onChange={v => setState({ canvasEffectColor: v })} />
+      </div>
+      <LabeledSlider label="Radius" value={state.canvasEffectRadius} min={15} max={120} step={5} onChange={v => setState({ canvasEffectRadius: v })} suffix="px" />
+
+      <Button variant="outline" className="w-full text-xs" data-testid="btn-play-all-canvas"
+        onClick={() => {
+          CANVAS_EFFECT_TYPES.forEach((e, i) => {
+            setTimeout(() => onPlayCanvasEffect(e), i * 350);
+          });
+        }}>
+        <Zap className="w-3 h-3 mr-1" /> Play All Canvas VFX
+      </Button>
+
+      {/* ── Sprite Effects ── */}
+      <SectionHeader title="Sprite Effects" />
       <Select value={state.effectType} onValueChange={v => setState({ effectType: v as SpriteEffectType })}>
         <SelectTrigger data-testid="select-effect-type"><SelectValue /></SelectTrigger>
         <SelectContent>
@@ -944,13 +1044,13 @@ function EffectsPanel({ state, setState, onPlayEffect }: {
         </div>
       ))}
 
-      <SectionHeader title="Settings" />
+      <SectionHeader title="Sprite Settings" />
       <LabeledSlider label="Scale" value={state.effectScale} min={0.5} max={4.0} step={0.1} onChange={v => setState({ effectScale: v })} suffix="x" />
       <LabeledSlider label="Duration" value={state.effectDuration} min={200} max={3000} step={50} onChange={v => setState({ effectDuration: v })} suffix="ms" />
 
       <Button className="w-full bg-purple-700 hover:bg-purple-600 text-xs" data-testid="btn-play-effect"
         onClick={() => onPlayEffect(state.effectType, state.effectScale, state.effectDuration)}>
-        <Sparkles className="w-3 h-3 mr-1" /> Play Effect
+        <Sparkles className="w-3 h-3 mr-1" /> Play Sprite Effect
       </Button>
 
       <Button variant="outline" className="w-full text-xs" data-testid="btn-play-all-effects"
@@ -959,12 +1059,12 @@ function EffectsPanel({ state, setState, onPlayEffect }: {
             setTimeout(() => onPlayEffect(e, state.effectScale, state.effectDuration), i * 400);
           });
         }}>
-        <Zap className="w-3 h-3 mr-1" /> Play All Effects (Sequence)
+        <Zap className="w-3 h-3 mr-1" /> Play All Sprite Effects
       </Button>
 
       <SectionHeader title="Current Effect Info" />
       <div className="bg-black/20 rounded p-3 text-xs space-y-2">
-        <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="text-amber-400">{effectInfo[state.effectType]?.label}</span></div>
+        <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="text-amber-400">{effectInfo[state.effectType]?.label || state.effectType}</span></div>
         <div className="flex justify-between"><span className="text-gray-500">Category</span><span className="text-purple-400">{effectInfo[state.effectType]?.category}</span></div>
         <div className="flex justify-between"><span className="text-gray-500">Scale</span><span className="text-green-400">{state.effectScale}x</span></div>
         <div className="flex justify-between"><span className="text-gray-500">Duration</span><span className="text-blue-400">{state.effectDuration}ms</span></div>
@@ -977,29 +1077,67 @@ function EnvironmentPanel({ state, setState }: {
   state: EditorState; setState: (s: Partial<EditorState>) => void;
 }) {
   const envType = state.envSubType;
-  const setEnvType = (v: "tree" | "rock") => setState({ envSubType: v });
+
+  const TREE_TYPES: { id: EditorState['treeType']; label: string }[] = [
+    { id: 'standard', label: 'Standard' }, { id: 'pine', label: 'Pine' }, { id: 'willow', label: 'Willow' },
+    { id: 'palm', label: 'Palm' }, { id: 'dead', label: 'Dead' }, { id: 'mushroom', label: 'Mushroom' },
+  ];
+  const ROCK_TYPES: { id: EditorState['rockType']; label: string }[] = [
+    { id: 'standard', label: 'Standard' }, { id: 'crystal', label: 'Crystal' },
+    { id: 'mossy_boulder', label: 'Mossy' }, { id: 'stalagmite', label: 'Stalagmite' },
+  ];
+  const MOUNTAIN_TYPES: { id: EditorState['mountainType']; label: string }[] = [
+    { id: 'peak', label: 'Peak' }, { id: 'cliff', label: 'Cliff' }, { id: 'mesa', label: 'Mesa' }, { id: 'hill', label: 'Hill' },
+  ];
+  const TERRAIN_PROP_TYPES: { id: EditorState['terrainPropType']; label: string }[] = [
+    { id: 'bush', label: 'Bush' }, { id: 'flower_patch', label: 'Flowers' }, { id: 'grass_tuft', label: 'Grass' },
+    { id: 'mushroom_cluster', label: 'Shrooms' }, { id: 'barrel', label: 'Barrel' }, { id: 'hay_bale', label: 'Hay Bale' },
+  ];
 
   return (
     <div className="space-y-4">
       <SectionHeader title="Environment Type" />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <Button size="sm" data-testid="btn-env-tree"
           variant={envType === "tree" ? "default" : "outline"}
-          className={`text-xs ${envType === "tree" ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-          onClick={() => setEnvType("tree")}>
+          className={`text-xs ${envType === "tree" ? 'bg-green-700 hover:bg-green-600' : ''}`}
+          onClick={() => setState({ envSubType: "tree" })}>
           <TreePine className="w-3 h-3 mr-1" /> Tree
         </Button>
         <Button size="sm" data-testid="btn-env-rock"
           variant={envType === "rock" ? "default" : "outline"}
-          className={`text-xs ${envType === "rock" ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-          onClick={() => setEnvType("rock")}>
+          className={`text-xs ${envType === "rock" ? 'bg-gray-600 hover:bg-gray-500' : ''}`}
+          onClick={() => setState({ envSubType: "rock" })}>
           Rock
+        </Button>
+        <Button size="sm" data-testid="btn-env-mountain"
+          variant={envType === "mountain" ? "default" : "outline"}
+          className={`text-xs ${envType === "mountain" ? 'bg-stone-600 hover:bg-stone-500' : ''}`}
+          onClick={() => setState({ envSubType: "mountain" })}>
+          <Mountain className="w-3 h-3 mr-1" /> Mtn
+        </Button>
+        <Button size="sm" data-testid="btn-env-terrain-prop"
+          variant={envType === "terrain_prop" ? "default" : "outline"}
+          className={`text-xs ${envType === "terrain_prop" ? 'bg-emerald-700 hover:bg-emerald-600' : ''}`}
+          onClick={() => setState({ envSubType: "terrain_prop" })}>
+          Props
         </Button>
       </div>
 
-      <SectionHeader title="Variation" />
-      {envType === "tree" ? (
+      {envType === "tree" && (
         <>
+          <SectionHeader title="Tree Type" />
+          <div className="grid grid-cols-3 gap-2">
+            {TREE_TYPES.map(tt => (
+              <Button key={tt.id} size="sm" data-testid={`btn-tree-type-${tt.id}`}
+                variant={state.treeType === tt.id ? "default" : "outline"}
+                className={`text-xs ${state.treeType === tt.id ? 'bg-green-700 hover:bg-green-600' : ''}`}
+                onClick={() => setState({ treeType: tt.id })}>
+                {tt.label}
+              </Button>
+            ))}
+          </div>
+          <SectionHeader title="Variation" />
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" data-testid="btn-tree-prev"
               onClick={() => setState({ treeSeed: Math.max(0, state.treeSeed - 1) })}>
@@ -1014,19 +1152,23 @@ function EnvironmentPanel({ state, setState }: {
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {[0, 1, 2, 3, 4, 5].map(seed => (
-              <Button key={seed} size="sm" data-testid={`btn-tree-seed-${seed}`}
-                variant={state.treeSeed === seed ? "default" : "outline"}
-                className={`text-xs ${state.treeSeed === seed ? 'bg-green-700 hover:bg-green-600' : ''}`}
-                onClick={() => setState({ treeSeed: seed })}>
-                Tree {seed + 1}
+        </>
+      )}
+
+      {envType === "rock" && (
+        <>
+          <SectionHeader title="Rock Type" />
+          <div className="grid grid-cols-2 gap-2">
+            {ROCK_TYPES.map(rt => (
+              <Button key={rt.id} size="sm" data-testid={`btn-rock-type-${rt.id}`}
+                variant={state.rockType === rt.id ? "default" : "outline"}
+                className={`text-xs ${state.rockType === rt.id ? 'bg-gray-600 hover:bg-gray-500' : ''}`}
+                onClick={() => setState({ rockType: rt.id })}>
+                {rt.label}
               </Button>
             ))}
           </div>
-        </>
-      ) : (
-        <>
+          <SectionHeader title="Variation" />
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" data-testid="btn-rock-prev"
               onClick={() => setState({ rockSeed: Math.max(0, state.rockSeed - 1) })}>
@@ -1041,46 +1183,165 @@ function EnvironmentPanel({ state, setState }: {
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
-          <div className="grid grid-cols-4 gap-2 mt-2">
-            {[0, 1, 2, 3].map(seed => (
-              <Button key={seed} size="sm" data-testid={`btn-rock-seed-${seed}`}
-                variant={state.rockSeed === seed ? "default" : "outline"}
-                className={`text-xs ${state.rockSeed === seed ? 'bg-gray-600 hover:bg-gray-500' : ''}`}
-                onClick={() => setState({ rockSeed: seed })}>
-                Rock {seed + 1}
+        </>
+      )}
+
+      {envType === "mountain" && (
+        <>
+          <SectionHeader title="Mountain Type" />
+          <div className="grid grid-cols-2 gap-2">
+            {MOUNTAIN_TYPES.map(mt => (
+              <Button key={mt.id} size="sm" data-testid={`btn-mountain-type-${mt.id}`}
+                variant={state.mountainType === mt.id ? "default" : "outline"}
+                className={`text-xs ${state.mountainType === mt.id ? 'bg-stone-600 hover:bg-stone-500' : ''}`}
+                onClick={() => setState({ mountainType: mt.id })}>
+                {mt.label}
               </Button>
             ))}
           </div>
         </>
       )}
 
+      {envType === "terrain_prop" && (
+        <>
+          <SectionHeader title="Terrain Prop" />
+          <div className="grid grid-cols-3 gap-2">
+            {TERRAIN_PROP_TYPES.map(tp => (
+              <Button key={tp.id} size="sm" data-testid={`btn-terrain-prop-${tp.id}`}
+                variant={state.terrainPropType === tp.id ? "default" : "outline"}
+                className={`text-xs ${state.terrainPropType === tp.id ? 'bg-emerald-700 hover:bg-emerald-600' : ''}`}
+                onClick={() => setState({ terrainPropType: tp.id })}>
+                {tp.label}
+              </Button>
+            ))}
+          </div>
+          {['bush', 'flower_patch', 'grass_tuft', 'mushroom_cluster'].includes(state.terrainPropType) && (
+            <>
+              <SectionHeader title="Variation" />
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" data-testid="btn-terrain-seed-prev"
+                  onClick={() => setState({ treeSeed: Math.max(0, state.treeSeed - 1) })}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <div className="flex-1 text-center">
+                  <span className="text-amber-400 font-mono text-lg">{state.treeSeed}</span>
+                  <p className="text-gray-500 text-[10px]">Seed Variation</p>
+                </div>
+                <Button size="sm" variant="outline" data-testid="btn-terrain-seed-next"
+                  onClick={() => setState({ treeSeed: state.treeSeed + 1 })}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       <SectionHeader title="Properties" />
       <div className="bg-black/20 rounded p-3 text-xs space-y-2">
-        {envType === "tree" ? (
+        <div className="flex justify-between"><span className="text-gray-500">Category</span><span className="text-amber-400 capitalize">{envType.replace('_', ' ')}</span></div>
+        {envType === "tree" && (
           <>
-            <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-green-400">Tree</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Variation</span><span className="text-amber-400">Seed {state.treeSeed}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Variant</span><span className="text-green-400 capitalize">{state.treeType}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Seed</span><span className="text-amber-400">{state.treeSeed}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Blocks Vision</span><span className="text-red-400">Yes (Fog of War)</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Destructible</span><span className="text-gray-400">No</span></div>
           </>
-        ) : (
+        )}
+        {envType === "rock" && (
           <>
-            <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-gray-300">Rock</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Variation</span><span className="text-amber-400">Seed {state.rockSeed}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Variant</span><span className="text-gray-300 capitalize">{state.rockType.replace('_', ' ')}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Seed</span><span className="text-amber-400">{state.rockSeed}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Collision</span><span className="text-red-400">Yes</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Terrain</span><span className="text-blue-400">Jungle / River</span></div>
+          </>
+        )}
+        {envType === "mountain" && (
+          <>
+            <div className="flex justify-between"><span className="text-gray-500">Variant</span><span className="text-stone-300 capitalize">{state.mountainType}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Impassable</span><span className="text-red-400">Yes</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Scale</span><span className="text-blue-400">Large</span></div>
+          </>
+        )}
+        {envType === "terrain_prop" && (
+          <>
+            <div className="flex justify-between"><span className="text-gray-500">Variant</span><span className="text-emerald-400 capitalize">{state.terrainPropType.replace('_', ' ')}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Walkable</span><span className="text-green-400">Yes</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Destructible</span><span className="text-gray-400">No</span></div>
           </>
         )}
       </div>
 
       <Button variant="outline" className="w-full text-xs" data-testid="btn-export-env"
         onClick={() => {
-          const data = envType === "tree"
-            ? { type: "tree", seed: state.treeSeed }
-            : { type: "rock", seed: state.rockSeed };
+          const data: Record<string, any> = { type: envType };
+          if (envType === 'tree') { data.variant = state.treeType; data.seed = state.treeSeed; }
+          else if (envType === 'rock') { data.variant = state.rockType; data.seed = state.rockSeed; }
+          else if (envType === 'mountain') { data.variant = state.mountainType; }
+          else { data.variant = state.terrainPropType; data.seed = state.treeSeed; }
           navigator.clipboard.writeText(JSON.stringify(data, null, 2));
         }}>
         <Copy className="w-3 h-3 mr-1" /> Export Data
+      </Button>
+    </div>
+  );
+}
+
+function AnimalsPanel({ state, setState, playing, setPlaying, speed, setSpeed, animTimer, resetTimer }: {
+  state: EditorState; setState: (s: Partial<EditorState>) => void;
+  playing: boolean; setPlaying: (p: boolean) => void;
+  speed: number; setSpeed: (s: number) => void;
+  animTimer: number; resetTimer: () => void;
+}) {
+  const ANIMAL_TYPES: { id: EditorState['animalType']; label: string }[] = [
+    { id: 'deer', label: 'Deer' }, { id: 'boar', label: 'Boar' }, { id: 'horse', label: 'Horse' },
+    { id: 'hawk', label: 'Hawk' }, { id: 'fish', label: 'Fish' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Animal Type" />
+      <div className="grid grid-cols-3 gap-2">
+        {ANIMAL_TYPES.map(a => (
+          <Button key={a.id} size="sm" data-testid={`btn-animal-${a.id}`}
+            variant={state.animalType === a.id ? "default" : "outline"}
+            className={`text-xs ${state.animalType === a.id ? 'bg-amber-700 hover:bg-amber-600' : ''}`}
+            onClick={() => setState({ animalType: a.id })}>
+            {a.label}
+          </Button>
+        ))}
+      </div>
+
+      <SectionHeader title="Facing" />
+      <LabeledSlider label="Facing" value={state.facing} min={0} max={6.28} step={0.1}
+        onChange={v => setState({ facing: v })} suffix=" rad" />
+
+      <SectionHeader title="Playback" />
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" className="flex-1" data-testid="btn-animal-playpause"
+          onClick={() => setPlaying(!playing)}>
+          {playing ? <Pause className="w-3 h-3 mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+          {playing ? 'Pause' : 'Play'}
+        </Button>
+        <Button size="sm" variant="outline" data-testid="btn-animal-reset" onClick={resetTimer}>
+          <RotateCcw className="w-3 h-3" />
+        </Button>
+      </div>
+      <LabeledSlider label="Speed" value={speed} min={0.1} max={3.0} step={0.1}
+        onChange={setSpeed} suffix="x" />
+
+      <SectionHeader title="Properties" />
+      <div className="bg-black/20 rounded p-3 text-xs space-y-2">
+        <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-amber-400 capitalize">{state.animalType}</span></div>
+        <div className="flex justify-between"><span className="text-gray-500">Facing</span><span className="text-blue-400">{state.facing.toFixed(2)} rad</span></div>
+        <div className="flex justify-between"><span className="text-gray-500">Tameable</span><span className="text-green-400">Yes</span></div>
+        <div className="flex justify-between"><span className="text-gray-500">AI</span><span className="text-purple-400">Wandering</span></div>
+      </div>
+
+      <Button variant="outline" className="w-full text-xs" data-testid="btn-export-animal"
+        onClick={() => {
+          const data = { type: state.animalType, facing: state.facing };
+          navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+        }}>
+        <Copy className="w-3 h-3 mr-1" /> Export Animal Data
       </Button>
     </div>
   );
@@ -1131,8 +1392,15 @@ export default function EntityEditorPage() {
     effectType: "melee_impact",
     effectScale: 1.5,
     effectDuration: 800,
+    canvasEffectColor: '#8b5cf6',
+    canvasEffectRadius: 40,
     structSubType: "tower",
     envSubType: "tree",
+    treeType: "standard",
+    rockType: "standard",
+    mountainType: "peak",
+    terrainPropType: "bush",
+    animalType: "deer",
   });
 
   const setState = useCallback((partial: Partial<EditorState>) => {
@@ -1143,6 +1411,7 @@ export default function EntityEditorPage() {
   const playingRef = useRef(true);
   const speedRef = useRef(1);
   const stateRef = useRef(state);
+  const effectPoolRef = useRef<EffectPool>(new EffectPool(64));
 
   useEffect(() => { playingRef.current = playing; }, [playing]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
@@ -1425,6 +1694,24 @@ export default function EntityEditorPage() {
     spriteEffectsRef.current.playEffect(type, canvas.width / 2, canvas.height / 2 + 10, scale, durationMs);
   }, []);
 
+  const playCanvasEffect = useCallback((type: EffectType) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2 + 20;
+    const s = stateRef.current;
+    // Offset so effects don't all stack on exact center
+    const jitterX = (Math.random() - 0.5) * 40;
+    const jitterY = (Math.random() - 0.5) * 20;
+    const angle = Math.random() * Math.PI * 2;
+    effectPoolRef.current.spawn(
+      cx + jitterX, cy + jitterY,
+      type, s.canvasEffectRadius, s.canvasEffectColor,
+      type.includes('telegraph') ? 1.2 : 0.6,
+      angle,
+    );
+  }, []);
+
   const renderFrame = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
     if (!canvas) { animFrameRef.current = requestAnimationFrame(renderFrame); return; }
@@ -1587,24 +1874,202 @@ export default function EntityEditorPage() {
       const scale = 2.5;
       ctx.translate(cx, cy + 30);
       ctx.scale(scale, scale);
-      if (s.structSubType === "nexus") {
-        vr.drawNexusVoxel(ctx, 0, 0, s.nexusTeamColor);
-      } else {
-        vr.drawTowerVoxel(ctx, 0, 0, s.towerTeamColor, s.towerTier);
+      switch (s.structSubType) {
+        case 'nexus': vr.drawNexusVoxel(ctx, 0, 0, s.nexusTeamColor); break;
+        case 'house': vr.drawHouseVoxel(ctx, 0, 0, s.towerTeamColor); break;
+        case 'bridge': vr.drawBridgeVoxel(ctx, 0, 0); break;
+        case 'well': vr.drawWellVoxel(ctx, 0, 0); break;
+        case 'shrine': vr.drawShrineVoxel(ctx, 0, 0, s.towerTeamColor); break;
+        case 'gate': vr.drawGateVoxel(ctx, 0, 0, s.towerTeamColor); break;
+        case 'wall': vr.drawWallSegmentVoxel(ctx, 0, 0, s.towerTeamColor); break;
+        default: vr.drawTowerVoxel(ctx, 0, 0, s.towerTeamColor, s.towerTier); break;
       }
       ctx.restore();
     } else if (activeTab === "environment") {
       ctx.save();
-      const scale = 3.0;
-      ctx.translate(cx, cy + 20);
-      ctx.scale(scale, scale);
-      if (s.envSubType === "rock") {
-        vr.drawRockVoxel(ctx, 0, 0, s.rockSeed);
+      if (s.envSubType === 'mountain') {
+        const scale = 2.0;
+        ctx.translate(cx, cy + 30);
+        ctx.scale(scale, scale);
+        switch (s.mountainType) {
+          case 'cliff': vr.drawCliffVoxel(ctx, 0, 0); break;
+          case 'mesa': vr.drawMesaVoxel(ctx, 0, 0); break;
+          case 'hill': vr.drawHillVoxel(ctx, 0, 0); break;
+          default: vr.drawMountainPeakVoxel(ctx, 0, 0); break;
+        }
+      } else if (s.envSubType === 'terrain_prop') {
+        const scale = 4.0;
+        ctx.translate(cx, cy + 10);
+        ctx.scale(scale, scale);
+        switch (s.terrainPropType) {
+          case 'flower_patch': vr.drawFlowerPatchVoxel(ctx, 0, 0, s.treeSeed); break;
+          case 'grass_tuft': vr.drawGrassTuftVoxel(ctx, 0, 0, s.treeSeed); break;
+          case 'mushroom_cluster': vr.drawMushroomClusterVoxel(ctx, 0, 0, s.treeSeed); break;
+          case 'barrel': vr.drawBarrelVoxel(ctx, 0, 0); break;
+          case 'hay_bale': vr.drawHayBaleVoxel(ctx, 0, 0); break;
+          default: vr.drawBushVoxel(ctx, 0, 0, s.treeSeed); break;
+        }
+      } else if (s.envSubType === 'rock') {
+        const scale = 3.0;
+        ctx.translate(cx, cy + 20);
+        ctx.scale(scale, scale);
+        switch (s.rockType) {
+          case 'crystal': vr.drawCrystalRockVoxel(ctx, 0, 0, s.rockSeed); break;
+          case 'mossy_boulder': vr.drawMossyBoulderVoxel(ctx, 0, 0, s.rockSeed); break;
+          case 'stalagmite': vr.drawStalagmiteVoxel(ctx, 0, 0, s.rockSeed); break;
+          default: vr.drawRockVoxel(ctx, 0, 0, s.rockSeed); break;
+        }
       } else {
-        vr.drawTreeVoxel(ctx, 0, 0, s.treeSeed);
+        const scale = 3.0;
+        ctx.translate(cx, cy + 20);
+        ctx.scale(scale, scale);
+        switch (s.treeType) {
+          case 'pine': vr.drawPineTreeVoxel(ctx, 0, 0, s.treeSeed); break;
+          case 'willow': vr.drawWillowVoxel(ctx, 0, 0, s.treeSeed); break;
+          case 'palm': vr.drawPalmVoxel(ctx, 0, 0, s.treeSeed); break;
+          case 'dead': vr.drawDeadTreeVoxel(ctx, 0, 0, s.treeSeed); break;
+          case 'mushroom': vr.drawMushroomTreeVoxel(ctx, 0, 0, s.treeSeed); break;
+          default: vr.drawTreeVoxel(ctx, 0, 0, s.treeSeed); break;
+        }
       }
       ctx.restore();
+    } else if (activeTab === "animals") {
+      ctx.save();
+      const scale = 4.0;
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+      switch (s.animalType) {
+        case 'boar': vr.drawBoarVoxel(ctx, 0, 0, s.facing, t); break;
+        case 'horse': vr.drawHorseVoxel(ctx, 0, 0, s.facing, t); break;
+        case 'hawk': vr.drawHawkVoxel(ctx, 0, 0, s.facing, t); break;
+        case 'fish': vr.drawFishVoxel(ctx, 0, 0, s.facing, t); break;
+        default: vr.drawDeerVoxel(ctx, 0, 0, s.facing, t); break;
+      }
+      ctx.restore();
+    } else if (activeTab === "effects") {
+      // Draw target dummy crosshair so effects have visual context
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1;
+      // Outer ring
+      ctx.beginPath(); ctx.arc(cx, cy, 60, 0, Math.PI * 2); ctx.stroke();
+      // Inner ring
+      ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.stroke();
+      // Crosshair lines
+      ctx.beginPath(); ctx.moveTo(cx - 70, cy); ctx.lineTo(cx + 70, cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy - 70); ctx.lineTo(cx, cy + 70); ctx.stroke();
+      // Center dot
+      ctx.fillStyle = 'rgba(255,180,50,0.25)';
+      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
+
+    // Update and render geometric canvas VFX
+    effectPoolRef.current.update(dt);
+    effectPoolRef.current.forEach((slot) => {
+      ctx.save();
+      ctx.globalAlpha = slot.opacity;
+      const r = slot.radius * slot.scaleMul;
+      const hex = slot.color;
+      switch (slot.type) {
+        case 'cast_circle': {
+          ctx.strokeStyle = hex;
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(slot.x, slot.y, r, 0, Math.PI * 2); ctx.stroke();
+          ctx.strokeStyle = hex + '66';
+          ctx.beginPath(); ctx.arc(slot.x, slot.y, r * 0.6, 0, Math.PI * 2); ctx.stroke();
+          break;
+        }
+        case 'impact_ring': {
+          ctx.strokeStyle = hex;
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(slot.x, slot.y, r, 0, Math.PI * 2); ctx.stroke();
+          break;
+        }
+        case 'aoe_blast': {
+          const grad = ctx.createRadialGradient(slot.x, slot.y, 0, slot.x, slot.y, r);
+          grad.addColorStop(0, hex + 'aa');
+          grad.addColorStop(1, hex + '00');
+          ctx.fillStyle = grad;
+          ctx.beginPath(); ctx.arc(slot.x, slot.y, r, 0, Math.PI * 2); ctx.fill();
+          break;
+        }
+        case 'skillshot_trail': {
+          const dx = Math.cos(slot.angle) * r * 2;
+          const dy = Math.sin(slot.angle) * r * 2;
+          ctx.strokeStyle = hex;
+          ctx.lineWidth = 4;
+          ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(slot.x, slot.y); ctx.lineTo(slot.x + dx, slot.y + dy); ctx.stroke();
+          break;
+        }
+        case 'cone_sweep': {
+          ctx.fillStyle = hex + '55';
+          ctx.beginPath();
+          ctx.moveTo(slot.x, slot.y);
+          ctx.arc(slot.x, slot.y, r * 1.5, slot.angle - 0.5, slot.angle + 0.5);
+          ctx.closePath(); ctx.fill();
+          break;
+        }
+        case 'dash_trail': {
+          const dx2 = Math.cos(slot.angle) * r * 2.5;
+          const dy2 = Math.sin(slot.angle) * r * 2.5;
+          ctx.strokeStyle = hex + '88';
+          ctx.lineWidth = 6;
+          ctx.lineCap = 'round';
+          ctx.setLineDash([8, 6]);
+          ctx.beginPath(); ctx.moveTo(slot.x, slot.y); ctx.lineTo(slot.x + dx2, slot.y + dy2); ctx.stroke();
+          ctx.setLineDash([]);
+          break;
+        }
+        case 'melee_slash':
+        case 'heavy_slash':
+        case 'enemy_slash': {
+          const arcW = slot.type === 'heavy_slash' ? 1.0 : 0.7;
+          ctx.strokeStyle = hex;
+          ctx.lineWidth = slot.type === 'heavy_slash' ? 5 : 3;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.arc(slot.x, slot.y, r, slot.angle - arcW, slot.angle + arcW);
+          ctx.stroke();
+          break;
+        }
+        case 'melee_lunge': {
+          const lx = Math.cos(slot.angle) * r * 1.8;
+          const ly = Math.sin(slot.angle) * r * 1.8;
+          ctx.strokeStyle = hex;
+          ctx.lineWidth = 3;
+          ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(slot.x, slot.y); ctx.lineTo(slot.x + lx, slot.y + ly); ctx.stroke();
+          // Tip arrow
+          ctx.fillStyle = hex;
+          ctx.beginPath();
+          ctx.arc(slot.x + lx, slot.y + ly, 4, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+        }
+        case 'enemy_aoe_telegraph': {
+          ctx.strokeStyle = hex + 'aa';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 4]);
+          ctx.beginPath(); ctx.arc(slot.x, slot.y, r, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = hex + '18';
+          ctx.beginPath(); ctx.arc(slot.x, slot.y, r, 0, Math.PI * 2); ctx.fill();
+          break;
+        }
+        case 'enemy_aoe_blast': {
+          const g2 = ctx.createRadialGradient(slot.x, slot.y, 0, slot.x, slot.y, r);
+          g2.addColorStop(0, hex + 'cc');
+          g2.addColorStop(0.7, hex + '44');
+          g2.addColorStop(1, hex + '00');
+          ctx.fillStyle = g2;
+          ctx.beginPath(); ctx.arc(slot.x, slot.y, r, 0, Math.PI * 2); ctx.fill();
+          break;
+        }
+      }
+      ctx.restore();
+    });
 
     spriteEffectsRef.current.update(dt);
     spriteEffectsRef.current.render(ctx);
@@ -1615,9 +2080,10 @@ export default function EntityEditorPage() {
     const label = activeTab === "heroes" ? `${s.race} ${s.heroClass} | ${tlActive ? 'custom' : s.animState}`
       : activeTab === "minions" ? `Minion: ${s.minionType}`
       : activeTab === "monsters" ? `Monster: ${s.mobType}`
-      : activeTab === "structures" ? `Structure`
+      : activeTab === "structures" ? `Structure: ${s.structSubType}`
       : activeTab === "effects" ? `Effect: ${s.effectType}`
-      : `Environment`;
+      : activeTab === "animals" ? `Animal: ${s.animalType}`
+      : `Env: ${s.envSubType}`;
     ctx.fillText(`${label}  t:${t.toFixed(3)}  ${speedRef.current.toFixed(1)}x`, 8, canvas.height - 8);
 
     animFrameRef.current = requestAnimationFrame(renderFrame);
@@ -1848,9 +2314,10 @@ export default function EntityEditorPage() {
                 {activeTab === "heroes" ? `${state.race} ${state.heroClass}` :
                  activeTab === "minions" ? `${state.minionType} minion` :
                  activeTab === "monsters" ? `${state.mobType} mob` :
-                 activeTab === "structures" ? `Structure` :
+                 activeTab === "structures" ? state.structSubType :
                  activeTab === "effects" ? state.effectType :
-                 `Environment`}
+                 activeTab === "animals" ? state.animalType :
+                 state.envSubType}
               </div>
             </div>
             <div className="absolute bottom-3 right-3 flex gap-2">
@@ -1901,10 +2368,14 @@ export default function EntityEditorPage() {
               <StructuresPanel state={state} setState={setState} />
             )}
             {activeTab === "effects" && (
-              <EffectsPanel state={state} setState={setState} onPlayEffect={playEffect} />
+              <EffectsPanel state={state} setState={setState} onPlayEffect={playEffect} onPlayCanvasEffect={playCanvasEffect} />
             )}
             {activeTab === "environment" && (
               <EnvironmentPanel state={state} setState={setState} />
+            )}
+            {activeTab === "animals" && (
+              <AnimalsPanel state={state} setState={setState} playing={playing} setPlaying={setPlaying}
+                speed={speed} setSpeed={setSpeed} animTimer={animTimer} resetTimer={resetTimer} />
             )}
           </div>
         </div>

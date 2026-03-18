@@ -1470,6 +1470,243 @@ function buildRockModel(seed: number): VoxelModel {
   return model;
 }
 
+// ── New Tree Models ──────────────────────────────────────────────
+
+function buildPineTreeModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 14 + (seed % 2);
+  const w = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  // Trunk
+  for (let z = 0; z < 5; z++) model[z][2][2] = shade('#3a2210', 0.85 + (seed % 3) * 0.05);
+  // Conical canopy
+  const darkGreen = '#0e4e0e'; const midGreen = '#1a5a1a';
+  for (let z = 4; z < h - 1; z++) {
+    const r = Math.max(0, Math.floor((h - 1 - z) / 3));
+    for (let y = 2 - r; y <= 2 + r; y++) for (let x = 2 - r; x <= 2 + r; x++) {
+      if (y >= 0 && y < w && x >= 0 && x < w) {
+        model[z][y][x] = (x + y + z + seed) % 3 === 0 ? darkGreen : midGreen;
+      }
+    }
+  }
+  // Snow cap
+  model[h - 1][2][2] = '#ffffff';
+  if (seed % 2 === 0) { model[h - 2][1][2] = '#eeeeff'; model[h - 2][3][2] = '#eeeeff'; }
+  return model;
+}
+
+function buildWillowModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 12; const w = 7;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  // Trunk
+  for (let z = 0; z < 6; z++) {
+    model[z][3][3] = '#4a3a1a';
+    if (z > 2) { model[z][3][2] = shade('#4a3a1a', 0.9); model[z][3][4] = shade('#4a3a1a', 0.9); }
+  }
+  // Canopy dome
+  const leafLight = '#4a9a4a'; const leafDark = '#2a7a2a';
+  for (let z = 5; z < 10; z++) {
+    const r = z < 8 ? 3 : (z < 9 ? 2 : 1);
+    for (let y = 3 - r; y <= 3 + r; y++) for (let x = 3 - r; x <= 3 + r; x++) {
+      if (y >= 0 && y < w && x >= 0 && x < w) model[z][y][x] = (x + y + seed) % 2 === 0 ? leafLight : leafDark;
+    }
+  }
+  // Droopy vines at edges
+  for (let dy = -2; dy <= 2; dy += 4) {
+    for (let z = 3; z < 7; z++) {
+      const yy = 3 + dy; if (yy >= 0 && yy < w) model[z][yy][3] = shade(leafDark, 0.8);
+    }
+  }
+  return model;
+}
+
+function buildPalmModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 14; const w = 7;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  // Thin curved trunk
+  const bark = '#6a5a3a';
+  for (let z = 0; z < 10; z++) {
+    const lean = z > 4 ? Math.floor((z - 4) / 3) : 0;
+    model[z][3][3 + lean] = bark;
+  }
+  // Frond crown
+  const frond = '#2a8a2a'; const frondLight = '#3a9a3a';
+  const cx = 3 + 2; // lean offset at top
+  for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) {
+    if (Math.abs(dx) + Math.abs(dy) <= 3 && (Math.abs(dx) + Math.abs(dy) > 0)) {
+      const xx = cx + dx; const yy = 3 + dy;
+      if (xx >= 0 && xx < w && yy >= 0 && yy < w) {
+        model[10][yy][xx] = (dx + dy + seed) % 2 === 0 ? frond : frondLight;
+        if (Math.abs(dx) + Math.abs(dy) >= 2) model[9][yy][xx] = shade(frond, 0.85);
+      }
+    }
+  }
+  model[11][3][cx] = frondLight;
+  return model;
+}
+
+function buildDeadTreeModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 10 + (seed % 2); const w = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const bark = '#3a2a1a'; const barkLight = '#4a3a2a';
+  // Main trunk
+  for (let z = 0; z < h - 2; z++) model[z][2][2] = z % 3 === 0 ? barkLight : bark;
+  // Gnarled branches — no leaves
+  model[5][2][3] = barkLight; model[5][2][4] = shade(bark, 0.7);
+  model[6][1][2] = barkLight; model[6][0][2] = shade(bark, 0.7);
+  model[7][2][1] = bark; model[8][3][2] = barkLight;
+  if (seed % 2 === 0) { model[4][3][2] = bark; model[3][4][2] = shade(bark, 0.6); }
+  return model;
+}
+
+function buildMushroomTreeModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 10; const w = 7;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  // Thick stem
+  const stem = '#d4a574';
+  for (let z = 0; z < 6; z++) {
+    model[z][3][3] = stem; model[z][3][2] = shade(stem, 0.9); model[z][2][3] = shade(stem, 0.9);
+  }
+  // Flat mushroom cap
+  const capMain = '#cc4444'; const capLight = '#ff6666'; const spot = '#ffffff';
+  for (let z = 6; z < 9; z++) {
+    const r = z === 6 ? 3 : (z === 7 ? 2 : 1);
+    for (let y = 3 - r; y <= 3 + r; y++) for (let x = 3 - r; x <= 3 + r; x++) {
+      if (y >= 0 && y < w && x >= 0 && x < w) {
+        const isSpot = (x + y + seed) % 5 === 0;
+        model[z][y][x] = isSpot ? spot : ((x + y) % 2 === 0 ? capMain : capLight);
+      }
+    }
+  }
+  model[9][3][3] = capMain;
+  return model;
+}
+
+// ── New Rock Models ──────────────────────────────────────────────
+
+function buildCrystalRockModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 8; const w = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const colors = ['#7b3ff2', '#00e5ff', '#b388ff', '#e0e0e0'];
+  // Base cluster
+  for (let z = 0; z < 3; z++) for (let y = 1; y < 4; y++) for (let x = 1; x < 4; x++) {
+    model[z][y][x] = colors[(x + y + z + seed) % colors.length];
+  }
+  // Jagged spires
+  model[3][2][2] = colors[0]; model[4][2][2] = colors[1]; model[5][2][2] = colors[0];
+  model[3][1][1] = colors[2]; model[4][1][1] = colors[3];
+  model[3][3][3] = colors[1]; model[4][3][3] = colors[2]; model[5][3][3] = colors[1];
+  model[6][2][2] = colors[3]; model[7][2][2] = colors[1];
+  return model;
+}
+
+function buildMossyBoulderModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 4; const w = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const rock = '#4a4a5a'; const moss = '#2a6a2a'; const mossLight = '#3a5a3a';
+  // Rounded base
+  for (let z = 0; z < 3; z++) {
+    const r = z < 2 ? 2 : 1;
+    for (let y = 2 - r; y <= 2 + r; y++) for (let x = 2 - r; x <= 2 + r; x++) {
+      if (y >= 0 && y < w && x >= 0 && x < w) {
+        const hasMoss = (x + y + z + seed) % 4 === 0;
+        model[z][y][x] = hasMoss ? (z > 0 ? moss : mossLight) : rock;
+      }
+    }
+  }
+  model[3][2][2] = moss;
+  return model;
+}
+
+function buildStalagmiteModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 10; const w = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const colors = ['#5a4a3a', '#4a3a2a', '#6a5a4a'];
+  // Wide base tapering to point
+  for (let z = 0; z < h; z++) {
+    const r = z < 3 ? 1 : 0;
+    for (let y = 1 - r; y <= 1 + r; y++) for (let x = 1 - r; x <= 1 + r; x++) {
+      if (y >= 0 && y < w && x >= 0 && x < w) {
+        model[z][y][x] = colors[(z + seed) % colors.length];
+      }
+    }
+  }
+  return model;
+}
+
+// ── Mountain Models ──────────────────────────────────────────────
+
+function buildMountainPeakModel(): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 16; const w = 9;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const stone = '#5a5a6a'; const stoneLight = '#7a7a8a'; const snow = '#ffffff'; const stoneDark = '#3a3a4a';
+  for (let z = 0; z < h; z++) {
+    const r = Math.max(0, Math.floor((h - z) * 4 / h));
+    for (let y = 4 - r; y <= 4 + r; y++) for (let x = 4 - r; x <= 4 + r; x++) {
+      if (y >= 0 && y < w && x >= 0 && x < w) {
+        const isSnow = z >= h - 4;
+        model[z][y][x] = isSnow ? snow : ((x + y + z) % 3 === 0 ? stoneLight : (z < 4 ? stoneDark : stone));
+      }
+    }
+  }
+  return model;
+}
+
+function buildCliffModel(): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 12; const w = 9; const d = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < d; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const colors = ['#5a4a3a', '#6a5a4a', '#4a3a2a'];
+  for (let z = 0; z < h; z++) {
+    const depth = z > 8 ? 2 : (z > 4 ? 3 : 4);
+    for (let y = 0; y < depth; y++) for (let x = 0; x < w; x++) {
+      model[z][y][x] = colors[(x + z) % colors.length];
+    }
+  }
+  return model;
+}
+
+function buildMesaModel(): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 8; const w = 9;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const sand = '#8a6a4a'; const sandLight = '#9a7a5a'; const sandDark = '#6a4a2a';
+  for (let z = 0; z < h; z++) {
+    const r = z < 4 ? 4 : (z < 6 ? 3 : (z < 7 ? 3 : 4));
+    for (let y = 4 - r; y <= 4 + r; y++) for (let x = 4 - r; x <= 4 + r; x++) {
+      if (y >= 0 && y < w && x >= 0 && x < w) {
+        model[z][y][x] = z === h - 1 ? sandLight : ((x + y + z) % 3 === 0 ? sandDark : sand);
+      }
+    }
+  }
+  return model;
+}
+
+function buildHillModel(): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 6; const w = 9;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const grass = '#3a6a2a'; const grassLight = '#4a7a3a'; const dirt = '#5a4a3a';
+  for (let z = 0; z < h; z++) {
+    const r = Math.max(0, 4 - z);
+    for (let y = 4 - r; y <= 4 + r; y++) for (let x = 4 - r; x <= 4 + r; x++) {
+      if (y >= 0 && y < w && x >= 0 && x < w) {
+        const d = Math.abs(x - 4) + Math.abs(y - 4);
+        if (d <= r) model[z][y][x] = z === 0 ? dirt : ((x + y) % 2 === 0 ? grass : grassLight);
+      }
+    }
+  }
+  return model;
+}
+
 function buildCampfireModel(animTimer: number): VoxelModel {
   const model: VoxelModel = [];
   const h = 8; const w = 5;
@@ -1569,6 +1806,321 @@ function buildNexusModel(teamColor: string): VoxelModel {
   model[5][3][3] = shade(teamColor, 1.5);
   model[6][3][3] = shade(teamColor, 1.3);
   model[7][3][3] = '#ffd700';
+  return model;
+}
+
+// ── Terrain Props ──────────────────────────────────────────────
+
+function buildBushModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 3; const w = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const greens = ['#1a5a1a', '#2a6a2a', '#3a7a3a'];
+  for (let z = 0; z < 2; z++) for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) {
+    if (z === 0 || (Math.abs(x - 1) + Math.abs(y - 1) <= 1))
+      model[z][y][x] = greens[(x + y + z + seed) % greens.length];
+  }
+  model[2][1][1] = greens[seed % greens.length];
+  return model;
+}
+
+function buildFlowerPatchModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 3; const w = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const green = '#2a7a2a';
+  const petals = ['#ff4488', '#ffaa22', '#4488ff', '#ff66aa', '#ffdd44'];
+  // Grass base
+  for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) model[0][y][x] = green;
+  // Stems
+  model[1][0][0] = green; model[1][1][2] = green; model[1][2][1] = green;
+  // Flower heads
+  model[2][0][0] = petals[(seed) % petals.length];
+  model[2][1][2] = petals[(seed + 1) % petals.length];
+  model[2][2][1] = petals[(seed + 2) % petals.length];
+  return model;
+}
+
+function buildGrassTuftModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 4; const w = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const colors = ['#3a7a2a', '#4a8a3a', '#5a9a4a'];
+  for (let z = 0; z < h; z++) {
+    const spread = z < 2 ? 1 : 0;
+    for (let x = 1 - spread; x <= 1 + spread; x++) {
+      if (x >= 0 && x < w) model[z][1][x] = colors[(x + z + seed) % colors.length];
+    }
+    if (z < 3 && seed % 2 === 0) model[z][0][1] = colors[(z + seed) % colors.length];
+  }
+  return model;
+}
+
+function buildMushroomClusterModel(seed: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 3; const w = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const stem = '#d4a574'; const cap = '#cc4444'; const capDark = '#8b4513';
+  // Big mushroom
+  model[0][1][1] = stem; model[1][1][1] = stem; model[2][1][1] = cap;
+  model[2][0][1] = capDark; model[2][1][0] = capDark; model[2][1][2] = capDark;
+  // Small mushroom
+  model[0][2][0] = stem; model[1][2][0] = (seed % 2 === 0) ? cap : capDark;
+  return model;
+}
+
+function buildBarrelModel(): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 4; const w = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const wood = '#8b6914'; const woodDark = '#6a4a0a'; const band = '#888888';
+  for (let z = 0; z < h; z++) {
+    const isBand = z === 0 || z === h - 1;
+    for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) {
+      if (Math.abs(x - 1) + Math.abs(y - 1) <= 1) {
+        model[z][y][x] = isBand ? band : ((x + y) % 2 === 0 ? wood : woodDark);
+      }
+    }
+  }
+  return model;
+}
+
+function buildHayBaleModel(): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 3; const w = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const hay = ['#c8a832', '#b89828', '#d8b842'];
+  for (let z = 0; z < h; z++) for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) {
+    model[z][y][x] = hay[(x + y + z) % hay.length];
+  }
+  return model;
+}
+
+// ── New Structures ──────────────────────────────────────────────
+
+function buildHouseModel(teamColor: string): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 8; const w = 7;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const wall = '#6a5a4a'; const wallDark = '#5a4a3a'; const roof = '#8b6914'; const chimney = '#3a3a4a';
+  // Walls (z 0-4)
+  for (let z = 0; z < 5; z++) for (let y = 1; y < 6; y++) for (let x = 1; x < 6; x++) {
+    if (y === 1 || y === 5 || x === 1 || x === 5) {
+      model[z][y][x] = (x + y + z) % 3 === 0 ? wallDark : wall;
+    }
+  }
+  // Door
+  model[0][3][1] = null; model[1][3][1] = null;
+  // Windows
+  model[2][2][1] = '#88ccff'; model[2][4][1] = '#88ccff';
+  model[2][2][5] = '#88ccff'; model[2][4][5] = '#88ccff';
+  // Floor
+  for (let y = 2; y < 5; y++) for (let x = 2; x < 5; x++) model[0][y][x] = wallDark;
+  // Roof (pyramid)
+  for (let z = 5; z < 8; z++) {
+    const r = 3 - (z - 5);
+    for (let y = 3 - r; y <= 3 + r; y++) for (let x = 3 - r; x <= 3 + r; x++) {
+      if (y >= 0 && y < w && x >= 0 && x < w) model[z][y][x] = roof;
+    }
+  }
+  // Chimney
+  model[5][5][5] = chimney; model[6][5][5] = chimney; model[7][5][5] = chimney;
+  // Team color door frame
+  model[0][3][1] = teamColor; model[2][3][1] = teamColor;
+  return model;
+}
+
+function buildBridgeModel(): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 4; const w = 9; const d = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < d; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const stone = '#5a5a6a'; const wood = '#6a5a4a'; const stoneDark = '#4a4a5a';
+  // Stone arch supports
+  for (let z = 0; z < 3; z++) {
+    model[z][2][0] = stone; model[z][2][w - 1] = stone;
+    model[z][2][1] = stoneDark; model[z][2][w - 2] = stoneDark;
+  }
+  // Deck
+  for (let x = 0; x < w; x++) for (let y = 1; y < 4; y++) {
+    model[3][y][x] = (x + y) % 2 === 0 ? wood : stone;
+  }
+  // Rails
+  for (let x = 0; x < w; x += 2) {
+    model[3][0][x] = stoneDark; model[3][4][x] = stoneDark;
+  }
+  return model;
+}
+
+function buildWellModel(): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 6; const w = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const stone = '#5a5a6a'; const wood = '#6a5a4a'; const water = '#3a7aaa';
+  // Stone ring
+  for (let z = 0; z < 3; z++) for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) {
+    if ((y === 0 || y === w - 1 || x === 0 || x === w - 1) && !(y === 0 && x === 0) && !(y === 0 && x === w-1) && !(y === w-1 && x === 0) && !(y === w-1 && x === w-1))
+      model[z][y][x] = stone;
+  }
+  // Water inside
+  model[0][1][1] = water; model[0][2][2] = water; model[0][1][2] = water; model[0][2][1] = water;
+  model[0][1][3] = water; model[0][2][3] = water; model[0][3][1] = water; model[0][3][2] = water; model[0][3][3] = water;
+  // Support posts
+  model[3][0][0] = wood; model[3][0][w-1] = wood;
+  model[4][0][0] = wood; model[4][0][w-1] = wood;
+  // Roof beam
+  for (let x = 0; x < w; x++) model[5][0][x] = wood;
+  return model;
+}
+
+function buildShrineModel(teamColor: string): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 7; const w = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < w; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const stone = '#3a3a4a'; const glow = '#8b5cf6'; const gold = '#ffd700';
+  // Stone base
+  for (let y = 1; y < 4; y++) for (let x = 1; x < 4; x++) { model[0][y][x] = stone; model[1][y][x] = stone; }
+  // Pillar corners
+  for (let z = 2; z < 5; z++) {
+    model[z][1][1] = stone; model[z][1][3] = stone; model[z][3][1] = stone; model[z][3][3] = stone;
+  }
+  // Glowing center
+  model[2][2][2] = glow; model[3][2][2] = shade(glow, 1.3); model[4][2][2] = glow;
+  // Gold cap
+  model[5][2][2] = gold; model[6][2][2] = teamColor;
+  return model;
+}
+
+function buildGateModel(teamColor: string): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 10; const w = 7; const d = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < d; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const stone = '#3a3a4a'; const stoneDark = '#2a2a3e'; const wood = '#6a5a4a';
+  // Left and right pillars
+  for (let z = 0; z < h; z++) for (let y = 0; y < d; y++) {
+    model[z][y][0] = (z + y) % 2 === 0 ? stone : stoneDark;
+    model[z][y][1] = stone;
+    model[z][y][w - 2] = stone;
+    model[z][y][w - 1] = (z + y) % 2 === 0 ? stone : stoneDark;
+  }
+  // Arch top
+  for (let x = 2; x < w - 2; x++) for (let y = 0; y < d; y++) {
+    model[h - 1][y][x] = stone;
+    model[h - 2][y][x] = teamColor;
+  }
+  // Portcullis bars
+  for (let z = 0; z < h - 2; z++) {
+    model[z][1][3] = z % 2 === 0 ? wood : null;
+  }
+  return model;
+}
+
+function buildWallSegmentModel(teamColor: string): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 6; const w = 7; const d = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < d; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const stone = '#3a3a4a'; const stoneDark = '#2a2a3e'; const stoneLight = '#4a4a5a';
+  // Main wall body
+  for (let z = 0; z < h - 1; z++) for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) {
+    model[z][y][x] = (x + y + z) % 3 === 0 ? stoneDark : stone;
+  }
+  // Battlements (merlons)
+  for (let x = 0; x < w; x += 2) for (let y = 0; y < d; y++) {
+    model[h - 1][y][x] = teamColor;
+  }
+  // Walk path (indent top)
+  for (let x = 1; x < w; x += 2) model[h - 1][1][x] = stoneLight;
+  return model;
+}
+
+// ── Animal Models ──────────────────────────────────────────────
+
+function buildDeerModel(animTimer: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 7; const w = 5; const d = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < d; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const body = '#8b6914'; const bodyLight = '#a07828'; const white = '#ffffff';
+  const walk = Math.sin(animTimer * 4) * 0.5;
+  // Legs
+  model[0][1][1] = body; model[0][1][3] = body;
+  model[1][1][1] = body; model[1][1][3] = body;
+  // Body
+  for (let x = 1; x < 4; x++) { model[2][1][x] = body; model[3][1][x] = bodyLight; }
+  // Neck & head
+  model[4][1][4] = body; model[5][1][4] = bodyLight;
+  // Antlers
+  model[6][0][4] = white; model[6][2][4] = white;
+  // Tail
+  model[3][1][0] = white;
+  return model;
+}
+
+function buildBoarModel(animTimer: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 4; const w = 5; const d = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < d; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const body = '#5a3a2a'; const bodyLight = '#7a5a4a'; const tusk = '#d4a574';
+  // Legs
+  model[0][0][1] = body; model[0][2][1] = body; model[0][0][3] = body; model[0][2][3] = body;
+  // Stocky body
+  for (let x = 1; x < 4; x++) for (let y = 0; y < d; y++) {
+    model[1][y][x] = body; model[2][y][x] = bodyLight;
+  }
+  // Head + tusks
+  model[2][1][4] = body; model[3][1][4] = bodyLight;
+  model[2][0][4] = tusk; model[2][2][4] = tusk;
+  return model;
+}
+
+function buildHorseModel(animTimer: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 8; const w = 7; const d = 3;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < d; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const body = '#5a3a1a'; const bodyLight = '#8a6a3a'; const mane = '#1a1a1a';
+  // Legs
+  for (let z = 0; z < 3; z++) {
+    model[z][1][1] = body; model[z][1][5] = body;
+  }
+  // Body
+  for (let x = 1; x < 6; x++) { model[3][1][x] = body; model[4][1][x] = bodyLight; }
+  model[3][0][2] = body; model[3][2][2] = body; model[3][0][4] = body; model[3][2][4] = body;
+  // Neck
+  model[5][1][5] = body; model[6][1][5] = bodyLight;
+  // Head
+  model[7][1][5] = bodyLight; model[7][1][6] = body;
+  // Mane
+  model[5][0][5] = mane; model[6][0][5] = mane; model[7][0][5] = mane;
+  // Tail
+  model[4][1][0] = mane; model[3][1][0] = mane;
+  return model;
+}
+
+function buildHawkModel(animTimer: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 3; const w = 5; const d = 5;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < d; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const body = '#5a3a1a'; const wing = '#f5f5dc'; const beak = '#1a1a1a';
+  const wingFlap = Math.sin(animTimer * 6);
+  // Body center
+  model[1][2][2] = body; model[1][2][3] = body;
+  // Head + beak
+  model[2][2][4] = body; model[2][2][4] = beak;
+  // Wings
+  const wingZ = wingFlap > 0 ? 2 : 0;
+  model[wingZ][0][2] = wing; model[wingZ][1][2] = wing;
+  model[wingZ][3][2] = wing; model[wingZ][4][2] = wing;
+  model[1][0][2] = wing; model[1][4][2] = wing;
+  // Tail
+  model[1][2][0] = body; model[0][2][0] = body;
+  return model;
+}
+
+function buildFishModel(animTimer: number): VoxelModel {
+  const model: VoxelModel = [];
+  const h = 2; const w = 3; const d = 1;
+  for (let z = 0; z < h; z++) { model[z] = []; for (let y = 0; y < d; y++) { model[z][y] = []; for (let x = 0; x < w; x++) model[z][y][x] = null; } }
+  const body = '#4488cc'; const belly = '#66aadd'; const fin = '#ccddee';
+  model[0][0][0] = fin; model[0][0][1] = body; model[0][0][2] = body;
+  model[1][0][1] = belly; model[1][0][2] = fin;
   return model;
 }
 
@@ -3020,6 +3572,129 @@ export class VoxelRenderer {
       return offscreen;
     });
     ctx.drawImage(cached, x - 15, y - 20);
+  }
+
+  // ── New Tree draws ──
+  drawPineTreeVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildPineTreeModel(seed);
+    this.renderVoxelModel(ctx, x, y - 40, model, 3, 0);
+  }
+  drawWillowVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildWillowModel(seed);
+    this.renderVoxelModel(ctx, x, y - 30, model, 3, 0);
+  }
+  drawPalmVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildPalmModel(seed);
+    this.renderVoxelModel(ctx, x, y - 40, model, 3, 0);
+  }
+  drawDeadTreeVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildDeadTreeModel(seed);
+    this.renderVoxelModel(ctx, x, y - 28, model, 3, 0);
+  }
+  drawMushroomTreeVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildMushroomTreeModel(seed);
+    this.renderVoxelModel(ctx, x, y - 26, model, 3, 0);
+  }
+  // ── New Rock draws ──
+  drawCrystalRockVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildCrystalRockModel(seed);
+    this.renderVoxelModel(ctx, x, y - 20, model, 3, 0);
+  }
+  drawMossyBoulderVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildMossyBoulderModel(seed);
+    this.renderVoxelModel(ctx, x, y - 10, model, 3, 0);
+  }
+  drawStalagmiteVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildStalagmiteModel(seed);
+    this.renderVoxelModel(ctx, x, y - 26, model, 3, 0);
+  }
+  // ── Mountain draws ──
+  drawMountainPeakVoxel(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const model = buildMountainPeakModel();
+    this.renderVoxelModel(ctx, x, y - 44, model, 3, 0);
+  }
+  drawCliffVoxel(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const model = buildCliffModel();
+    this.renderVoxelModel(ctx, x, y - 32, model, 3, 0);
+  }
+  drawMesaVoxel(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const model = buildMesaModel();
+    this.renderVoxelModel(ctx, x, y - 20, model, 3, 0);
+  }
+  drawHillVoxel(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const model = buildHillModel();
+    this.renderVoxelModel(ctx, x, y - 14, model, 3, 0);
+  }
+  // ── Terrain prop draws ──
+  drawBushVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildBushModel(seed);
+    this.renderVoxelModel(ctx, x, y - 6, model, 3, 0);
+  }
+  drawFlowerPatchVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildFlowerPatchModel(seed);
+    this.renderVoxelModel(ctx, x, y - 6, model, 3, 0);
+  }
+  drawGrassTuftVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildGrassTuftModel(seed);
+    this.renderVoxelModel(ctx, x, y - 8, model, 3, 0);
+  }
+  drawMushroomClusterVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+    const model = buildMushroomClusterModel(seed);
+    this.renderVoxelModel(ctx, x, y - 6, model, 3, 0);
+  }
+  drawBarrelVoxel(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const model = buildBarrelModel();
+    this.renderVoxelModel(ctx, x, y - 8, model, 3, 0);
+  }
+  drawHayBaleVoxel(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const model = buildHayBaleModel();
+    this.renderVoxelModel(ctx, x, y - 6, model, 3, 0);
+  }
+  // ── New Structure draws ──
+  drawHouseVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, teamColor: string) {
+    const model = buildHouseModel(teamColor);
+    this.renderVoxelModel(ctx, x, y - 20, model, 3, 0);
+  }
+  drawBridgeVoxel(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const model = buildBridgeModel();
+    this.renderVoxelModel(ctx, x, y - 8, model, 3, 0);
+  }
+  drawWellVoxel(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    const model = buildWellModel();
+    this.renderVoxelModel(ctx, x, y - 14, model, 3, 0);
+  }
+  drawShrineVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, teamColor: string) {
+    const model = buildShrineModel(teamColor);
+    this.renderVoxelModel(ctx, x, y - 16, model, 3, 0);
+  }
+  drawGateVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, teamColor: string) {
+    const model = buildGateModel(teamColor);
+    this.renderVoxelModel(ctx, x, y - 26, model, 3, 0);
+  }
+  drawWallSegmentVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, teamColor: string) {
+    const model = buildWallSegmentModel(teamColor);
+    this.renderVoxelModel(ctx, x, y - 14, model, 3, 0);
+  }
+  // ── Animal draws ──
+  drawDeerVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, animTimer: number) {
+    const model = buildDeerModel(animTimer);
+    this.renderVoxelModel(ctx, x, y - 16, model, 3, facing);
+  }
+  drawBoarVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, animTimer: number) {
+    const model = buildBoarModel(animTimer);
+    this.renderVoxelModel(ctx, x, y - 8, model, 3, facing);
+  }
+  drawHorseVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, animTimer: number) {
+    const model = buildHorseModel(animTimer);
+    this.renderVoxelModel(ctx, x, y - 20, model, 3, facing);
+  }
+  drawHawkVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, animTimer: number) {
+    const model = buildHawkModel(animTimer);
+    this.renderVoxelModel(ctx, x, y - 8, model, 3, facing);
+  }
+  drawFishVoxel(ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, animTimer: number) {
+    const model = buildFishModel(animTimer);
+    this.renderVoxelModel(ctx, x, y - 4, model, 3, facing);
   }
 
   drawTerrainTile(ctx: CanvasRenderingContext2D, x: number, y: number, tileSize: number, terrain: TerrainType, tileX: number, tileY: number) {

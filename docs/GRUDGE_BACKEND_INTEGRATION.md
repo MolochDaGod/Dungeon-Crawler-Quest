@@ -34,7 +34,8 @@ https://molochdagod.github.io/ObjectStore
 | `/api/v1/attributes.json` | 8 attribute definitions, formulas, colors | 5 min |
 | `/api/v1/professions.json` | Gathering & crafting professions, skill trees, XP tables | 5 min |
 | `/api/v1/armor.json` | Armor sets by material (cloth/leather/metal), stats | 5 min |
-| `/api/v1/equipment.json` | Equipment slot config, tier multipliers, upgrade costs | 5 min |
+|| `/api/v1/equipment.json` | Equipment slot config, tier multipliers, upgrade costs | 5 min |
+|| `/api/v1/voxelAssets.json` | Voxel asset catalog: 7 categories (trees, rocks, mountains, terrain_props, structures, animals, enemies) | 5 min |
 
 ### Best Practices
 
@@ -89,6 +90,7 @@ All ObjectStore responses have TypeScript interfaces in `grudge-api.ts`:
 - `OSProfessionsData` — profession trees and XP tables
 - `OSArmorData` — armor sets and stats
 - `OSEquipmentData` — equipment configuration
+- `OSVoxelAssetsData` — voxel asset catalog (categories, models, properties)
 
 Import and use these types to catch API shape changes at compile time.
 
@@ -363,6 +365,13 @@ The following systems were added recently and need backend persistence:
 - 5 new enemy types with custom voxel art in `drawEnemyVoxel()`: Tentacle Horror, Timber Wolf, Cave Bear, Pit Demon, Sky Hawk
 - Each has distinctive animations: tentacle writhe, wolf gallop/bite, bear claw swipe, demon fire aura, hawk wing-beat/dive
 - Templates in `ENEMY_TEMPLATES`, spawns distributed across Forest, Swamp, Mountain, Dragon's Reach, and Volcano zones
+
+### Voxel Asset Library (`voxelAssets.json`)
+- 46 voxel assets in 7 categories via ObjectStore: trees(11), rocks(7), mountains(4), terrain_props(6), structures(8), animals(5), enemies(5)
+- 29 new model builders in `voxel.ts`: pine/willow/palm/dead/mushroom trees, crystal/mossy/stalagmite rocks, peak/cliff/mesa/hill mountains, bush/flower/grass/mushroom/barrel/hay terrain props, house/bridge/well/shrine/gate/wall structures, deer/boar/horse/hawk/fish animals
+- Entity editor (`entity-editor.tsx`) expanded with 7 tabs: Heroes, Minions, Monsters, Structures (8 types), Effects, Environment (4 categories), Animals (5 types)
+- All models previewable with live canvas rendering, seed variation, team colors, facing/animation controls
+- **Persistence:** Asset catalog is static — no save needed
 
 ### Melee Knockback + Hitstun
 - Player melee attacks push hit enemies to the edge of the slash arc (range × 0.8)

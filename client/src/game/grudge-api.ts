@@ -194,6 +194,28 @@ export interface OSEquipmentData {
   weaponTypes: Record<string, { name: string; icon: string; iconUrl: string; hand: string }>;
 }
 
+export interface OSVoxelAssetItem {
+  id: string;
+  name: string;
+  voxelSize: [number, number, number];
+  colors: string[];
+  animated: boolean;
+  description: string;
+}
+
+export interface OSVoxelAssetCategory {
+  name: string;
+  emoji: string;
+  items: OSVoxelAssetItem[];
+}
+
+export interface OSVoxelAssetsData {
+  version: string;
+  description: string;
+  totalAssets: number;
+  categories: Record<string, OSVoxelAssetCategory>;
+}
+
 // ── Cache ──────────────────────────────────────────────────────
 
 interface CacheEntry<T> { data: T; timestamp: number; }
@@ -246,6 +268,10 @@ export const grudgeApi = {
     return fetchCached('/api/v1/equipment.json');
   },
 
+  async getVoxelAssets(): Promise<OSVoxelAssetsData> {
+    return fetchCached('/api/v1/voxelAssets.json');
+  },
+
   /** Get a specific weapon by ID across all categories */
   async getWeapon(weaponId: string): Promise<OSWeaponItem | null> {
     const data = await this.getWeapons();
@@ -281,6 +307,10 @@ export const grudgeApi = {
 
 // ── Bundled Fallback Defaults ──────────────────────────────────
 // Minimal attribute data so the game works offline without fetching
+
+export const FALLBACK_VOXEL_ASSET_CATEGORIES = [
+  'trees', 'rocks', 'mountains', 'terrain_props', 'structures', 'animals', 'enemies',
+] as const;
 
 export const FALLBACK_ATTRIBUTES: OSAttribute[] = [
   { id: 'strength', name: 'Strength', icon: 'battle', color: '#ef4444', description: 'Increases physical attack damage.', formula: 'Physical Damage = Base × (1 + STR × 0.05)', emoji: '💪' },
