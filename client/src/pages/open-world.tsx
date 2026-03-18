@@ -15,7 +15,7 @@ import { getAvailableMissions } from '@/game/missions';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
 import { initGLBSprites } from '@/game/glb-sprites';
 import { ProgressEvent } from '@/game/player-progress';
-import { loadKeybindings, matchesKeyDown, KeybindAction } from '@/game/keybindings';
+import { loadKeybindings, matchesKeyDown, KeybindAction, KeybindConfig } from '@/game/keybindings';
 import hudFramePath from '@assets/hud-frame.png';
 import MainPanel from '@/components/MainPanel';
 
@@ -63,7 +63,7 @@ export default function OpenWorldPage() {
       const dt = Math.min(rawDt, 0.05);
       lastTime = now;
 
-      updateOpenWorld(state, dt, keysRef.current);
+      updateOpenWorld(state, dt, keysRef.current, bindings);
       renderer.render(state);
 
       // Render minimap on top
@@ -125,19 +125,21 @@ export default function OpenWorldPage() {
         return;
       }
 
-      if (matchesKeyDown(bindings[KeybindAction.Ability1], e)) { e.preventDefault(); tryTargetOrCast(0); }
-      else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) { e.preventDefault(); tryTargetOrCast(1); }
-      else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) { e.preventDefault(); tryTargetOrCast(2); }
-      else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) { e.preventDefault(); tryTargetOrCast(3); }
-      if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handleOWAttack(state);
-      if (key === ' ') { e.preventDefault(); handleOWDodge(state); }
-      if (key === 'tab') { e.preventDefault(); handleOWTargetCycle(state); }
-      if (key === 'i') state.showInventory = !state.showInventory;
-      if (key === 'c') setShowCharPanel(prev => !prev);
-      if (key === 'j') setShowMissions(prev => !prev);
-      if (key === 'f') enterOWDungeon(state);
-      if (key === '=') minimapZoomIn(minimapRef.current);
-      if (key === '-') minimapZoomOut(minimapRef.current);
+      // Abilities (use Dungeon/OW 1-4 bindings, not MOBA Q/W/E/R)
+      if (matchesKeyDown(bindings[KeybindAction.DungeonAbility1], e)) { e.preventDefault(); tryTargetOrCast(0); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility2], e)) { e.preventDefault(); tryTargetOrCast(1); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility3], e)) { e.preventDefault(); tryTargetOrCast(2); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility4], e)) { e.preventDefault(); tryTargetOrCast(3); }
+      // Combat
+      if (matchesKeyDown(bindings[KeybindAction.DodgeRoll], e)) { e.preventDefault(); handleOWDodge(state); }
+      if (matchesKeyDown(bindings[KeybindAction.TargetLock], e)) { e.preventDefault(); handleOWTargetCycle(state); }
+      // UI toggles
+      if (matchesKeyDown(bindings[KeybindAction.ToggleInventory], e)) state.showInventory = !state.showInventory;
+      if (matchesKeyDown(bindings[KeybindAction.ToggleCharPanel], e)) setShowCharPanel(prev => !prev);
+      if (matchesKeyDown(bindings[KeybindAction.ToggleMissions], e)) setShowMissions(prev => !prev);
+      // Camera
+      if (matchesKeyDown(bindings[KeybindAction.ZoomIn], e)) minimapZoomIn(minimapRef.current);
+      if (matchesKeyDown(bindings[KeybindAction.ZoomOut], e)) minimapZoomOut(minimapRef.current);
     };
 
     const onKeyUp = (e: KeyboardEvent) => { keysRef.current.delete(e.key.toLowerCase()); };

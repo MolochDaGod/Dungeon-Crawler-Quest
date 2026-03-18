@@ -43,6 +43,10 @@ export enum KeybindAction {
   DodgeRoll = 'DodgeRoll',
   Interact = 'Interact',
   TargetLock = 'TargetLock',
+  // UI toggles (Open World)
+  ToggleInventory = 'ToggleInventory',
+  ToggleCharPanel = 'ToggleCharPanel',
+  ToggleMissions = 'ToggleMissions',
 }
 
 export const ACTION_CATEGORIES: Record<string, KeybindAction[]> = {
@@ -51,7 +55,7 @@ export const ACTION_CATEGORIES: Record<string, KeybindAction[]> = {
   'MOBA Abilities (Q/W/E/R)': [KeybindAction.Ability1, KeybindAction.Ability2, KeybindAction.Ability3, KeybindAction.Ability4],
   'Dungeon/OW Combat': [KeybindAction.LightAttack, KeybindAction.HeavyAttack, KeybindAction.DodgeRoll, KeybindAction.Sprint],
   'Dungeon/OW Abilities (1-4)': [KeybindAction.DungeonAbility1, KeybindAction.DungeonAbility2, KeybindAction.DungeonAbility3, KeybindAction.DungeonAbility4],
-  'Interaction': [KeybindAction.Interact, KeybindAction.TargetLock],
+  'Interaction': [KeybindAction.Interact, KeybindAction.TargetLock, KeybindAction.ToggleInventory, KeybindAction.ToggleCharPanel, KeybindAction.ToggleMissions],
   'Level Up': [KeybindAction.LevelUpAbility1, KeybindAction.LevelUpAbility2, KeybindAction.LevelUpAbility3, KeybindAction.LevelUpAbility4],
   Items: [KeybindAction.Item1, KeybindAction.Item2, KeybindAction.Item3, KeybindAction.Item4, KeybindAction.Item5, KeybindAction.Item6],
   Camera: [KeybindAction.CameraPan, KeybindAction.CenterCamera, KeybindAction.ZoomIn, KeybindAction.ZoomOut],
@@ -101,6 +105,9 @@ export const ACTION_LABELS: Record<KeybindAction, string> = {
   [KeybindAction.DodgeRoll]: 'Dodge Roll (Space)',
   [KeybindAction.Interact]: 'Interact (E)',
   [KeybindAction.TargetLock]: 'Target Lock (Tab)',
+  [KeybindAction.ToggleInventory]: 'Toggle Inventory (I)',
+  [KeybindAction.ToggleCharPanel]: 'Toggle Character Panel (C)',
+  [KeybindAction.ToggleMissions]: 'Toggle Missions (J)',
 };
 
 export interface KeyBind {
@@ -166,6 +173,9 @@ export function getDefaultBindings(): KeybindConfig {
     [KeybindAction.DodgeRoll]: makeKeyBind(' '),
     [KeybindAction.Interact]: makeKeyBind('e'),
     [KeybindAction.TargetLock]: makeKeyBind('tab'),
+    [KeybindAction.ToggleInventory]: makeKeyBind('i'),
+    [KeybindAction.ToggleCharPanel]: makeKeyBind('c'),
+    [KeybindAction.ToggleMissions]: makeKeyBind('j'),
   };
 }
 

@@ -39,14 +39,14 @@ function saveGraphicsSettings(settings: GraphicsSettings): void {
   localStorage.setItem('grudge_volume', String(settings.masterVolume));
 }
 
-const MOBA_CATEGORIES = ['Movement', 'Combat', 'Abilities', 'Level Up', 'Items', 'Camera', 'UI'];
-const DUNGEON_CATEGORIES = ['Movement', 'Combat', 'Abilities', 'Items', 'UI'];
+const MOBA_CATEGORIES = ['Movement', 'MOBA Combat', 'MOBA Abilities (Q/W/E/R)', 'Level Up', 'Items', 'Camera', 'UI'];
+const OW_CATEGORIES = ['Movement', 'Dungeon/OW Combat', 'Dungeon/OW Abilities (1-4)', 'Interaction', 'Items', 'Camera', 'UI'];
 
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const [bindings, setBindings] = useState<KeybindConfig>(loadKeybindings);
   const [rebinding, setRebinding] = useState<KeybindAction | null>(null);
-  const [modeTab, setModeTab] = useState<'moba' | 'dungeon'>('moba');
+  const [modeTab, setModeTab] = useState<'moba' | 'openworld' | 'all'>('openworld');
   const [graphics, setGraphics] = useState<GraphicsSettings>(loadGraphicsSettings);
 
   const handleRebind = useCallback((action: KeybindAction) => {
@@ -111,7 +111,7 @@ export default function SettingsPage() {
     saveGraphicsSettings(updated);
   };
 
-  const filteredCategories = modeTab === 'moba' ? MOBA_CATEGORIES : DUNGEON_CATEGORIES;
+  const filteredCategories = modeTab === 'moba' ? MOBA_CATEGORIES : modeTab === 'openworld' ? OW_CATEGORIES : Object.keys(ACTION_CATEGORIES);
 
   return (
     <div
@@ -142,7 +142,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex mb-6" style={{ gap: 0 }} data-testid="panel-mode-tabs">
-          {(['moba', 'dungeon'] as const).map((mode) => (
+          {([['openworld', 'Open World'], ['moba', 'MOBA Arena'], ['all', 'All Controls']] as const).map(([mode, label]) => (
             <button
               key={mode}
               className="flex-1 py-3 text-sm font-bold uppercase tracking-wider cursor-pointer transition-all"
@@ -160,7 +160,7 @@ export default function SettingsPage() {
               onClick={() => setModeTab(mode)}
               data-testid={`button-tab-${mode}`}
             >
-              {mode === 'moba' ? 'MOBA Arena' : 'Dungeon Crawl'}
+              {label}
             </button>
           ))}
         </div>

@@ -8,10 +8,11 @@
 import {
   HeroData, HEROES, Vec2, AbilityDef, ItemDef, ITEMS,
   heroStatsAtLevel, RACE_COLORS, CLASS_COLORS,
-  getHeroAbilities, getWeaponRenderType, getHeroWeapon
+  getHeroAbilities, getWeaponRenderType, getHeroWeapon,
+  WeaponType
 } from './types';
 import { VoxelRenderer, DungeonTileVoxelType } from './voxel';
-import { globalAnimDirector } from './voxel-motion';
+import { globalAnimDirector, drawAISlashVFX } from './voxel-motion';
 import {
   StatusEffect, StatusEffectType, createStatusEffect, applyStatusEffect,
   updateStatusEffects, isStunned, isRooted, isSilenced, getSpeedMultiplier,
@@ -78,6 +79,9 @@ import {
 import { SpawnerManager, createSpawnerManager, SpawnRequest } from './spawner-system';
 import { ZoneEventManager, createZoneEventManager, EventUpdate } from './zone-events';
 import { behaviorTick, assignArchetype, clearBehaviorCache, getArchetype, AIEntity, AITarget } from './ai-behaviors';
+import { KeybindConfig, KeybindAction, loadKeybindings } from './keybindings';
+import { OWAnimFSM, OWAnimState } from './ow-anim-fsm';
+import { EffectPool, EffectSlot, EffectType } from './effect-pool';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -86,6 +90,13 @@ const OW_VIEW_RANGE = 800;       // pixels visible around player
 const SPAWN_RADIUS = 1200;       // only spawn/update enemies within this
 const DESPAWN_RADIUS = 1600;     // enemies beyond this are removed
 const AGGRO_RANGE = 400;
+
+// Enemy attackStyle → weapon type for AI slash VFX
+const ENEMY_ATTACK_WEAPON: Record<string, WeaponType> = {
+  melee: 'sword_shield',
+  ranged: 'bow',
+  aoe: 'staff',
+};
 
 // Zone → terrain tile type mapping
 const ZONE_TERRAIN: Record<string, DungeonTileVoxelType> = {
@@ -163,6 +174,7 @@ export interface OWEnemy {
   size: number;
   activeEffects: StatusEffect[];
   ccImmunityTimers: Map<StatusEffectType, number>;
+  hitStopTimer: number;       // >0 = animation frozen (impact freeze)
   homeX: number;
   homeY: number;
   leashRange: number;
@@ -199,6 +211,7 @@ export interface OWPlayer {
   comboTimer: number;
   heavyAttackCooldown: number;
   meleeAnimTimer: number;
+  hitStopTimer: number;       // >0 = animation frozen (impact freeze)
   // MMO controls
   stamina: number;
   maxStamina: number;
@@ -331,6 +344,12 @@ export interface OpenWorldState {
   equipmentBag: EquipmentBag;
   resourceNodes: OWResourceNode[];
   harvestCooldown: number;
+
+  // Animation FSM
+  animFSM: OWAnimFSM;
+
+  // Pre-allocated effect pool (replaces spellEffects for hot-path usage)
+  effectPool: EffectPool;
 
   // Mission system
   missionLog: MissionLog;
@@ -486,6 +505,7 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
       comboTimer: 0,
       heavyAttackCooldown: 0,
       meleeAnimTimer: 0,
+      hitStopTimer: 0,
       stamina: 100,
       maxStamina: 100,
       sprinting: false,
@@ -532,6 +552,8 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     equipmentBag: loadEquipmentBag(),
     resourceNodes: [],
     harvestCooldown: 0,
+    animFSM: new OWAnimFSM(),
+    effectPool: new EffectPool(128),
     missionLog: loadMissionLog(),
     terrainCache: new Map(),
     generatedWorld: loadGeneratedWorld(),
@@ -727,8 +749,7 @@ export function handleOWDodge(state: OpenWorldState): void {
   p.dodgeTimer = 0.3;
   p.dodgeCooldown = 1.0;
   p.dodgeInvuln = true;
-  p.animState = 'dodge';
-  p.animTimer = 0;
+  state.animFSM.tryTransition('dodge', true);
   p.meleeAnimTimer = 0; // cancel melee if mid-swing
   spawnParticles(state, p.x, p.y, '#9a8a6a', 6);
 }
@@ -841,6 +862,7 @@ function spawnEnemiesNearPlayer(state: OpenWorldState): void {
           level: ms.level,
           attackStyle: template.attackStyle,
           aoeTelegraph: null,
+          hitStopTimer: 0,
         });
       }
     }
@@ -849,7 +871,8 @@ function spawnEnemiesNearPlayer(state: OpenWorldState): void {
 
 // ── Update Loop ────────────────────────────────────────────────
 
-export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<string>): void {
+export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<string>, bindings?: KeybindConfig): void {
+  const kb = bindings || loadKeybindings();
   if (state.paused || state.gameOver) return;
   state.gameTime += dt;
 
@@ -910,8 +933,18 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
     state.killFeed.push({ text: eu.message, color: eu.color, time: state.gameTime });
   }
 
+  // ── Hit-Stop (impact freeze) ──
+  if (p.hitStopTimer > 0) {
+    p.hitStopTimer -= dt;
+    if (p.hitStopTimer <= 0) { p.hitStopTimer = 0; state.animFSM.unfreeze(); }
+  }
+
+  // ── Animation FSM tick ──
+  state.animFSM.update(dt);
+  p.animState = state.animFSM.state;
+  p.animTimer = state.animFSM.timer;
+
   // Player update
-  p.animTimer += dt;
   // Mana regen boosted by WIS
   const derived = computeDerivedStats(state.playerAttributes);
   p.mp = Math.min(p.maxMp, p.mp + dt * derived.manaRegen);
@@ -929,12 +962,13 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   // ── Dodge Roll Update ──
   if (p.dodgeTimer > 0) {
     p.dodgeTimer -= dt;
+    state.animFSM.tryTransition('dodge');
     const dodgeSpeed = 400;
     const dodgeNx = p.x + Math.cos(p.facing) * dodgeSpeed * dt;
     const dodgeNy = p.y + Math.sin(p.facing) * dodgeSpeed * dt;
     if (isWalkableOW(dodgeNx, p.y)) p.x = dodgeNx;
     if (isWalkableOW(p.x, dodgeNy)) p.y = dodgeNy;
-    p.animState = 'dodge';
+      // animState driven by FSM
     p.dodgeInvuln = p.dodgeTimer > 0.05; // i-frames for most of roll
     // Spawn dust trail
     if (Math.random() < 0.6) {
@@ -950,8 +984,15 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   if (p.dodgeCooldown > 0) p.dodgeCooldown -= dt;
 
   // ── Sprint / Stamina ──
-  p.sprinting = keys.has('shift') && p.stamina > 0 && !p.dead;
-  if (p.sprinting && (keys.has('w') || keys.has('s') || keys.has('a') || keys.has('d'))) {
+  const kUp = kb[KeybindAction.MoveUp].key;
+  const kDown = kb[KeybindAction.MoveDown].key;
+  const kLeft = kb[KeybindAction.MoveLeft].key;
+  const kRight = kb[KeybindAction.MoveRight].key;
+  const kSprint = kb[KeybindAction.Sprint].key;
+  const kInteract = kb[KeybindAction.Interact].key;
+
+  p.sprinting = keys.has(kSprint) && p.stamina > 0 && !p.dead;
+  if (p.sprinting && (keys.has(kUp) || keys.has(kDown) || keys.has(kLeft) || keys.has(kRight))) {
     p.stamina = Math.max(0, p.stamina - 25 * dt);
   } else {
     // Regen stamina when not sprinting
@@ -961,10 +1002,10 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   // ── Movement (weather affects speed) ──
   if (!isStunned(p as any as CombatEntity) && p.dodgeTimer <= 0) {
     let mx = 0, my = 0;
-    if (keys.has('w') || keys.has('arrowup')) my = -1;
-    if (keys.has('s') || keys.has('arrowdown')) my = 1;
-    if (keys.has('a') || keys.has('arrowleft')) mx = -1;
-    if (keys.has('d') || keys.has('arrowright')) mx = 1;
+    if (keys.has(kUp)) my = -1;
+    if (keys.has(kDown)) my = 1;
+    if (keys.has(kLeft)) mx = -1;
+    if (keys.has(kRight)) mx = 1;
 
     const spdMult = getSpeedMultiplier(p as any as CombatEntity) * getWeatherSpeedMod(state.worldState);
     const sprintMult = p.sprinting ? 1.6 : 1.0;
@@ -974,11 +1015,11 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
       p.vx = (mx / len) * speed;
       p.vy = (my / len) * speed;
       p.facing = Math.atan2(my, mx);
-      p.animState = 'walk';
+      state.animFSM.tryTransition('walk');
     } else {
       p.vx = 0;
       p.vy = 0;
-      if (p.animState === 'walk') p.animState = 'idle';
+      state.animFSM.tryTransition('idle');
     }
 
     const nx = p.x + p.vx * dt;
@@ -1016,8 +1057,8 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   // Resource nodes
   updateResourceNodes(state, dt);
 
-  // E key: interact (harvest, NPC, dungeon entrance)
-  if (keys.has('e')) {
+  // Interact key: harvest, NPC, dungeon entrance
+  if (keys.has(kInteract)) {
     handleOWInteract(state);
   }
 
@@ -1060,7 +1101,8 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   }
   state.floatingTexts = state.floatingTexts.filter(ft => ft.life > 0);
 
-  // Spell effects
+  // Spell effects — pool tick (legacy array kept in sync)
+  state.effectPool.update(dt);
   for (const se of state.spellEffects) se.life -= dt;
   state.spellEffects = state.spellEffects.filter(se => se.life > 0);
 
@@ -1118,7 +1160,13 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
 
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
-    enemy.animTimer += dt;
+
+    // Enemy hit-stop: tick down and skip AI while frozen
+    const enemyFrozen = enemy.hitStopTimer > 0;
+    if (enemyFrozen) {
+      enemy.hitStopTimer = Math.max(0, enemy.hitStopTimer - dt);
+    }
+    if (!enemyFrozen) enemy.animTimer += dt;
 
     const eres = updateStatusEffects(enemy as any as CombatEntity, dt);
     if (eres.damage > 0) {
@@ -1132,6 +1180,7 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
     }
 
     if (isStunned(enemy as any as CombatEntity)) continue;
+    if (enemyFrozen) continue; // hit-stop: skip AI while frozen
 
     const d = distXY(enemy, p);
 
@@ -1206,6 +1255,10 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
               p.hp -= dmg;
               addText(state, p.x, p.y - 20, `-${dmg}`, '#ef4444', 14);
               spawnParticles(state, p.x, p.y, '#ef4444', 3);
+              // Hit-stop on enemy melee connecting with player
+              const hs = enemy.isBoss ? 0.05 : 0.03;
+              p.hitStopTimer = hs; state.animFSM.freeze();
+              enemy.hitStopTimer = hs;
             } else if (p.dodgeInvuln && d < enemy.rng + 20) {
               addText(state, p.x, p.y - 20, 'DODGE', '#ffd700', 12);
             }
@@ -1521,7 +1574,7 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
 
   p.mp -= ab.manaCost;
   p.abilityCooldowns[abilityIndex] = ab.cooldown;
-  p.animState = 'ability';
+  state.animFSM.tryTransition('ability');
 
   // Spell combo tracking — casting within 3s window stacks
   if (p.spellComboTimer > 0) {
@@ -1668,6 +1721,7 @@ const COMBO_WINDOW = 0.5;
 function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number, damage: number, slowDuration: number, slowPct: number): number {
   const p = state.player;
   let hits = 0;
+  let anyCrit = false;
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
     const d = distXY(p, enemy);
@@ -1684,11 +1738,13 @@ function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number,
       damage
     );
     enemy.hp -= result.finalDamage;
+    if (result.isCrit) anyCrit = true;
     const col = result.isCrit ? '#ffd700' : '#ffffff';
     addText(state, enemy.x, enemy.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, col, result.isCrit ? 16 : 12);
     spawnParticles(state, enemy.x, enemy.y, '#ff6666', 4);
     triggerHitFlash(state, enemy.id);
     incrementCombo(state);
+    enemy.hitStopTimer = result.isCrit ? 0.07 : 0.04;
     hits++;
 
     // Melee slow
@@ -1703,7 +1759,12 @@ function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number,
     }
     if (enemy.hp <= 0) killEnemy(state, enemy);
   }
-  if (hits > 0) triggerScreenShake(state, 3 + hits, 0.12);
+  if (hits > 0) {
+    triggerScreenShake(state, 3 + hits, 0.12);
+    // Hit-stop: freeze player + FSM on melee impact
+    p.hitStopTimer = anyCrit ? 0.07 : 0.04;
+    state.animFSM.freeze();
+  }
   return hits;
 }
 
@@ -1733,7 +1794,7 @@ export function handleOWAttack(state: OpenWorldState): void {
     if (isWalkableOW(nx, ny)) { p.x = nx; p.y = ny; }
     meleeArcDamage(state, Math.PI / 3, MELEE_RANGE, p.atk * 1.0, 0.3, 0.3);
     addSpellEffect(state, p.x + Math.cos(p.facing) * 30, p.y + Math.sin(p.facing) * 30, 'melee_slash', 40, abilityColor, 0.25, p.facing);
-    p.animState = 'attack';
+    state.animFSM.tryTransition('attack', true);
     p.meleeAnimTimer = 0.25;
   } else if (p.comboStep === 2) {
     // Back slash: slight backstep, 90° cone, more damage
@@ -1743,7 +1804,7 @@ export function handleOWAttack(state: OpenWorldState): void {
     meleeArcDamage(state, Math.PI / 2, MELEE_RANGE + 10, p.atk * 1.2, 0.3, 0.3);
     const slashColor = hd.heroClass === 'Mage' ? '#a855f7' : hd.heroClass === 'Ranger' ? '#22c55e' : '#f59e0b';
     addSpellEffect(state, p.x + Math.cos(p.facing) * 30, p.y + Math.sin(p.facing) * 30, 'melee_slash', 50, slashColor, 0.25, p.facing);
-    p.animState = 'attack';
+    state.animFSM.tryTransition('attack', true);
     p.meleeAnimTimer = 0.25;
   } else {
     // Lunge: dash 50px forward, narrow thrust, highest damage
@@ -1752,7 +1813,7 @@ export function handleOWAttack(state: OpenWorldState): void {
     if (isWalkableOW(nx, ny)) { p.x = nx; p.y = ny; }
     meleeArcDamage(state, Math.PI / 4, MELEE_RANGE + 20, p.atk * 1.8, 0.4, 0.35);
     addSpellEffect(state, p.x, p.y, 'melee_lunge', 60, '#ffd700', 0.3, p.facing, { startX: p.x - Math.cos(p.facing) * 50, startY: p.y - Math.sin(p.facing) * 50 });
-    p.animState = 'lunge_slash';
+    state.animFSM.tryTransition('lunge_slash', true);
     p.meleeAnimTimer = 0.3;
     p.comboStep = 0;
     p.comboTimer = 0;
@@ -1775,8 +1836,10 @@ export function handleOWHeavyAttack(state: OpenWorldState): void {
   if (heavyHits > 0) triggerScreenShake(state, 6, 0.2);
   spawnParticles(state, p.x + Math.cos(p.facing) * 30, p.y + Math.sin(p.facing) * 30, '#ffd700', 6);
 
-  p.animState = 'combo_finisher';
+  state.animFSM.tryTransition('combo_finisher', true);
   p.meleeAnimTimer = 0.4;
+  // Hit-stop on heavy attack impact
+  if (heavyHits > 0) { p.hitStopTimer = 0.06; state.animFSM.freeze(); }
   p.heavyAttackCooldown = 1.2;
   p.comboStep = 0;
   p.comboTimer = 0;
@@ -2052,6 +2115,8 @@ function updateAmbientParticles(state: OpenWorldState, dt: number): void {
 }
 
 function addSpellEffect(state: OpenWorldState, x: number, y: number, type: OWSpellEffect['type'], radius: number, color: string, duration: number, angle = 0, data?: any): void {
+  // Dual-write: pool (zero-alloc hot path) + legacy array (backward compat)
+  state.effectPool.spawn(x, y, type as EffectType, radius, color, duration, angle, data);
   state.spellEffects.push({ x, y, type, life: duration, maxLife: duration, radius, color, angle, data });
 }
 
@@ -2272,7 +2337,8 @@ export class OpenWorldRenderer {
 
     this.renderPlayer(ctx, state, brightness);
 
-    for (const se of state.spellEffects) this.renderSpellEffect(ctx, se);
+    // Render spell effects from pre-allocated pool
+    state.effectPool.forEach(slot => this.renderSpellEffect(ctx, slot as any));
 
     for (const proj of state.projectiles) this.renderProjectile(ctx, proj, state.gameTime);
     for (const pt of state.particles) this.renderParticle(ctx, pt);
@@ -2788,6 +2854,17 @@ export class OpenWorldRenderer {
     }
 
     this.voxel.drawEnemyVoxel(ctx, enemy.x, enemy.y, enemy.type, enemy.facing, enemy.animState, enemy.animTimer, enemy.size, enemy.isBoss);
+
+    // AI slash VFX for attacking enemies (parity with player weapon trails)
+    if (enemy.animState === 'attack' && enemy.animTimer > 0.05) {
+      const wType = ENEMY_ATTACK_WEAPON[enemy.attackStyle] || 'sword_shield';
+      const plan = globalAnimDirector.planAttack('Warrior', wType, enemy.id, enemy.facing);
+      plan.slashWidth *= Math.max(1, enemy.size / 12); // scale to enemy size
+      if (enemy.isBoss) { plan.impactFlash = true; plan.trailIntensity = 1.8; }
+      const atkPhase = enemy.animTimer % 0.8; // syncs with drawEnemyVoxel attack cycle
+      const progress = Math.min(1, atkPhase / plan.duration);
+      drawAISlashVFX(ctx, enemy.x, enemy.y - enemy.size * 0.5, plan, progress, state.gameTime);
+    }
 
     // White flash overlay on hit
     if (flashTimer > 0) {

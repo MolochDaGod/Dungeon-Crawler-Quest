@@ -35,6 +35,10 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - AI faction system, NPC interactions, quest givers
 
 #### Combat & Visual Polish
+- **Animation FSM** (`ow-anim-fsm.ts`): priority-based state machine for player animation with interruptibility windows, blend-out, and auto-return. Replaces scattered `animState` writes with `tryTransition()` calls.
+- **Hit-stop (impact freeze)**: brief animation pause on melee/heavy hits — 40ms normal, 70ms crit, 60ms heavy attacks, 50ms boss hits. Freezes both attacker and target FSM/animTimer.
+- **Enemy animation parity**: attacking enemies now render AI slash VFX via `drawAISlashVFX()` with attackStyle→weaponType mapping (melee→sword, ranged→bow, aoe→staff). Boss enemies get enhanced impact flash and trail intensity.
+- **Effect pool** (`effect-pool.ts`): pre-allocated 128-slot VFX pool with zero per-frame allocation. Per-type visual curves (fadeOut, expandFade, popFade, pulseFade) compute opacity/scale each tick.
 - Weapon-leading melee slash: weapon rotation drives the swing, body lunges forward
 - Weapon afterimage ghost trail during attacks
 - Widened VFX slash arc with increased reach
@@ -176,6 +180,8 @@ client/src/
 │   ├── types.ts               # Shared types, 26 heroes, abilities
 │   ├── voxel.ts               # Voxel rendering, weapon animations, VFX
 │   ├── voxel-motion.ts        # Animation primitives
+│   ├── ow-anim-fsm.ts         # Open World animation FSM (priority/interruptibility)
+│   ├── effect-pool.ts          # Pre-allocated VFX pool with per-type visual curves
 │   └── glb-sprites.ts         # GLB/GLTF 3D model sprite loader
 ├── pages/
 │   ├── open-world.tsx         # Open World UI, HUD, game loop
