@@ -30,31 +30,29 @@ interface TileRect {
   sx: number; sy: number; sw: number; sh: number;
 }
 
-// Simplified road tile atlas positions (from Road1_grass.png)
+// Road tile atlas positions — mapped from visual inspection of Road1_grass.png (240×416)
+// The sheet has variable-sized pieces, not a uniform grid. Key usable regions:
 const ROAD_TILES = {
-  // Small circles/dots (16×16)
-  dot:       { sx: 0,   sy: 0,   sw: 16, sh: 16 },
-  // Horizontal straight (48×16)
-  hStraight: { sx: 0,   sy: 192, sw: 48, sh: 16 },
-  // Vertical straight (16×48)
-  vStraight: { sx: 0,   sy: 128, sw: 16, sh: 48 },
-  // Corner top-left (32×32)
-  cornerTL:  { sx: 0,   sy: 80,  sw: 32, sh: 32 },
-  // Corner top-right (32×32)
-  cornerTR:  { sx: 32,  sy: 80,  sw: 32, sh: 32 },
-  // Corner bottom-left (32×32)
-  cornerBL:  { sx: 0,   sy: 112, sw: 32, sh: 32 },
-  // Corner bottom-right (32×32)
-  cornerBR:  { sx: 32,  sy: 112, sw: 32, sh: 32 },
-  // T-junction pieces (48×48)
-  tDown:     { sx: 112, sy: 192, sw: 48, sh: 48 },
-  tUp:       { sx: 112, sy: 144, sw: 48, sh: 48 },
-  tLeft:     { sx: 64,  sy: 192, sw: 48, sh: 48 },
-  tRight:    { sx: 160, sy: 192, sw: 48, sh: 48 },
-  // Crossroad (48×48)
-  cross:     { sx: 112, sy: 240, sw: 48, sh: 48 },
-  // Large fill (64×64 center piece)
-  fill:      { sx: 80,  sy: 288, sw: 64, sh: 64 },
+  // Row 0: Circle end-caps (~48×48 each, 4 across)
+  dot:       { sx: 0,   sy: 0,   sw: 48, sh: 48 },
+  // Row 4-5: Straight horizontal road section (large piece at bottom-left)
+  hStraight: { sx: 0,   sy: 336, sw: 80, sh: 32 },
+  // Row 3-4: Straight vertical road section (left side)
+  vStraight: { sx: 0,   sy: 208, sw: 32, sh: 80 },
+  // Row 2: Corner pieces (4 variants, ~48×48)
+  cornerTL:  { sx: 0,   sy: 112, sw: 48, sh: 48 },
+  cornerTR:  { sx: 96,  sy: 112, sw: 48, sh: 48 },
+  cornerBL:  { sx: 0,   sy: 160, sw: 48, sh: 48 },
+  cornerBR:  { sx: 96,  sy: 160, sw: 48, sh: 48 },
+  // Row 3: T-junction and cross pieces
+  tDown:     { sx: 144, sy: 208, sw: 48, sh: 48 },
+  tUp:       { sx: 144, sy: 160, sw: 48, sh: 48 },
+  tLeft:     { sx: 96,  sy: 208, sw: 48, sh: 48 },
+  tRight:    { sx: 192, sy: 208, sw: 48, sh: 48 },
+  // Row 6: Cross-road (large center piece ~96×96)
+  cross:     { sx: 144, sy: 336, sw: 96, sh: 80 },
+  // Row 4: Large filled road section (center ~80×80)
+  fill:      { sx: 48,  sy: 256, sw: 80, sh: 80 },
 } as const;
 
 // Biome colors from Ground_grass.png (8 rows of tree/bush variants)
@@ -300,9 +298,11 @@ export class TileMapRenderer {
       const drawSize = RENDER_TILE * d.size;
 
       if (img?.complete) {
-        // Ground_grass.png: 272×496, each element ~34×62 in a 4-col × 8-row grid
-        const cellW = 68;
-        const cellH = 62;
+        // Ground_grass.png: 272×496 = 4 columns × 8 rows of biome-colored elements
+        // Col 0: round tree/bush, Col 1: square block, Col 2: dark variant, Col 3: small accent
+        // Rows 0-7: grass-green, olive, autumn-brown, teal, cream, deep-green, khaki, dark-green
+        const cellW = 68;  // 272 / 4 = 68px per column
+        const cellH = 62;  // 496 / 8 = 62px per row
         const srcX = d.srcCol * cellW;
         const srcY = d.srcRow * cellH;
         ctx.drawImage(img, srcX, srcY, cellW, cellH,

@@ -532,7 +532,7 @@ function makeBuilding(id: string, type: DecoType, x: number, y: number, zoneId: 
 function makeNPC(id: string, x: number, y: number, zoneId: number, role: WorldDecoration['npcRole'], name: string): WorldDecoration {
   return {
     id, type: 'npc', x, y, zoneId,
-    sprite: `${GUILD}/Smith_idle_without_shadow.png`,
+    sprite: `${GUILD}/Smith/Idle_Walk/Smith_idle_without_shadow.png`,
     srcRect: { sx: 0, sy: 0, sw: 48, sh: 48 },
     drawW: 40, drawH: 40,
     animated: true,

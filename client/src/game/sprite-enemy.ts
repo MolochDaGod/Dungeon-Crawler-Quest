@@ -161,7 +161,9 @@ export function drawSpriteEnemy(
   const sheet = getSheet(def, animState);
 
   const row = facingToRow(facing);
-  const totalFrames = meta.cols;
+  // Auto-detect frame count from actual sheet width (handles variable sizes per entity)
+  const actualCols = sheet?.complete ? Math.floor(sheet.width / meta.frameW) : meta.cols;
+  const totalFrames = actualCols;
   const frameIndex = animState === 'death'
     ? Math.min(Math.floor(animTime * fps), totalFrames - 1) // Death doesn't loop
     : Math.floor(animTime * fps) % totalFrames;
