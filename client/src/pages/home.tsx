@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Sword, Shield, Skull, Crown, Settings, Map, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree } from 'lucide-react';
+import { Sword, Shield, Skull, Crown, Settings, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree } from 'lucide-react';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<'moba' | 'dungeon' | 'openworld'>('moba');
+  const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld'>('arena');
   const [titlePulse, setTitlePulse] = useState(false);
 
   useEffect(() => {
@@ -136,34 +136,18 @@ export default function Home() {
         <div className="flex flex-wrap justify-center gap-5 mb-8">
           <button
             className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
-              selectedMode === 'moba'
+              selectedMode === 'arena'
                 ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
                 : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
             }`}
-            onClick={() => setSelectedMode('moba')}
-            data-testid="button-mode-moba"
+            onClick={() => setSelectedMode('arena')}
+            data-testid="button-mode-arena"
           >
             <Sword className="w-12 h-12" />
-            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>MOBA ARENA</span>
+            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>ARENA</span>
             <span className="text-xs text-gray-400">5v5 &bull; 3 Lanes &bull; Towers</span>
             <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
               Destroy the enemy Nexus. Level up, buy items, and push lanes with your team.
-            </p>
-          </button>
-          <button
-            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
-              selectedMode === 'dungeon'
-                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
-                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
-            }`}
-            onClick={() => setSelectedMode('dungeon')}
-            data-testid="button-mode-dungeon"
-          >
-            <Map className="w-12 h-12" />
-            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>DUNGEON CRAWL</span>
-            <span className="text-xs text-gray-400">PvE &bull; 10 Floors &bull; Bosses</span>
-            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
-              Explore procedural dungeons. Fight monsters, find loot, and conquer the final boss.
             </p>
           </button>
           <button
@@ -177,9 +161,9 @@ export default function Home() {
           >
             <Globe className="w-12 h-12" />
             <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>OPEN WORLD</span>
-            <span className="text-xs text-gray-400">MMO &bull; 8 Zones &bull; Day/Night</span>
+            <span className="text-xs text-gray-400">MMO &bull; 8 Zones &bull; Dungeons &bull; Day/Night</span>
             <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
-              Explore a vast island. Fight zone monsters, earn reputation, and defeat world bosses.
+              Explore a vast island. Enter dungeon events, earn reputation, and defeat world bosses.
             </p>
           </button>
         </div>
@@ -192,7 +176,7 @@ export default function Home() {
             onClick={handlePlay}
             data-testid="button-play"
           >
-            {selectedMode === 'moba' ? 'ENTER THE ARENA' : selectedMode === 'dungeon' ? 'DESCEND INTO DARKNESS' : 'EXPLORE THE WORLD'}
+            {selectedMode === 'arena' ? 'ENTER THE ARENA' : 'EXPLORE THE WORLD'}
           </Button>
 
           <div className="flex gap-4 mt-2">
@@ -243,7 +227,7 @@ export default function Home() {
           <h3 className="text-xs uppercase tracking-[0.2em] text-center mb-3" style={{ fontFamily: "'Oxanium', sans-serif", color: '#c5a059' }}>
             How to Play
           </h3>
-          {selectedMode === 'moba' ? (
+          {selectedMode === 'arena' ? (
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
               <div className="flex items-center gap-2 text-gray-500 text-xs">
                 <MousePointer2 className="w-3.5 h-3.5 text-gray-600 shrink-0" />
@@ -276,33 +260,6 @@ export default function Home() {
               <div className="flex items-center gap-2 text-gray-500 text-xs">
                 <Keyboard className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                 <span><span className="text-gray-400">WASD</span> Camera</span>
-              </div>
-            </div>
-          ) : selectedMode === 'dungeon' ? (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-              <div className="flex items-center gap-2 text-gray-500 text-xs">
-                <Keyboard className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                <span><span className="text-gray-400">W A S D</span> Move</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500 text-xs">
-                <Keyboard className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                <span><span className="text-gray-400">Q W E R</span> Abilities</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500 text-xs">
-                <MousePointer2 className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                <span><span className="text-gray-400">LMB / Space</span> Attack</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500 text-xs">
-                <Keyboard className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                <span><span className="text-gray-400">I</span> Inventory</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500 text-xs">
-                <LayoutGrid className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                <span><span className="text-gray-400">Tab</span> Scoreboard</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500 text-xs">
-                <MousePointer2 className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                <span><span className="text-gray-400">Scroll</span> Zoom</span>
               </div>
             </div>
           ) : (

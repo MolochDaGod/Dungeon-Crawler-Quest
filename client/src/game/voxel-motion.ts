@@ -550,6 +550,322 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
       { time: 1.2, pose: {}, glow: 0 },
     ]
   },
+
+  // ── Enhanced Combo Motions (use rotation/scale for dramatic per-part transforms) ──
+
+  combo_double_slash: {
+    name: 'combo_double_slash',
+    duration: 0.8,
+    keyframes: [
+      // Wind up: torso twists left, weapon pulls back
+      { time: 0, pose: {
+        torso: { ox: 0, oy: 0, oz: 0, rotation: 0 },
+        leftArm: { ox: 0, oy: 0, oz: 0 }, rightArm: { ox: 0, oy: 0, oz: 0 },
+        weapon: { ox: -1, oy: 0, oz: 3, rotation: 0 },
+        leftLeg: { ox: 0, oy: 0, oz: 0 }, rightLeg: { ox: 0, oy: 0, oz: 0 },
+        head: { ox: 0, oy: 0, oz: 0 }
+      }, glow: 0, easing: 'easeIn' },
+      // First slash: torso twists right 25°, weapon sweeps L→R
+      { time: 0.12, pose: {
+        torso: { ox: 1, oy: 0, oz: 0, rotation: -20 },
+        leftArm: { ox: -2, oy: -1, oz: 2 }, rightArm: { ox: 0, oy: 0, oz: 1 },
+        weapon: { ox: -2, oy: 0, oz: 5, rotation: 15 },
+        leftLeg: { ox: 0, oy: -1, oz: 0 }, rightLeg: { ox: 0, oy: 1, oz: 0 },
+        head: { ox: 1, oy: 0, oz: 0, rotation: -5 }
+      }, glow: 0.3, easing: 'easeIn' },
+      { time: 0.25, pose: {
+        torso: { ox: 2, oy: 0, oz: 0, rotation: 25 },
+        leftArm: { ox: 4, oy: -2, oz: 2 }, rightArm: { ox: 1, oy: 0, oz: 1 },
+        weapon: { ox: 5, oy: -2, oz: 1, rotation: -90 },
+        leftLeg: { ox: 0, oy: 1, oz: 0 }, rightLeg: { ox: 0, oy: -1, oz: 1 },
+        head: { ox: 2, oy: 0, oz: 0, rotation: 10 }
+      }, glow: 1.0, easing: 'overshoot' },
+      // Reset mid-combo
+      { time: 0.38, pose: {
+        torso: { ox: 0, oy: 0, oz: 0, rotation: 5 },
+        leftArm: { ox: 1, oy: 0, oz: 1 }, rightArm: { ox: 0, oy: 0, oz: 0 },
+        weapon: { ox: 1, oy: 0, oz: 3, rotation: -30 },
+        head: { ox: 0, oy: 0, oz: 0, rotation: 0 }
+      }, glow: 0.2, easing: 'easeOut' },
+      // Second slash: torso twists left, weapon sweeps R→L
+      { time: 0.48, pose: {
+        torso: { ox: -1, oy: 0, oz: 0, rotation: -25 },
+        leftArm: { ox: -3, oy: 1, oz: 2 }, rightArm: { ox: 2, oy: -1, oz: 2 },
+        weapon: { ox: -4, oy: 2, oz: 1, rotation: 90 },
+        leftLeg: { ox: 0, oy: 1, oz: 1 }, rightLeg: { ox: 0, oy: -1, oz: 0 },
+        head: { ox: -1, oy: 0, oz: 0, rotation: -10 }
+      }, glow: 1.0, easing: 'overshoot' },
+      // Follow-through
+      { time: 0.65, pose: {
+        torso: { ox: -1, oy: 0, oz: 0, rotation: -8 },
+        weapon: { ox: -2, oy: 1, oz: 0, rotation: 45 },
+      }, glow: 0.3, easing: 'easeOut' },
+      { time: 0.8, pose: {}, glow: 0 },
+    ]
+  },
+
+  combo_uppercut_slam: {
+    name: 'combo_uppercut_slam',
+    duration: 0.9,
+    keyframes: [
+      // Crouch: body compresses down
+      { time: 0, pose: {
+        torso: { ox: 0, oy: 0, oz: -2, scale: 0.9, rotation: 0 },
+        head: { ox: 0, oy: 0, oz: -2, scale: 0.95 },
+        leftLeg: { ox: 0, oy: -1, oz: -1 }, rightLeg: { ox: 0, oy: 1, oz: -1 },
+        leftArm: { ox: 0, oy: 0, oz: -1 }, rightArm: { ox: 0, oy: 0, oz: -1 },
+        weapon: { ox: 0, oy: 0, oz: -1, rotation: 0 }
+      }, glow: 0, easing: 'easeIn' },
+      // Deep crouch
+      { time: 0.15, pose: {
+        torso: { ox: 0, oy: 0, oz: -3, scale: 0.85, rotation: -5 },
+        head: { ox: 0, oy: 0, oz: -3, scale: 0.9 },
+        leftLeg: { ox: 0, oy: -2, oz: -2 }, rightLeg: { ox: 0, oy: 2, oz: -2 },
+        leftArm: { ox: -1, oy: 0, oz: -2 }, rightArm: { ox: -1, oy: 0, oz: -2 },
+        weapon: { ox: -1, oy: 0, oz: -2, rotation: -15 }
+      }, glow: 0.3, easing: 'easeIn' },
+      // LAUNCH: explosive upward, arms + weapon skyward, 45° rotation
+      { time: 0.35, pose: {
+        torso: { ox: 0, oy: 0, oz: 4, scale: 1.1, rotation: 15 },
+        head: { ox: 0, oy: 0, oz: 5, scale: 1.05, rotation: 10 },
+        leftLeg: { ox: 0, oy: -1, oz: 0 }, rightLeg: { ox: 0, oy: 1, oz: 0 },
+        leftArm: { ox: 2, oy: -2, oz: 7, rotation: 45 }, rightArm: { ox: 2, oy: 1, oz: 6, rotation: 30 },
+        weapon: { ox: 3, oy: -2, oz: 8, rotation: 45 }
+      }, glow: 1.0, easing: 'overshoot' },
+      // Peak
+      { time: 0.5, pose: {
+        torso: { ox: 0, oy: 0, oz: 3, scale: 1.05, rotation: 8 },
+        head: { ox: 0, oy: 0, oz: 4, rotation: 5 },
+        leftArm: { ox: 1, oy: -1, oz: 5, rotation: 25 }, rightArm: { ox: 1, oy: 0, oz: 4 },
+        weapon: { ox: 2, oy: -1, oz: 6, rotation: 25 }
+      }, glow: 0.7, easing: 'easeOut' },
+      // SLAM down
+      { time: 0.65, pose: {
+        torso: { ox: 1, oy: 0, oz: -1, scale: 0.95, rotation: -10 },
+        head: { ox: 0, oy: 0, oz: 0, rotation: -5 },
+        leftArm: { ox: 3, oy: -1, oz: -2, rotation: -60 }, rightArm: { ox: 1, oy: 0, oz: -1 },
+        weapon: { ox: 4, oy: -2, oz: -3, rotation: -90 },
+        leftLeg: { ox: 0, oy: 1, oz: 0 }, rightLeg: { ox: 0, oy: -1, oz: 0 }
+      }, glow: 1.0, easing: 'bounce' },
+      // Recovery
+      { time: 0.8, pose: {
+        torso: { ox: 0, oy: 0, oz: 0, rotation: -3 },
+        weapon: { ox: 2, oy: -1, oz: -1, rotation: -40 }
+      }, glow: 0.2, easing: 'easeOut' },
+      { time: 0.9, pose: {}, glow: 0 },
+    ]
+  },
+
+  combo_spinning_cleave: {
+    name: 'combo_spinning_cleave',
+    duration: 0.7,
+    keyframes: [
+      // Wind up
+      { time: 0, pose: {
+        torso: { ox: 0, oy: 0, oz: 0, rotation: 0 },
+        leftArm: { ox: -1, oy: -1, oz: 1 }, rightArm: { ox: -1, oy: 1, oz: 1 },
+        weapon: { ox: -1, oy: 0, oz: 3, rotation: 0 },
+        head: { ox: 0, oy: 0, oz: 0, rotation: 0 }
+      }, glow: 0, easing: 'easeIn' },
+      // Spin 90°
+      { time: 0.1, pose: {
+        torso: { ox: 0, oy: 0, oz: 1, rotation: 90 },
+        leftArm: { ox: 3, oy: -2, oz: 2, rotation: 60 }, rightArm: { ox: -2, oy: 2, oz: 2, rotation: -30 },
+        weapon: { ox: 4, oy: -2, oz: 2, rotation: 90 },
+        leftLeg: { ox: 0, oy: -1, oz: 1 }, rightLeg: { ox: 0, oy: 1, oz: 1 },
+        head: { ox: 0, oy: 0, oz: 1, rotation: 70 }
+      }, glow: 0.5, easing: 'easeIn' },
+      // Spin 180°
+      { time: 0.22, pose: {
+        torso: { ox: 0, oy: 0, oz: 2, rotation: 180 },
+        leftArm: { ox: 4, oy: 0, oz: 3, rotation: 120 }, rightArm: { ox: -3, oy: 0, oz: 3, rotation: -60 },
+        weapon: { ox: 5, oy: 0, oz: 1, rotation: 180 },
+        head: { ox: 0, oy: 0, oz: 2, rotation: 160 }
+      }, glow: 0.8, easing: 'easeInOut' },
+      // Spin 270°
+      { time: 0.35, pose: {
+        torso: { ox: 0, oy: 0, oz: 2, rotation: 270 },
+        leftArm: { ox: -3, oy: 2, oz: 3, rotation: 180 }, rightArm: { ox: 3, oy: -2, oz: 3, rotation: 90 },
+        weapon: { ox: -4, oy: 2, oz: 2, rotation: 270 },
+        head: { ox: 0, oy: 0, oz: 2, rotation: 250 }
+      }, glow: 1.0, easing: 'easeInOut' },
+      // Spin 360° — full rotation complete
+      { time: 0.48, pose: {
+        torso: { ox: 0, oy: 0, oz: 1, rotation: 360, scale: 1.1 },
+        leftArm: { ox: 4, oy: -2, oz: 2, rotation: 300 }, rightArm: { ox: 1, oy: 0, oz: 1 },
+        weapon: { ox: 5, oy: -2, oz: 0, rotation: 360 },
+        leftLeg: { ox: 0, oy: 1, oz: 0 }, rightLeg: { ox: 0, oy: -1, oz: 0 },
+        head: { ox: 0, oy: 0, oz: 1, rotation: 350 }
+      }, glow: 1.0, easing: 'overshoot' },
+      // Recover
+      { time: 0.6, pose: {
+        torso: { ox: 0, oy: 0, oz: 0, rotation: 365 },
+        weapon: { ox: 2, oy: -1, oz: 0, rotation: 340 }
+      }, glow: 0.3, easing: 'easeOut' },
+      { time: 0.7, pose: {}, glow: 0 },
+    ]
+  },
+
+  combo_backstep_burst: {
+    name: 'combo_backstep_burst',
+    duration: 0.75,
+    keyframes: [
+      // Jump back: legs push backward, torso leans forward
+      { time: 0, pose: {
+        leftLeg: { ox: 0, oy: 0, oz: 0 }, rightLeg: { ox: 0, oy: 0, oz: 0 },
+        torso: { ox: 0, oy: 0, oz: 0, rotation: 0 },
+        weapon: { ox: 0, oy: 0, oz: 3, rotation: 0 }
+      }, glow: 0, easing: 'easeIn' },
+      { time: 0.1, pose: {
+        leftLeg: { ox: 0, oy: 3, oz: 1 }, rightLeg: { ox: 0, oy: 2, oz: 0 },
+        torso: { ox: 1, oy: -1, oz: 1, rotation: 8 },
+        head: { ox: 1, oy: 0, oz: 1, rotation: 5 },
+        leftArm: { ox: 2, oy: -1, oz: 2 }, rightArm: { ox: 1, oy: 0, oz: 1 },
+        weapon: { ox: 2, oy: -1, oz: 5, rotation: 10 }
+      }, glow: 0.2, easing: 'easeIn' },
+      // First thrust
+      { time: 0.2, pose: {
+        leftLeg: { ox: 0, oy: 2, oz: 0 }, rightLeg: { ox: 0, oy: 1, oz: 0 },
+        torso: { ox: 2, oy: -1, oz: 0, rotation: 12 },
+        head: { ox: 2, oy: 0, oz: 0, rotation: 8 },
+        leftArm: { ox: 5, oy: -2, oz: 2, rotation: 15 }, rightArm: { ox: 2, oy: 0, oz: 1 },
+        weapon: { ox: 6, oy: -3, oz: 2, rotation: -45 }
+      }, glow: 0.8, easing: 'overshoot' },
+      // Pull back
+      { time: 0.32, pose: {
+        torso: { ox: 1, oy: 0, oz: 0, rotation: 5 },
+        leftArm: { ox: 2, oy: -1, oz: 2 },
+        weapon: { ox: 2, oy: -1, oz: 4, rotation: 0 }
+      }, glow: 0.2, easing: 'easeOut' },
+      // Second thrust
+      { time: 0.42, pose: {
+        torso: { ox: 3, oy: 0, oz: 0, rotation: 15 },
+        head: { ox: 2, oy: 0, oz: 0, rotation: 10 },
+        leftArm: { ox: 6, oy: -2, oz: 1, rotation: 20 }, rightArm: { ox: 3, oy: 0, oz: 1 },
+        weapon: { ox: 7, oy: -3, oz: 1, rotation: -60 }
+      }, glow: 0.9, easing: 'overshoot' },
+      // Pull back
+      { time: 0.52, pose: {
+        torso: { ox: 1, oy: 0, oz: 0, rotation: 3 },
+        weapon: { ox: 3, oy: -1, oz: 3, rotation: -10 }
+      }, glow: 0.2, easing: 'easeOut' },
+      // Third thrust — biggest
+      { time: 0.62, pose: {
+        torso: { ox: 4, oy: 0, oz: 0, rotation: 20, scale: 1.05 },
+        head: { ox: 3, oy: 0, oz: 0, rotation: 12 },
+        leftArm: { ox: 7, oy: -2, oz: 0, rotation: 30 }, rightArm: { ox: 4, oy: 0, oz: 0 },
+        weapon: { ox: 8, oy: -3, oz: 0, rotation: -90 },
+        leftLeg: { ox: 0, oy: 2, oz: 0 }, rightLeg: { ox: 0, oy: 1, oz: 0 }
+      }, glow: 1.0, easing: 'overshoot' },
+      { time: 0.75, pose: {}, glow: 0 },
+    ]
+  },
+
+  combo_power_slam: {
+    name: 'combo_power_slam',
+    duration: 0.85,
+    keyframes: [
+      // Raise weapon overhead: arms up, weapon at 90° above head
+      { time: 0, pose: {
+        torso: { ox: 0, oy: 0, oz: 0, rotation: 0 },
+        weapon: { ox: 0, oy: 0, oz: 3, rotation: 0 }
+      }, glow: 0, easing: 'easeIn' },
+      { time: 0.15, pose: {
+        torso: { ox: 0, oy: 0, oz: 1, rotation: -5 },
+        head: { ox: 0, oy: 0, oz: 1, rotation: -3 },
+        leftArm: { ox: -1, oy: -1, oz: 6, rotation: 30 }, rightArm: { ox: -1, oy: 0, oz: 5, rotation: 20 },
+        weapon: { ox: -1, oy: -1, oz: 8, rotation: 90 },
+        leftLeg: { ox: 0, oy: -1, oz: 0 }, rightLeg: { ox: 0, oy: 1, oz: 0 }
+      }, glow: 0.4, easing: 'easeIn' },
+      // Charged: body compresses, weapon high, glowing
+      { time: 0.35, pose: {
+        torso: { ox: 0, oy: 0, oz: -1, scale: 0.92, rotation: -8 },
+        head: { ox: 0, oy: 0, oz: 0, rotation: -5 },
+        leftArm: { ox: -1, oy: -1, oz: 7, rotation: 40 }, rightArm: { ox: -1, oy: 0, oz: 6, rotation: 30 },
+        weapon: { ox: -1, oy: -1, oz: 8, rotation: 95, scale: 1.1 },
+        leftLeg: { ox: 0, oy: -2, oz: -1 }, rightLeg: { ox: 0, oy: 2, oz: -1 }
+      }, glow: 0.8, easing: 'easeIn' },
+      // SLAM: explosive downward, weapon crashes to ground, body expands
+      { time: 0.5, pose: {
+        torso: { ox: 2, oy: 0, oz: -2, scale: 1.15, rotation: 20 },
+        head: { ox: 1, oy: 0, oz: -1, rotation: 15 },
+        leftArm: { ox: 4, oy: -2, oz: -3, rotation: -60 }, rightArm: { ox: 2, oy: -1, oz: -2, rotation: -30 },
+        weapon: { ox: 5, oy: -3, oz: -4, rotation: -90, scale: 1.2 },
+        leftLeg: { ox: 0, oy: 1, oz: 0 }, rightLeg: { ox: 0, oy: -1, oz: 0 }
+      }, glow: 1.0, easing: 'bounce' },
+      // Ground bounce: slight upward rebound
+      { time: 0.65, pose: {
+        torso: { ox: 1, oy: 0, oz: 1, scale: 1.05, rotation: 8 },
+        head: { ox: 0, oy: 0, oz: 1, rotation: 5 },
+        weapon: { ox: 3, oy: -2, oz: -1, rotation: -60 },
+      }, glow: 0.5, easing: 'easeOut' },
+      // Settle
+      { time: 0.78, pose: {
+        torso: { ox: 0, oy: 0, oz: 0, rotation: 2 },
+        weapon: { ox: 1, oy: -1, oz: 0, rotation: -30 }
+      }, glow: 0.1, easing: 'easeOut' },
+      { time: 0.85, pose: {}, glow: 0 },
+    ]
+  },
+
+  combo_whirlwind_finisher: {
+    name: 'combo_whirlwind_finisher',
+    duration: 1.0,
+    keyframes: [
+      // Start: arms out wide
+      { time: 0, pose: {
+        torso: { ox: 0, oy: 0, oz: 0, rotation: 0 },
+        leftArm: { ox: -1, oy: -2, oz: 1 }, rightArm: { ox: -1, oy: 2, oz: 1 },
+        weapon: { ox: -1, oy: -2, oz: 3, rotation: 0 }
+      }, glow: 0.2, easing: 'easeIn' },
+      // First spin 360° — building speed
+      { time: 0.08, pose: {
+        torso: { ox: 0, oy: 0, oz: 1, rotation: 90 },
+        leftArm: { ox: 3, oy: -2, oz: 2, rotation: 80 }, rightArm: { ox: -3, oy: 2, oz: 2, rotation: -40 },
+        weapon: { ox: 4, oy: -2, oz: 2, rotation: 90 },
+        head: { ox: 0, oy: 0, oz: 1, rotation: 80 }
+      }, glow: 0.4, easing: 'easeIn' },
+      { time: 0.18, pose: {
+        torso: { ox: 0, oy: 0, oz: 2, rotation: 270 },
+        leftArm: { ox: -4, oy: 2, oz: 3, rotation: 200 }, rightArm: { ox: 4, oy: -2, oz: 3, rotation: 110 },
+        weapon: { ox: -5, oy: 2, oz: 2, rotation: 270 },
+        head: { ox: 0, oy: 0, oz: 2, rotation: 250 }
+      }, glow: 0.6, easing: 'easeInOut' },
+      { time: 0.28, pose: {
+        torso: { ox: 0, oy: 0, oz: 2, rotation: 360 },
+        weapon: { ox: 5, oy: -2, oz: 1, rotation: 360 },
+        head: { ox: 0, oy: 0, oz: 2, rotation: 350 }
+      }, glow: 0.7, easing: 'easeIn' },
+      // Second spin 720° — faster, weapon arcs wider
+      { time: 0.38, pose: {
+        torso: { ox: 0, oy: 0, oz: 3, rotation: 540, scale: 1.05 },
+        leftArm: { ox: 5, oy: -3, oz: 3, rotation: 450 }, rightArm: { ox: -4, oy: 3, oz: 3, rotation: 200 },
+        weapon: { ox: 6, oy: -3, oz: 1, rotation: 540, scale: 1.1 },
+        leftLeg: { ox: 0, oy: -1, oz: 2 }, rightLeg: { ox: 0, oy: 1, oz: 2 },
+        head: { ox: 0, oy: 0, oz: 3, rotation: 520 }
+      }, glow: 0.9, easing: 'easeIn' },
+      { time: 0.52, pose: {
+        torso: { ox: 0, oy: 0, oz: 3, rotation: 720, scale: 1.1 },
+        leftArm: { ox: -5, oy: 3, oz: 3, rotation: 650 }, rightArm: { ox: 5, oy: -3, oz: 3, rotation: 380 },
+        weapon: { ox: -6, oy: 3, oz: 0, rotation: 720, scale: 1.15 },
+        head: { ox: 0, oy: 0, oz: 3, rotation: 700 }
+      }, glow: 1.0, easing: 'easeInOut' },
+      // FINISHER: explosive stop with burst
+      { time: 0.65, pose: {
+        torso: { ox: 2, oy: 0, oz: 1, rotation: 740, scale: 1.2 },
+        leftArm: { ox: 6, oy: -3, oz: 1, rotation: 720 }, rightArm: { ox: 2, oy: 0, oz: 0 },
+        weapon: { ox: 7, oy: -4, oz: -1, rotation: 740, scale: 1.3 },
+        leftLeg: { ox: 0, oy: 1, oz: 0 }, rightLeg: { ox: 0, oy: -1, oz: 0 },
+        head: { ox: 1, oy: 0, oz: 1, rotation: 730 }
+      }, glow: 1.0, easing: 'overshoot' },
+      // Recovery
+      { time: 0.82, pose: {
+        torso: { ox: 0, oy: 0, oz: 0, rotation: 725 },
+        weapon: { ox: 3, oy: -2, oz: 0, rotation: 720 }
+      }, glow: 0.3, easing: 'easeOut' },
+      { time: 1.0, pose: {}, glow: 0 },
+    ]
+  },
 };
 
 export interface ClassMotionProfile {
@@ -923,13 +1239,13 @@ export interface SpellVFXPlan {
 }
 
 const COMBO_PATTERNS: Record<string, string[]> = {
-  swing_horizontal: ['swing_horizontal', 'thrust_linear', 'swing_vertical_chop'],
-  swing_vertical_chop: ['swing_vertical_chop', 'swing_horizontal', 'slam_overhead'],
-  thrust_linear: ['thrust_linear', 'claw_swipe', 'thrust_linear'],
-  slam_overhead: ['slam_overhead', 'swing_horizontal', 'slam_overhead'],
-  claw_swipe: ['claw_swipe', 'claw_swipe', 'swing_horizontal'],
-  bow_draw_release: ['bow_draw_release', 'bow_draw_release', 'bow_draw_release'],
-  staff_cast: ['staff_cast', 'staff_cast', 'staff_cast'],
+  swing_horizontal: ['combo_double_slash', 'combo_uppercut_slam', 'combo_spinning_cleave'],
+  swing_vertical_chop: ['combo_power_slam', 'combo_backstep_burst', 'combo_spinning_cleave'],
+  thrust_linear: ['combo_backstep_burst', 'combo_double_slash', 'combo_uppercut_slam'],
+  slam_overhead: ['combo_power_slam', 'combo_double_slash', 'combo_whirlwind_finisher'],
+  claw_swipe: ['combo_double_slash', 'combo_double_slash', 'combo_whirlwind_finisher'],
+  bow_draw_release: ['combo_backstep_burst', 'combo_backstep_burst', 'combo_spinning_cleave'],
+  staff_cast: ['staff_cast', 'combo_spinning_cleave', 'combo_power_slam'],
 };
 
 const CLASS_SLASH_COLORS: Record<string, string> = {

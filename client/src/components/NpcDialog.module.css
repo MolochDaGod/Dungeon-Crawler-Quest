@@ -8,6 +8,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
   font-family: 'Crimson Text', Georgia, serif;
   color: #f5e2c1;
 }

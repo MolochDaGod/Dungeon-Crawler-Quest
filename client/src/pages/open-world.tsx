@@ -382,7 +382,7 @@ export default function OpenWorldPage() {
             </div>
           )}
 
-          {/* Dungeon entrance prompt */}
+          {/* Dungeon Event entrance */}
           {hud.nearbyDungeon && (
             <div
               className="absolute bottom-48 left-1/2 -translate-x-1/2 pointer-events-none"
@@ -395,6 +395,7 @@ export default function OpenWorldPage() {
               }}
             >
               <div className="text-center">
+                <div className="text-[9px] text-red-500 font-bold tracking-wider mb-1">⚔ DUNGEON EVENT</div>
                 <div className="text-sm font-black text-red-400">{hud.nearbyDungeon.name}</div>
                 <div className="text-xs text-gray-400 mt-1">
                   {hud.level >= hud.nearbyDungeon.requiredLevel

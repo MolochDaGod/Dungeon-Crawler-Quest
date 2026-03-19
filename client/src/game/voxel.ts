@@ -4,10 +4,14 @@ import {
   drawTransformVFX, drawHealingVFX, drawShieldVFX,
   drawSummonVFX, WeaponTrailSystem,
   sampleMotion, additivePoses, MOTION_LIBRARY,
-  getClassMotionProfile, type FullPose,
+  getClassMotionProfile, type FullPose, type BodyPartPose as MotionBodyPartPose,
   globalAnimDirector, drawAISlashVFX, drawAISpellVFX,
   type AttackPlan, type SpellVFXPlan
 } from './voxel-motion';
+import {
+  getCachedParsedBody, getPartRenderOrder, PART_SCREEN_OFFSETS,
+  type ParsedBody, type BodyPartName
+} from './voxel-body-parser';
 
 function vfxSeededRand(seed: number): number {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
@@ -2341,6 +2345,7 @@ export class VoxelRenderer {
   private weaponTrails = new Map<number, WeaponTrailSystem>();
   private transformTimers = new Map<number, number>();
   private deathDebrisCache = new Map<number, DeathDebris>();
+  private parsedBodyCache = new Map<string, ParsedBody>();
 
   private getWeaponTrail(entityId: number): WeaponTrailSystem {
     let trail = this.weaponTrails.get(entityId);
@@ -2381,6 +2386,114 @@ export class VoxelRenderer {
     const debris: DeathDebris = { voxels, startTime: time, duration: 2.5 };
     this.deathDebrisCache.set(entityId, debris);
     return debris;
+  }
+
+  /**
+   * Render a parsed body with independent per-part canvas transforms.
+   * Each body part gets its own rotation/scale/translation from the FullPose.
+   */
+  renderParsedBody(
+    ctx: CanvasRenderingContext2D,
+    cx: number, cy: number,
+    parsed: ParsedBody,
+    poses: FullPose,
+    cubeSize: number,
+    facing: number
+  ) {
+    const cs = cubeSize;
+    const isoX = cs;
+    const isoY = cs * 0.5;
+    const renderOrder = getPartRenderOrder(facing);
+
+    // Map FullPose part names to ParsedBody part names
+    const poseMap: Record<BodyPartName, MotionBodyPartPose & { weaponGlow?: number }> = {
+      leftLeg: poses.leftLeg,
+      rightLeg: poses.rightLeg,
+      chest: poses.torso,
+      leftArm: poses.leftArm,
+      rightArm: poses.rightArm,
+      head: poses.head,
+      hat: poses.head, // hat follows head by default but with slight delay
+      weapon: poses.weapon,
+    };
+
+    for (const partName of renderOrder) {
+      const part = parsed[partName];
+      const pose = poseMap[partName];
+      if (!part || !pose) continue;
+
+      // Check if this part has any voxels
+      let hasVoxels = false;
+      outer: for (let z = 0; z < part.model.length; z++) {
+        const layer = part.model[z];
+        if (!layer) continue;
+        for (let y = 0; y < layer.length; y++) {
+          const row = layer[y];
+          if (!row) continue;
+          for (let x = 0; x < row.length; x++) {
+            if (row[x]) { hasVoxels = true; break outer; }
+          }
+        }
+      }
+      if (!hasVoxels) continue;
+
+      const offsets = PART_SCREEN_OFFSETS[partName];
+      const rotation = (pose.rotation ?? 0) * Math.PI / 180;
+      const scale = pose.scale ?? 1;
+      const ox = pose.ox ?? 0;
+      const oy = pose.oy ?? 0;
+      const oz = pose.oz ?? 0;
+
+      // For hat: add slight lag/bounce relative to head
+      let hatBounce = 0;
+      if (partName === 'hat') {
+        const headRot = (poses.head.rotation ?? 0) * Math.PI / 180;
+        hatBounce = Math.sin(headRot * 2) * 2;
+      }
+
+      // Calculate screen position of this part's origin in iso space
+      const partWorldX = offsets.dx + ox;
+      const partWorldY = offsets.dy + oy;
+      const partWorldZ = offsets.dz + oz + hatBounce;
+
+      // Iso projection of part origin
+      const partScreenX = cx + (partWorldX - partWorldY) * isoX;
+      const partScreenY = cy + (partWorldX + partWorldY) * isoY - partWorldZ * cs;
+
+      // Apply canvas-level transform for rotation and scale
+      if (Math.abs(rotation) > 0.001 || Math.abs(scale - 1) > 0.01) {
+        ctx.save();
+
+        // Translate to pivot point, rotate, scale, translate back
+        const pivotScreenX = partScreenX + (part.pivotX - part.pivotY) * isoX;
+        const pivotScreenY = partScreenY + (part.pivotX + part.pivotY) * isoY - part.pivotZ * cs;
+
+        ctx.translate(pivotScreenX, pivotScreenY);
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.translate(-pivotScreenX, -pivotScreenY);
+
+        this.renderVoxelModel(ctx, partScreenX, partScreenY, part.model, cs, facing);
+        ctx.restore();
+      } else {
+        this.renderVoxelModel(ctx, partScreenX, partScreenY, part.model, cs, facing);
+      }
+    }
+  }
+
+  /**
+   * Get or build a cached parsed body for combat rendering.
+   */
+  private getParsedBody(race: string, heroClass: string, heroName?: string): ParsedBody {
+    const key = `${race}:${heroClass}:${heroName ?? ''}`;
+    let cached = this.parsedBodyCache.get(key);
+    if (!cached) {
+      // Build idle model with zero poses for clean slicing
+      const idleModel = buildHeroModel(race, heroClass, 'idle', 0, heroName);
+      cached = getCachedParsedBody(race, heroClass, idleModel, heroName);
+      this.parsedBodyCache.set(key, cached);
+    }
+    return cached;
   }
 
   private renderDeathDebris(ctx: CanvasRenderingContext2D, cx: number, cy: number, debris: DeathDebris, time: number, facing: number) {
@@ -2537,7 +2650,33 @@ export class VoxelRenderer {
       this.deathDebrisCache.delete(eid);
     }
 
-    this.renderVoxelModel(ctx, x, groundY - 12, model, this.cubeSize, facing);
+    // Use parsed body rendering for combat states (per-part rotation/scale)
+    const isCombatAnim = animState === 'attack' || animState === 'combo_finisher' ||
+      animState === 'dash_attack' || animState === 'lunge_slash' || animState === 'ability';
+    if (isCombatAnim && animTimer > 0.01) {
+      const parsed = this.getParsedBody(race, heroClass, heroName);
+      const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
+      const motionProfile = getClassMotionProfile(heroClass, weaponType);
+      // Pick the combo motion based on current combo step
+      let motionName = motionProfile.attackMotion;
+      if (animState === 'ability') {
+        motionName = motionProfile.abilityMotion;
+      } else {
+        const plan = globalAnimDirector.planAttack(heroClass, weaponType, eid, facing);
+        motionName = plan.motionName;
+      }
+
+      const motion = MOTION_LIBRARY[motionName];
+      if (motion) {
+        const scaledTime = animTimer * (motionProfile.attackSpeed * 1.0);
+        const comboPose = sampleMotion(motion, scaledTime);
+        this.renderParsedBody(ctx, x, groundY - 12, parsed, comboPose, this.cubeSize, facing);
+      } else {
+        this.renderVoxelModel(ctx, x, groundY - 12, model, this.cubeSize, facing);
+      }
+    } else {
+      this.renderVoxelModel(ctx, x, groundY - 12, model, this.cubeSize, facing);
+    }
 
     if (animState === 'attack' && animTimer > 0.02) {
       this.drawAttackVFX(ctx, x, groundY, heroClass, facing, animTimer, race);
