@@ -7,6 +7,8 @@ export enum KeybindAction {
   Ability2 = 'Ability2',
   Ability3 = 'Ability3',
   Ability4 = 'Ability4',
+  Ability5 = 'Ability5',
+  Ability6 = 'Ability6',
   Attack = 'Attack',
   AttackMove = 'AttackMove',
   MoveToTarget = 'MoveToTarget',
@@ -28,6 +30,8 @@ export enum KeybindAction {
   LevelUpAbility2 = 'LevelUpAbility2',
   LevelUpAbility3 = 'LevelUpAbility3',
   LevelUpAbility4 = 'LevelUpAbility4',
+  LevelUpAbility5 = 'LevelUpAbility5',
+  LevelUpAbility6 = 'LevelUpAbility6',
   Dodge = 'Dodge',
   DashAttack = 'DashAttack',
   Block = 'Block',
@@ -43,6 +47,7 @@ export enum KeybindAction {
   DodgeRoll = 'DodgeRoll',
   Interact = 'Interact',
   TargetLock = 'TargetLock',
+  ToggleSkillTree = 'ToggleSkillTree',
   // UI toggles (Open World)
   ToggleInventory = 'ToggleInventory',
   ToggleCharPanel = 'ToggleCharPanel',
@@ -52,11 +57,11 @@ export enum KeybindAction {
 export const ACTION_CATEGORIES: Record<string, KeybindAction[]> = {
   Movement: [KeybindAction.MoveUp, KeybindAction.MoveDown, KeybindAction.MoveLeft, KeybindAction.MoveRight, KeybindAction.StopMove],
   'MOBA Combat': [KeybindAction.Attack, KeybindAction.AttackMove, KeybindAction.MoveToTarget, KeybindAction.Dodge, KeybindAction.DashAttack, KeybindAction.Block],
-  'MOBA Abilities (Q/W/E/R)': [KeybindAction.Ability1, KeybindAction.Ability2, KeybindAction.Ability3, KeybindAction.Ability4],
+  'MOBA Abilities (Q/W/E/R/D/F)': [KeybindAction.Ability1, KeybindAction.Ability2, KeybindAction.Ability3, KeybindAction.Ability4, KeybindAction.Ability5, KeybindAction.Ability6],
   'Dungeon/OW Combat': [KeybindAction.LightAttack, KeybindAction.HeavyAttack, KeybindAction.DodgeRoll, KeybindAction.Sprint],
   'Dungeon/OW Abilities (1-4)': [KeybindAction.DungeonAbility1, KeybindAction.DungeonAbility2, KeybindAction.DungeonAbility3, KeybindAction.DungeonAbility4],
   'Interaction': [KeybindAction.Interact, KeybindAction.TargetLock, KeybindAction.ToggleInventory, KeybindAction.ToggleCharPanel, KeybindAction.ToggleMissions],
-  'Level Up': [KeybindAction.LevelUpAbility1, KeybindAction.LevelUpAbility2, KeybindAction.LevelUpAbility3, KeybindAction.LevelUpAbility4],
+  'Level Up': [KeybindAction.LevelUpAbility1, KeybindAction.LevelUpAbility2, KeybindAction.LevelUpAbility3, KeybindAction.LevelUpAbility4, KeybindAction.LevelUpAbility5, KeybindAction.LevelUpAbility6],
   Items: [KeybindAction.Item1, KeybindAction.Item2, KeybindAction.Item3, KeybindAction.Item4, KeybindAction.Item5, KeybindAction.Item6],
   Camera: [KeybindAction.CameraPan, KeybindAction.CenterCamera, KeybindAction.ZoomIn, KeybindAction.ZoomOut],
   UI: [KeybindAction.ToggleShop, KeybindAction.ToggleScoreboard, KeybindAction.Pause],
@@ -71,6 +76,8 @@ export const ACTION_LABELS: Record<KeybindAction, string> = {
   [KeybindAction.Ability2]: 'Spell 2 (W)',
   [KeybindAction.Ability3]: 'Spell 3 (E)',
   [KeybindAction.Ability4]: 'Ultimate (R)',
+  [KeybindAction.Ability5]: 'Spell 5 (D)',
+  [KeybindAction.Ability6]: 'Spell 6 (F)',
   [KeybindAction.Attack]: 'Attack / Select',
   [KeybindAction.AttackMove]: 'Attack Move (A)',
   [KeybindAction.MoveToTarget]: 'Move / Target',
@@ -92,6 +99,8 @@ export const ACTION_LABELS: Record<KeybindAction, string> = {
   [KeybindAction.LevelUpAbility2]: 'Level Up W',
   [KeybindAction.LevelUpAbility3]: 'Level Up E',
   [KeybindAction.LevelUpAbility4]: 'Level Up R',
+  [KeybindAction.LevelUpAbility5]: 'Level Up D',
+  [KeybindAction.LevelUpAbility6]: 'Level Up F',
   [KeybindAction.Dodge]: 'Dodge Roll',
   [KeybindAction.DashAttack]: 'Dash Attack',
   [KeybindAction.Block]: 'Shield Block',
@@ -108,6 +117,7 @@ export const ACTION_LABELS: Record<KeybindAction, string> = {
   [KeybindAction.ToggleInventory]: 'Toggle Inventory (I)',
   [KeybindAction.ToggleCharPanel]: 'Toggle Character Panel (C)',
   [KeybindAction.ToggleMissions]: 'Toggle Missions (J)',
+  [KeybindAction.ToggleSkillTree]: 'Toggle Skill Tree (N)',
 };
 
 export interface KeyBind {
@@ -138,6 +148,8 @@ export function getDefaultBindings(): KeybindConfig {
     [KeybindAction.Ability2]: makeKeyBind('w'),
     [KeybindAction.Ability3]: makeKeyBind('e'),
     [KeybindAction.Ability4]: makeKeyBind('r'),
+    [KeybindAction.Ability5]: makeKeyBind('d'),
+    [KeybindAction.Ability6]: makeKeyBind('f'),
     [KeybindAction.Attack]: makeMouseBind(0),
     [KeybindAction.AttackMove]: makeKeyBind('a'),
     [KeybindAction.MoveToTarget]: makeMouseBind(2),
@@ -159,6 +171,8 @@ export function getDefaultBindings(): KeybindConfig {
     [KeybindAction.LevelUpAbility2]: makeKeyBind('w', false, true),
     [KeybindAction.LevelUpAbility3]: makeKeyBind('e', false, true),
     [KeybindAction.LevelUpAbility4]: makeKeyBind('r', false, true),
+    [KeybindAction.LevelUpAbility5]: makeKeyBind('d', false, true),
+    [KeybindAction.LevelUpAbility6]: makeKeyBind('f', false, true),
     [KeybindAction.Dodge]: makeKeyBind('c'),
     [KeybindAction.DashAttack]: makeKeyBind('f'),
     [KeybindAction.Block]: makeKeyBind('v'),
@@ -176,6 +190,7 @@ export function getDefaultBindings(): KeybindConfig {
     [KeybindAction.ToggleInventory]: makeKeyBind('i'),
     [KeybindAction.ToggleCharPanel]: makeKeyBind('c'),
     [KeybindAction.ToggleMissions]: makeKeyBind('j'),
+    [KeybindAction.ToggleSkillTree]: makeKeyBind('n'),
   };
 }
 

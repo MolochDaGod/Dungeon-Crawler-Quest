@@ -132,6 +132,8 @@ export interface MobaHero extends GameEntity {
   pendingAttackTarget: number | null;
   aiChatTimer: number;
   killStreak: number;
+  attributes?: import('./attributes').PlayerAttributes;
+  derivedStats?: import('./attributes').DerivedStats;
 }
 
 export interface MobaMinion extends GameEntity {
@@ -219,7 +221,10 @@ export interface SpellProjectile {
   maxLife: number;
   spellName: string;
   aoeRadius: number;
+  trailImage?: import('./trail-effects').TrailColor;
 }
+
+export type ProjectileStyle = 'default' | 'spinning_axe' | 'arrow_long' | 'magic_orb' | 'worg_fang';
 
 export interface Projectile {
   id: number;
@@ -233,6 +238,10 @@ export interface Projectile {
   sourceId: number;
   color: string;
   size: number;
+  projStyle?: ProjectileStyle;
+  trailColor?: string;
+  spawnTime?: number;
+  trailImage?: import('./trail-effects').TrailColor;
 }
 
 export interface Particle {
@@ -298,6 +307,7 @@ export interface MobaState {
   areaDamageZones: AreaDamageZoneState[];
   pendingSpriteEffects: { type: string; x: number; y: number; scale: number; duration: number }[];
   firstBloodClaimed: boolean;
+  activeSpells: import('./spell-system').ActiveSpell[];
 }
 
 export interface AreaDamageZoneState {
@@ -380,6 +390,14 @@ export interface HudState {
   minimapEntities: { x: number; y: number; type: 'player' | 'ally_hero' | 'enemy_hero' | 'ally_tower' | 'enemy_tower' | 'ally_nexus' | 'enemy_nexus' | 'ally_minion' | 'enemy_minion' | 'jungle_small' | 'jungle_medium' | 'jungle_buff'; dead?: boolean }[];
   cameraViewport: { x: number; y: number; w: number; h: number };
   targetInfo: TargetInfo | null;
+  // Derived combat stats for HUD display
+  critChance: number;
+  evasionPct: number;
+  armorPen: number;
+  blockChancePct: number;
+  lifestealPct: number;
+  cdr: number;
+  attributePoints: number;
 }
 
 export interface TargetInfo {
@@ -661,10 +679,12 @@ export function heroStatsAtLevel(hero: HeroData, level: number): { hp: number; a
   };
 }
 
+/** Legacy damage calc — now uses √Defense formula from reference system */
 export function calcDamage(atk: number, def: number): number {
-  const reduction = def / (def + 50);
-  const raw = atk * (1 + Math.random() * 0.2 - 0.1);
-  return Math.max(1, Math.floor(raw * (1 - reduction)));
+  const sqrtDef = Math.sqrt(Math.max(0, def));
+  const mitigation = Math.min(90, sqrtDef);
+  const variance = 0.75 + Math.random() * 0.5;
+  return Math.max(1, Math.floor(atk * (100 - mitigation) / 100 * variance));
 }
 
 export type WeaponType = 'sword_shield' | 'heavy_axe' | 'spear' | 'war_hammer' | 'axe_shield' | 'greatsword' | 'claws' | 'bow' | 'staff' | 'pistol' | 'swords' | 'axes1h' | 'greataxes' | 'hammers' | 'daggers' | 'crossbows' | 'guns' | 'scythes' | 'fireStaves' | 'frostStaves' | 'arcaneStaves' | 'natureStaves' | 'lightningStaves' | 'holyStaves';

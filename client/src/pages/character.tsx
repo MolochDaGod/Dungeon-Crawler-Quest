@@ -131,7 +131,7 @@ export default function CharacterPage() {
               <div className={css.statRow}><span className={css.statKey}>Bonus MP</span><span className={css.statVal}>+{data.attributeSummary.derived.bonusMp}</span></div>
               <div className={css.statRow}><span className={css.statKey}>Phys ATK</span><span className={css.statVal}>+{data.attributeSummary.derived.bonusAtk}</span></div>
               <div className={css.statRow}><span className={css.statKey}>Mag ATK</span><span className={css.statVal}>+{data.attributeSummary.derived.bonusMagicDmg}</span></div>
-              <div className={css.statRow}><span className={css.statKey}>Crit</span><span className={css.statVal}>{data.attributeSummary.derived.critChance.toFixed(1)}%</span></div>
+              <div className={css.statRow}><span className={css.statKey}>Crit</span><span className={css.statVal}>{data.attributeSummary.derived.criticalChance.toFixed(1)}%</span></div>
               <div className={css.statRow}><span className={css.statKey}>Evasion</span><span className={css.statVal}>{data.attributeSummary.derived.evasionChance.toFixed(1)}%</span></div>
             </div>
           )}

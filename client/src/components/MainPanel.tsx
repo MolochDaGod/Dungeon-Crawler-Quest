@@ -109,7 +109,7 @@ export default function MainPanel({ hud, stateRef, heroData, abilities, abilityN
               <div className={css.statRow}><span className={css.statKey}>Bonus MP</span><span className={css.statVal}>+{hud.attributeSummary.derived.bonusMp}</span></div>
               <div className={css.statRow}><span className={css.statKey}>Phys ATK</span><span className={css.statVal}>+{hud.attributeSummary.derived.bonusAtk}</span></div>
               <div className={css.statRow}><span className={css.statKey}>Mag ATK</span><span className={css.statVal}>+{hud.attributeSummary.derived.bonusMagicDmg}</span></div>
-              <div className={css.statRow}><span className={css.statKey}>Crit</span><span className={css.statVal}>{hud.attributeSummary.derived.critChance.toFixed(1)}%</span></div>
+              <div className={css.statRow}><span className={css.statKey}>Crit</span><span className={css.statVal}>{hud.attributeSummary.derived.criticalChance.toFixed(1)}%</span></div>
               <div className={css.statRow}><span className={css.statKey}>Evasion</span><span className={css.statVal}>{hud.attributeSummary.derived.evasionChance.toFixed(1)}%</span></div>
             </div>
           )}
@@ -282,7 +282,7 @@ function AttributesTab({ hud, stateRef }: { hud: OWHudState; stateRef: React.Mut
         {[
           { label: 'Heal Power', val: `×${summary.derived.healPower.toFixed(2)}`, icon: '💚' },
           { label: 'Ability Bonus', val: `×${summary.derived.abilityBonus.toFixed(2)}`, icon: '🔮' },
-          { label: 'Crit Chance', val: `${summary.derived.critChance.toFixed(1)}%`, icon: '💥' },
+          { label: 'Crit Chance', val: `${summary.derived.criticalChance.toFixed(1)}%`, icon: '💥' },
           { label: 'Evasion', val: `${summary.derived.evasionChance.toFixed(1)}%`, icon: '🌀' },
         ].map(d => (
           <div key={d.label} className={css.attrCard}>

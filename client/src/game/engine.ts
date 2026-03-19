@@ -16,9 +16,22 @@ import {
   StatusEffect, StatusEffectType, updateStatusEffects, applyStatusEffect,
   isStunned, isRooted, isSilenced, getSpeedMultiplier,
   hasLifesteal, getAbilityStatusEffects, createStatusEffect,
-  CombatEntity, calculateDamage as combatCalcDamage,
+  CombatEntity, calculateDamage as combatCalcDamage, DamageOpts,
   DOT_TYPES, CC_TYPES
 } from './combat';
+import {
+  PlayerAttributes, DerivedStats, createPlayerAttributes,
+  computeDerivedStats, applyAttributeBonus, grantLevelUpPoints,
+  autoAllocatePoint, POINTS_PER_LEVEL, STARTING_POINTS
+} from './attributes';
+import {
+  preloadTrails, updateTrailPoint, removeTrail,
+  CLASS_TRAIL_COLOR, ELEMENT_TRAIL_COLOR, type TrailColor
+} from './trail-effects';
+import {
+  getSpellForAbility, createActiveSpell, updateActiveSpell,
+  type ActiveSpell, type SpellTickResult
+} from './spell-system';
 
 const BASE_POSITIONS: Vec2[] = [
   { x: 300, y: 3700 },
@@ -191,6 +204,8 @@ function generateDecorations(): { x: number; y: number; type: string; seed: numb
 }
 
 export function createInitialState(playerHeroId: number, playerTeam: number): MobaState {
+  // Preload trail effect images
+  preloadTrails();
   // Load saved map from admin editor if available
   const savedMap = loadMapData();
 
@@ -230,7 +245,8 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     screenShake: 0,
     areaDamageZones: [],
     pendingSpriteEffects: [],
-    firstBloodClaimed: false
+    firstBloodClaimed: false,
+    activeSpells: []
   };
 
   const team0Heroes = [playerHeroId];
@@ -282,7 +298,15 @@ function laneSpawn(lane: number, team: number): Vec2 {
 }
 
 function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: number, isPlayer: boolean): MobaHero {
-  const stats = heroStatsAtLevel(hd, 1);
+  const attrs = createPlayerAttributes(hd.heroClass);
+  // createPlayerAttributes already grants STARTING_POINTS (20)
+  // Auto-allocate for non-player heroes
+  if (!isPlayer) {
+    while (attrs.unspentPoints > 0) autoAllocatePoint(attrs, hd.heroClass);
+  }
+  const baseStats = heroStatsAtLevel(hd, 1);
+  const stats = applyAttributeBonus(baseStats, attrs, hd.heroClass);
+  const derived = computeDerivedStats(attrs);
   return {
     id: state.nextEntityId++,
     heroDataId: hd.id,
@@ -317,7 +341,9 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     abilityLevels: [0, 0, 0, 0],
     abilityPoints: 1,
     aiChatTimer: 5 + Math.random() * 20,
-    killStreak: 0
+    killStreak: 0,
+    attributes: attrs,
+    derivedStats: derived,
   };
 }
 
@@ -691,6 +717,7 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   updateProjectiles(state, dt);
   updateSpellProjectiles(state, dt);
   updateAreaDamageZones(state, dt);
+  updateActiveSpells(state, dt);
   updateParticles(state, dt);
   updateFloatingTexts(state, dt);
   updateSpellEffects(state, dt);
@@ -743,12 +770,14 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
   if (heroData) {
     const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
     if (abilities) {
+      // Apply CDR to charge recharge timers
+      const heroCdrMult = hero.derivedStats ? Math.max(0, 1 - hero.derivedStats.cooldownReduction / 100) : 1;
       for (let i = 0; i < abilities.length; i++) {
         const ab = abilities[i];
         if (ab.maxCharges && ab.maxCharges > 0) {
           if (hero.abilityCharges[i] < ab.maxCharges) {
             hero.abilityChargeTimers[i] += dt;
-            const rechargeTime = ab.chargeRechargeTime || ab.cooldown;
+            const rechargeTime = (ab.chargeRechargeTime || ab.cooldown) * heroCdrMult;
             if (hero.abilityChargeTimers[i] >= rechargeTime) {
               hero.abilityCharges[i]++;
               hero.abilityChargeTimers[i] = 0;
@@ -861,7 +890,11 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
     }
   }
 
-  hero.mp = Math.min(hero.maxMp, hero.mp + dt * (2 + hero.level * 0.5));
+  // Regen from derived stats
+  const hpRegen = hero.derivedStats ? hero.derivedStats.healthRegen : 0;
+  const mpRegen = hero.derivedStats ? hero.derivedStats.manaRegen : 0;
+  hero.hp = Math.min(hero.maxHp, hero.hp + dt * hpRegen);
+  hero.mp = Math.min(hero.maxMp, hero.mp + dt * (2 + hero.level * 0.5 + mpRegen));
 
   const effectResult = updateStatusEffects(hero as any as CombatEntity, dt);
   if (effectResult.damage > 0) {
@@ -892,7 +925,9 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
     if (hero.abilityCooldowns[i] > 0) hero.abilityCooldowns[i] -= dt;
   }
 
-  hero.autoAttackTimer -= dt;
+  // Attack speed from derived stats speeds up auto-attack interval
+  const atkSpdMult = hero.derivedStats ? 1 + hero.derivedStats.attackSpeed / 100 : 1;
+  hero.autoAttackTimer -= dt * atkSpdMult;
 
   if (hero.attackWindup > 0) {
     hero.attackWindup -= dt;
@@ -1691,7 +1726,11 @@ function isMeleeClass(heroClass: string): boolean {
 function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, target: any, comboMult: number = 1.0) {
   const atk = 'atk' in attacker ? attacker.atk : 15;
   const color = attacker.team === 0 ? '#60a5fa' : '#f87171';
-  const dmg = Math.floor(atk * comboMult);
+  // Apply full derived damage bonus from attributes
+  const derived = 'derivedStats' in attacker ? (attacker as MobaHero).derivedStats : null;
+  const dmgBonus = derived ? derived.damage : 0;
+  const physMult = derived ? derived.physDmgMult : 1;
+  const dmg = Math.floor((atk + dmgBonus) * comboMult * physMult);
 
   let isMelee = false;
   if ('heroDataId' in attacker) {
@@ -1746,17 +1785,49 @@ function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, ta
       });
     }
   } else {
+    // Determine class-specific projectile style
+    let projStyle: import('./types').ProjectileStyle = 'default';
+    let trailColor = color;
+    let projSpeed = 450;
+    if ('heroDataId' in attacker) {
+      const hd = HEROES[(attacker as MobaHero).heroDataId];
+      if (hd) {
+        if (hd.heroClass === 'Warrior') {
+          projStyle = 'spinning_axe';
+          trailColor = '#dc2626';
+          projSpeed = 380;
+        } else if (hd.heroClass === 'Ranger') {
+          projStyle = 'arrow_long';
+          trailColor = CLASS_COLORS.Ranger;
+          projSpeed = 550;
+        } else if (hd.heroClass === 'Mage') {
+          projStyle = 'magic_orb';
+          trailColor = CLASS_COLORS.Mage;
+          projSpeed = 420;
+        } else if (hd.heroClass === 'Worg') {
+          projStyle = 'worg_fang';
+          trailColor = CLASS_COLORS.Worg;
+          projSpeed = 480;
+        }
+        // Assign trail image based on class
+        var projTrailImage: TrailColor | undefined = CLASS_TRAIL_COLOR[hd.heroClass];
+      }
+    }
     state.projectiles.push({
       id: state.nextEntityId++,
       x: attacker.x, y: attacker.y,
       targetId: target.id,
       targetType: 'hero',
       damage: dmg,
-      speed: 450,
+      speed: projSpeed,
       team: attacker.team,
       sourceId: attacker.id,
       color: comboMult > 1 ? '#ffd700' : color,
-      size: comboMult > 1 ? 6 : 4
+      size: comboMult > 1 ? 6 : 4,
+      projStyle,
+      trailColor,
+      spawnTime: state.gameTime,
+      trailImage: projTrailImage,
     });
   }
 
@@ -1796,18 +1867,24 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   const levelDamageMultiplier = abilityLevel > 0 ? (1 + (abilityLevel - 1) * 0.25) : 1;
   const ab = { ...abRaw, damage: Math.floor(abRaw.damage * levelDamageMultiplier) };
 
+  // Apply CDR and mana cost reduction from derived stats
+  const derived = hero.derivedStats;
+  const cdrMult = derived ? Math.max(0, 1 - derived.cooldownReduction / 100) : 1;
+  const costMult = derived ? Math.max(0, 1 - derived.abilityCost / 100) : 1;
+  const effectiveManaCost = Math.floor(ab.manaCost * costMult);
+
   if (ab.maxCharges && ab.maxCharges > 0) {
-    if (hero.abilityCharges[abilityIndex] <= 0 || hero.mp < ab.manaCost) return;
+    if (hero.abilityCharges[abilityIndex] <= 0 || hero.mp < effectiveManaCost) return;
     hero.abilityCharges[abilityIndex]--;
     if (hero.abilityChargeTimers[abilityIndex] <= 0) {
       hero.abilityChargeTimers[abilityIndex] = 0;
     }
   } else {
-    if (hero.abilityCooldowns[abilityIndex] > 0 || hero.mp < ab.manaCost) return;
-    hero.abilityCooldowns[abilityIndex] = ab.cooldown;
+    if (hero.abilityCooldowns[abilityIndex] > 0 || hero.mp < effectiveManaCost) return;
+    hero.abilityCooldowns[abilityIndex] = ab.cooldown * cdrMult;
   }
 
-  hero.mp -= ab.manaCost;
+  hero.mp -= effectiveManaCost;
   hero.animState = 'ability';
   hero.animTimer = 0;
 
@@ -1841,6 +1918,29 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
     if (sig) {
       state.pendingSpriteEffects.push({ type: sig.effect, x: hero.x, y: hero.y, scale: sig.scale, duration: sig.duration });
     }
+  }
+
+  // ── Advanced Spell Pattern System ──
+  // If this ability has a Dota 2-style spell pattern, use the advanced system
+  const spellDef = getSpellForAbility(ab.name);
+  if (spellDef) {
+    const abilityColor = CLASS_COLORS[heroData.heroClass] || '#ffffff';
+    const targetX = target ? target.x : state.mouseWorld.x;
+    const targetY = target ? target.y : state.mouseWorld.y;
+    const angle = Math.atan2(targetY - hero.y, targetX - hero.x);
+    const spellX = spellDef.range === 0 ? hero.x : targetX;
+    const spellY = spellDef.range === 0 ? hero.y : targetY;
+    const bonusDmg = hero.atk * 0.6;
+    const activeSpell = createActiveSpell(spellDef, spellX, spellY, angle, hero.team, hero.id, bonusDmg);
+    state.activeSpells.push(activeSpell);
+    // Cast VFX
+    if (spellDef.castVfx) {
+      state.pendingSpriteEffects.push({ type: spellDef.castVfx, x: hero.x, y: hero.y, scale: 1.3, duration: 700 });
+    }
+    spawnCastBurst(state, hero.x, hero.y, abilityColor, 14);
+    state.screenShake = spellDef.duration > 2 ? 0.12 : 0.08;
+    addFloatingText(state, hero.x, hero.y - 30, ab.name, abilityColor, 16);
+    return;
   }
 
   const abilityColor = CLASS_COLORS[heroData.heroClass] || '#ffffff';
@@ -2383,14 +2483,49 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
     return;
   }
 
+  // Build DamageOpts from attacker/target derived stats
+  const atkDerived = 'derivedStats' in attacker ? (attacker as MobaHero).derivedStats : null;
+  const tgtDerived = 'derivedStats' in target ? (target as MobaHero).derivedStats : null;
   const def = 'def' in target ? target.def : 0;
-  let dmg = calcDamage(rawDmg, def);
 
-  if ('blockActive' in target && target.blockActive) {
-    const blockReduction = 0.7;
-    const blocked = Math.floor(dmg * blockReduction);
-    dmg -= blocked;
-    addFloatingText(state, target.x, target.y - 30, `BLOCKED ${blocked}`, '#f59e0b', 12);
+  const dmgOpts: DamageOpts = {
+    critChance: atkDerived ? atkDerived.criticalChance / 100 : 0.05,
+    critMultiplier: atkDerived ? atkDerived.criticalDamage : 1.5,
+    armorPenPercent: atkDerived ? atkDerived.armorPenetration / 100 : 0,
+    defenseBreak: atkDerived ? atkDerived.defenseBreak / 100 : 0,
+    blockChance: ('blockActive' in target && target.blockActive)
+      ? (tgtDerived ? tgtDerived.block / 100 : 0.5)
+      : 0,
+    blockEffect: tgtDerived ? tgtDerived.blockEffect / 100 : 0.7,
+    blockPenPercent: atkDerived ? atkDerived.blockPenetration / 100 : 0,
+    evasionChance: tgtDerived ? tgtDerived.evasion / 100 : 0,
+    critEvasion: tgtDerived ? tgtDerived.criticalEvasion / 100 : 0,
+    lifestealPercent: atkDerived ? atkDerived.drainHealth / 100 : 0,
+  };
+
+  const result = combatCalcDamage(
+    { atk: 'atk' in attacker ? attacker.atk : 15, activeEffects: attacker.activeEffects || [] },
+    { def, activeEffects: target.activeEffects || [], shieldHp: target.shieldHp },
+    rawDmg,
+    dmgOpts,
+  );
+
+  // Evasion
+  if (result.isEvaded) {
+    addFloatingText(state, target.x, target.y - 20, 'EVADE', '#10b981', 14);
+    return;
+  }
+
+  let dmg = result.finalDamage;
+
+  // Update shield HP
+  if (result.absorbed > 0 && 'shieldHp' in target) {
+    target.shieldHp = Math.max(0, (target.shieldHp || 0) - result.absorbed);
+  }
+
+  // Block VFX
+  if (result.isBlocked) {
+    addFloatingText(state, target.x, target.y - 30, 'BLOCKED', '#f59e0b', 12);
     state.spellEffects.push({
       x: target.x, y: target.y, type: 'shield_flash',
       life: 0.25, maxLife: 0.25, radius: 30, color: '#f59e0b', angle: 0
@@ -2404,23 +2539,19 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
     }
   }
 
-  if ('shieldHp' in target && target.shieldHp > 0) {
-    const absorbed = Math.min(target.shieldHp, dmg);
-    target.shieldHp -= absorbed;
-    dmg -= absorbed;
-  }
-
   target.hp -= dmg;
 
+  // Lifesteal from derived stats + Worg buff
+  let totalDrain = result.drained;
   if ('heroDataId' in attacker && attacker.buffTimer > 0) {
     const heroData = HEROES[(attacker as MobaHero).heroDataId];
     if (heroData && heroData.heroClass === 'Worg') {
-      const lifestealAmt = Math.floor(dmg * 0.15);
-      (attacker as MobaHero).hp = Math.min((attacker as MobaHero).maxHp, (attacker as MobaHero).hp + lifestealAmt);
-      if (lifestealAmt > 0) {
-        addFloatingText(state, attacker.x, attacker.y - 15, `+${lifestealAmt}`, '#22c55e', 10);
-      }
+      totalDrain += Math.floor(dmg * 0.15);
     }
+  }
+  if (totalDrain > 0 && 'heroDataId' in attacker) {
+    (attacker as MobaHero).hp = Math.min((attacker as MobaHero).maxHp, (attacker as MobaHero).hp + totalDrain);
+    addFloatingText(state, attacker.x, attacker.y - 15, `+${totalDrain}`, '#22c55e', 10);
   }
 
   if ('lastDamagedBy' in target) {
@@ -2558,11 +2689,16 @@ function respawnHero(state: MobaState, hero: MobaHero) {
   hero.x = base.x + (Math.random() - 0.5) * 60;
   hero.y = base.y + (Math.random() - 0.5) * 60;
   hero.dead = false;
-  const stats = heroStatsAtLevel(HEROES[hero.heroDataId], hero.level);
+  const hd = HEROES[hero.heroDataId];
+  const baseStats = heroStatsAtLevel(hd, hero.level);
+  const stats = hero.attributes ? applyAttributeBonus(baseStats, hero.attributes, hd.heroClass) : baseStats;
   hero.hp = stats.hp;
   hero.maxHp = stats.hp;
   hero.mp = stats.mp;
   hero.maxMp = stats.mp;
+  hero.atk = stats.atk;
+  hero.def = stats.def;
+  hero.spd = stats.spd;
 
   for (const item of hero.items) {
     if (item) {
@@ -2570,7 +2706,15 @@ function respawnHero(state: MobaState, hero: MobaHero) {
       hero.hp += item.hp;
       hero.maxMp += item.mp;
       hero.mp += item.mp;
+      hero.atk += item.atk;
+      hero.def += item.def;
+      hero.spd += item.spd;
     }
+  }
+
+  // Recompute derived stats from attributes
+  if (hero.attributes) {
+    hero.derivedStats = computeDerivedStats(hero.attributes);
   }
 
   hero.stunTimer = 0;
@@ -2585,7 +2729,22 @@ function checkLevelUp(state: MobaState, hero: MobaHero) {
   while (hero.level < 18 && hero.xp >= xpForLevel(hero.level)) {
     hero.xp -= xpForLevel(hero.level);
     hero.level++;
-    const stats = heroStatsAtLevel(HEROES[hero.heroDataId], hero.level);
+
+    // Grant attribute points
+    if (hero.attributes) {
+      grantLevelUpPoints(hero.attributes);
+      // AI heroes auto-allocate
+      if (!hero.isPlayer) {
+        const hd = HEROES[hero.heroDataId];
+        while (hero.attributes.unspentPoints > 0) autoAllocatePoint(hero.attributes, hd?.heroClass || 'Warrior');
+      }
+      // Recompute derived stats
+      hero.derivedStats = computeDerivedStats(hero.attributes);
+    }
+
+    const hd = HEROES[hero.heroDataId];
+    const baseStats = heroStatsAtLevel(hd, hero.level);
+    const stats = hero.attributes ? applyAttributeBonus(baseStats, hero.attributes, hd.heroClass) : baseStats;
     const hpDiff = stats.hp - (hero.maxHp - totalItemStat(hero, 'hp'));
     hero.maxHp += hpDiff;
     hero.hp = Math.min(hero.hp + hpDiff, hero.maxHp);
@@ -2601,7 +2760,7 @@ function checkLevelUp(state: MobaState, hero: MobaHero) {
     spawnAbilityParticles(state, hero.x, hero.y, '#ffd700', 20);
 
     if (hero.isPlayer) {
-      state.killFeed.push({ text: `You reached level ${hero.level}!`, color: '#ffd700', time: state.gameTime });
+      state.killFeed.push({ text: `You reached level ${hero.level}! (+${POINTS_PER_LEVEL} attr pts)`, color: '#ffd700', time: state.gameTime });
     }
   }
 }
@@ -2784,6 +2943,11 @@ function updateProjectiles(state: MobaState, dt: number) {
     proj.x += Math.cos(angle) * proj.speed * dt;
     proj.y += Math.sin(angle) * proj.speed * dt;
 
+    // Update trail position history for image-based trails
+    if (proj.trailImage) {
+      updateTrailPoint(proj.id, proj.x, proj.y, dt);
+    }
+
     let hitTower = false;
     for (const tower of state.towers) {
       if (tower.dead || tower.team === proj.team) continue;
@@ -2822,6 +2986,11 @@ function updateProjectiles(state: MobaState, dt: number) {
       }
       proj.targetId = -1;
     }
+  }
+  // Clean up trail histories for removed projectiles
+  const removed = state.projectiles.filter(p => p.targetId === -1);
+  for (const p of removed) {
+    if (p.trailImage) removeTrail(p.id);
   }
   state.projectiles = state.projectiles.filter(p => p.targetId !== -1);
 }
@@ -3180,6 +3349,108 @@ export function spawnAreaDamageZone(
       life: 0.4, maxLife: 0.4,
       color, size: 3, type: 'ability'
     });
+  }
+}
+
+function updateActiveSpells(state: MobaState, dt: number) {
+  for (let i = state.activeSpells.length - 1; i >= 0; i--) {
+    const spell = state.activeSpells[i];
+    const result = updateActiveSpell(spell, dt);
+
+    // Process AoE damage markers
+    for (const dmg of result.damages) {
+      const attacker = findEntityById(state, spell.sourceId);
+      if (!attacker) continue;
+
+      if (dmg.entityId === -1) {
+        // Static AoE — damage all enemies in spell radius
+        const enemies = getAllEnemies(state, spell.team);
+        for (const e of enemies) {
+          if (dist(spell, e) < spell.radius) {
+            dealDamage(state, attacker, e, dmg.damage);
+            // Apply slow
+            if (spell.slow && spell.slow > 0 && 'activeEffects' in e) {
+              applyStatusEffect(e as any, {
+                id: state.nextEntityId++, type: StatusEffectType.Slow,
+                name: 'Spell Slow', duration: 1.5, icon: '❄', color: '#60a5fa',
+                remaining: 1.5, stacks: 1, maxStacks: 1, value: 1 - spell.slow,
+                tickRate: 0, tickTimer: 0, tickDamage: 0, sourceId: spell.sourceId,
+              });
+            }
+            // Apply stun
+            if (spell.stunDuration && spell.stunDuration > 0 && 'stunTimer' in e) {
+              (e as any).stunTimer = Math.max((e as any).stunTimer || 0, spell.stunDuration);
+            }
+          }
+        }
+      } else if (dmg.entityId === -2) {
+        // Moving AoE — damage at spell.moveX/moveY
+        const enemies = getAllEnemies(state, spell.team);
+        const mx = spell.moveX || spell.x;
+        const my = spell.moveY || spell.y;
+        for (const e of enemies) {
+          if (dist({ x: mx, y: my }, e) < spell.radius) {
+            dealDamage(state, attacker, e, dmg.damage);
+            if (spell.stunDuration && 'stunTimer' in e) {
+              (e as any).stunTimer = Math.max((e as any).stunTimer || 0, spell.stunDuration);
+            }
+          }
+        }
+      } else if (dmg.entityId === -3) {
+        // Chain bounce — find nearest unhit enemy
+        const enemies = getAllEnemies(state, spell.team);
+        let closest: any = null;
+        let closestDist = spell.bounceRange || 300;
+        for (const e of enemies) {
+          if (spell.hitIds.includes(e.id)) continue;
+          const d = dist(spell, e);
+          if (d < closestDist) { closestDist = d; closest = e; }
+        }
+        if (closest) {
+          dealDamage(state, attacker, closest, dmg.damage);
+          spell.hitIds.push(closest.id);
+          spell.x = closest.x;
+          spell.y = closest.y;
+        } else {
+          // No more targets, end chain
+          spell.elapsed = spell.duration;
+        }
+      }
+    }
+
+    // Spawn VFX
+    for (const vfx of result.vfxSpawns) {
+      state.pendingSpriteEffects.push({ type: vfx.type, x: vfx.x, y: vfx.y, scale: vfx.scale, duration: vfx.duration });
+    }
+
+    // Spawn projectiles from fan/scatter patterns
+    for (const proj of result.projectiles) {
+      state.spellProjectiles.push({
+        id: state.nextEntityId++,
+        x: proj.x, y: proj.y,
+        vx: Math.cos(proj.angle) * proj.speed,
+        vy: Math.sin(proj.angle) * proj.speed,
+        speed: proj.speed,
+        damage: proj.damage,
+        radius: 15,
+        team: spell.team,
+        sourceId: spell.sourceId,
+        color: proj.trail === 'red' ? '#ff4422' : proj.trail === 'green' ? '#44ff44' : proj.trail === 'orange' ? '#ff8844' : '#aa44ff',
+        trailColor: proj.trail === 'red' ? '#ff4422' : proj.trail === 'green' ? '#44ff44' : proj.trail === 'orange' ? '#ff8844' : '#aa44ff',
+        piercing: false,
+        hitIds: [],
+        life: 1.5,
+        maxLife: 1.5,
+        spellName: spell.spellId,
+        aoeRadius: 0,
+        trailImage: proj.trail,
+      });
+    }
+
+    // Remove completed spells
+    if (result.done) {
+      state.activeSpells.splice(i, 1);
+    }
   }
 }
 
@@ -3622,6 +3893,14 @@ export function getHudState(state: MobaState): HudState {
       h: (typeof window !== 'undefined' ? window.innerHeight : 1080) / state.camera.zoom,
     },
     targetInfo: getTargetInfo(state, player),
+    // Derived combat stats from attribute system
+    critChance: player?.derivedStats?.criticalChance ?? 0,
+    evasionPct: player?.derivedStats?.evasion ?? 0,
+    armorPen: player?.derivedStats?.armorPenetration ?? 0,
+    blockChancePct: player?.derivedStats?.block ?? 0,
+    lifestealPct: player?.derivedStats?.drainHealth ?? 0,
+    cdr: player?.derivedStats?.cooldownReduction ?? 0,
+    attributePoints: player?.attributes?.unspentPoints ?? 0,
   };
 }
 
@@ -5079,8 +5358,150 @@ export class MobaRenderer {
 
   private renderProjectile(ctx: CanvasRenderingContext2D, proj: Projectile, state: MobaState) {
     const target = findEntityById(state, proj.targetId);
+    const angle = target ? Math.atan2(target.y - proj.y, target.x - proj.x) : 0;
+    const style = proj.projStyle || 'default';
+    const tColor = proj.trailColor || proj.color;
+    const t = state.gameTime - (proj.spawnTime || 0);
+
+    if (style === 'spinning_axe') {
+      // Spinning axe — warrior ranged: 2 blades rotating
+      ctx.save();
+      ctx.translate(proj.x, proj.y);
+      const spin = t * 14; // fast spin
+      ctx.rotate(spin);
+      // Glow
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 12;
+      // Blade 1
+      ctx.fillStyle = '#b91c1c';
+      ctx.beginPath();
+      ctx.moveTo(0, -2); ctx.lineTo(10, -4); ctx.lineTo(12, 0); ctx.lineTo(10, 4); ctx.lineTo(0, 2);
+      ctx.closePath(); ctx.fill();
+      // Blade 2 (opposite)
+      ctx.beginPath();
+      ctx.moveTo(0, 2); ctx.lineTo(-10, 4); ctx.lineTo(-12, 0); ctx.lineTo(-10, -4); ctx.lineTo(0, -2);
+      ctx.closePath(); ctx.fill();
+      // Center
+      ctx.fillStyle = '#fca5a5';
+      ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      // Trail sparks
+      for (let i = 1; i <= 4; i++) {
+        ctx.fillStyle = tColor;
+        ctx.globalAlpha = 0.4 - i * 0.09;
+        ctx.beginPath();
+        ctx.arc(
+          proj.x - Math.cos(angle) * i * 7,
+          proj.y - Math.sin(angle) * i * 7,
+          4 - i * 0.6, 0, Math.PI * 2
+        );
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    if (style === 'arrow_long') {
+      // Long arrow — ranger bow: elongated with colored trailing wisps
+      ctx.save();
+      ctx.translate(proj.x, proj.y);
+      ctx.rotate(angle);
+      // Arrow shaft
+      ctx.strokeStyle = '#f5e2c1';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(10, 0); ctx.stroke();
+      // Arrowhead
+      ctx.fillStyle = '#d1d5db';
+      ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(7, -3); ctx.lineTo(7, 3); ctx.closePath(); ctx.fill();
+      // Fletching
+      ctx.fillStyle = tColor;
+      ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-11, -3); ctx.lineTo(-11, 0); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-11, 3); ctx.lineTo(-11, 0); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      // Colored trailing wisps
+      for (let i = 1; i <= 5; i++) {
+        const ox = proj.x - Math.cos(angle) * i * 6;
+        const oy = proj.y - Math.sin(angle) * i * 6;
+        ctx.fillStyle = tColor;
+        ctx.globalAlpha = 0.5 - i * 0.09;
+        ctx.beginPath();
+        ctx.arc(ox, oy + Math.sin(t * 8 + i) * 2, 2.5 - i * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    if (style === 'magic_orb') {
+      // Mage orb — pulsing arcane sphere
+      ctx.save();
+      ctx.translate(proj.x, proj.y);
+      const pulse = 1 + Math.sin(t * 10) * 0.15;
+      const r = proj.size * 1.2 * pulse;
+      ctx.shadowColor = tColor;
+      ctx.shadowBlur = 14;
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.4, tColor);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      // Arcane trail
+      for (let i = 1; i <= 3; i++) {
+        ctx.fillStyle = tColor;
+        ctx.globalAlpha = 0.3 - i * 0.08;
+        ctx.beginPath();
+        ctx.arc(
+          proj.x - Math.cos(angle) * i * 9,
+          proj.y - Math.sin(angle) * i * 9,
+          r * (0.6 - i * 0.12), 0, Math.PI * 2
+        );
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    if (style === 'worg_fang') {
+      // Worg fang — crescent fang shape
+      ctx.save();
+      ctx.translate(proj.x, proj.y);
+      ctx.rotate(angle);
+      ctx.shadowColor = tColor;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = tColor;
+      ctx.beginPath();
+      ctx.arc(0, 0, 7, -Math.PI * 0.6, Math.PI * 0.6);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath(); ctx.arc(3, 0, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      // Trail
+      for (let i = 1; i <= 3; i++) {
+        ctx.fillStyle = tColor;
+        ctx.globalAlpha = 0.35 - i * 0.1;
+        ctx.beginPath();
+        ctx.arc(
+          proj.x - Math.cos(angle) * i * 8,
+          proj.y - Math.sin(angle) * i * 8,
+          5 - i, 0, Math.PI * 2
+        );
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    // Default projectile rendering
     if (target) {
-      const angle = Math.atan2(target.y - proj.y, target.x - proj.x);
       for (let i = 1; i <= 3; i++) {
         ctx.fillStyle = proj.color;
         ctx.globalAlpha = 0.3 - i * 0.08;

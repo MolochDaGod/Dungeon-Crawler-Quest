@@ -168,63 +168,159 @@ export interface DamageResult {
   isBlocked: boolean;
   absorbed: number;
   dotApplied: StatusEffect | null;
+  /** Amount drained (lifesteal) */
+  drained: number;
+  /** Was the attack evaded? */
+  isEvaded: boolean;
+}
+
+/** Full 8-step damage pipeline options (all optional for backward compat) */
+export interface DamageOpts {
+  critChance?: number;        // 0-1 (default 0.05)
+  critMultiplier?: number;    // default 1.5, cap 3.0
+  armorPenFlat?: number;
+  armorPenPercent?: number;   // 0-1
+  blockChance?: number;       // 0-1 (cap 0.75)
+  blockEffect?: number;       // 0-1 (cap 0.90)
+  blockPenPercent?: number;   // 0-1 reduces block chance
+  defenseBreak?: number;      // 0-1 reduces effective defense
+  evasionChance?: number;     // 0-1 (cap 0.40)
+  critEvasion?: number;       // 0-1
+  lifestealPercent?: number;  // 0-1
+  damageReduction?: number;   // flat % (0-1)
+  isSpell?: boolean;
 }
 
 const CC_IMMUNITY_DURATION = 3.0;
 const DIMINISHING_RETURNS_FACTOR = 0.5;
 
+/**
+ * 8-step damage pipeline (Grudge Warlords reference):
+ * 1. Calculate base damage (raw + attacker buffs/debuffs)
+ * 2. Apply defense break (reduce target effective defense)
+ * 3. Mitigation: DamageTaken = Incoming × (100 - √Defense) / 100
+ * 4. Random variance ±25%
+ * 5. Block check (cap 75%, factor cap 90%) — blocked attacks can't crit
+ * 6. Critical check (cap 75%, factor cap 3.0×)
+ * 7. Apply damage
+ * 8. Trigger effects (drain, absorb)
+ */
 export function calculateDamage(
   attacker: { atk: number; activeEffects?: StatusEffect[] },
   target: { def: number; activeEffects?: StatusEffect[]; shieldHp?: number },
   baseDamage: number,
-  critChance = 0.05,
-  critMultiplier = 1.5,
-  armorPenFlat = 0,
-  armorPenPercent = 0,
+  critChanceOrOpts: number | DamageOpts = 0.05,
+  critMultiplierLegacy = 1.5,
+  armorPenFlatLegacy = 0,
+  armorPenPercentLegacy = 0,
 ): DamageResult {
+  // Unpack opts (support old 4-arg signature and new opts object)
+  const opts: DamageOpts = typeof critChanceOrOpts === 'object' ? critChanceOrOpts : {
+    critChance: critChanceOrOpts,
+    critMultiplier: critMultiplierLegacy,
+    armorPenFlat: armorPenFlatLegacy,
+    armorPenPercent: armorPenPercentLegacy,
+  };
+  const critChance     = Math.min(0.75, opts.critChance ?? 0.05);
+  const critMult       = Math.min(3.0, opts.critMultiplier ?? 1.5);
+  let armorPenFlat     = opts.armorPenFlat ?? 0;
+  let armorPenPct      = opts.armorPenPercent ?? 0;
+  const blockChance    = Math.min(0.75, opts.blockChance ?? 0);
+  const blockEffect    = Math.min(0.90, opts.blockEffect ?? 0.7);
+  const blockPenPct    = opts.blockPenPercent ?? 0;
+  const defBreakPct    = opts.defenseBreak ?? 0;
+  const evasion        = Math.min(0.40, opts.evasionChance ?? 0);
+  const critEvasion    = opts.critEvasion ?? 0;
+  const lifestealPct   = opts.lifestealPercent ?? 0;
+  const dmgReduction   = opts.damageReduction ?? 0;
+
+  const result: DamageResult = {
+    rawDamage: baseDamage, finalDamage: 0, isCrit: false,
+    isBlocked: false, absorbed: 0, dotApplied: null, drained: 0, isEvaded: false,
+  };
+
+  // Step 0: Invulnerability check
+  if (target.activeEffects) {
+    if (target.activeEffects.some(e => e.type === StatusEffectType.Invulnerable)) {
+      result.absorbed = baseDamage;
+      result.isBlocked = true;
+      return result;
+    }
+  }
+
+  // Step 0b: Evasion check
+  if (evasion > 0 && Math.random() < evasion) {
+    result.isEvaded = true;
+    return result;
+  }
+
+  // Step 1: Calculate base damage with attacker modifiers
   let atkMod = attacker.atk;
   let defMod = target.def;
-  let bonusCritChance = critChance;
-  let bonusArmorPen = armorPenFlat;
 
   if (attacker.activeEffects) {
     for (const eff of attacker.activeEffects) {
       if (eff.type === StatusEffectType.AtkBuff) atkMod += eff.value * eff.stacks;
-      if (eff.type === StatusEffectType.ArmorPen) bonusArmorPen += eff.value * eff.stacks;
+      if (eff.type === StatusEffectType.ArmorPen) armorPenFlat += eff.value * eff.stacks;
     }
   }
-
   if (target.activeEffects) {
     for (const eff of target.activeEffects) {
       if (eff.type === StatusEffectType.DefDebuff) defMod -= eff.value * eff.stacks;
-      if (eff.type === StatusEffectType.AtkDebuff && (target as any) === (attacker as any)) atkMod -= eff.value * eff.stacks;
-    }
-
-    const invuln = target.activeEffects.find(e => e.type === StatusEffectType.Invulnerable);
-    if (invuln) {
-      return { rawDamage: baseDamage, finalDamage: 0, isCrit: false, isBlocked: true, absorbed: baseDamage, dotApplied: null };
     }
   }
 
-  defMod = Math.max(0, defMod - bonusArmorPen);
-  defMod = Math.max(0, defMod * (1 - armorPenPercent));
+  // Step 2: Apply defense break (reduces effective defense)
+  defMod = Math.max(0, defMod * (1 - defBreakPct));
+  defMod = Math.max(0, defMod - armorPenFlat);
+  defMod = Math.max(0, defMod * (1 - armorPenPct));
 
-  const variance = 1 + (Math.random() * 0.2 - 0.1);
-  let rawDmg = baseDamage * variance;
+  // Step 3: Mitigation — √Defense formula
+  const sqrtDef = Math.sqrt(Math.max(0, defMod));
+  const mitigation = Math.max(0, Math.min(90, sqrtDef)); // cap at 90% reduction
+  let dmg = baseDamage * (100 - mitigation) / 100;
 
-  const isCrit = Math.random() < bonusCritChance;
-  if (isCrit) rawDmg *= critMultiplier;
+  // Step 4: Random variance ±25%
+  const variance = 0.75 + Math.random() * 0.5;
+  dmg *= variance;
 
-  const reduction = defMod / (defMod + 50);
-  let finalDmg = Math.max(1, Math.floor(rawDmg * (1 - reduction)));
+  // Apply flat damage reduction
+  if (dmgReduction > 0) dmg *= (1 - dmgReduction);
 
-  let absorbed = 0;
+  // Step 5: Block check (cap 75%, factor cap 90%)
+  let isBlocked = false;
+  const effectiveBlockChance = Math.max(0, blockChance * (1 - blockPenPct));
+  if (effectiveBlockChance > 0 && Math.random() < effectiveBlockChance) {
+    isBlocked = true;
+    dmg *= (1 - blockEffect);
+    result.isBlocked = true;
+  }
+
+  // Step 6: Critical check (cap 75%, factor cap 3.0×) — crits can't happen on blocked attacks
+  if (!isBlocked && critChance > 0 && Math.random() < critChance) {
+    // Crit evasion check
+    if (critEvasion <= 0 || Math.random() >= critEvasion) {
+      result.isCrit = true;
+      dmg *= critMult;
+    }
+  }
+
+  // Step 7: Apply damage (floor, minimum 1)
+  let finalDmg = Math.max(1, Math.floor(dmg));
+
+  // Step 8: Trigger effects — shield absorption
   if (target.shieldHp !== undefined && target.shieldHp > 0) {
-    absorbed = Math.min(target.shieldHp, finalDmg);
-    finalDmg -= absorbed;
+    result.absorbed = Math.min(target.shieldHp, finalDmg);
+    finalDmg -= result.absorbed;
   }
 
-  return { rawDamage: baseDamage, finalDamage: finalDmg, isCrit, isBlocked: false, absorbed, dotApplied: null };
+  // Lifesteal
+  if (lifestealPct > 0) {
+    result.drained = Math.floor(finalDmg * lifestealPct);
+  }
+
+  result.finalDamage = finalDmg;
+  return result;
 }
 
 export function canApplyCC(entity: CombatEntity, ccType: StatusEffectType): boolean {
@@ -405,6 +501,42 @@ export function getShieldAmount(entity: CombatEntity): number {
 }
 
 export const ABILITY_EFFECTS: Record<string, StatusEffect[]> = {};
+
+/**
+ * Build DamageOpts from attacker/target DerivedStats.
+ * Shared helper for engine.ts and open-world.ts so every combat call
+ * goes through the full 8-step pipeline with attribute bonuses.
+ */
+export function buildDamageOpts(
+  atkDerived: {
+    criticalChance?: number; criticalDamage?: number;
+    armorPenetration?: number; defenseBreak?: number;
+    blockPenetration?: number; drainHealth?: number;
+    attackSpeed?: number; stagger?: number;
+  } | null | undefined,
+  tgtDerived: {
+    block?: number; blockEffect?: number;
+    evasion?: number; criticalEvasion?: number;
+    damageReduction?: number;
+  } | null | undefined,
+  targetBlocking?: boolean,
+): DamageOpts {
+  return {
+    critChance: atkDerived ? atkDerived.criticalChance! / 100 : 0.05,
+    critMultiplier: atkDerived?.criticalDamage ?? 1.5,
+    armorPenPercent: atkDerived ? (atkDerived.armorPenetration ?? 0) / 100 : 0,
+    defenseBreak: atkDerived ? (atkDerived.defenseBreak ?? 0) / 100 : 0,
+    blockPenPercent: atkDerived ? (atkDerived.blockPenetration ?? 0) / 100 : 0,
+    blockChance: targetBlocking
+      ? (tgtDerived ? (tgtDerived.block ?? 0) / 100 : 0.5)
+      : 0,
+    blockEffect: tgtDerived ? (tgtDerived.blockEffect ?? 0) / 100 : 0.7,
+    evasionChance: tgtDerived ? (tgtDerived.evasion ?? 0) / 100 : 0,
+    critEvasion: tgtDerived ? (tgtDerived.criticalEvasion ?? 0) / 100 : 0,
+    lifestealPercent: atkDerived ? (atkDerived.drainHealth ?? 0) / 100 : 0,
+    damageReduction: tgtDerived ? (tgtDerived.damageReduction ?? 0) / 100 : 0,
+  };
+}
 
 export function getAbilityStatusEffects(abilityName: string, sourceId: number, heroAtk: number): StatusEffect[] {
   switch (abilityName) {

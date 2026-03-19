@@ -522,7 +522,8 @@ function buildBearModel(animState: string, animTimer: number): VoxelModel {
   const fang = '#eeeecc';
   const pawPad = '#444433';
 
-  const W = 12, D = 12, H = 14;
+  // Enlarged bear grid for 1.5x voxel model
+  const W = 12, D = 12, H = 16;
   const model: VoxelModel = [];
   for (let z = 0; z < H; z++) {
     model[z] = [];
@@ -539,18 +540,21 @@ function buildBearModel(animState: string, animTimer: number): VoxelModel {
   const t = animTimer;
   const walkPhase = animState === 'walk' ? Math.sin(t * 7) : 0;
   const walkPhase2 = animState === 'walk' ? Math.cos(t * 7) : 0;
-  const atkProgress = animState === 'attack' ? Math.min(1, t / 0.6) : 0;
+  const atkProgress = animState === 'attack' || animState === 'combo_finisher' ? Math.min(1, t / 0.6) : 0;
   const rearUp = atkProgress < 0.4 ? atkProgress / 0.4 : atkProgress < 0.6 ? 1 : 1 - (atkProgress - 0.6) / 0.4;
   const swipe = atkProgress >= 0.35 && atkProgress < 0.6 ? (atkProgress - 0.35) / 0.25 : 0;
   const bodyBob = animState === 'walk' ? Math.abs(Math.sin(t * 14)) * 0.5 : 0;
+  // Idle breathing
+  const idleBreathe = animState === 'idle' ? Math.sin(t * 1.8) * 0.3 : 0;
 
   const fLegOy = Math.round(walkPhase * 1.5);
   const bLegOy = Math.round(-walkPhase * 1.5);
   const fLegOz = Math.round(Math.max(0, -walkPhase) * 0.8);
   const bLegOz = Math.round(Math.max(0, walkPhase) * 0.8);
   const weightShift = Math.round(walkPhase2 * 0.6);
-  const bodyRear = Math.round(rearUp * 2);
+  const bodyRear = Math.round(rearUp * 2 + idleBreathe);
 
+  // ── Back legs (thicker)
   for (let y = 3; y <= 7; y++) {
     setV(0 + fLegOz, y + fLegOy, 2, darkFur);
     setV(1 + fLegOz, y + fLegOy, 2, fur);
@@ -558,19 +562,35 @@ function buildBearModel(animState: string, animTimer: number): VoxelModel {
     setV(1 + fLegOz, y + fLegOy, 9, fur);
     setV(0 + fLegOz, y + fLegOy, 3, darkFur);
     setV(1 + fLegOz, y + fLegOy, 8, darkFur);
+    // Extra thickness
+    setV(2 + fLegOz, y + fLegOy, 2, midFur);
+    setV(2 + fLegOz, y + fLegOy, 9, midFur);
   }
   setV(0, 3 + fLegOy, 2, claw); setV(0, 3 + fLegOy, 3, claw);
   setV(0, 3 + fLegOy, 9, claw); setV(0, 3 + fLegOy, 8, claw);
   setV(0, 4, 2, pawPad); setV(0, 4, 9, pawPad);
 
+  // ── Front legs — LONG arms that reach to the ground
+  const armLow = Math.round(rearUp * 3); // arms drop lower during attack
   for (let y = 3; y <= 7; y++) {
     setV(0 + bLegOz, y + bLegOy, 4, darkFur);
     setV(1 + bLegOz, y + bLegOy, 4, fur);
+    setV(2 + bLegOz, y + bLegOy, 4, fur);
     setV(0 + bLegOz, y + bLegOy, 7, darkFur);
     setV(1 + bLegOz, y + bLegOy, 7, fur);
+    setV(2 + bLegOz, y + bLegOy, 7, fur);
+    // Ground-reaching front arm extension (3 thick)
+    setV(0 + bLegOz, y + bLegOy, 3, midFur);
+    setV(0 + bLegOz, y + bLegOy, 8, midFur);
+    setV(1 + bLegOz, y + bLegOy, 3, darkFur);
+    setV(1 + bLegOz, y + bLegOy, 8, darkFur);
   }
-  setV(0, 3 + bLegOy, 4, claw); setV(0, 3 + bLegOy, 7, claw);
+  // Front paw claws (big)
+  setV(0, 3 + bLegOy, 3, claw); setV(0, 3 + bLegOy, 4, claw); setV(0, 2 + bLegOy, 4, claw);
+  setV(0, 3 + bLegOy, 7, claw); setV(0, 3 + bLegOy, 8, claw); setV(0, 2 + bLegOy, 7, claw);
+  setV(0, 4, 4, pawPad); setV(0, 4, 7, pawPad);
 
+  // ── Massive body (wider + taller)
   const bodyZ = bodyRear + Math.round(bodyBob);
   for (let x = 2; x <= 9; x++) {
     for (let y = 3; y <= 8; y++) {
@@ -578,15 +598,18 @@ function buildBearModel(animState: string, animTimer: number): VoxelModel {
       setV(2 + bodyZ, y + weightShift, x, isEdge ? darkFur : fur);
       setV(3 + bodyZ, y + weightShift, x, isEdge ? fur : midFur);
       setV(4 + bodyZ, y + weightShift, x, isEdge ? darkFur : fur);
+      setV(5 + bodyZ, y + weightShift, x, isEdge ? fur : midFur);
     }
   }
 
+  // Extra top body layer
   for (let x = 3; x <= 8; x++) {
     for (let y = 3; y <= 8; y++) {
-      setV(5 + bodyZ, y + weightShift, x, fur);
+      setV(6 + bodyZ, y + weightShift, x, fur);
     }
   }
 
+  // Belly markings
   for (let x = 3; x <= 8; x++) {
     setV(3 + bodyZ, 5 + weightShift, x, lightFur);
     setV(3 + bodyZ, 6 + weightShift, x, lightFur);
@@ -594,76 +617,103 @@ function buildBearModel(animState: string, animTimer: number): VoxelModel {
     setV(4 + bodyZ, 6 + weightShift, x, lightFur);
   }
 
+  // Back ridge
   for (let x = 2; x <= 9; x++) {
-    setV(5 + bodyZ, 4 + weightShift, x, darkFur);
-    setV(5 + bodyZ, 7 + weightShift, x, darkFur);
+    setV(6 + bodyZ, 4 + weightShift, x, darkFur);
+    setV(6 + bodyZ, 7 + weightShift, x, darkFur);
   }
 
+  // ── Huge shoulder hump
   const shoulderOz = bodyZ + Math.round(rearUp * 1);
   for (let y = 3; y <= 8; y++) {
-    setV(5 + shoulderOz, y + weightShift, 2, midFur);
-    setV(5 + shoulderOz, y + weightShift, 9, midFur);
-    setV(6 + shoulderOz, y + weightShift, 3, darkFur);
-    setV(6 + shoulderOz, y + weightShift, 8, darkFur);
+    setV(6 + shoulderOz, y + weightShift, 2, midFur);
+    setV(6 + shoulderOz, y + weightShift, 9, midFur);
+    setV(7 + shoulderOz, y + weightShift, 3, darkFur);
+    setV(7 + shoulderOz, y + weightShift, 8, darkFur);
+  }
+  // Hump mass
+  for (let x = 4; x <= 7; x++) {
+    setV(7 + shoulderOz, 5 + weightShift, x, midFur);
+    setV(7 + shoulderOz, 6 + weightShift, x, midFur);
   }
 
+  // ── Head (large, set forward)
   const headOz = bodyZ + Math.round(rearUp * 2.5);
   const headOx = Math.round(swipe * 2);
   for (let x = 3; x <= 8; x++) {
     for (let y = 2; y <= 6; y++) {
       const isTop = y === 2 || x === 3 || x === 8;
-      setV(6 + headOz, y + headOx, x, isTop ? darkFur : fur);
-      setV(7 + headOz, y + headOx, x, isTop ? fur : midFur);
-      setV(8 + headOz, y + headOx, x, darkFur);
+      setV(7 + headOz, y + headOx, x, isTop ? darkFur : fur);
+      setV(8 + headOz, y + headOx, x, isTop ? fur : midFur);
+      setV(9 + headOz, y + headOx, x, darkFur);
     }
   }
+  // Snout
   for (let x = 4; x <= 7; x++) {
-    setV(9 + headOz, 3 + headOx, x, fur);
-    setV(9 + headOz, 4 + headOx, x, fur);
+    setV(10 + headOz, 3 + headOx, x, fur);
+    setV(10 + headOz, 4 + headOx, x, fur);
   }
   for (let x = 5; x <= 6; x++) {
-    setV(10 + headOz, 3 + headOx, x, darkFur);
-    setV(10 + headOz, 4 + headOx, x, darkFur);
+    setV(11 + headOz, 3 + headOx, x, darkFur);
+    setV(11 + headOz, 4 + headOx, x, darkFur);
   }
 
-  setV(8 + headOz, 2 + headOx, 4, eye);
-  setV(8 + headOz, 2 + headOx, 7, eye);
-  setV(9 + headOz, 2 + headOx, 4, eyeGlow);
-  setV(9 + headOz, 2 + headOx, 7, eyeGlow);
+  // Eyes (glowing orange)
+  setV(9 + headOz, 2 + headOx, 4, eye);
+  setV(9 + headOz, 2 + headOx, 7, eye);
+  setV(10 + headOz, 2 + headOx, 4, eyeGlow);
+  setV(10 + headOz, 2 + headOx, 7, eyeGlow);
 
-  setV(7 + headOz, 2 + headOx, 5, nose);
-  setV(7 + headOz, 2 + headOx, 6, nose);
-  setV(6 + headOz, 2 + headOx, 5, '#994444');
-  setV(6 + headOz, 2 + headOx, 6, '#994444');
+  // Nose + mouth
+  setV(8 + headOz, 2 + headOx, 5, nose);
+  setV(8 + headOz, 2 + headOx, 6, nose);
+  setV(7 + headOz, 2 + headOx, 5, '#994444');
+  setV(7 + headOz, 2 + headOx, 6, '#994444');
 
+  // Large fangs
+  setV(7 + headOz, 2 + headOx, 4, fang);
+  setV(7 + headOz, 2 + headOx, 7, fang);
   setV(6 + headOz, 2 + headOx, 4, fang);
   setV(6 + headOz, 2 + headOx, 7, fang);
-  setV(5 + headOz, 2 + headOx, 4, fang);
-  setV(5 + headOz, 2 + headOx, 7, fang);
 
-  setV(9 + headOz, 4 + headOx, 3, fur);
-  setV(9 + headOz, 4 + headOx, 8, fur);
-  setV(10 + headOz, 4 + headOx, 3, darkFur);
-  setV(10 + headOz, 4 + headOx, 8, darkFur);
-  setV(10 + headOz, 3 + headOx, 3, darkFur);
-  setV(10 + headOz, 3 + headOx, 8, darkFur);
+  // Ears
+  setV(10 + headOz, 4 + headOx, 3, fur);
+  setV(10 + headOz, 4 + headOx, 8, fur);
+  setV(11 + headOz, 4 + headOx, 3, darkFur);
+  setV(11 + headOz, 4 + headOx, 8, darkFur);
+  setV(11 + headOz, 3 + headOx, 3, darkFur);
+  setV(11 + headOz, 3 + headOx, 8, darkFur);
 
+  // ── Attack claw swipe VFX
   if (swipe > 0.1) {
-    const clawExtend = Math.round(swipe * 3);
-    for (let ci = 0; ci < 3; ci++) {
-      setV(4 + bodyZ, 2 - clawExtend + ci, 1, claw);
-      setV(4 + bodyZ, 2 - clawExtend + ci, 10, claw);
+    const clawExtend = Math.round(swipe * 4);
+    for (let ci = 0; ci < 4; ci++) {
+      setV(4 + bodyZ, 2 - clawExtend + ci, 0, claw);
+      setV(4 + bodyZ, 2 - clawExtend + ci, 11, claw);
+      setV(5 + bodyZ, 2 - clawExtend + ci, 1, claw);
+      setV(5 + bodyZ, 2 - clawExtend + ci, 10, claw);
     }
-    setV(3 + bodyZ, 1, 1, '#ff4400');
-    setV(3 + bodyZ, 1, 10, '#ff4400');
+    // Claw glow on swing
+    setV(3 + bodyZ, 1, 0, '#ff4400');
+    setV(3 + bodyZ, 1, 11, '#ff4400');
+    setV(4 + bodyZ, 1, 0, '#ff6600');
+    setV(4 + bodyZ, 1, 11, '#ff6600');
   }
 
+  // ── Reared-up extended arms
   if (rearUp > 0.5) {
     for (let y = 3; y <= 8; y++) {
-      setV(3 + bodyZ, y + weightShift, 1, darkFur);
-      setV(4 + bodyZ, y + weightShift, 1, fur);
-      setV(3 + bodyZ, y + weightShift, 10, darkFur);
-      setV(4 + bodyZ, y + weightShift, 10, fur);
+      setV(3 + bodyZ, y + weightShift, 0, darkFur);
+      setV(4 + bodyZ, y + weightShift, 0, fur);
+      setV(5 + bodyZ, y + weightShift, 0, midFur);
+      setV(3 + bodyZ, y + weightShift, 11, darkFur);
+      setV(4 + bodyZ, y + weightShift, 11, fur);
+      setV(5 + bodyZ, y + weightShift, 11, midFur);
+    }
+    // Shoulder mass when reared
+    for (let y = 4; y <= 7; y++) {
+      setV(6 + bodyZ, y + weightShift, 1, fur);
+      setV(6 + bodyZ, y + weightShift, 10, fur);
     }
   }
 
@@ -2403,7 +2453,9 @@ export class VoxelRenderer {
       }
 
       const bearModel = buildBearModel(animState, animTimer);
-      this.renderVoxelModel(ctx, x, groundY - 28, bearModel, this.cubeSize, facing);
+      // 1.5x scale for bear form
+      const bearScale = Math.floor(this.cubeSize * 1.5);
+      this.renderVoxelModel(ctx, x, groundY - 38, bearModel, bearScale, facing);
 
       if (shieldHp && shieldHp > 0) drawShieldVFX(ctx, x, groundY - 14, shieldHp, 200, time);
       return;

@@ -17,7 +17,7 @@ import {
   StatusEffect, StatusEffectType, createStatusEffect, applyStatusEffect,
   updateStatusEffects, isStunned, isRooted, isSilenced, getSpeedMultiplier,
   hasLifesteal, getAbilityStatusEffects, calculateDamage as combatCalcDamage,
-  CombatEntity, EFFECT_COLORS
+  CombatEntity, EFFECT_COLORS, buildDamageOpts, DamageOpts
 } from './combat';
 import {
   WorldState, WeatherType, createWorldState, updateWorldState,
@@ -1008,10 +1008,11 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   p.animState = state.animFSM.state;
   p.animTimer = state.animFSM.timer;
 
-  // Player update
-  // Mana regen boosted by WIS
+  // Player update — compute derived stats for this frame
   const derived = computeDerivedStats(state.playerAttributes);
+  // Mana + Health regen from attributes
   p.mp = Math.min(p.maxMp, p.mp + dt * derived.manaRegen);
+  p.hp = Math.min(p.maxHp, p.hp + dt * derived.healthRegen);
 
   const effectResult = updateStatusEffects(p as any as CombatEntity, dt);
   if (effectResult.damage > 0) {
@@ -1079,9 +1080,10 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
 
     const spdMult = getSpeedMultiplier(p as any as CombatEntity) * getWeatherSpeedMod(state.worldState);
     const sprintMult = p.sprinting ? 1.6 : 1.0;
+    const moveSpeedBonus = 1 + (derived.movementSpeed / 100); // AGI movement speed %
     if (!isRooted(p as any as CombatEntity) && (mx !== 0 || my !== 0)) {
       const len = Math.sqrt(mx * mx + my * my);
-      const speed = p.spd * 2 * spdMult * sprintMult;
+      const speed = p.spd * 2 * spdMult * sprintMult * moveSpeedBonus;
       p.vx = (mx / len) * speed;
       p.vy = (my / len) * speed;
       p.facing = Math.atan2(my, mx);
@@ -1560,10 +1562,13 @@ function handleProjectileHit(state: OpenWorldState, proj: OWProjectile, target: 
   if (proj.sourceIsPlayer) {
     const enemy = state.enemies.find(e => e.id === target.id);
     if (enemy) {
+      const projDerived = computeDerivedStats(state.playerAttributes);
+      const projOpts = buildDamageOpts(projDerived, null);
       const result = combatCalcDamage(
         { atk: p.atk, activeEffects: p.activeEffects },
         { def: enemy.def, activeEffects: enemy.activeEffects },
-        proj.damage
+        proj.damage,
+        projOpts,
       );
       enemy.hp -= result.finalDamage;
       const col = result.isCrit ? '#ffd700' : '#ffffff';
@@ -1680,8 +1685,12 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
   switch (ab.type) {
     case 'damage': {
       if (nearest) {
-        const dmg = (ab.damage + p.atk * 0.8) * comboBonus;
-        const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, dmg, 0.1);
+        const pDerived = computeDerivedStats(state.playerAttributes);
+        const isMagic = hd.heroClass === 'Mage';
+        const dmgMult = isMagic ? pDerived.magicDmgMult : pDerived.physDmgMult;
+        const dmg = (ab.damage + p.atk * 0.8) * comboBonus * dmgMult;
+        const dmgOpts = buildDamageOpts(pDerived, null);
+        const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, dmg, dmgOpts);
         nearest.hp -= result.finalDamage;
         addText(state, nearest.x, nearest.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, result.isCrit ? '#ffd700' : abilityColor, result.isCrit ? 18 : 14);
         spawnParticles(state, nearest.x, nearest.y, abilityColor, 10 + p.spellComboCount * 2);
@@ -1695,6 +1704,9 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
       break;
     }
     case 'aoe': {
+      const pDerivedAoe = computeDerivedStats(state.playerAttributes);
+      const isMagicAoe = hd.heroClass === 'Mage';
+      const aoeDmgMult = isMagicAoe ? pDerivedAoe.magicDmgMult : pDerivedAoe.physDmgMult;
       const cx = targetWorld && ab.castType === 'ground_aoe' ? targetWorld.x : nearest ? nearest.x : p.x + Math.cos(p.facing) * 100;
       const cy = targetWorld && ab.castType === 'ground_aoe' ? targetWorld.y : nearest ? nearest.y : p.y + Math.sin(p.facing) * 100;
 
@@ -1704,12 +1716,13 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
         addSpellEffect(state, cx, cy, 'aoe_blast', ab.radius, abilityColor, 0.6);
       }
 
+      const aoeOpts = buildDamageOpts(pDerivedAoe, null);
       let aoeHits = 0;
       for (const e of state.enemies) {
         if (e.dead) continue;
         if (distXY({ x: cx, y: cy }, e) < ab.radius) {
-          const dmg = (ab.damage + p.atk * 0.6) * comboBonus;
-          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: e.def, activeEffects: e.activeEffects }, dmg);
+          const dmg = (ab.damage + p.atk * 0.6) * comboBonus * aoeDmgMult;
+          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: e.def, activeEffects: e.activeEffects }, dmg, aoeOpts);
           e.hp -= result.finalDamage;
           addText(state, e.x, e.y - 15, `-${result.finalDamage}`, abilityColor, 12);
           addSpellEffect(state, e.x, e.y, 'impact_ring', 24 + p.spellComboCount * 3, abilityColor, 0.35);
@@ -1738,7 +1751,8 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
         const effects = getAbilityStatusEffects(ab.name, p.id, p.atk);
         for (const eff of effects) applyStatusEffect(e as any as CombatEntity, eff);
         if (ab.damage > 0) {
-          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: e.def, activeEffects: e.activeEffects }, ab.damage);
+          const debuffOpts = buildDamageOpts(computeDerivedStats(state.playerAttributes), null);
+          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: e.def, activeEffects: e.activeEffects }, ab.damage, debuffOpts);
           e.hp -= result.finalDamage;
           if (e.hp <= 0) killEnemy(state, e);
         }
@@ -1755,22 +1769,26 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
       break;
     }
     case 'dash': {
+      const dashDerived = computeDerivedStats(state.playerAttributes);
+      const dashRangeBonus = 1 + (dashDerived.movementSpeed / 200); // AGI extends dash range
       const startX = p.x, startY = p.y;
       if (nearest) {
         const angle = angleBetween(p, nearest);
-        const dashDist = Math.min(ab.range, distXY(p, nearest));
+        const dashDist = Math.min(ab.range * dashRangeBonus, distXY(p, nearest));
         const nx = p.x + Math.cos(angle) * dashDist;
         const ny = p.y + Math.sin(angle) * dashDist;
         if (isWalkableOW(nx, ny)) { p.x = nx; p.y = ny; }
         if (ab.damage > 0) {
-          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, ab.damage + p.atk * 0.5);
+          const dashOpts = buildDamageOpts(dashDerived, null);
+          const dashDmg = (ab.damage + p.atk * 0.5) * dashDerived.physDmgMult;
+          const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, dashDmg, dashOpts);
           nearest.hp -= result.finalDamage;
           addSpellEffect(state, nearest.x, nearest.y, 'impact_ring', 25, abilityColor, 0.4);
           if (nearest.hp <= 0) killEnemy(state, nearest);
         }
       } else {
-        const nx = p.x + Math.cos(p.facing) * ab.range;
-        const ny = p.y + Math.sin(p.facing) * ab.range;
+        const nx = p.x + Math.cos(p.facing) * ab.range * dashRangeBonus;
+        const ny = p.y + Math.sin(p.facing) * ab.range * dashRangeBonus;
         if (isWalkableOW(nx, ny)) { p.x = nx; p.y = ny; }
       }
       addSpellEffect(state, startX, startY, 'dash_trail', 15, abilityColor, 0.4, Math.atan2(p.y - startY, p.x - startX), { endX: p.x, endY: p.y });
@@ -1790,12 +1808,15 @@ const COMBO_WINDOW = 0.5;
 
 function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number, damage: number, slowDuration: number, slowPct: number): number {
   const p = state.player;
+  const playerDerived = computeDerivedStats(state.playerAttributes);
   let hits = 0;
   let anyCrit = false;
   // Knockback scales with combo step: step1 = 0.6, step2 = 0.75, step3/finisher = 1.0
   const comboKB = p.comboStep <= 1 ? 0.6 : p.comboStep === 2 ? 0.75 : 1.0;
   const knockbackDist = range * 0.8 * comboKB;
   const stunDuration = 0.2 * comboKB;
+  // Scale damage with physical damage multiplier
+  const scaledDamage = damage * playerDerived.physDmgMult;
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
     const d = distXY(p, enemy);
@@ -1806,10 +1827,12 @@ function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number,
     while (diff < -Math.PI) diff += Math.PI * 2;
     if (Math.abs(diff) > coneAngle / 2) continue;
 
+    const dmgOpts = buildDamageOpts(playerDerived, null);
     const result = combatCalcDamage(
       { atk: p.atk, activeEffects: p.activeEffects },
       { def: enemy.def, activeEffects: enemy.activeEffects },
-      damage
+      scaledDamage,
+      dmgOpts,
     );
     enemy.hp -= result.finalDamage;
     if (result.isCrit) anyCrit = true;
@@ -1838,9 +1861,11 @@ function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number,
       applyStatusEffect(enemy as any as CombatEntity, createStatusEffect(StatusEffectType.Slow, slowDuration, p.id, slowPct));
     }
 
-    const ls = hasLifesteal(p as any as CombatEntity);
-    if (ls > 0) {
-      const heal = Math.floor(result.finalDamage * ls);
+    // Lifesteal from derived stats + status effects
+    const lsEffect = hasLifesteal(p as any as CombatEntity);
+    const lsTotal = Math.max(lsEffect, result.drained > 0 ? result.drained / Math.max(1, result.finalDamage) : 0);
+    if (lsTotal > 0 || result.drained > 0) {
+      const heal = result.drained > 0 ? result.drained : Math.floor(result.finalDamage * lsTotal);
       p.hp = Math.min(p.maxHp, p.hp + heal);
     }
     if (enemy.hp <= 0) killEnemy(state, enemy);

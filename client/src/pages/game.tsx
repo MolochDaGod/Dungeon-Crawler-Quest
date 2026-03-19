@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import {
   MobaState, HudState, HEROES, ITEMS, CLASS_ABILITIES,
   TEAM_COLORS, TEAM_NAMES, CLASS_COLORS, RARITY_COLORS,
-  ItemDef, getPortraitPath, MAP_SIZE, TargetInfo
+  ItemDef, getPortraitPath, MAP_SIZE, TargetInfo, getHeroAbilities
 } from '@/game/types';
 import {
   createInitialState, updateGame, getHudState,
@@ -23,6 +23,11 @@ import {
 import { createCombatActor, CombatVFX, COMBAT_ACTION_NAMES, COMBAT_HOTKEY_LEGEND } from '@/game/combat-machine';
 import { MouseTargetingManager } from '@/game/mouse-targeting';
 import { PhysicsWorld, createPhysicsWorld } from '@/game/physics';
+import {
+  SKILL_TREES, MobaSkillLoadout, createDefaultMobaLoadout,
+  buildAbilitiesFromMobaLoadout, getHudOrderAbilities, hudIndexToAbilityIndex,
+  saveMobaLoadout, loadMobaLoadout, setMobaSlotSelection
+} from '@/game/skill-trees';
 
 function TargetInfoPanel({ target }: { target: TargetInfo }) {
   const hpPercent = target.maxHp > 0 ? (target.hp / target.maxHp) * 100 : 0;
@@ -174,6 +179,8 @@ export default function GamePage() {
   const mouseTargetRef = useRef<MouseTargetingManager>(new MouseTargetingManager());
   const physicsRef = useRef<PhysicsWorld | null>(null);
   const [combatAction, setCombatAction] = useState('');
+  const [showSkillTree, setShowSkillTree] = useState(false);
+  const [skillLoadout, setSkillLoadout] = useState<MobaSkillLoadout | null>(null);
 
   const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
   const team = parseInt(localStorage.getItem('grudge_team') || '0');
@@ -362,8 +369,8 @@ export default function GamePage() {
         const p = state.heroes[state.playerHeroIndex];
         if (!p) return;
         const hd = HEROES[p.heroDataId];
-        const abilities = hd ? CLASS_ABILITIES[hd.heroClass] : null;
-        const ab = abilities?.[idx];
+        const abilities = hd ? getHeroAbilities(hd.race, hd.heroClass) : null;
+        const ab = abilities?.[idx] || (p as any)._loadoutAbilities?.[idx];
         if (ab && ab.castType === 'ground_aoe') {
           const classColors: Record<string, string> = { Mage: '#a855f7', Warrior: '#ef4444', Ranger: '#22c55e', Worg: '#f97316' };
           mouseTarget.startAOETargeting(idx, ab.radius || 80, ab.range || 500, classColors[hd?.heroClass || ''] || '#ef4444');
@@ -377,6 +384,8 @@ export default function GamePage() {
       else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) tryAbility(1);
       else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) tryAbility(2);
       else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) tryAbility(3);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability5], e)) tryAbility(4);
+      else if (matchesKeyDown(bindings[KeybindAction.Ability6], e)) tryAbility(5);
 
       if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handlePlayerAttack(state);
       if (matchesKeyDown(bindings[KeybindAction.ToggleShop], e)) state.showShop = !state.showShop;
@@ -427,6 +436,13 @@ export default function GamePage() {
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility2], e)) { e.preventDefault(); handleLevelUpAbility(state, 1); }
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility3], e)) { e.preventDefault(); handleLevelUpAbility(state, 2); }
       if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility4], e)) { e.preventDefault(); handleLevelUpAbility(state, 3); }
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility5], e)) { e.preventDefault(); handleLevelUpAbility(state, 4); }
+      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility6], e)) { e.preventDefault(); handleLevelUpAbility(state, 5); }
+
+      // N key: toggle skill tree panel
+      if (key === 'n' && !e.repeat && !e.ctrlKey) {
+        setShowSkillTree(prev => !prev);
+      }
 
       // Combat machine keys (only non-ability keys — Q/W/E/R are reserved for spells)
       if (key === 'shift') combatActor.send({ type: 'SHIFT_DOWN' });
@@ -606,7 +622,12 @@ export default function GamePage() {
   };
 
   const heroData = HEROES.find(h => h.id === heroId);
-  const abilities = heroData ? CLASS_ABILITIES[heroData.heroClass] || [] : [];
+  // Use race-specific abilities, expanded to 6 via skill tree loadout
+  const baseAbilities = heroData ? getHeroAbilities(heroData.race, heroData.heroClass) : [];
+  const mobaLoadout = skillLoadout || (heroData ? createDefaultMobaLoadout(heroData.race, heroData.heroClass) : null);
+  const fullAbilities = mobaLoadout ? buildAbilitiesFromMobaLoadout(mobaLoadout) : baseAbilities;
+  // Display order: Q W E D F | R (weapon skills first, ultimate last)
+  const abilities = fullAbilities.length >= 6 ? getHudOrderAbilities(fullAbilities) : baseAbilities;
 
   useEffect(() => {
     if (!hud || !portraitCanvasRef.current) return;
@@ -783,20 +804,28 @@ export default function GamePage() {
                 )}
 
                 <div className="flex items-center flex-wrap" style={{ gap: 4 }}>
-                  {abilities.map((ab, i) => {
-                    const cd = hud.abilityCooldowns[i] || 0;
-                    const maxCharges = hud.abilityMaxCharges?.[i] || 0;
-                    const charges = hud.abilityCharges?.[i] || 0;
+                  {abilities.map((ab, hudIdx) => {
+                    // Map display index to internal ability index for cooldown/charge lookups
+                    const abIdx = abilities.length >= 6 ? hudIndexToAbilityIndex(hudIdx) : hudIdx;
+                    const cd = hud.abilityCooldowns[abIdx] || 0;
+                    const maxCharges = hud.abilityMaxCharges?.[abIdx] || 0;
+                    const charges = hud.abilityCharges?.[abIdx] || 0;
                     const hasCharges = maxCharges > 0;
                     const onCd = hasCharges ? charges <= 0 : cd > 0;
                     const ready = !onCd && hud.mp >= ab.manaCost;
-                    const selected = stateRef.current?.selectedAbility === i;
+                    const selected = stateRef.current?.selectedAbility === abIdx;
+                    const isUltimate = abIdx === 3; // R key = class ultimate
+                    const maxLevel = isUltimate ? 3 : 4;
                     return (
-                      <div key={i} className="relative flex flex-col items-center group" style={{ gap: 1 }}>
+                      <div key={hudIdx} className="relative flex flex-col items-center group" style={{ gap: 1 }}>
+                        {/* Separator before ultimate (last displayed slot) */}
+                        {hudIdx === 5 && abilities.length >= 6 && (
+                          <div className="absolute -left-3 top-0 bottom-0" style={{ width: 1, background: 'linear-gradient(to bottom, transparent, #c5a059, transparent)' }} />
+                        )}
                         <div
                           className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block pointer-events-none"
                           style={{ width: 200, zIndex: 10 }}
-                          data-testid={`tooltip-ability-${i}`}
+                          data-testid={`tooltip-ability-${hudIdx}`}
                         >
                           <div
                             className="p-2 rounded text-left"
@@ -812,19 +841,20 @@ export default function GamePage() {
                               <span style={{ color: '#60a5fa' }}>Mana: {ab.manaCost}</span>
                               <span style={{ color: '#fbbf24' }}>CD: {ab.cooldown}s</span>
                             </div>
-                            {ab.damage > 0 && <div className="text-[9px] mt-0.5" style={{ color: '#f87171' }}>Damage: {ab.damage}{(hud.abilityLevels?.[i] || 0) > 1 ? ` (x${(1 + ((hud.abilityLevels[i] - 1) * 0.25)).toFixed(2)})` : ''}</div>}
+                            {ab.damage > 0 && <div className="text-[9px] mt-0.5" style={{ color: '#f87171' }}>Damage: {ab.damage}{(hud.abilityLevels?.[abIdx] || 0) > 1 ? ` (x${(1 + ((hud.abilityLevels[abIdx] - 1) * 0.25)).toFixed(2)})` : ''}</div>}
                             {ab.range > 0 && <div className="text-[9px]" style={{ color: '#4ade80' }}>Range: {ab.range}</div>}
                             {hasCharges && <div className="text-[9px] mt-0.5" style={{ color: '#a78bfa' }}>Charges: {charges}/{maxCharges}</div>}
-                            <div className="text-[9px] mt-0.5" style={{ color: '#ffd700' }}>Level: {hud.abilityLevels?.[i] || 0}/{i === 3 ? 3 : 4}</div>
+                            <div className="text-[9px] mt-0.5" style={{ color: '#ffd700' }}>Level: {hud.abilityLevels?.[abIdx] || 0}/{maxLevel}</div>
+                            {isUltimate && <div className="text-[8px] mt-1" style={{ color: '#c5a059' }}>CLASS ULTIMATE</div>}
                           </div>
                         </div>
                         <button
                           className="relative flex items-center justify-center font-bold text-white"
                           style={{
-                            width: 48, height: 48,
-                            background: onCd ? 'linear-gradient(135deg, #1a1a1a, #0a0a0a)' : `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
-                            border: `2px solid ${selected ? '#ffd700' : onCd ? '#333' : '#c5a059'}`,
-                            borderRadius: 4,
+                            width: isUltimate ? 52 : 44, height: isUltimate ? 52 : 44,
+                            background: onCd ? 'linear-gradient(135deg, #1a1a1a, #0a0a0a)' : isUltimate ? `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, #ffd70033)` : `linear-gradient(135deg, ${CLASS_COLORS[hud.heroClass] || '#333'}, ${CLASS_COLORS[hud.heroClass] || '#333'}88)`,
+                            border: `2px solid ${selected ? '#ffd700' : onCd ? '#333' : isUltimate ? '#ffd700' : '#c5a059'}`,
+                            borderRadius: isUltimate ? 6 : 4,
                             boxShadow: selected
                               ? '0 0 12px rgba(255,215,0,0.5)'
                               : ready
@@ -836,16 +866,16 @@ export default function GamePage() {
                           }}
                           onClick={() => {
                             if (stateRef.current) {
-                              stateRef.current.selectedAbility = i;
+                              stateRef.current.selectedAbility = abIdx;
                               stateRef.current.cursorMode = 'ability';
                             }
                           }}
-                          data-testid={`button-ability-${i}`}
+                          data-testid={`button-ability-${hudIdx}`}
                         >
-                          <span className="absolute text-[9px] font-bold" style={{ top: 2, left: 4, color: selected ? '#ffd700' : '#888' }}>{ab.key}</span>
+                          <span className="absolute text-[9px] font-bold" style={{ top: 2, left: 4, color: selected ? '#ffd700' : isUltimate ? '#ffd700' : '#888' }}>{ab.key}</span>
                           <span className="text-xs font-black" style={{ textShadow: '0 1px 2px #000' }}>{ab.name.substring(0, 2)}</span>
                           {hasCharges && charges > 0 ? (
-                            <span className="absolute text-[10px] font-black" style={{ bottom: 2, right: 4, color: '#a78bfa', textShadow: '0 0 4px rgba(167,139,250,0.5)' }} data-testid={`text-charges-${i}`}>{charges}</span>
+                            <span className="absolute text-[10px] font-black" style={{ bottom: 2, right: 4, color: '#a78bfa', textShadow: '0 0 4px rgba(167,139,250,0.5)' }} data-testid={`text-charges-${hudIdx}`}>{charges}</span>
                           ) : onCd ? (
                             <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 2 }}>
                               <span className="text-sm font-black text-white" style={{ textShadow: '0 0 4px #000' }}>{cd.toFixed(1)}</span>
@@ -855,7 +885,7 @@ export default function GamePage() {
                         <div className="flex items-center" style={{ gap: 2 }}>
                           <span className="text-[8px] font-bold" style={{ color: hud.mp >= ab.manaCost ? '#60a5fa' : '#f87171' }}>{ab.manaCost}</span>
                           {hasCharges && (
-                            <div className="flex" style={{ gap: 1 }} data-testid={`pips-charges-${i}`}>
+                            <div className="flex" style={{ gap: 1 }} data-testid={`pips-charges-${hudIdx}`}>
                               {Array.from({ length: maxCharges }).map((_, ci) => (
                                 <div
                                   key={ci}
@@ -870,20 +900,20 @@ export default function GamePage() {
                             </div>
                           )}
                         </div>
-                        <div className="flex" style={{ gap: 1 }} data-testid={`pips-ability-level-${i}`}>
-                          {Array.from({ length: i === 3 ? 3 : 4 }).map((_, li) => (
+                        <div className="flex" style={{ gap: 1 }} data-testid={`pips-ability-level-${hudIdx}`}>
+                          {Array.from({ length: maxLevel }).map((_, li) => (
                             <div
                               key={li}
                               style={{
                                 width: 6, height: 3,
                                 borderRadius: 1,
-                                background: li < (hud.abilityLevels?.[i] || 0) ? '#ffd700' : '#333',
-                                boxShadow: li < (hud.abilityLevels?.[i] || 0) ? '0 0 3px rgba(255,215,0,0.5)' : 'none',
+                                background: li < (hud.abilityLevels?.[abIdx] || 0) ? '#ffd700' : '#333',
+                                boxShadow: li < (hud.abilityLevels?.[abIdx] || 0) ? '0 0 3px rgba(255,215,0,0.5)' : 'none',
                               }}
                             />
                           ))}
                         </div>
-                        {(hud.abilityPoints || 0) > 0 && (hud.abilityLevels?.[i] || 0) < (i === 3 ? 3 : 4) && (
+                        {(hud.abilityPoints || 0) > 0 && (hud.abilityLevels?.[abIdx] || 0) < maxLevel && (
                           <button
                             className="text-[7px] font-black cursor-pointer"
                             style={{
@@ -896,9 +926,9 @@ export default function GamePage() {
                             }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (stateRef.current) handleLevelUpAbility(stateRef.current, i);
+                              if (stateRef.current) handleLevelUpAbility(stateRef.current, abIdx);
                             }}
-                            data-testid={`button-levelup-ability-${i}`}
+                            data-testid={`button-levelup-ability-${hudIdx}`}
                           >
                             +
                           </button>
@@ -1104,25 +1134,49 @@ export default function GamePage() {
                     <span style={{ color: '#c5a059' }}>g</span>
                   </span>
                 </div>
-                <div className="flex-1 overflow-y-auto" style={{ fontSize: 10, maxHeight: 120 }}>
-                  <div className="font-bold truncate" style={{ color: '#c5a059', fontSize: 11, marginBottom: 4, borderBottom: '1px solid #333', paddingBottom: 3 }}>{hud.heroName.split(' ').pop()}</div>
-                  <div className="flex justify-between" style={{ gap: 8 }}>
-                    <div className="flex flex-col" style={{ gap: 1 }}>
-                      <span style={{ color: '#888' }}>ATK <span className="font-bold" style={{ color: '#fbbf24' }}>{hud.atk}</span></span>
-                      <span style={{ color: '#888' }}>DEF <span className="font-bold" style={{ color: '#60a5fa' }}>{hud.def}</span></span>
-                      <span style={{ color: '#888' }}>SPD <span className="font-bold" style={{ color: '#4ade80' }}>{hud.spd}</span></span>
-                    </div>
-                    <div className="flex flex-col items-end" style={{ gap: 1 }}>
-                      <span className="font-bold" style={{ fontSize: 14, letterSpacing: 1 }}>
+                <div className="flex-1 overflow-y-auto" style={{ fontSize: 10, maxHeight: 160 }}>
+                  <div className="flex justify-between items-center" style={{ marginBottom: 4, borderBottom: '1px solid #333', paddingBottom: 3 }}>
+                    <div className="font-bold truncate" style={{ color: '#c5a059', fontSize: 11 }}>{hud.heroName.split(' ').pop()}</div>
+                    <div className="flex items-center" style={{ gap: 4 }}>
+                      <span className="font-bold" style={{ fontSize: 12, letterSpacing: 1 }}>
                         <span style={{ color: '#4ade80' }}>{hud.kills}</span>
                         <span style={{ color: '#555' }}>/</span>
                         <span style={{ color: '#f87171' }}>{hud.deaths}</span>
                         <span style={{ color: '#555' }}>/</span>
                         <span style={{ color: '#fbbf24' }}>{hud.assists}</span>
                       </span>
-                      <span style={{ color: '#555', fontSize: 8 }}>KDA</span>
                     </div>
                   </div>
+                  <div className="flex" style={{ gap: 10 }}>
+                    <div className="flex flex-col" style={{ gap: 1 }}>
+                      <span style={{ color: '#888' }}>ATK <span className="font-bold" style={{ color: '#fbbf24' }}>{hud.atk}</span></span>
+                      <span style={{ color: '#888' }}>DEF <span className="font-bold" style={{ color: '#60a5fa' }}>{hud.def}</span></span>
+                      <span style={{ color: '#888' }}>SPD <span className="font-bold" style={{ color: '#4ade80' }}>{hud.spd}</span></span>
+                    </div>
+                    <div className="flex flex-col" style={{ gap: 1 }}>
+                      <span style={{ color: '#888' }}>CRT <span className="font-bold" style={{ color: '#f87171' }}>{hud.critChance.toFixed(1)}%</span></span>
+                      <span style={{ color: '#888' }}>EVA <span className="font-bold" style={{ color: '#22d3ee' }}>{hud.evasionPct.toFixed(1)}%</span></span>
+                      <span style={{ color: '#888' }}>CDR <span className="font-bold" style={{ color: '#a78bfa' }}>{hud.cdr.toFixed(1)}%</span></span>
+                    </div>
+                    <div className="flex flex-col" style={{ gap: 1 }}>
+                      <span style={{ color: '#888' }}>PEN <span className="font-bold" style={{ color: '#fb923c' }}>{hud.armorPen.toFixed(1)}%</span></span>
+                      <span style={{ color: '#888' }}>BLK <span className="font-bold" style={{ color: '#fbbf24' }}>{hud.blockChancePct.toFixed(1)}%</span></span>
+                      <span style={{ color: '#888' }}>LST <span className="font-bold" style={{ color: '#4ade80' }}>{hud.lifestealPct.toFixed(1)}%</span></span>
+                    </div>
+                  </div>
+                  {hud.attributePoints > 0 && (
+                    <div className="mt-1 text-center" style={{ fontSize: 9, color: '#ffd700', background: 'rgba(255,215,0,0.1)', borderRadius: 2, padding: '1px 4px' }}>
+                      ⬆ {hud.attributePoints} attribute pts
+                    </div>
+                  )}
+                  <button
+                    className="w-full mt-1 text-center font-bold cursor-pointer pointer-events-auto"
+                    style={{ fontSize: 9, color: '#c5a059', background: 'rgba(197,160,89,0.1)', border: '1px solid rgba(197,160,89,0.3)', borderRadius: 2, padding: '2px 0' }}
+                    onClick={() => setShowSkillTree(prev => !prev)}
+                    data-testid="button-skill-tree"
+                  >
+                    Skill Tree [N]
+                  </button>
                 </div>
               </div>
             </div>
@@ -1151,9 +1205,105 @@ export default function GamePage() {
 
           {hud.showShop && <ShopPanel hud={hud} onBuy={(id) => stateRef.current && buyItem(stateRef.current, id)} onClose={() => stateRef.current && (stateRef.current.showShop = false)} />}
           {hud.showScoreboard && <Scoreboard hud={hud} />}
+          {showSkillTree && mobaLoadout && (
+            <SkillTreePanel
+              hud={hud}
+              loadout={mobaLoadout}
+              onSelectSkill={(slotIdx, optIdx) => {
+                const updated = setMobaSlotSelection(mobaLoadout, slotIdx, optIdx);
+                setSkillLoadout(updated);
+                saveMobaLoadout(updated);
+              }}
+              onClose={() => setShowSkillTree(false)}
+            />
+          )}
           {hud.gameOver && <GameOverScreen hud={hud} onReturn={() => setLocation('/')} />}
         </div>
       )}
+    </div>
+  );
+}
+
+function SkillTreePanel({ hud, loadout, onSelectSkill, onClose }: {
+  hud: HudState;
+  loadout: MobaSkillLoadout;
+  onSelectSkill: (slotIdx: number, optIdx: number) => void;
+  onClose: () => void;
+}) {
+  const tree = SKILL_TREES[loadout.className];
+  if (!tree) return null;
+  const SLOT_LABELS = ['Q — Attack', 'W — Core', 'E — Defensive', 'R — Ultimate', 'D — Special', 'F — Burst'];
+  // Display order: Q(0), W(1), E(2), D(4), F(5), R(3)
+  const displayOrder = [0, 1, 2, 4, 5, 3];
+  return (
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto" data-testid="panel-skill-tree">
+      <div
+        className="p-4 rounded-lg max-h-[85vh] overflow-y-auto"
+        style={{
+          width: 620,
+          background: 'linear-gradient(to bottom, #1a1a2e, #0a0a15)',
+          border: `2px solid ${tree.color}`,
+          boxShadow: `0 0 30px rgba(0,0,0,0.8), 0 0 8px ${tree.color}33`
+        }}
+      >
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif", color: tree.color }}>
+            {loadout.className.toUpperCase()} SKILL TREE
+          </h2>
+          <div className="flex items-center gap-3">
+            <span className="text-xs" style={{ color: '#888' }}>{loadout.race} {loadout.className}</span>
+            <button className="text-gray-400 hover:text-white text-xl cursor-pointer" onClick={onClose}>&times;</button>
+          </div>
+        </div>
+        <div className="text-[10px] mb-3" style={{ color: '#888' }}>Select one skill per slot. Weapon skills on Q W E D F, class ultimate on R.</div>
+        {displayOrder.map(slotIdx => {
+          const pool = tree.slots[slotIdx];
+          if (!pool || pool.options.length === 0) return null;
+          const selected = loadout.selections[slotIdx] || 0;
+          const isUlt = slotIdx === 3;
+          return (
+            <div key={slotIdx} className="mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: isUlt ? '#ffd700' : tree.color }}>
+                  {SLOT_LABELS[slotIdx]}
+                </span>
+                {isUlt && <span className="text-[8px]" style={{ color: '#c5a059', background: 'rgba(255,215,0,0.1)', padding: '0 4px', borderRadius: 2 }}>CLASS</span>}
+              </div>
+              <div className="grid grid-cols-1 gap-1.5">
+                {pool.options.map((opt, oi) => {
+                  const isActive = oi === selected;
+                  const ab = opt.ability;
+                  return (
+                    <button
+                      key={oi}
+                      className="text-left p-2 rounded border transition-all cursor-pointer"
+                      style={{
+                        background: isActive ? `linear-gradient(135deg, ${tree.color}15, ${tree.color}08)` : '#0a0a0f',
+                        border: isActive ? `2px solid ${tree.color}` : '1px solid #222',
+                        boxShadow: isActive ? `0 0 8px ${tree.color}33` : 'none',
+                      }}
+                      onClick={() => onSelectSkill(slotIdx, oi)}
+                      data-testid={`skill-select-${slotIdx}-${oi}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold" style={{ color: isActive ? tree.color : '#ddd' }}>{ab.name}</span>
+                        <div className="flex gap-2">
+                          {ab.damage > 0 && <span className="text-[9px]" style={{ color: '#f87171' }}>{ab.damage} DMG</span>}
+                          <span className="text-[9px]" style={{ color: '#60a5fa' }}>{ab.manaCost} MP</span>
+                          <span className="text-[9px]" style={{ color: '#fbbf24' }}>{ab.cooldown}s CD</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] mt-0.5" style={{ color: '#888' }}>{ab.description}</p>
+                      {ab.effect && <span className="text-[9px]" style={{ color: '#a78bfa' }}>{ab.effect}</span>}
+                      {isActive && <span className="text-[8px] font-bold mt-0.5 block" style={{ color: tree.color }}>EQUIPPED</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

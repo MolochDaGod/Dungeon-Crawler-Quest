@@ -78,9 +78,18 @@ All game data is sourced from the **Grudge ObjectStore API** (`https://molochdag
 
 ### Attributes (`attributes.ts`)
 - 8 primary attributes: STR, INT, VIT, DEX, END, WIS, AGI, TAC
-- 3 points per level-up, freely allocatable
-- Derived stats: bonus HP/MP, phys/magic ATK, DEF, SPD, crit, evasion, heal power, ability bonus
+- 20 starting points + 7 per level-up (160 max at level 20), freely allocatable
+- Diminishing returns at 25/50 points; stat caps (75% crit/block, 3.0× crit factor, 90% block, 95% accuracy/resistance, 50% drain/reflect/absorb)
+- 37 derived stats across Offense, Defense, Utility, and Resources including crit, evasion, armor pen, lifesteal, movement speed, attack speed, heal power, spell power, and more
 - Class-based starting distributions (Warrior, Mage, Ranger, Worg)
+
+### Combat Pipeline (`combat.ts`)
+- Shared `buildDamageOpts()` helper constructs damage options from attacker/target `DerivedStats`
+- 8-step damage pipeline: base → phys/magic multiplier → crit → armor pen → defense (√DEF mitigation) → block → damage reduction → lifesteal
+- Both MOBA engine and Open World engine route all attacks through this pipeline
+- Auto-attacks scale with full `derived.damage` and class multipliers; attack speed scales auto-attack timer
+- Abilities use class-appropriate phys/magic damage multipliers; dash range scales with AGI-based movement speed
+- Health regen ticks alongside mana regen in the open world update loop
 
 ### Professions & Harvesting (`professions-system.ts`)
 - **6 Gathering:** Mining, Logging, Skinning, Fishing, Herbalism, Scavenging
@@ -107,7 +116,7 @@ Full-screen 3-column dark-fantasy UI with Cinzel/Crimson Text/JetBrains Mono fon
 - **Left Column** (260px) — Character preview, core stats (ATK/DEF/SPD), derived stats, progress tracker (reputation, zones, kills, bosses)
 - **Center Column** — 8 tabbed panels:
   - **Equipment** — 8 equip slots in grid layout, character silhouette, set bonus tracker
-  - **Attributes** — 8 primary stats with +/− allocation, emoji icons, derived bonuses grid
+  - **Attributes** — 8 primary stats with +/− allocation, 4 organized sections (Resources, Offense, Defense, Utility) showing all 37 derived stats with icons and formatted values
   - **Class Skills** — Abilities grouped by slot tier, damage/CD/MP/effect chip badges
   - **Weapon Skills** — Dynamic loadout based on equipped weapon type
   - **Upgrades** — Placeholder for gear/ability upgrade system
@@ -182,6 +191,10 @@ client/src/
 │   ├── npc-shops.ts           # NPC shop system: buy/sell, respec, tier-scaled inventory
 │   ├── minimap.ts             # Real-time minimap renderer with zoom controls
 │   ├── puter-cloud.ts         # Puter.js cloud services (AI, KV, storage)
+│   ├── combat.ts              # Shared damage pipeline, buildDamageOpts, DamageOpts
+│   ├── skill-trees.ts         # Skill tree definitions and progression
+│   ├── spell-system.ts        # Spell casting system and spell data
+│   ├── trail-effects.ts       # Weapon trail and VFX trail effects
 │   ├── engine.ts              # MOBA game engine
 │   ├── dungeon.ts             # Dungeon crawler engine
 │   ├── types.ts               # Shared types, 26 heroes, abilities
