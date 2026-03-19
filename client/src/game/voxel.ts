@@ -1,4 +1,5 @@
 import { getHeroWeapon, getWeaponRenderType, type WeaponType } from './types';
+import { type EquipmentAppearance, getEffectiveArmorColors, getEffectiveBootColor } from './voxel-equipment';
 import {
   drawCastingCircle, drawWeaponTrail, drawAuraEffect,
   drawTransformVFX, drawHealingVFX, drawShieldVFX,
@@ -883,10 +884,12 @@ function buildAxeShieldWeapon(wP: BodyPartPose, rA: BodyPartPose, setV: (z: numb
   setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#777777');
 }
 
-function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number, heroName?: string, heroItems?: ({ id: number } | null)[]): VoxelModel {
+function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number, heroName?: string, heroItems?: ({ id: number } | null)[], equipAppearance?: EquipmentAppearance | null): VoxelModel {
   const isPirate = heroName?.includes('Racalvin') || heroName?.includes('Pirate King');
   const skin = RACE_SKIN[race] || '#c4956a';
-  const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
+  const classArmorBase = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
+  // Equipment appearance overrides class defaults when gear is equipped
+  const armor = equipAppearance ? getEffectiveArmorColors(classArmorBase, equipAppearance) : classArmorBase;
   const hair = race === 'Elf' ? '#e8d090' : race === 'Orc' ? '#2a2a2a' : race === 'Undead' ? '#444444' : race === 'Dwarf' ? '#a0522d' : '#3a2a1a';
   const eye = race === 'Undead' ? '#ff4444' : race === 'Orc' ? '#ffaa00' : '#2244aa';
   const weaponType = getWeaponRenderType(getHeroWeapon(race, heroClass));
@@ -913,7 +916,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
   };
 
   // Athletic proportions: legs +1 voxel, torso +1 voxel → everything shifts up
-  const bootColor = shade(armor.primary, 0.7);
+  const bootColor = equipAppearance ? getEffectiveBootColor(shade(armor.primary, 0.7), equipAppearance) : shade(armor.primary, 0.7);
   const bootAccent = shade(armor.primary, 0.85);
   const lL = poses.leftLeg, rL = poses.rightLeg;
   // Left leg: 3 voxels tall (was 2)

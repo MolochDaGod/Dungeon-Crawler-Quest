@@ -87,7 +87,7 @@ import { getSpriteDefForEnemy, drawSpriteEnemy, mapOWAnimState, preloadSpriteEne
 import { getZoneLayout, drawDecoration, drawAnimal, updateAnimal, drawHeroesGuild, type ZoneDecorLayout, type LiveAnimal } from './world-decorations';
 import { resolveMovement } from './world-collision';
 import { renderWalls, renderWaterArea } from './world-collision';
-import { ZONE_5_AREAS, getZone5Area } from './node-map';
+import { ZONE_5_AREAS, getZone5Area, collidesWithWall, isDeepWater } from './node-map';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -477,11 +477,18 @@ function angleBetween(a: { x: number; y: number }, b: { x: number; y: number }):
 }
 
 // Simple open-world walkability — delegates to heightmap when available, falls back to bounds check
+// Also checks world collision (walls, water, decorations) from the new collision system
 let _activeHeightmap: WorldHeightmap | null = null;
 let _activeBoatMounted = false;
 function isWalkableOW(x: number, y: number): boolean {
-  if (_activeHeightmap) return _activeHeightmap.isWalkable(x, y, _activeBoatMounted);
-  return x >= 10 && y >= 10 && x < OPEN_WORLD_SIZE - 10 && y < OPEN_WORLD_SIZE - 10;
+  // Bounds check
+  if (x < 10 || y < 10 || x >= OPEN_WORLD_SIZE - 10 || y >= OPEN_WORLD_SIZE - 10) return false;
+  // Heightmap check (terrain elevation)
+  if (_activeHeightmap && !_activeHeightmap.isWalkable(x, y, _activeBoatMounted)) return false;
+  // New collision checks: stone walls + deep water
+  if (collidesWithWall(x, y, 10)) return false;
+  if (isDeepWater(x, y)) return false;
+  return true;
 }
 
 // Get terrain type for a tile based on which zone it falls in
