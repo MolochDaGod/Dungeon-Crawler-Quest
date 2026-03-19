@@ -32,6 +32,12 @@ import {
   getSpellForAbility, createActiveSpell, updateActiveSpell,
   type ActiveSpell, type SpellTickResult
 } from './spell-system';
+import {
+  getClassAura, createActiveAura, updateAura,
+  accumulateAuraEffects, emptyAuraModifiers,
+  type ActiveAura, type AuraVisual, type AuraStatModifiers,
+  CLASS_AURAS
+} from './aura-system';
 
 const BASE_POSITIONS: Vec2[] = [
   { x: 300, y: 3700 },
@@ -344,6 +350,8 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     killStreak: 0,
     attributes: attrs,
     derivedStats: derived,
+    activeAuras: [],
+    auraModifiers: emptyAuraModifiers(),
   };
 }
 
@@ -704,6 +712,7 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   for (const hero of state.heroes) {
     updateHero(state, hero, dt);
   }
+  updateHeroAuras(state, dt);
 
   for (const minion of state.minions) {
     updateMinion(state, minion, dt);
@@ -3352,6 +3361,67 @@ export function spawnAreaDamageZone(
   }
 }
 
+function updateHeroAuras(state: MobaState, dt: number) {
+  // Reset all aura modifiers
+  for (const hero of state.heroes) {
+    if (hero.dead) continue;
+    hero.auraModifiers = emptyAuraModifiers();
+  }
+
+  for (const hero of state.heroes) {
+    if (hero.dead) continue;
+    const heroData = HEROES[hero.heroDataId];
+    if (!heroData) continue;
+
+    // Auto-grant class aura at required level
+    const classAuraDef = getClassAura(heroData.heroClass);
+    if (classAuraDef && hero.level >= classAuraDef.levelRequired) {
+      if (!hero.activeAuras.find(a => a.auraId === classAuraDef.id)) {
+        hero.activeAuras.push(createActiveAura(classAuraDef.id));
+      }
+    }
+
+    // Update each active aura
+    for (const aura of hero.activeAuras) {
+      const auraDef = CLASS_AURAS[aura.auraId];
+      if (!auraDef) continue;
+
+      const tick = updateAura(aura, auraDef, hero.x, hero.y, dt);
+
+      if (tick.shouldApply) {
+        // Apply to self always
+        if (auraDef.target === 'self' || auraDef.target === 'all_allies') {
+          accumulateAuraEffects(hero.auraModifiers!, auraDef.effects);
+          aura.affectedIds.push(hero.id);
+        }
+
+        // Apply to nearby allies
+        if (auraDef.target === 'allies' || auraDef.target === 'all_allies') {
+          for (const ally of state.heroes) {
+            if (ally.id === hero.id || ally.dead || ally.team !== hero.team) continue;
+            const d = dist(hero, ally);
+            if (d < auraDef.radius) {
+              accumulateAuraEffects(ally.auraModifiers!, auraDef.effects);
+              aura.affectedIds.push(ally.id);
+            }
+          }
+        }
+
+        // Apply HP/MP regen from aura modifiers
+        for (const affectedId of aura.affectedIds) {
+          const target = state.heroes.find(h => h.id === affectedId);
+          if (!target || target.dead) continue;
+          const mods = target.auraModifiers;
+          if (mods) {
+            target.hp = Math.min(target.maxHp, target.hp + mods.hpRegen * auraDef.tickRate);
+            target.mp = Math.min(target.maxMp, target.mp + mods.mpRegen * auraDef.tickRate);
+          }
+        }
+      }
+    }
+  }
+}
+
 function updateActiveSpells(state: MobaState, dt: number) {
   for (let i = state.activeSpells.length - 1; i >= 0; i--) {
     const spell = state.activeSpells[i];
@@ -4366,6 +4436,78 @@ export class MobaRenderer {
 
     for (const zone of state.areaDamageZones) {
       this.renderAreaDamageZone(ctx, zone, state.gameTime);
+    }
+
+    // Render active spell AoE visuals
+    for (const spell of state.activeSpells) {
+      const elapsed = spell.elapsed;
+      const color = spell.castVfx?.includes('fire') ? '#ff4422' : spell.castVfx?.includes('ice') || spell.castVfx?.includes('frost') ? '#44aaff' : spell.castVfx?.includes('arcane') ? '#aa44ff' : spell.castVfx?.includes('mist') ? '#44ff44' : spell.castVfx?.includes('tornado') || spell.castVfx?.includes('wind') ? '#22cc44' : '#ff8844';
+      if (spell.pattern === 'persistent_aoe' || spell.pattern === 'sequential_impact') {
+        ctx.save();
+        ctx.globalAlpha = 0.12 + Math.sin(elapsed * 4) * 0.05;
+        const grad = ctx.createRadialGradient(spell.x, spell.y, 0, spell.x, spell.y, spell.radius);
+        grad.addColorStop(0, color + '44');
+        grad.addColorStop(0.7, color + '22');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(spell.x, spell.y, spell.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = color + '55';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      } else if (spell.pattern === 'expanding_ring') {
+        const r = spell.currentRadius || 0;
+        ctx.save();
+        ctx.globalAlpha = 0.3 * Math.max(0, 1 - r / spell.radius);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(spell.x, spell.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      } else if (spell.pattern === 'moving_zone') {
+        const mx = spell.moveX || spell.x;
+        const my = spell.moveY || spell.y;
+        ctx.save();
+        ctx.globalAlpha = 0.2 + Math.sin(elapsed * 8) * 0.1;
+        const grad = ctx.createRadialGradient(mx, my, 0, mx, my, spell.radius);
+        grad.addColorStop(0, color + '55');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(mx, my, spell.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // Render aura rings under heroes
+    for (const hero of state.heroes) {
+      if (hero.dead || hero.activeAuras.length === 0) continue;
+      for (const aura of hero.activeAuras) {
+        const auraDef = CLASS_AURAS[aura.auraId];
+        if (!auraDef) continue;
+        const pulseT = (Math.sin(aura.pulsePhase) + 1) / 2;
+        const r = auraDef.radius * (0.85 + pulseT * 0.15);
+        ctx.save();
+        ctx.globalAlpha = 0.06 + pulseT * 0.05;
+        const grad = ctx.createRadialGradient(hero.x, hero.y, r * 0.7, hero.x, hero.y, r);
+        grad.addColorStop(0, 'transparent');
+        grad.addColorStop(0.6, auraDef.color + '18');
+        grad.addColorStop(1, auraDef.pulseColor + '22');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(hero.x, hero.y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = auraDef.color + '30';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(hero.x, hero.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     for (const se of state.spellEffects) {

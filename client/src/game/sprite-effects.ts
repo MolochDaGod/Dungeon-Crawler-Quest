@@ -300,6 +300,10 @@ export const ABILITY_VFX: Record<string, AbilityVfxDef> = {
   'Death Rain':         { aoe: 'os_arcane_mist', impact: 'os_hit_burst' },
   'Lead Storm':         { aoe: 'os_fire_explosion2', impact: 'os_thunder_hit' },
   'Phantom Barrage':    { aoe: 'os_arcane_mist', impact: 'os_thunder_proj2' },
+  // ── Spell-pattern AoE abilities (spell-system.ts) ──
+  'Poison Arrow':       { projectile: 'os_wind_proj', aoe: 'os_arcane_mist' },
+  'Rain of Arrows':     { aoe: 'os_wind_proj', impact: 'os_fire_explosion2' },
+  'Multi-Shot':         { projectile: 'os_wind_proj', impact: 'os_hit1' },
 };
 
 // ── Auto-attack VFX per class ──────────────────────────────────

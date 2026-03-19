@@ -134,6 +134,8 @@ export interface MobaHero extends GameEntity {
   killStreak: number;
   attributes?: import('./attributes').PlayerAttributes;
   derivedStats?: import('./attributes').DerivedStats;
+  activeAuras: import('./aura-system').ActiveAura[];
+  auraModifiers?: import('./aura-system').AuraStatModifiers;
 }
 
 export interface MobaMinion extends GameEntity {
