@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -21,10 +21,9 @@ const sharedVoxel = new VoxelRenderer();
 
 type CodexTab = 'lore' | 'stats' | 'skills';
 
-function HeroCodexPopup({ hero, onMouseEnter, onMouseLeave }: {
+function HeroCodexPopup({ hero, onClose }: {
   hero: HeroData;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
+  onClose: () => void;
 }) {
   const [tab, setTab] = useState<CodexTab>('lore');
   const [imgError, setImgError] = useState(false);
@@ -166,8 +165,7 @@ function HeroCodexPopup({ hero, onMouseEnter, onMouseLeave }: {
   return (
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Card container */}
       <div style={{
@@ -278,24 +276,9 @@ export default function CharacterSelect() {
   const [selectedHero, setSelectedHero] = useState<HeroData | null>(null);
   const [raceFilter, setRaceFilter] = useState('All');
   const [classFilter, setClassFilter] = useState('All');
-  const [hoveredHero, setHoveredHero] = useState<HeroData | null>(null);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [codexHero, setCodexHero] = useState<HeroData | null>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const voxelRef = useRef<VoxelRenderer | null>(null);
-
-  const handleCardMouseEnter = useCallback((hero: HeroData) => {
-    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
-    setHoveredHero(hero);
-  }, []);
-
-  const scheduleHoverClose = useCallback(() => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    hoverTimerRef.current = setTimeout(() => setHoveredHero(null), 200);
-  }, []);
-
-  const cancelHoverClose = useCallback(() => {
-    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
-  }, []);
 
   const filteredHeroes = HEROES.filter(h => {
     if (raceFilter !== 'All' && h.race !== raceFilter) return false;
@@ -418,9 +401,10 @@ export default function CharacterSelect() {
                 <Card
                   key={hero.id}
                   className={`cursor-pointer transition-all overflow-hidden bg-[#1a1a2e] border hover:border-[#c5a059]/50 ${isSelected ? 'border-[#c5a059] ring-1 ring-[#c5a059]/30' : 'border-gray-800'} ${hero.isSecret ? 'bg-gradient-to-br from-[#1a1a2e] to-[#281432]' : ''}`}
-                  onClick={() => setSelectedHero(hero)}
-                  onMouseEnter={() => handleCardMouseEnter(hero)}
-                  onMouseLeave={scheduleHoverClose}
+                  onClick={() => {
+                    setSelectedHero(hero);
+                    setCodexHero(hero);
+                  }}
                   data-testid={`card-hero-${hero.id}`}
                 >
                   <div className="relative">
@@ -525,12 +509,11 @@ export default function CharacterSelect() {
           </div>
         </div>
       </div>
-      {/* Codex hover popup */}
-      {hoveredHero && (
+      {/* Codex click popup */}
+      {codexHero && (
         <HeroCodexPopup
-          hero={hoveredHero}
-          onMouseEnter={cancelHoverClose}
-          onMouseLeave={scheduleHoverClose}
+          hero={codexHero}
+          onClose={() => setCodexHero(null)}
         />
       )}
     </div>
