@@ -35,7 +35,32 @@ export type SpriteEffectType =
   // ObjectStore — Debuffs / Dark
   | 'os_arcane_mist' | 'os_frozen_ice' | 'os_earth_wall'
   // ObjectStore — Special
-  | 'os_worge_tornado';
+  | 'os_worge_tornado'
+  // ObjectStore — Melee smears & thrusts
+  | 'os_smear_h1' | 'os_smear_h2' | 'os_smear_h3'
+  | 'os_smear_v1' | 'os_smear_v2' | 'os_smear_v3'
+  | 'os_thrust1' | 'os_thrust2'
+  | 'os_effect3_stun' | 'os_effect4_dodge'
+  // ObjectStore — Retro Impacts (full color set)
+  | 'os_retro_fire_a' | 'os_retro_fire_b' | 'os_retro_fire_c' | 'os_retro_fire_d'
+  | 'os_retro_red_a' | 'os_retro_red_b'
+  | 'os_retro_yellow_a' | 'os_retro_yellow_b'
+  | 'os_retro_orange_a' | 'os_retro_orange_b'
+  | 'os_retro_purple_a' | 'os_retro_purple_b' | 'os_retro_purple_c' | 'os_retro_purple_d'
+  | 'os_retro_cyan_a' | 'os_retro_cyan_b'
+  | 'os_retro_blue_a' | 'os_retro_blue_b'
+  | 'os_retro_green_a' | 'os_retro_green_b'
+  | 'os_retro_white_a' | 'os_retro_white_b' | 'os_retro_white_c' | 'os_retro_white_d'
+  | 'os_retro_pink_a' | 'os_retro_pink_b'
+  | 'os_retro_magenta_a' | 'os_retro_magenta_b'
+  | 'os_retro_teal_a' | 'os_retro_teal_b'
+  // ObjectStore — Bullet projectiles (full color set)
+  | 'os_bullet_blue' | 'os_bullet_green' | 'os_bullet_purple' | 'os_bullet_red' | 'os_bullet_yellow'
+  // ObjectStore — Missing projectiles
+  | 'os_firebolt' | 'os_waterball' | 'os_waterblast' | 'os_waterblast_end'
+  | 'os_fire_breath' | 'os_fire_breath_hit'
+  // ObjectStore — Smoke / Dodge
+  | 'os_smoke_vfx1' | 'os_smoke_vfx3' | 'os_wind_hit' | 'os_star_burst';
 
 // ── Spritesheet info ───────────────────────────────────────────
 interface SpritesheetInfo {
@@ -164,6 +189,71 @@ const EFFECT_FILE_MAP: Record<SpriteEffectType, EffectDef> = {
 
   // ── ObjectStore CDN — Special ──
   os_worge_tornado: { path: `${OS}/sprites/effects/worge_tornado.png`, cols: 4, rows: 2, frameW: 384, frameH: 512, frames: 8 },
+
+  // ── ObjectStore CDN — Melee Smears & Thrusts ──
+  os_smear_h1:     { path: `${OS}/sprites/effects/pixel/smear_h1.png`, cols: 5, rows: 1, frameW: 48, frameH: 48, frames: 5 },
+  os_smear_h2:     { path: `${OS}/sprites/effects/pixel/smear_h2.png`, cols: 5, rows: 1, frameW: 48, frameH: 48, frames: 5 },
+  os_smear_h3:     { path: `${OS}/sprites/effects/pixel/smear_h3.png`, cols: 5, rows: 1, frameW: 48, frameH: 48, frames: 5 },
+  os_smear_v1:     { path: `${OS}/sprites/effects/pixel/smear_v1.png`, cols: 6, rows: 1, frameW: 48, frameH: 48, frames: 6 },
+  os_smear_v2:     { path: `${OS}/sprites/effects/pixel/smear_v2.png`, cols: 6, rows: 1, frameW: 48, frameH: 48, frames: 6 },
+  os_smear_v3:     { path: `${OS}/sprites/effects/pixel/smear_v3.png`, cols: 6, rows: 1, frameW: 48, frameH: 48, frames: 6 },
+  os_thrust1:      { path: `${OS}/sprites/effects/pixel/thrust_1.png`, cols: 5, rows: 1, frameW: 48, frameH: 48, frames: 5 },
+  os_thrust2:      { path: `${OS}/sprites/effects/pixel/thrust_2.png`, cols: 5, rows: 1, frameW: 48, frameH: 48, frames: 5 },
+  os_effect3_stun: { path: `${OS}/sprites/effects/pixel/effect_3.png`, cols: 1, rows: 5, frameW: 32, frameH: 32, frames: 5 },
+  os_effect4_dodge:{ path: `${OS}/sprites/effects/pixel/effect_4.png`, cols: 1, rows: 5, frameW: 32, frameH: 32, frames: 5 },
+
+  // ── ObjectStore CDN — Retro Impacts (full color set, 9×6 grid, 64×64) ──
+  os_retro_fire_a:    { path: `${OS}/sprites/effects/retro_impact/impactFireA.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_fire_b:    { path: `${OS}/sprites/effects/retro_impact/impactFireB.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_fire_c:    { path: `${OS}/sprites/effects/retro_impact/impactFireC.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_fire_d:    { path: `${OS}/sprites/effects/retro_impact/impactFireD.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_red_a:     { path: `${OS}/sprites/effects/retro_impact/impactRedA.png`,     cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_red_b:     { path: `${OS}/sprites/effects/retro_impact/impactRedB.png`,     cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_yellow_a:  { path: `${OS}/sprites/effects/retro_impact/impactYellowA.png`,  cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_yellow_b:  { path: `${OS}/sprites/effects/retro_impact/impactYellowB.png`,  cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_orange_a:  { path: `${OS}/sprites/effects/retro_impact/impactOrangeA.png`,  cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_orange_b:  { path: `${OS}/sprites/effects/retro_impact/impactOrangeB.png`,  cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_purple_a:  { path: `${OS}/sprites/effects/retro_impact/impactPurpleA.png`,  cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_purple_b:  { path: `${OS}/sprites/effects/retro_impact/impactPurpleB.png`,  cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_purple_c:  { path: `${OS}/sprites/effects/retro_impact/impactPurpleC.png`,  cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_purple_d:  { path: `${OS}/sprites/effects/retro_impact/impactPurpleD.png`,  cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_cyan_a:    { path: `${OS}/sprites/effects/retro_impact/impactCyanA.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_cyan_b:    { path: `${OS}/sprites/effects/retro_impact/impactCyanB.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_blue_a:    { path: `${OS}/sprites/effects/retro_impact/impactBlueA.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_blue_b:    { path: `${OS}/sprites/effects/retro_impact/impactBlueB.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_green_a:   { path: `${OS}/sprites/effects/retro_impact/impactGreenA.png`,   cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_green_b:   { path: `${OS}/sprites/effects/retro_impact/impactGreenB.png`,   cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_white_a:   { path: `${OS}/sprites/effects/retro_impact/impactWhiteA.png`,   cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_white_b:   { path: `${OS}/sprites/effects/retro_impact/impactWhiteB.png`,   cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_white_c:   { path: `${OS}/sprites/effects/retro_impact/impactWhiteC.png`,   cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_white_d:   { path: `${OS}/sprites/effects/retro_impact/impactWhiteD.png`,   cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_pink_a:    { path: `${OS}/sprites/effects/retro_impact/impactPinkA.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_pink_b:    { path: `${OS}/sprites/effects/retro_impact/impactPinkB.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_magenta_a: { path: `${OS}/sprites/effects/retro_impact/impactMagentaA.png`, cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_magenta_b: { path: `${OS}/sprites/effects/retro_impact/impactMagentaB.png`, cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_teal_a:    { path: `${OS}/sprites/effects/retro_impact/impactTealA.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+  os_retro_teal_b:    { path: `${OS}/sprites/effects/retro_impact/impactTealB.png`,    cols: 9, rows: 6, frameW: 64, frameH: 64, frames: 54 },
+
+  // ── ObjectStore CDN — Bullet Projectiles (20×16 grid, 32×32) ──
+  os_bullet_blue:   { path: `${OS}/sprites/effects/bullet_impact/bullet_blue.png`,   cols: 20, rows: 16, frameW: 32, frameH: 32, frames: 320 },
+  os_bullet_green:  { path: `${OS}/sprites/effects/bullet_impact/bullet_green.png`,  cols: 20, rows: 16, frameW: 32, frameH: 32, frames: 320 },
+  os_bullet_purple: { path: `${OS}/sprites/effects/bullet_impact/bullet_purple.png`, cols: 20, rows: 16, frameW: 32, frameH: 32, frames: 320 },
+  os_bullet_red:    { path: `${OS}/sprites/effects/bullet_impact/bullet_red.png`,    cols: 20, rows: 16, frameW: 32, frameH: 32, frames: 320 },
+  os_bullet_yellow: { path: `${OS}/sprites/effects/bullet_impact/bullet_yellow.png`, cols: 20, rows: 16, frameW: 32, frameH: 32, frames: 320 },
+
+  // ── ObjectStore CDN — Missing Projectiles ──
+  os_firebolt:         { path: `${OS}/sprites/effects/firebolt.png`,          cols: 6, rows: 1, frameW: 32, frameH: 32, frames: 6 },
+  os_waterball:        { path: `${OS}/sprites/effects/water_ball.png`,        cols: 8, rows: 1, frameW: 32, frameH: 32, frames: 8 },
+  os_waterblast:       { path: `${OS}/sprites/effects/water_blast.png`,       cols: 8, rows: 1, frameW: 48, frameH: 48, frames: 8 },
+  os_waterblast_end:   { path: `${OS}/sprites/effects/water_blast_end.png`,   cols: 6, rows: 1, frameW: 48, frameH: 48, frames: 6 },
+  os_fire_breath:      { path: `${OS}/sprites/effects/fire_breath.png`,       cols: 6, rows: 1, frameW: 48, frameH: 32, frames: 6 },
+  os_fire_breath_hit:  { path: `${OS}/sprites/effects/fire_breath_hit.png`,   cols: 6, rows: 1, frameW: 48, frameH: 48, frames: 6 },
+
+  // ── ObjectStore CDN — Smoke / Dodge / Misc ──
+  os_smoke_vfx1:  { path: `${OS}/sprites/effects/pixel/smoke_vfx_1.png`, cols: 8, rows: 1, frameW: 48, frameH: 48, frames: 8 },
+  os_smoke_vfx3:  { path: `${OS}/sprites/effects/pixel/smoke_vfx_3.png`, cols: 8, rows: 1, frameW: 48, frameH: 48, frames: 8 },
+  os_wind_hit:    { path: `${OS}/sprites/effects/wind_hit.png`,          cols: 6, rows: 1, frameW: 32, frameH: 32, frames: 6 },
+  os_star_burst:  { path: `${OS}/sprites/effects/star_burst.png`,        cols: 8, rows: 1, frameW: 48, frameH: 48, frames: 8 },
 };
 
 // ── Legacy class VFX (kept for backward compat) ────────────────

@@ -6,3 +6,4 @@ export { UpgradesTab } from './UpgradesTab';
 export { CraftingTab } from './CraftingTab';
 export { QuestsTab } from './QuestsTab';
 export { GuildTab } from './GuildTab';
+export { HeroPreview } from './HeroPreview';

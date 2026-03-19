@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import css from './MainPanel.module.css';
 import { OWHudState } from '@/game/open-world';
 import { OpenWorldState } from '@/game/open-world';
 import { allocateOWAttribute, claimOWMission } from '@/game/open-world';
 import { AttributeId } from '@/game/attributes';
 import { HeroData, AbilityDef, CLASS_COLORS, ABILITY_ICONS } from '@/game/types';
+import { VoxelRenderer } from '@/game/voxel';
 
 /* ── Emoji helpers for attributes ── */
 const ATTR_EMOJI: Record<string, string> = {
@@ -94,6 +95,57 @@ const UPGRADES = [
   { name: 'Cooldown Mastery', icon: '⏱️', desc: 'Reduce cooldowns by 3% per level', maxLevel: 5, stat: 'CDR +3%', cost: 350 },
 ];
 
+/* ── Inline Voxel Hero Canvas ── */
+function VoxelHeroCanvas({ race, heroClass, heroName }: { race: string; heroClass: string; heroName: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const voxelRef = useRef<VoxelRenderer | null>(null);
+  const animRef = useRef<number>(0);
+  const timerRef = useRef<number>(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (!voxelRef.current) voxelRef.current = new VoxelRenderer();
+    const voxel = voxelRef.current;
+    const ctx = canvas.getContext('2d')!;
+    let running = true;
+    let last = performance.now();
+
+    function frame() {
+      if (!running) return;
+      const now = performance.now();
+      timerRef.current += (now - last) / 1000;
+      last = now;
+      ctx.clearRect(0, 0, 128, 140);
+      // Background gradient
+      const g = ctx.createRadialGradient(64, 70, 0, 64, 70, 80);
+      g.addColorStop(0, '#2a2218');
+      g.addColorStop(1, '#1a1410');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 128, 140);
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(64, 115, 28, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Hero
+      voxel.drawHeroVoxel(ctx, 64, 100, race, heroClass, Math.PI * 0.5, 'idle', timerRef.current, heroName);
+      animRef.current = requestAnimationFrame(frame);
+    }
+    frame();
+    return () => { running = false; cancelAnimationFrame(animRef.current); };
+  }, [race, heroClass, heroName]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={128}
+      height={140}
+      style={{ width: 128, height: 140, borderRadius: 8, imageRendering: 'pixelated' }}
+    />
+  );
+}
+
 interface Props {
   hud: OWHudState;
   stateRef: React.MutableRefObject<OpenWorldState | null>;
@@ -153,7 +205,7 @@ export default function MainPanel({ hud, stateRef, heroData, abilities, abilityN
         {/* ── Left Column: Character Preview + Stats ── */}
         <div className={css.leftCol}>
           <div className={css.charPreview}>
-            <div className={css.charSilhouette}>{hud.heroRace}<br />{hud.heroClass}</div>
+            <VoxelHeroCanvas race={hud.heroRace} heroClass={hud.heroClass} heroName={hud.heroName} />
           </div>
 
           {/* Core Stats */}

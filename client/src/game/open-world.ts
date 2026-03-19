@@ -82,6 +82,12 @@ import { behaviorTick, assignArchetype, clearBehaviorCache, getArchetype, AIEnti
 import { KeybindConfig, KeybindAction, loadKeybindings } from './keybindings';
 import { OWAnimFSM, OWAnimState } from './ow-anim-fsm';
 import { EffectPool, EffectSlot, EffectType } from './effect-pool';
+import { getTileMapRenderer } from './tile-renderer';
+import { getSpriteDefForEnemy, drawSpriteEnemy, mapOWAnimState, preloadSpriteEnemies } from './sprite-enemy';
+import { getZoneLayout, drawDecoration, drawAnimal, updateAnimal, drawHeroesGuild, type ZoneDecorLayout, type LiveAnimal } from './world-decorations';
+import { resolveMovement } from './world-collision';
+import { renderWalls, renderWaterArea } from './world-collision';
+import { ZONE_5_AREAS, getZone5Area } from './node-map';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -2393,11 +2399,16 @@ export class OpenWorldRenderer {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
   private voxel: VoxelRenderer;
+  private tileRenderer = getTileMapRenderer();
+  private activeLayouts: ZoneDecorLayout[] = [];
+  private activeAnimals: LiveAnimal[] = [];
+  private lastLayoutZoneId = -1;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.voxel = new VoxelRenderer();
+    preloadSpriteEnemies();
   }
 
   render(state: OpenWorldState): void {
@@ -2429,13 +2440,51 @@ export class OpenWorldRenderer {
     ctx.scale(cam.zoom, cam.zoom);
     ctx.translate(-cam.x, -cam.y);
 
+    // ── New tile-based terrain + decorations ──
+    this.updateZoneLayouts(state);
+    const viewW = W / cam.zoom;
+    const viewH = H / cam.zoom;
+    const camLeft = cam.x - viewW / 2;
+    const camTop = cam.y - viewH / 2;
+
+    // Layer 1: Tile-based terrain (replaces old flat fills)
     this.renderTerrain(ctx, state, cam, W, H, brightness);
+
+    // Layer 2: Water areas (animated, rendered on top of terrain)
+    for (const area of ZONE_5_AREAS) {
+      if (area.terrainType === 'water') {
+        renderWaterArea(ctx, area.bounds, camLeft, camTop, state.gameTime);
+      }
+    }
+
+    // Layer 3: Roads (tile-based)
+    this.tileRenderer.renderRoads(ctx, camLeft, camTop, viewW, viewH);
     this.renderRoads(ctx, state, brightness);
     this.renderGeneratedRoads(ctx, state, brightness);
+
+    // Layer 4: Stone walls
+    renderWalls(ctx, camLeft, camTop);
+
     this.renderZoneBorders(ctx, state);
+
+    // Layer 5: Buildings + decorations
     this.renderBuildings(ctx, state, brightness);
     this.renderGeneratedBuildings(ctx, state, brightness);
     this.renderGeneratedDecorations(ctx, state, brightness);
+
+    // Layer 6: World decorations (trees, rocks, herbs, props, chests)
+    this.renderWorldDecorations(ctx, state, camLeft, camTop, viewW, viewH);
+
+    // Layer 7: Heroes Guild
+    for (const layout of this.activeLayouts) {
+      if (layout.guildPos) {
+        drawHeroesGuild(ctx, layout.guildPos.x, layout.guildPos.y, camLeft, camTop, state.gameTime);
+      }
+    }
+
+    // Layer 8: Animals
+    this.renderAnimals(ctx, state, camLeft, camTop);
+
     this.renderPortals(ctx, state);
     this.renderDungeonEntrances(ctx, state);
     this.renderNPCs(ctx, state, brightness);
@@ -2444,9 +2493,18 @@ export class OpenWorldRenderer {
     // Ambient particles (behind entities)
     for (const ap of state.ambientParticles) this.renderAmbientParticle(ctx, ap);
 
-    // Enemies sorted by Y for depth
+    // Enemies sorted by Y for depth — use sprite renderer for supported types
     const sorted = state.enemies.filter(e => !e.dead).sort((a, b) => a.y - b.y);
-    for (const enemy of sorted) this.renderEnemy(ctx, enemy, state, brightness);
+    for (const enemy of sorted) {
+      const spriteDef = getSpriteDefForEnemy(enemy.type);
+      if (spriteDef) {
+        const animState = mapOWAnimState(enemy.animState);
+        const tint = (state.hitFlash.get(enemy.id) ?? 0) > 0 ? '#ffffff' : undefined;
+        drawSpriteEnemy(ctx, spriteDef, enemy.x, enemy.y, enemy.facing, animState, enemy.animTimer, camLeft, camTop, tint);
+      } else {
+        this.renderEnemy(ctx, enemy, state, brightness);
+      }
+    }
 
     this.renderPlayer(ctx, state, brightness);
 
@@ -2555,6 +2613,59 @@ export class OpenWorldRenderer {
 
         ctx.globalAlpha = 1;
       }
+    }
+  }
+
+  // ── New World Decoration + Animal helpers ──────────────────────
+
+  private updateZoneLayouts(state: OpenWorldState): void {
+    // Get decoration layouts for nearby zones
+    const currentZone = getZoneAtPosition(state.player.x, state.player.y);
+    const currentId = currentZone?.id ?? -1;
+    if (currentId !== this.lastLayoutZoneId) {
+      this.lastLayoutZoneId = currentId;
+      this.activeLayouts = [];
+      this.activeAnimals = [];
+      // Load layouts for current zone and adjacent zones
+      const zoneIds: number[] = [];
+      if (currentZone) zoneIds.push(currentZone.id);
+      if (currentZone) {
+        for (const connId of currentZone.connectedZoneIds) {
+          if (!zoneIds.includes(connId)) zoneIds.push(connId);
+        }
+      }
+      for (const zid of zoneIds) {
+        const zone = getZoneById(zid);
+        if (zone) {
+          const layout = getZoneLayout(zone);
+          this.activeLayouts.push(layout);
+          this.activeAnimals.push(...layout.animals);
+        }
+      }
+    }
+    // Update animal AI
+    for (const animal of this.activeAnimals) {
+      const zone = ISLAND_ZONES.find(z => z.id === animal.zoneId);
+      if (zone) updateAnimal(animal, 1 / 60, zone.bounds);
+    }
+  }
+
+  private renderWorldDecorations(ctx: CanvasRenderingContext2D, state: OpenWorldState, camX: number, camY: number, viewW: number, viewH: number): void {
+    const p = state.player;
+    for (const layout of this.activeLayouts) {
+      for (const deco of layout.decorations) {
+        // Cull distant decorations
+        if (Math.abs(deco.x - p.x) > viewW * 0.6 || Math.abs(deco.y - p.y) > viewH * 0.6) continue;
+        const dist = Math.sqrt((p.x - deco.x) ** 2 + (p.y - deco.y) ** 2);
+        drawDecoration(ctx, deco, camX, camY, state.gameTime, dist);
+      }
+    }
+  }
+
+  private renderAnimals(ctx: CanvasRenderingContext2D, state: OpenWorldState, camX: number, camY: number): void {
+    for (const animal of this.activeAnimals) {
+      if (Math.abs(animal.x - state.player.x) > 800 || Math.abs(animal.y - state.player.y) > 800) continue;
+      drawAnimal(ctx, animal, camX, camY);
     }
   }
 

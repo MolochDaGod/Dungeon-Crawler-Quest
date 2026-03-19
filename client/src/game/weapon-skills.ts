@@ -91,12 +91,15 @@ export function buildAbilitiesFromLoadout(loadout: WeaponSkillLoadout): AbilityD
   const s3 = loadout.slot3.options[loadout.slot3.selectedIndex];
   if (s3) abilities.push(osSkillToAbility(s3, 'Space', 'defensive'));
 
-  // Slot 4 - Weapon Special or Class Ultimate (R key)
+  // Slot 4 - Weapon Special (D key) — weapon-specific ability
   if (loadout.slot4.options.length > 0) {
     const s4 = loadout.slot4.options[loadout.slot4.selectedIndex];
-    if (s4) abilities.push(osSkillToAbility(s4, 'R', 'ultimate'));
-  } else if (loadout.classUltimate) {
-    abilities.push(loadout.classUltimate);
+    if (s4) abilities.push(osSkillToAbility(s4, 'D', 'core'));
+  }
+
+  // R key - ALWAYS class ultimate, never overridden by weapon
+  if (loadout.classUltimate) {
+    abilities.push({ ...loadout.classUltimate, key: 'R' });
   }
 
   return abilities;

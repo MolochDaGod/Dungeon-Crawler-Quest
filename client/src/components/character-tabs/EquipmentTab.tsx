@@ -1,5 +1,6 @@
 import css from '../MainPanel.module.css';
 import { CharacterData } from '@/game/character-data';
+import { HeroPreview } from './HeroPreview';
 
 const LEFT_EQUIP = ['Helm', 'Chest', 'Hands', 'Feet'];
 const RIGHT_EQUIP = ['Main Hand', 'Off-Hand', 'Ring', 'Cape'];
@@ -26,7 +27,9 @@ export function EquipmentTab({ data }: { data: CharacterData }) {
       <div className={css.sectionTitle}>Equipped Gear</div>
       <div className={css.equipLayout}>
         <div className={css.equipStack}>{LEFT_EQUIP.map(renderSlot)}</div>
-        <div className={css.eqCenter}>{data.heroRace}<br />{data.heroClass}</div>
+        <div className={css.eqCenter}>
+          <HeroPreview data={data} size={120} showName={false} showStats={false} animate={true} />
+        </div>
         <div className={css.equipStack}>{RIGHT_EQUIP.map(renderSlot)}</div>
       </div>
 
