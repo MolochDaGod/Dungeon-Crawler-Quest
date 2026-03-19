@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Sword, Shield, Skull, Crown, Settings, Map, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe } from 'lucide-react';
+import { Sword, Shield, Skull, Crown, Settings, Map, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree } from 'lucide-react';
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -211,6 +211,22 @@ export default function Home() {
             >
               <Sword className="w-4 h-4" />
               <span>Entity Editor</span>
+            </button>
+            <button
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"
+              onClick={() => setLocation('/character')}
+              data-testid="button-character"
+            >
+              <User className="w-4 h-4" />
+              <span>Character</span>
+            </button>
+            <button
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"
+              onClick={() => setLocation('/island')}
+              data-testid="button-island"
+            >
+              <Palmtree className="w-4 h-4" />
+              <span>Island Camp</span>
             </button>
             <button
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"

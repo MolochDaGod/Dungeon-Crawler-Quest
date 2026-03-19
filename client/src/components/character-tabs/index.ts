@@ -1,0 +1,8 @@
+export { EquipmentTab } from './EquipmentTab';
+export { AttributesTab } from './AttributesTab';
+export { ClassSkillsTab } from './ClassSkillsTab';
+export { WeaponSkillsTab } from './WeaponSkillsTab';
+export { UpgradesTab } from './UpgradesTab';
+export { CraftingTab } from './CraftingTab';
+export { QuestsTab } from './QuestsTab';
+export { GuildTab } from './GuildTab';

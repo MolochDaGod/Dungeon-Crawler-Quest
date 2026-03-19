@@ -9,7 +9,7 @@ import {
   JungleCamp, JungleMob, getHeroAbilities
 } from './types';
 import { VoxelRenderer, TerrainType } from './voxel';
-import { SpriteEffectSystem, SpriteEffectType, CLASS_SPELL_VFX } from './sprite-effects';
+import { SpriteEffectSystem, SpriteEffectType, CLASS_SPELL_VFX, ABILITY_VFX, AUTO_ATTACK_VFX, HERO_SIGNATURE_VFX } from './sprite-effects';
 import { globalAnimDirector } from './voxel-motion';
 import { loadMapData, MapData } from './map-data';
 import {
@@ -912,19 +912,18 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
         const comboMult = hero.comboCount >= 3 ? 1.5 : 1.0;
         performAutoAttack(state, hero, target, comboMult);
         const heroData = HEROES[hero.heroDataId];
-        if (heroData && (heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg') && dist(hero, target) < 100) {
-          const slashColor = CLASS_COLORS[heroData.heroClass] || '#ef4444';
-          state.spellEffects.push({
-            x: hero.x + Math.cos(hero.facing) * 25, y: hero.y + Math.sin(hero.facing) * 25,
-            type: 'slash_arc', life: 0.2, maxLife: 0.2, radius: 25, color: slashColor, angle: hero.facing
-          });
-          state.pendingSpriteEffects.push({ type: 'melee_impact', x: target.x, y: target.y, scale: 0.6, duration: 400 });
-        }
-        if (heroData && heroData.heroClass === 'Mage') {
-          state.pendingSpriteEffects.push({ type: 'mage_attack', x: target.x, y: target.y, scale: 0.7, duration: 500 });
-        }
-        if (heroData && heroData.heroClass === 'Ranger') {
-          state.pendingSpriteEffects.push({ type: 'fire_attack', x: target.x, y: target.y, scale: 0.5, duration: 350 });
+        if (heroData) {
+          const aaVfx = AUTO_ATTACK_VFX[heroData.heroClass];
+          if (aaVfx) {
+            state.pendingSpriteEffects.push({ type: aaVfx.onHit, x: target.x, y: target.y, scale: 0.8, duration: 350 });
+          }
+          if ((heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg') && dist(hero, target) < 100) {
+            const slashColor = CLASS_COLORS[heroData.heroClass] || '#ef4444';
+            state.spellEffects.push({
+              x: hero.x + Math.cos(hero.facing) * 25, y: hero.y + Math.sin(hero.facing) * 25,
+              type: 'slash_arc', life: 0.2, maxLife: 0.2, radius: 25, color: slashColor, angle: hero.facing
+            });
+          }
         }
         if (hero.comboCount >= 3) {
           hero.animState = 'combo_finisher';
@@ -1812,16 +1811,36 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   hero.animState = 'ability';
   hero.animTimer = 0;
 
-  // Legacy class VFX
-  const classEffectMap: Record<string, string> = {
-    Warrior: 'warrior_spin', Worg: 'fire_ability', Mage: 'mage_ability', Ranger: 'buff'
-  };
-  const effectType = classEffectMap[heroData.heroClass] || 'channel';
-  state.pendingSpriteEffects.push({ type: effectType, x: hero.x, y: hero.y, scale: 0.8, duration: 600 });
-  // New sprite-sheet VFX from magic-sprites pack
-  const classVfx = CLASS_SPELL_VFX[heroData.heroClass];
-  if (classVfx && classVfx[abilityIndex]) {
-    state.pendingSpriteEffects.push({ type: classVfx[abilityIndex], x: hero.x, y: hero.y, scale: 1.5, duration: 800 });
+  // ObjectStore ability VFX — look up by ability name for specific effects
+  const abilityVfx = ABILITY_VFX[ab.name];
+  if (abilityVfx) {
+    if (abilityVfx.cast) {
+      state.pendingSpriteEffects.push({ type: abilityVfx.cast, x: hero.x, y: hero.y, scale: 1.2, duration: 700 });
+    }
+    if (abilityVfx.aoe) {
+      const cx = target ? target.x : hero.x;
+      const cy = target ? target.y : hero.y;
+      state.pendingSpriteEffects.push({ type: abilityVfx.aoe, x: cx, y: cy, scale: 1.5, duration: 900 });
+    }
+    if (abilityVfx.impact && target) {
+      state.pendingSpriteEffects.push({ type: abilityVfx.impact, x: target.x, y: target.y, scale: 1.0, duration: 500 });
+    }
+    if (abilityVfx.projectile) {
+      state.pendingSpriteEffects.push({ type: abilityVfx.projectile, x: hero.x, y: hero.y, scale: 1.0, duration: 600 });
+    }
+  } else {
+    // Fallback: class-level VFX from ObjectStore
+    const classVfx = CLASS_SPELL_VFX[heroData.heroClass];
+    if (classVfx && classVfx[abilityIndex]) {
+      state.pendingSpriteEffects.push({ type: classVfx[abilityIndex], x: hero.x, y: hero.y, scale: 1.5, duration: 800 });
+    }
+  }
+  // Hero signature VFX on ultimate abilities (slot index 3 = R)
+  if (abilityIndex === 3) {
+    const sig = HERO_SIGNATURE_VFX[heroData.name];
+    if (sig) {
+      state.pendingSpriteEffects.push({ type: sig.effect, x: hero.x, y: hero.y, scale: sig.scale, duration: sig.duration });
+    }
   }
 
   const abilityColor = CLASS_COLORS[heroData.heroClass] || '#ffffff';
@@ -2531,6 +2550,7 @@ function killHero(state: MobaState, hero: MobaHero) {
   hero.lastDamagedBy = [];
   spawnDeathParticles(state, hero.x, hero.y, TEAM_COLORS[hero.team]);
   state.pendingSpriteEffects.push({ type: 'undead', x: hero.x, y: hero.y, scale: 1.0, duration: 800 });
+  state.pendingSpriteEffects.push({ type: 'os_arcane_mist', x: hero.x, y: hero.y, scale: 1.4, duration: 900 });
 }
 
 function respawnHero(state: MobaState, hero: MobaHero) {
@@ -2557,6 +2577,8 @@ function respawnHero(state: MobaState, hero: MobaHero) {
   hero.shieldHp = 0;
   hero.animState = 'idle';
   spawnAbilityParticles(state, hero.x, hero.y, '#22c55e', 15);
+  state.pendingSpriteEffects.push({ type: 'os_resurrect', x: hero.x, y: hero.y, scale: 1.2, duration: 1000 });
+  state.pendingSpriteEffects.push({ type: 'os_holy_heal', x: hero.x, y: hero.y, scale: 1.0, duration: 800 });
 }
 
 function checkLevelUp(state: MobaState, hero: MobaHero) {

@@ -7,8 +7,235 @@ import {
   RARITY_COLORS, STAT_COLORS, CLASS_ABILITIES
 } from '@/game/types';
 import { VoxelRenderer } from '@/game/voxel';
+import {
+  getCodexHeroId, getCodexPortraitUrl, getCodexSpriteFallbackUrl, getSkillIconUrl,
+  CODEX_FACTION_STYLES, CODEX_RARITY_CONFIG, RACIAL_TRAITS,
+  CODEX_CLASS_ABILITIES, CODEX_HERO_META,
+} from '@/game/hero-codex';
 
 const sharedVoxel = new VoxelRenderer();
+
+/* ------------------------------------------------------------------ */
+/*  Hero Codex Popup (grudge-heros.puter.site card)                     */
+/* ------------------------------------------------------------------ */
+
+type CodexTab = 'lore' | 'stats' | 'skills';
+
+function HeroCodexPopup({ hero, onMouseEnter, onMouseLeave }: {
+  hero: HeroData;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) {
+  const [tab, setTab] = useState<CodexTab>('lore');
+  const [imgError, setImgError] = useState(false);
+
+  const codexId = getCodexHeroId(hero);
+  const meta = CODEX_HERO_META[codexId];
+  const fs = CODEX_FACTION_STYLES[hero.faction] || CODEX_FACTION_STYLES.Crusade;
+  const rarCfg = CODEX_RARITY_CONFIG[hero.rarity] || CODEX_RARITY_CONFIG.Common;
+  const border = fs.border;
+  const traits = [...(RACIAL_TRAITS[hero.race] || []), ...(meta?.extraTraits || [])];
+  const abilities = CODEX_CLASS_ABILITIES[hero.heroClass] || [];
+
+  const stars = Array.from({ length: rarCfg.stars }, (_, i) => (
+    <span key={i} style={{
+      display: 'inline-block', width: 13, height: 13,
+      clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
+      background: rarCfg.color, filter: `drop-shadow(0 0 2px ${rarCfg.color}60)`,
+    }} />
+  ));
+
+  const statBoxes = [
+    { label: 'Health',  value: hero.hp,  color: '#22c55e' },
+    { label: 'Attack',  value: hero.atk, color: '#ef4444' },
+    { label: 'Defense', value: hero.def, color: '#3b82f6' },
+    { label: 'Speed',   value: hero.spd, color: '#f59e0b' },
+    { label: 'Range',   value: hero.rng, color: '#06b6d4' },
+    { label: 'Mana',    value: hero.mp,  color: '#8b5cf6' },
+  ];
+
+  const diffColor = (d: string) =>
+    d === 'Expert' ? '#ef4444' : d === 'Advanced' ? '#f59e0b' : d === 'Intermediate' ? '#3b82f6' : '#22c55e';
+
+  /* ---- Lore tab ---- */
+  const loreContent = meta ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ padding: 10, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <p style={{ fontSize: 12, fontStyle: 'italic', color: border, lineHeight: 1.6 }}>"{hero.quote}"</p>
+      </div>
+      <div>
+        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, color: '#888', marginBottom: 4 }}>Lore</div>
+        <p style={{ fontSize: 12, color: '#ccc', lineHeight: 1.6 }}>{meta.lore}</p>
+      </div>
+      <div>
+        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, color: '#888', marginBottom: 4 }}>Backstory</div>
+        <p style={{ fontSize: 12, color: '#aaa', lineHeight: 1.6 }}>{meta.backstory}</p>
+      </div>
+      <div style={{ padding: 10, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, color: '#888', marginBottom: 4 }}>Racial Traits</div>
+        {traits.map(t => (
+          <div key={t.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#ddd' }}>{t.name}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: border }}>{t.effect}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 10, fontStyle: 'italic', textAlign: 'center', color: '#666', paddingTop: 4 }}>{meta.flavorText}</div>
+    </div>
+  ) : <p style={{ color: '#666', fontSize: 12 }}>No codex data available.</p>;
+
+  /* ---- Stats tab ---- */
+  const statsContent = meta ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        {statBoxes.map(s => (
+          <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 8, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 9, textTransform: 'uppercase', color: '#888' }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, color: '#888', marginBottom: 4 }}>Combat Profile</div>
+        {[
+          ['Combat Style', meta.combatStyle],
+          ['Weapons', meta.weapons],
+          ['Difficulty', meta.difficulty],
+          ['Primary Attr', meta.primaryAttribute],
+        ].map(([label, value]) => (
+          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '2px 0' }}>
+            <span style={{ color: '#aaa' }}>{label}</span>
+            <span style={{ color: label === 'Difficulty' ? diffColor(value) : label === 'Primary Attr' ? border : '#ddd', fontWeight: label === 'Primary Attr' ? 700 : 400, maxWidth: 180, textAlign: 'right' as const }}>{value}</span>
+          </div>
+        ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '2px 0' }}>
+          <span style={{ color: '#aaa' }}>Rarity</span>
+          <span style={{ display: 'flex', gap: 2 }}>{stars}</span>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, color: '#22c55e', marginBottom: 4 }}>Strengths</div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {meta.strengths.map(s => <li key={s} style={{ fontSize: 10, color: '#aaa', display: 'flex', gap: 4, padding: '2px 0' }}><span style={{ color: '#22c55e' }}>+</span> {s}</li>)}
+          </ul>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>Weaknesses</div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {meta.weaknesses.map(w => <li key={w} style={{ fontSize: 10, color: '#aaa', display: 'flex', gap: 4, padding: '2px 0' }}><span style={{ color: '#ef4444' }}>-</span> {w}</li>)}
+          </ul>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  /* ---- Skills tab ---- */
+  const skillsContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {abilities.map(a => (
+        <div key={a.name} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: 10, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: `${border}20`, border: `1px solid ${border}40` }}>
+            <img src={getSkillIconUrl(a.icon)} alt="" style={{ width: 20, height: 20, imageRendering: 'pixelated', filter: `drop-shadow(0 0 2px ${border})` }} crossOrigin="anonymous" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#ddd' }}>{a.name}</span>
+              {a.manaCost > 0
+                ? <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}>{a.manaCost} MP</span>
+                : <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(34,197,94,0.15)', color: '#4ade80' }}>Passive</span>}
+            </div>
+            <p style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{a.description}</p>
+          </div>
+        </div>
+      ))}
+      <div style={{ padding: 10, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, color: '#888', marginBottom: 4 }}>Racial Traits</div>
+        {traits.map(t => (
+          <div key={t.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#ddd' }}>{t.name}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: border }}>{t.effect}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const tabContent: Record<CodexTab, React.ReactNode> = { lore: loreContent, stats: statsContent, skills: skillsContent };
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* Card container */}
+      <div style={{
+        display: 'flex', flexDirection: 'row', maxWidth: 850, width: '95vw', maxHeight: '88vh',
+        borderRadius: 16, overflow: 'hidden',
+        border: `2px solid ${border}`,
+        boxShadow: `0 0 40px ${fs.glow}, 0 8px 40px rgba(0,0,0,0.6)`,
+        background: fs.gradient,
+      }}>
+        {/* Left — portrait */}
+        <div style={{ position: 'relative', width: 320, flexShrink: 0, minHeight: 300 }}>
+          <img
+            src={imgError ? getCodexSpriteFallbackUrl(hero) : getCodexPortraitUrl(hero)}
+            alt={hero.name}
+            onError={() => !imgError && setImgError(true)}
+            crossOrigin="anonymous"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', minHeight: 300, maxHeight: 500 }}
+          />
+          {/* gradients */}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 30%, transparent 60%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent 60%, rgba(0,0,0,0.8) 100%)' }} />
+          {/* tags */}
+          <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.75)', border: `1px solid ${rarCfg.color}40`, display: 'flex', gap: 3 }}>{stars}</div>
+            <span style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.75)', fontSize: 10, fontWeight: 700, color: border, border: `1px solid ${border}50` }}>{hero.faction}</span>
+          </div>
+          {/* name area */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16 }}>
+            <div style={{ fontFamily: "'Cinzel','Oxanium',serif", fontSize: '1.25rem', fontWeight: 700, color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}>{hero.name}</div>
+            <div style={{ fontSize: 14, fontStyle: 'italic', color: border }}>{hero.title}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+              <span style={{ fontSize: 11, color: '#ccc' }}>{hero.race}</span>
+              <span style={{ fontSize: 11, color: '#888' }}>/</span>
+              <span style={{ fontSize: 11, color: '#ccc' }}>{hero.heroClass}</span>
+              {meta && <><span style={{ fontSize: 11, color: '#888' }}>/</span><span style={{ fontSize: 11, color: border, fontWeight: 700 }}>{meta.alignment}</span></>}
+            </div>
+          </div>
+        </div>
+
+        {/* Right — tabbed content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            {(['lore', 'stats', 'skills'] as CodexTab[]).map(t => (
+              <button
+                key={t}
+                onClick={(e) => { e.stopPropagation(); setTab(t); }}
+                style={{
+                  flex: 1, padding: '10px 16px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: 1, background: tab === t ? 'rgba(255,255,255,0.03)' : 'transparent',
+                  border: 'none', borderBottom: `2px solid ${tab === t ? border : 'transparent'}`,
+                  cursor: 'pointer', fontFamily: "'Jost','Segoe UI',sans-serif",
+                  color: tab === t ? border : '#888', transition: 'all 0.2s',
+                }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: 16, maxHeight: 400 }}>
+            {tabContent[tab]}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 
 function HeroPortraitCanvas({ hero, width, height, className, style, testId }: {
   hero: HeroData; width: number; height: number; className?: string; style?: React.CSSProperties; testId?: string;
@@ -51,8 +278,24 @@ export default function CharacterSelect() {
   const [selectedHero, setSelectedHero] = useState<HeroData | null>(null);
   const [raceFilter, setRaceFilter] = useState('All');
   const [classFilter, setClassFilter] = useState('All');
+  const [hoveredHero, setHoveredHero] = useState<HeroData | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const voxelRef = useRef<VoxelRenderer | null>(null);
+
+  const handleCardMouseEnter = useCallback((hero: HeroData) => {
+    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+    setHoveredHero(hero);
+  }, []);
+
+  const scheduleHoverClose = useCallback(() => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => setHoveredHero(null), 200);
+  }, []);
+
+  const cancelHoverClose = useCallback(() => {
+    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+  }, []);
 
   const filteredHeroes = HEROES.filter(h => {
     if (raceFilter !== 'All' && h.race !== raceFilter) return false;
@@ -176,6 +419,8 @@ export default function CharacterSelect() {
                   key={hero.id}
                   className={`cursor-pointer transition-all overflow-hidden bg-[#1a1a2e] border hover:border-[#c5a059]/50 ${isSelected ? 'border-[#c5a059] ring-1 ring-[#c5a059]/30' : 'border-gray-800'} ${hero.isSecret ? 'bg-gradient-to-br from-[#1a1a2e] to-[#281432]' : ''}`}
                   onClick={() => setSelectedHero(hero)}
+                  onMouseEnter={() => handleCardMouseEnter(hero)}
+                  onMouseLeave={scheduleHoverClose}
                   data-testid={`card-hero-${hero.id}`}
                 >
                   <div className="relative">
@@ -280,6 +525,14 @@ export default function CharacterSelect() {
           </div>
         </div>
       </div>
+      {/* Codex hover popup */}
+      {hoveredHero && (
+        <HeroCodexPopup
+          hero={hoveredHero}
+          onMouseEnter={cancelHoverClose}
+          onMouseLeave={scheduleHoverClose}
+        />
+      )}
     </div>
   );
 }

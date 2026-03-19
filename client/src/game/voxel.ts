@@ -68,6 +68,51 @@ const CLASS_ARMOR: Record<string, { primary: string; secondary: string; weapon: 
   Ranger: { primary: '#2d5016', secondary: '#4a7c23', weapon: '#854d0e' }
 };
 
+interface HeroCustomization {
+  cape?: string;
+  hat?: 'helm' | 'hood' | 'wizard' | 'crown' | 'horned' | 'skull' | 'feathered' | 'tribal' | 'miner' | 'captain';
+  hatColor?: string;
+  hatAccent?: string;
+  shoulders?: string;
+  belt?: string;
+}
+
+const HERO_CUSTOMIZATIONS: Record<string, HeroCustomization> = {
+  // Humans
+  'Sir Aldric Valorheart': { cape: '#cc2222', hat: 'helm', hatColor: '#999999', hatAccent: '#cccccc', shoulders: '#aaaaaa' },
+  'Gareth Moonshadow': { cape: '#2a1a3e', hat: 'hood', hatColor: '#1a0e2e', shoulders: '#3a2a4e' },
+  'Archmage Elara Brightspire': { cape: '#3050a0', hat: 'wizard', hatColor: '#4a3080', hatAccent: '#ffd700', belt: '#c5a059' },
+  'Kael Shadowblade': { cape: '#1a3a12', hat: 'hood', hatColor: '#0e2808', belt: '#4a3010' },
+  // Barbarians
+  'Ulfgar Bonecrusher': { cape: '#5a3a1a', hat: 'horned', hatColor: '#666666', hatAccent: '#d4a574', shoulders: '#777777' },
+  'Hrothgar Fangborn': { hat: 'skull', hatColor: '#d4a574', belt: '#aa2222' },
+  'Volka Stormborn': { cape: '#1a2a5a', hat: 'wizard', hatColor: '#1a1a3e', hatAccent: '#4488cc', belt: '#3060a0' },
+  'Svala Windrider': { cape: '#8899aa', hat: 'feathered', hatColor: '#667788', hatAccent: '#ffffff' },
+  // Dwarves
+  'Thane Ironshield': { cape: '#1a2a5a', hat: 'crown', hatColor: '#ffd700', hatAccent: '#ff4444', shoulders: '#c5a059' },
+  'Bromm Earthshaker': { cape: '#4a3010', hat: 'horned', hatColor: '#555555', hatAccent: '#aa6633', shoulders: '#666666' },
+  'Runa Forgekeeper': { cape: '#aa4400', hat: 'helm', hatColor: '#884422', hatAccent: '#ff6600', belt: '#ff8800' },
+  'Durin Tunnelwatcher': { hat: 'miner', hatColor: '#c5a059', hatAccent: '#ffdd44', belt: '#6b4423' },
+  // Elves
+  'Thalion Bladedancer': { cape: '#eeeeee', hat: 'crown', hatColor: '#ffd700', hatAccent: '#22d3ee', shoulders: '#dddddd' },
+  'Sylara Wildheart': { cape: '#2a5a1a', hat: 'crown', hatColor: '#44aa22', hatAccent: '#88dd44' },
+  'Lyra Stormweaver': { cape: '#2266aa', hat: 'crown', hatColor: '#22d3ee', hatAccent: '#ffffff' },
+  'Aelindra Swiftbow': { cape: '#2d5016', hat: 'feathered', hatColor: '#3a6a22', hatAccent: '#88cc44', belt: '#6b4423' },
+  // Orcs
+  'Grommash Ironjaw': { cape: '#8a1a1a', hat: 'horned', hatColor: '#444444', hatAccent: '#cc2222', shoulders: '#555555' },
+  'Fenris Bloodfang': { cape: '#5a1111', hat: 'skull', hatColor: '#ccbb99', shoulders: '#3a2a1a' },
+  "Zul'jin the Hexmaster": { hat: 'tribal', hatColor: '#cc4422', hatAccent: '#ffd700', belt: '#c5a059', shoulders: '#6b4423' },
+  'Razak Deadeye': { shoulders: '#d4a574', belt: '#5a3a1a' },
+  // Undead
+  'Lord Malachar': { cape: '#1a1a2e', hat: 'helm', hatColor: '#333344', hatAccent: '#6644aa', shoulders: '#444466' },
+  'The Ghoulfather': { cape: '#2a3a2a', hat: 'hood', hatColor: '#3a4a3a', belt: '#555555' },
+  'Necromancer Vexis': { cape: '#3a1a4a', hat: 'wizard', hatColor: '#2a0a3a', hatAccent: '#aa44ff', belt: '#6644aa' },
+  'Shade Whisper': { cape: '#2a3a4a', hat: 'hood', hatColor: '#3a4a5a' },
+  // Pirates
+  'Racalvin the Pirate King': { cape: '#c5a059' },
+  'Cpt. John Wayne': { cape: '#3050a0', hat: 'captain', hatColor: '#1a1a3e', hatAccent: '#c5a059', shoulders: '#c5a059' },
+};
+
 export type TerrainType = 'grass' | 'dirt' | 'stone' | 'water' | 'lane' | 'jungle' | 'base_blue' | 'base_red' | 'river' | 'jungle_path';
 export type DungeonTileVoxelType = 'floor' | 'wall' | 'wall_top' | 'door' | 'trap' | 'stairs' | 'chest';
 
@@ -1086,6 +1131,106 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     setV(12 + hP.oz, 3 + hP.oy, 4 + hP.ox, armor.secondary);
     setV(13 + hP.oz, 3 + hP.oy, 3 + hP.ox, armor.weapon);
     setV(13 + hP.oz, 3 + hP.oy, 4 + hP.ox, armor.weapon);
+  }
+
+  // Per-hero visual customizations
+  const custom = heroName ? HERO_CUSTOMIZATIONS[heroName] : undefined;
+  if (custom) {
+    // Cape (behind character at y=5)
+    if (custom.cape) {
+      for (let z = 3; z <= 7; z++) {
+        setV(z + tP.oz, 5 + tP.oy, 3 + tP.ox, z === 7 ? shade(custom.cape, 1.15) : custom.cape);
+        setV(z + tP.oz, 5 + tP.oy, 4 + tP.ox, z === 7 ? shade(custom.cape, 1.15) : custom.cape);
+      }
+      setV(7 + tP.oz, 5 + tP.oy, 2 + tP.ox, custom.cape);
+      setV(7 + tP.oz, 5 + tP.oy, 5 + tP.ox, custom.cape);
+    }
+
+    // Shoulder pads
+    if (custom.shoulders) {
+      setV(7 + tP.oz, 2 + tP.oy, 0 + tP.ox, custom.shoulders);
+      setV(7 + tP.oz, 3 + tP.oy, 0 + tP.ox, shade(custom.shoulders, 0.85));
+      setV(7 + tP.oz, 2 + tP.oy, 7 + tP.ox, custom.shoulders);
+      setV(7 + tP.oz, 3 + tP.oy, 7 + tP.ox, shade(custom.shoulders, 0.85));
+    }
+
+    // Belt / sash
+    if (custom.belt) {
+      for (let x = 2; x <= 5; x++) setV(3 + tP.oz, 2 + tP.oy, x + tP.ox, custom.belt);
+    }
+
+    // Hat (skip for heroes that already have pirate hat)
+    if (custom.hat && !isPirate) {
+      const hc = custom.hatColor || '#888888';
+      const ha = custom.hatAccent || shade(hc, 1.3);
+
+      if (custom.hat === 'helm') {
+        for (let x = 2; x <= 5; x++) {
+          setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hc);
+          setV(11 + hP.oz, 2 + hP.oy, x + hP.ox, hc);
+        }
+        setV(12 + hP.oz, 3 + hP.oy, 3 + hP.ox, ha);
+        setV(12 + hP.oz, 3 + hP.oy, 4 + hP.ox, ha);
+      } else if (custom.hat === 'hood') {
+        for (let x = 2; x <= 5; x++) {
+          setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hc);
+          setV(11 + hP.oz, 4 + hP.oy, x + hP.ox, hc);
+        }
+        setV(10 + hP.oz, 4 + hP.oy, 3 + hP.ox, hc);
+        setV(10 + hP.oz, 4 + hP.oy, 4 + hP.ox, hc);
+        setV(10 + hP.oz, 5 + hP.oy, 3 + hP.ox, hc);
+        setV(10 + hP.oz, 5 + hP.oy, 4 + hP.ox, hc);
+      } else if (custom.hat === 'wizard') {
+        for (let x = 1; x <= 6; x++) setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hc);
+        for (let x = 2; x <= 5; x++) setV(12 + hP.oz, 3 + hP.oy, x + hP.ox, hc);
+        setV(13 + hP.oz, 3 + hP.oy, 3 + hP.ox, hc);
+        setV(13 + hP.oz, 3 + hP.oy, 4 + hP.ox, hc);
+        setV(14 + hP.oz, 3 + hP.oy, 3 + hP.ox, ha);
+      } else if (custom.hat === 'crown') {
+        setV(11 + hP.oz, 2 + hP.oy, 2 + hP.ox, hc);
+        setV(11 + hP.oz, 2 + hP.oy, 5 + hP.ox, hc);
+        setV(11 + hP.oz, 2 + hP.oy, 3 + hP.ox, ha);
+        setV(11 + hP.oz, 2 + hP.oy, 4 + hP.ox, ha);
+        setV(11 + hP.oz, 3 + hP.oy, 2 + hP.ox, hc);
+        setV(11 + hP.oz, 3 + hP.oy, 5 + hP.ox, hc);
+      } else if (custom.hat === 'horned') {
+        for (let x = 2; x <= 5; x++) setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hc);
+        setV(12 + hP.oz, 2 + hP.oy, 1 + hP.ox, ha);
+        setV(13 + hP.oz, 2 + hP.oy, 1 + hP.ox, ha);
+        setV(12 + hP.oz, 2 + hP.oy, 6 + hP.ox, ha);
+        setV(13 + hP.oz, 2 + hP.oy, 6 + hP.ox, ha);
+      } else if (custom.hat === 'skull') {
+        for (let x = 2; x <= 5; x++) {
+          setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hc);
+          setV(11 + hP.oz, 2 + hP.oy, x + hP.ox, hc);
+        }
+        setV(11 + hP.oz, 2 + hP.oy, 3 + hP.ox, '#111111');
+        setV(11 + hP.oz, 2 + hP.oy, 4 + hP.ox, '#111111');
+      } else if (custom.hat === 'feathered') {
+        for (let x = 2; x <= 5; x++) setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hc);
+        setV(12 + hP.oz, 3 + hP.oy, 5 + hP.ox, ha);
+        setV(13 + hP.oz, 3 + hP.oy, 5 + hP.ox, ha);
+      } else if (custom.hat === 'tribal') {
+        setV(11 + hP.oz, 2 + hP.oy, 2 + hP.ox, hc);
+        setV(11 + hP.oz, 2 + hP.oy, 5 + hP.ox, hc);
+        setV(12 + hP.oz, 2 + hP.oy, 3 + hP.ox, ha);
+        setV(12 + hP.oz, 2 + hP.oy, 4 + hP.ox, ha);
+        setV(12 + hP.oz, 3 + hP.oy, 3 + hP.ox, hc);
+        setV(12 + hP.oz, 3 + hP.oy, 4 + hP.ox, hc);
+      } else if (custom.hat === 'miner') {
+        for (let x = 2; x <= 5; x++) {
+          setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hc);
+          setV(11 + hP.oz, 2 + hP.oy, x + hP.ox, hc);
+        }
+        setV(12 + hP.oz, 2 + hP.oy, 3 + hP.ox, ha);
+      } else if (custom.hat === 'captain') {
+        for (let x = 1; x <= 6; x++) setV(11 + hP.oz, 3 + hP.oy, x + hP.ox, hc);
+        for (let x = 2; x <= 5; x++) setV(11 + hP.oz, 2 + hP.oy, x + hP.ox, hc);
+        for (let x = 2; x <= 5; x++) setV(12 + hP.oz, 3 + hP.oy, x + hP.ox, shade(hc, 0.8));
+        setV(12 + hP.oz, 2 + hP.oy, 3 + hP.ox, ha);
+        setV(12 + hP.oz, 2 + hP.oy, 4 + hP.ox, ha);
+      }
+    }
   }
 
   return model;
@@ -3393,91 +3538,25 @@ export class VoxelRenderer {
     race: string, heroClass: string,
     heroName?: string
   ) {
-    const skin = RACE_SKIN[race] || '#c4956a';
     const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
-    const hair = race === 'Elf' ? '#e8d090' : race === 'Orc' ? '#2a2a2a' : race === 'Undead' ? '#444444' : race === 'Dwarf' ? '#a0522d' : '#3a2a1a';
-    const eye = race === 'Undead' ? '#ff4444' : race === 'Orc' ? '#ffaa00' : '#2244aa';
-    const isPirate = heroName?.includes('Racalvin') || heroName?.includes('Pirate King');
 
-    const px = Math.floor(width / 8);
-    const py = Math.floor(height / 10);
+    // Build full idle hero model with per-hero customizations
+    const model = buildHeroModel(race, heroClass, 'idle', 0, heroName);
 
-    ctx.fillStyle = armor.primary;
-    ctx.fillRect(x + px, y + height - py * 3, width - px * 2, py * 3);
-    ctx.fillStyle = armor.secondary;
-    ctx.fillRect(x + px * 2, y + height - py * 2, width - px * 4, py);
+    // Scale to fit: cs=4 for card portraits (>=100px), cs=3 for small thumbnails
+    const portraitCs = Math.min(width, height) >= 100 ? 4 : 3;
+    const cx = x + Math.floor(width / 2);
+    const cy = y + Math.floor(height * 0.68);
 
-    ctx.fillStyle = skin;
-    ctx.fillRect(x + px * 2, y + py * 2, width - px * 4, py * 5);
+    // Clip to portrait bounds and render full-body voxel
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, width, height);
+    ctx.clip();
+    this.renderVoxelModel(ctx, cx, cy, model, portraitCs, 0.3);
+    ctx.restore();
 
-    ctx.fillStyle = shade(skin, 0.9);
-    ctx.fillRect(x + px * 2, y + py * 5, width - px * 4, py);
-
-    ctx.fillStyle = eye;
-    ctx.fillRect(x + px * 2 + px, y + py * 4, px, py);
-    ctx.fillRect(x + width - px * 3 - px, y + py * 4, px, py);
-
-    ctx.fillStyle = '#ffffff';
-    const eyeHighlight = Math.max(1, Math.floor(px * 0.4));
-    ctx.fillRect(x + px * 2 + px, y + py * 4, eyeHighlight, eyeHighlight);
-    ctx.fillRect(x + width - px * 3 - px, y + py * 4, eyeHighlight, eyeHighlight);
-
-    ctx.fillStyle = shade(skin, 0.8);
-    ctx.fillRect(x + px * 3, y + py * 5, px, Math.floor(py * 0.6));
-    ctx.fillRect(x + width - px * 4, y + py * 5, px, Math.floor(py * 0.6));
-
-    ctx.fillStyle = hair;
-    ctx.fillRect(x + px, y + py, width - px * 2, py * 2);
-    ctx.fillRect(x + px, y + py * 2, px, py * 2);
-    ctx.fillRect(x + width - px * 2, y + py * 2, px, py * 2);
-
-    if (race === 'Dwarf') {
-      ctx.fillStyle = hair;
-      ctx.fillRect(x + px * 2, y + py * 6, px, py * 2);
-      ctx.fillRect(x + width - px * 3, y + py * 6, px, py * 2);
-      ctx.fillRect(x + px * 3, y + py * 7, width - px * 6, py);
-    }
-
-    if (race === 'Elf') {
-      ctx.fillStyle = skin;
-      ctx.fillRect(x + px, y + py * 3, px, py * 2);
-      ctx.fillRect(x + width - px * 2, y + py * 3, px, py * 2);
-    }
-
-    if (race === 'Orc') {
-      ctx.fillStyle = '#445522';
-      ctx.fillRect(x + px * 3, y + py * 6, px, py);
-      ctx.fillRect(x + width - px * 4, y + py * 6, px, py);
-    }
-
-    if (race === 'Undead') {
-      ctx.fillStyle = '#555555';
-      ctx.fillRect(x + px * 3, y + py * 5, width - px * 6, Math.floor(py * 0.5));
-    }
-
-    if (isPirate) {
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(x, y + py, width, py);
-      ctx.fillRect(x + px, y, width - px * 2, py * 2);
-      ctx.fillStyle = '#c5a059';
-      ctx.fillRect(x + px, y + py * 2, width - px * 2, Math.max(1, Math.floor(py * 0.4)));
-      ctx.fillStyle = '#2a1a0a';
-      ctx.fillRect(x + px * 2, y + py * 6, width - px * 4, py * 2);
-    }
-
-    if (heroClass === 'Warrior' && !isPirate) {
-      ctx.fillStyle = '#888888';
-      ctx.fillRect(x + px, y + py, width - px * 2, Math.max(1, Math.floor(py * 0.5)));
-      ctx.fillRect(x + px * 2, y + py * 2, px, py);
-      ctx.fillRect(x + width - px * 3, y + py * 2, px, py);
-    }
-
-    if (heroClass === 'Mage') {
-      ctx.fillStyle = armor.secondary;
-      ctx.fillRect(x + px, y, width - px * 2, py);
-      ctx.fillRect(x + px * 3, y - Math.floor(py * 0.5), px * 2, py);
-    }
-
+    // Subtle border
     const [br, bg, bb] = hexToRgb(armor.primary);
     ctx.fillStyle = `rgba(${br},${bg},${bb},0.27)`;
     ctx.fillRect(x, y, 1, height);
