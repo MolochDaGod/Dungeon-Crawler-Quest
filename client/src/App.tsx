@@ -10,6 +10,7 @@ import CreateCharacter from "@/pages/create-character";
 import GamePage from "@/pages/game";
 import SettingsPage from "@/pages/settings";
 import OpenWorldPage from "@/pages/open-world";
+import OpenWorldLobby from "@/pages/open-world-lobby";
 import AnimationEditorPage from "@/pages/animation-editor";
 import AdminPage from "@/pages/admin";
 import EntityEditorPage from "@/pages/entity-editor";
@@ -27,7 +28,8 @@ function Router() {
       <Route path="/character-select" component={CharacterSelect} />
       <Route path="/create-character" component={CreateCharacter} />
       <Route path="/game" component={GamePage} />
-      <Route path="/open-world" component={OpenWorldPage} />
+      <Route path="/open-world" component={OpenWorldLobby} />
+      <Route path="/open-world-play" component={OpenWorldPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/animation-editor" component={AnimationEditorPage} />
       <Route path="/admin" component={AdminPage} />
