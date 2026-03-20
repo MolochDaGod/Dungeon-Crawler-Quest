@@ -6,7 +6,7 @@ import {
 import {
   OpenWorldState, OWHudState,
   createOpenWorldState, updateOpenWorld, getOWHudState,
-  OpenWorldRenderer, handleOWAbility, handleOWAttack, handleOWHeavyAttack,
+  OpenWorldRenderer, handleOWAbility, handleOWAttack, handleOWRangedAttack,
   updateOWMouseWorld, startOWTargeting, confirmOWTargeting, cancelOWTargeting,
   allocateOWAttribute, acceptOWMission, claimOWMission, enterOWDungeon,
   handleOWDodge, handleOWTargetCycle, closeNPCDialog
@@ -172,7 +172,7 @@ export default function OpenWorldPage() {
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       if (state.targeting.active) { cancelOWTargeting(state); return; }
-      handleOWHeavyAttack(state);
+      handleOWRangedAttack(state);
     };
 
     const onMouseMove = (e: MouseEvent) => {

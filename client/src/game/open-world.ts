@@ -88,6 +88,11 @@ import { getZoneLayout, drawDecoration, drawAnimal, updateAnimal, drawHeroesGuil
 import { resolveMovement } from './world-collision';
 import { renderWalls, renderWaterArea } from './world-collision';
 import { ZONE_5_AREAS, getZone5Area, collidesWithWall, isDeepWater } from './node-map';
+import {
+  VoxelProjectile, createVoxelProjectile, updateVoxelProjectile,
+  renderVoxelProjectile, getClassRangedConfig
+} from './voxel-projectiles';
+import { projectileHitsCircle } from './spatial-math';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -390,6 +395,10 @@ export interface OpenWorldState {
   boatDocks: BoatDock[];
   spawnerManager: SpawnerManager;
   eventManager: ZoneEventManager;
+
+  // Voxel projectiles (class ranged attacks + spell effects)
+  voxelProjectiles: VoxelProjectile[];
+  rangedAttackCooldown: number;
 }
 
 export interface OWHudState {
@@ -597,6 +606,9 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     spawnerManager: null as any, // initialized below
     eventManager: createZoneEventManager(),
   };
+
+  state.voxelProjectiles = [];
+  state.rangedAttackCooldown = 0;
 
   // Initialize heightmap from generated world data
   state.heightmap = createWorldHeightmap(state.generatedWorld);
@@ -1169,6 +1181,45 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
 
   // Update projectiles
   updateProjectiles(state, dt);
+
+  // Ranged attack cooldown
+  if (state.rangedAttackCooldown > 0) state.rangedAttackCooldown -= dt;
+
+  // Update voxel projectiles (class ranged attacks + spell effects)
+  for (const vp of state.voxelProjectiles) {
+    const trails = updateVoxelProjectile(vp, dt);
+    // Spawn trail particles
+    for (const tp of trails) {
+      state.particles.push({ x: tp.x, y: tp.y, vx: tp.vx, vy: tp.vy, life: tp.life, maxLife: tp.maxLife, color: tp.color, size: tp.size });
+    }
+    // Check enemy collision using swept circle test (catches fast projectiles)
+    if (!vp.dead && vp.sourceId === p.id) {
+      const prevX = vp.x - Math.cos(vp.angle) * vp.speed * dt;
+      const prevY = vp.y - Math.sin(vp.angle) * vp.speed * dt;
+      for (const enemy of state.enemies) {
+        if (enemy.dead) continue;
+        if (projectileHitsCircle(prevX, prevY, vp.x, vp.y, vp.hitRadius, enemy.x, enemy.y, enemy.size)) {
+          // Hit!
+          const dmgOpts = buildDamageOpts(computeDerivedStats(state.playerAttributes), null);
+          const result = combatCalcDamage(
+            { atk: p.atk, activeEffects: p.activeEffects },
+            { def: enemy.def, activeEffects: enemy.activeEffects },
+            vp.damage, dmgOpts,
+          );
+          enemy.hp -= result.finalDamage;
+          const col = result.isCrit ? '#ffd700' : '#ffffff';
+          addText(state, enemy.x, enemy.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, col, result.isCrit ? 16 : 12);
+          triggerHitFlash(state, enemy.id);
+          spawnParticles(state, enemy.x, enemy.y, vp.color, 6);
+          if (enemy.hp <= 0) killEnemy(state, enemy);
+          vp.dead = true;
+          triggerScreenShake(state, 2, 0.08);
+          break;
+        }
+      }
+    }
+  }
+  state.voxelProjectiles = state.voxelProjectiles.filter(vp => !vp.dead);
 
   // Particles
   for (const pt of state.particles) {
@@ -1946,27 +1997,36 @@ export function handleOWAttack(state: OpenWorldState): void {
   globalAnimDirector.registerAttack(p.id, state.gameTime);
 }
 
-export function handleOWHeavyAttack(state: OpenWorldState): void {
+/** RMB: Class-specific ranged attack aimed at mouse position */
+export function handleOWRangedAttack(state: OpenWorldState): void {
   const p = state.player;
-  if (p.dead || isStunned(p as any) || p.meleeAnimTimer > 0 || p.heavyAttackCooldown > 0) return;
+  if (p.dead || isStunned(p as any) || state.rangedAttackCooldown > 0) return;
 
   const hd = HEROES[p.heroDataId];
-  const nearest = findNearestEnemy(state, p, MELEE_RANGE + 40);
-  if (nearest) p.facing = angleBetween(p, nearest);
+  const cfg = getClassRangedConfig(hd.heroClass, state.weaponLoadout?.weaponType);
 
-  // Heavy overhead slash: wide arc, strong slow
-  const heavyHits = meleeArcDamage(state, Math.PI * 0.6, MELEE_RANGE + 15, p.atk * 1.5, 0.5, 0.4);
-  addSpellEffect(state, p.x + Math.cos(p.facing) * 25, p.y + Math.sin(p.facing) * 25, 'heavy_slash', 55, '#ef4444', 0.35, p.facing);
-  if (heavyHits > 0) triggerScreenShake(state, 6, 0.2);
-  spawnParticles(state, p.x + Math.cos(p.facing) * 30, p.y + Math.sin(p.facing) * 30, '#ffd700', 6);
+  // Face toward mouse
+  p.facing = Math.atan2(state.mouseWorld.y - p.y, state.mouseWorld.x - p.x);
 
-  state.animFSM.tryTransition('combo_finisher', true);
-  p.meleeAnimTimer = 0.4;
-  // Hit-stop on heavy attack impact
-  if (heavyHits > 0) { p.hitStopTimer = 0.06; state.animFSM.freeze(); }
-  p.heavyAttackCooldown = 1.2;
-  p.comboStep = 0;
-  p.comboTimer = 0;
+  // Spawn projectile from player toward mouse
+  const damage = p.atk * cfg.damageMultiplier;
+  const proj = createVoxelProjectile(
+    cfg.type,
+    p.x + Math.cos(p.facing) * 20, p.y + Math.sin(p.facing) * 20,
+    state.mouseWorld.x, state.mouseWorld.y,
+    damage, p.id,
+    cfg.color, cfg.trailColor,
+  );
+  proj.speed *= cfg.speedMultiplier;
+  state.voxelProjectiles.push(proj);
+
+  // Animation
+  state.animFSM.tryTransition('attack', true);
+  p.meleeAnimTimer = 0.3;
+  state.rangedAttackCooldown = cfg.cooldown;
+
+  // VFX at launch point
+  spawnParticles(state, p.x + Math.cos(p.facing) * 15, p.y + Math.sin(p.facing) * 15, cfg.color, 4);
 
   globalAnimDirector.registerAttack(p.id, state.gameTime);
 }
@@ -2519,6 +2579,12 @@ export class OpenWorldRenderer {
     state.effectPool.forEach(slot => this.renderSpellEffect(ctx, slot as any));
 
     for (const proj of state.projectiles) this.renderProjectile(ctx, proj, state.gameTime);
+
+    // Voxel projectiles (class ranged attacks + spell effects)
+    for (const vp of state.voxelProjectiles) {
+      renderVoxelProjectile(ctx, vp, camLeft, camTop, state.gameTime);
+    }
+
     for (const pt of state.particles) this.renderParticle(ctx, pt);
     for (const ft of state.floatingTexts) this.renderFloatingText(ctx, ft);
 
