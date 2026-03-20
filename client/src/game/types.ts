@@ -612,29 +612,30 @@ export const CLASS_ABILITIES: Record<string, AbilityDef[]> = {
     { name: "Smoke Bomb", key: "Space", cooldown: 12, manaCost: 15, damage: 0, range: 0, radius: 120, duration: 3, type: 'debuff', castType: 'self_cast', description: "Drop smoke, becoming invisible and blinding enemies", slot: 'defensive', weaponSkillId: 'gun-smoke', effect: 'stealth + blind 2s' },
     { name: "Phantom Barrage", key: "R", cooldown: 55, manaCost: 80, damage: 90, range: 400, radius: 150, duration: 3, type: 'aoe', castType: 'ground_aoe', description: "Spectral bullets rain down on area for 3s", slot: 'ultimate', effect: 'armor pen 50%' }
   ],
+  // ═══ BALANCED Generic fallbacks ═══ Auto DPS ~35-40, Core DPS ~12-15, Ult CD 60s
   Warrior: [
-    { name: "Slash", key: "Q", cooldown: 0, manaCost: 0, damage: 35, range: 80, radius: 0, duration: 0, type: 'damage', castType: 'targeted', description: "Basic sword slash attack", slot: 'attack' },
-    { name: "Power Strike", key: "E", cooldown: 6, manaCost: 15, damage: 55, range: 80, radius: 0, duration: 0, type: 'damage', castType: 'targeted', description: "Powerful overhead strike dealing 150% damage", slot: 'core' },
-    { name: "Parry", key: "Space", cooldown: 8, manaCost: 10, damage: 0, range: 0, radius: 0, duration: 1.5, type: 'buff', castType: 'self_cast', description: "Block incoming attack and counter", slot: 'defensive' },
-    { name: "Avatar", key: "R", cooldown: 60, manaCost: 80, damage: 0, range: 0, radius: 0, duration: 10, type: 'buff', castType: 'self_cast', description: "Transform into a giant, +50% HP and ATK for 10s", slot: 'ultimate' }
+    { name: "Slash", key: "Q", cooldown: 0, manaCost: 0, damage: 40, range: 90, radius: 0, duration: 0, type: 'damage', castType: 'targeted', description: "Basic sword slash. Fast, reliable melee.", slot: 'attack' },
+    { name: "Power Strike", key: "E", cooldown: 7, manaCost: 18, damage: 85, range: 100, radius: 0, duration: 0, type: 'damage', castType: 'targeted', description: "85 damage overhead strike with 0.5s stun.", slot: 'core', effect: 'stun 0.5s' },
+    { name: "Parry", key: "Space", cooldown: 10, manaCost: 12, damage: 0, range: 0, radius: 0, duration: 1.5, type: 'buff', castType: 'self_cast', description: "Block next attack, counter for 50% ATK.", slot: 'defensive', effect: 'block + counter 50%' },
+    { name: "Avatar", key: "R", cooldown: 60, manaCost: 75, damage: 0, range: 0, radius: 0, duration: 10, type: 'buff', castType: 'self_cast', description: "+50% HP & ATK for 10s.", slot: 'ultimate' }
   ],
   Worg: [
-    { name: "Quick Stab", key: "Q", cooldown: 0, manaCost: 0, damage: 30, range: 70, radius: 0, duration: 0, type: 'damage', castType: 'targeted', description: "Quick melee strike", slot: 'attack' },
-    { name: "Blade Flurry", key: "E", cooldown: 5, manaCost: 15, damage: 20, range: 70, radius: 80, duration: 1.5, type: 'aoe', castType: 'self_cast', description: "Rapid flurry of strikes", slot: 'core' },
-    { name: "Shadow Step", key: "Space", cooldown: 6, manaCost: 10, damage: 0, range: 200, radius: 0, duration: 1, type: 'dash', castType: 'ground_aoe', description: "Teleport and become invisible for 1s", slot: 'defensive' },
-    { name: "Primal Fury", key: "R", cooldown: 55, manaCost: 70, damage: 0, range: 0, radius: 0, duration: 12, type: 'buff', castType: 'self_cast', description: "Enter frenzy, +40% ATK SPD and lifesteal for 12s", slot: 'ultimate' }
+    { name: "Quick Stab", key: "Q", cooldown: 0, manaCost: 0, damage: 32, range: 80, radius: 0, duration: 0, type: 'damage', castType: 'targeted', description: "Fast dagger stab. Low damage, very fast.", slot: 'attack' },
+    { name: "Blade Flurry", key: "E", cooldown: 6, manaCost: 18, damage: 18, range: 80, radius: 80, duration: 1.2, type: 'aoe', castType: 'self_cast', description: "5 rapid strikes. 18×5=90 total in 80 radius.", slot: 'core', effect: 'hits 5x' },
+    { name: "Shadow Step", key: "Space", cooldown: 8, manaCost: 12, damage: 0, range: 200, radius: 0, duration: 1, type: 'dash', castType: 'ground_aoe', description: "Teleport behind target. 1s stealth.", slot: 'defensive', effect: 'dodge + stealth 1s' },
+    { name: "Primal Fury", key: "R", cooldown: 60, manaCost: 65, damage: 0, range: 0, radius: 0, duration: 10, type: 'buff', castType: 'self_cast', description: "+40% ATK speed, +25% lifesteal for 10s.", slot: 'ultimate' }
   ],
   Mage: [
-    { name: "Arcane Bolt", key: "Q", cooldown: 0, manaCost: 5, damage: 45, range: 400, radius: 0, duration: 0, type: 'damage', castType: 'skillshot', description: "Fire a bolt of magical energy", slot: 'attack' },
-    { name: "Arcane Barrage", key: "E", cooldown: 6, manaCost: 25, damage: 60, range: 350, radius: 80, duration: 0, type: 'aoe', castType: 'ground_aoe', description: "Rain magic on an area", slot: 'core' },
-    { name: "Mana Shield", key: "Space", cooldown: 14, manaCost: 30, damage: 0, range: 0, radius: 0, duration: 4, type: 'buff', castType: 'self_cast', description: "Create a mana shield absorbing damage", slot: 'defensive' },
-    { name: "Meteor", key: "R", cooldown: 50, manaCost: 90, damage: 120, range: 500, radius: 150, duration: 0, type: 'aoe', castType: 'ground_aoe', description: "Call down a meteor dealing massive AoE damage", slot: 'ultimate' }
+    { name: "Arcane Bolt", key: "Q", cooldown: 0, manaCost: 3, damage: 38, range: 400, radius: 0, duration: 0, type: 'damage', castType: 'skillshot', description: "Magic bolt. 3 mana, 400 range.", slot: 'attack' },
+    { name: "Arcane Barrage", key: "E", cooldown: 7, manaCost: 28, damage: 75, range: 350, radius: 120, duration: 0, type: 'aoe', castType: 'ground_aoe', description: "75 damage AoE in 120 radius.", slot: 'core' },
+    { name: "Mana Shield", key: "Space", cooldown: 14, manaCost: 25, damage: 0, range: 0, radius: 0, duration: 4, type: 'buff', castType: 'self_cast', description: "Absorb 150 damage for 4s.", slot: 'defensive', effect: 'shield 150' },
+    { name: "Meteor", key: "R", cooldown: 60, manaCost: 80, damage: 140, range: 450, radius: 160, duration: 0, type: 'aoe', castType: 'ground_aoe', description: "140 damage in 160 radius. 1.5s delay.", slot: 'ultimate' }
   ],
   Ranger: [
-    { name: "Quick Shot", key: "Q", cooldown: 0, manaCost: 0, damage: 35, range: 450, radius: 0, duration: 0, type: 'damage', castType: 'line', description: "Fire a quick shot", slot: 'attack' },
-    { name: "Aimed Shot", key: "E", cooldown: 5, manaCost: 15, damage: 65, range: 500, radius: 0, duration: 0, type: 'damage', castType: 'line', description: "Carefully aimed shot dealing high damage", slot: 'core' },
-    { name: "Evasive Roll", key: "Space", cooldown: 6, manaCost: 8, damage: 0, range: 180, radius: 0, duration: 0.5, type: 'dash', castType: 'ground_aoe', description: "Quick dodge roll with i-frames", slot: 'defensive' },
-    { name: "Storm of Arrows", key: "R", cooldown: 55, manaCost: 80, damage: 80, range: 400, radius: 200, duration: 3, type: 'aoe', castType: 'ground_aoe', description: "Rain arrows over an area for 3s", slot: 'ultimate' }
+    { name: "Quick Shot", key: "Q", cooldown: 0, manaCost: 0, damage: 36, range: 450, radius: 0, duration: 0, type: 'damage', castType: 'line', description: "Fast arrow. Free, 450 range.", slot: 'attack' },
+    { name: "Aimed Shot", key: "E", cooldown: 6, manaCost: 15, damage: 80, range: 500, radius: 0, duration: 0, type: 'damage', castType: 'line', description: "80 damage precise shot. Longest range.", slot: 'core', damageMultiplier: 1.6 },
+    { name: "Evasive Roll", key: "Space", cooldown: 8, manaCost: 0, damage: 0, range: 180, radius: 0, duration: 0.5, type: 'dash', castType: 'ground_aoe', description: "Dodge roll. Costs stamina, not mana.", slot: 'defensive', effect: 'dodge + i-frames' },
+    { name: "Storm of Arrows", key: "R", cooldown: 60, manaCost: 70, damage: 90, range: 400, radius: 200, duration: 3, type: 'aoe', castType: 'ground_aoe', description: "90 damage arrow rain for 3s in 200 radius.", slot: 'ultimate' }
   ]
 };
 
