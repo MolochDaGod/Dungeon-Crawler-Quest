@@ -1,0 +1,27 @@
+# Vercel deploy ignore — keep under 15k file limit
+# Vite builds only what's referenced; these raw assets aren't needed
+
+# Sprite source files (PNG runtime copies in dist/ via vite)
+public/assets/sprites/ent-chars-1/PNG/*/Parts/
+public/assets/sprites/ent-chars-1/PNG/*/With_shadow/
+public/assets/sprites/ent-chars-2/PNG/*/Parts/
+public/assets/sprites/ent-chars-2/PNG/*/With_shadow/
+public/assets/sprites/ent-chars-3/PNG/*/Parts/
+public/assets/sprites/ent-chars-3/PNG/*/With_shadow/
+
+# Explosion individual frames (keep spritesheets only)
+public/assets/sprites/explosions/PNG/Explosion_*/1/
+public/assets/sprites/explosions/PNG/Explosion_*/2/
+
+# License/readme files
+public/assets/sprites/*/license.txt
+public/assets/sprites/*/readme.txt
+public/assets/sprites/*/*.url
+
+# Dev/build artifacts
+.git
+scripts/
+*.psd
+*.aseprite
+*.tmx
+*.ai
