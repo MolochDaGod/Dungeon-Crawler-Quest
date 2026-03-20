@@ -12,6 +12,9 @@ import {
   hasLifesteal, getAbilityStatusEffects, calculateDamage as combatCalcDamage,
   CombatEntity, EFFECT_COLORS
 } from './combat';
+import { buildDungeonGrid, type DungeonGrid } from './dungeon-grid';
+import { DungeonTileRenderer } from './dungeon-tile-renderer';
+import { initDungeonEnemyAI, updateDungeonEnemyAI } from './dungeon-ai';
 
 export interface DungeonTile {
   type: 'floor' | 'wall' | 'door' | 'stairs' | 'trap' | 'chest' | 'spawn';
@@ -162,6 +165,7 @@ export interface DungeonState {
   rooms: DungeonRoom[];
   mapWidth: number;
   mapHeight: number;
+  dungeonGrid: DungeonGrid | null;
   player: DungeonPlayer;
   enemies: DungeonEnemy[];
   heroEnemies: DungeonHeroEnemy[];
@@ -316,6 +320,7 @@ export function createDungeonState(heroId: number): DungeonState {
     },
     spellEffects: [],
     exitPortals: [],
+    dungeonGrid: null,
     bossRoomCleared: false,
     bossRoomIndex: -1,
     rangedFireTimer: 0,
@@ -439,6 +444,14 @@ function generateFloor(state: DungeonState) {
         state.tiles[Math.floor(cy / TILE_SIZE)][Math.floor(cx / TILE_SIZE)].type = 'trap';
       }
     }
+  }
+
+  // Build pathfinding grid from tiles (must be before AI init)
+  state.dungeonGrid = buildDungeonGrid(state.tiles, state.mapWidth, state.mapHeight);
+
+  // Initialize enemy AI with pathfinding grid
+  if (state.dungeonGrid) {
+    initDungeonEnemyAI(state, state.dungeonGrid);
   }
 
   if (state.floor >= 2) {
@@ -789,6 +802,7 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
     }
   }
 
+  // ── Status effects for all enemies ──
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
     enemy.animTimer += dt;
@@ -803,45 +817,35 @@ export function updateDungeon(state: DungeonState, dt: number, keys: Set<string>
       killDungeonEnemy(state, enemy);
       continue;
     }
+  }
 
+  // ── AI-driven movement & state (replaces inline straight-line AI) ──
+  if (state.dungeonGrid) {
+    updateDungeonEnemyAI(state, state.dungeonGrid, dt);
+  }
+
+  // ── Attack execution for enemies in attack state ──
+  for (const enemy of state.enemies) {
+    if (enemy.dead) continue;
     if (isStunned(enemy as any as CombatEntity)) continue;
 
-    const d = distXY(enemy, p);
-    if (d < 400) {
-      enemy.targetId = p.id;
-      enemy.facing = angleBetween(enemy, p);
-
-      if (d <= enemy.rng + 10) {
-        enemy.animState = 'attack';
-        globalAnimDirector.registerAttack(enemy.id, state.gameTime || 0);
-        enemy.attackTimer -= dt;
-        if (enemy.attackTimer <= 0) {
-          const spdMult = getSpeedMultiplier(enemy as any as CombatEntity);
-          state.projectiles.push({
-            id: state.nextId++,
-            x: enemy.x, y: enemy.y,
-            targetId: p.id,
-            damage: enemy.atk,
-            speed: enemy.rng > 100 ? 400 : 300,
-            color: enemy.color,
-            size: enemy.isBoss ? 5 : 3,
-            sourceIsPlayer: false,
-          });
-          enemy.attackTimer = 1.2 / spdMult;
-        }
-      } else if (!isRooted(enemy as any as CombatEntity)) {
+    if (enemy.animState === 'attack' && enemy.targetId === p.id) {
+      globalAnimDirector.registerAttack(enemy.id, state.gameTime || 0);
+      enemy.attackTimer -= dt;
+      if (enemy.attackTimer <= 0) {
         const spdMult = getSpeedMultiplier(enemy as any as CombatEntity);
-        const angle = angleBetween(enemy, p);
-        const nx2 = enemy.x + Math.cos(angle) * enemy.spd * spdMult * dt;
-        const ny2 = enemy.y + Math.sin(angle) * enemy.spd * spdMult * dt;
-        if (isWalkable(state, nx2, ny2)) {
-          enemy.x = nx2;
-          enemy.y = ny2;
-        }
-        enemy.animState = 'walk';
+        state.projectiles.push({
+          id: state.nextId++,
+          x: enemy.x, y: enemy.y,
+          targetId: p.id,
+          damage: enemy.atk,
+          speed: enemy.rng > 100 ? 400 : 300,
+          color: enemy.color,
+          size: enemy.isBoss ? 5 : 3,
+          sourceIsPlayer: false,
+        });
+        enemy.attackTimer = 1.2 / spdMult;
       }
-    } else {
-      enemy.animState = 'idle';
     }
   }
 
@@ -1838,12 +1842,16 @@ export class DungeonRenderer {
   private canvas: HTMLCanvasElement;
   private voxel: VoxelRenderer;
   private spriteEffects: SpriteEffectSystem;
+  private tileRenderer: DungeonTileRenderer;
+  private decorSeededForFloor = -1;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.voxel = new VoxelRenderer();
     this.spriteEffects = new SpriteEffectSystem();
+    this.tileRenderer = new DungeonTileRenderer();
+    this.tileRenderer.ensureLoaded();
   }
 
   updateSpriteEffects(dt: number) {
@@ -1869,6 +1877,11 @@ export class DungeonRenderer {
     ctx.translate(-cam.x, -cam.y);
 
     this.renderTiles(ctx, state, cam, W, H);
+    // Seed decorations once per floor change
+    if (this.tileRenderer.isReady() && state.floor !== this.decorSeededForFloor && state.rooms.length > 0) {
+      this.tileRenderer.seedDecorations(state.rooms, state.tiles, state.mapWidth, state.mapHeight);
+      this.decorSeededForFloor = state.floor;
+    }
     this.renderChests(ctx, state);
     this.renderExitPortals(ctx, state);
 
@@ -1930,43 +1943,38 @@ export class DungeonRenderer {
         const inVision = state.visibleTiles.has(tileKey(tx, ty, state.mapWidth));
         ctx.globalAlpha = inVision ? Math.max(0.4, 1 - distSq / vrSq * 0.6) : 0.15;
 
-        let voxType: DungeonTileVoxelType = 'floor';
-        if (tile.type === 'wall') voxType = 'wall';
-        else if (tile.type === 'trap') voxType = 'trap';
-        else if (tile.type === 'stairs') voxType = 'stairs';
-        else if (tile.type === 'door') voxType = 'door';
-        else if (tile.type === 'chest') voxType = 'chest';
-        else voxType = 'floor';
-
-        this.voxel.drawDungeonTile(ctx, x, y, TILE_SIZE, voxType, tx, ty);
-
-        if (tile.type === 'floor' && tile.decoration > 0) {
-          const seed = (tx * 17 + ty * 31) % 100;
-          if (seed > 70) {
-            ctx.fillStyle = 'rgba(80,80,60,0.15)';
-            const cx = x + TILE_SIZE * 0.3 + (seed % 5) * 2;
-            const cy = y + TILE_SIZE * 0.3 + (seed % 7) * 2;
-            ctx.beginPath();
-            ctx.arc(cx, cy, 1.5 + (seed % 3), 0, Math.PI * 2);
-            ctx.fill();
-          }
-          if (seed > 85) {
-            ctx.strokeStyle = 'rgba(60,50,30,0.15)';
-            ctx.lineWidth = 0.5;
-            const crackLen = 4 + (seed % 8);
-            const crackAngle = (seed * 0.17) % (Math.PI * 2);
-            const crackX = x + TILE_SIZE * 0.5 + (seed % 10) - 5;
-            const crackY = y + TILE_SIZE * 0.5 + (seed % 7) - 3;
-            ctx.beginPath();
-            ctx.moveTo(crackX, crackY);
-            ctx.lineTo(crackX + Math.cos(crackAngle) * crackLen, crackY + Math.sin(crackAngle) * crackLen);
-            ctx.stroke();
-          }
+        // Use sprite tileset renderer if loaded, otherwise fall back to voxel
+        if (this.tileRenderer.isReady()) {
+          this.tileRenderer.renderTile(
+            ctx, state.tiles, tx, ty,
+            state.mapWidth, state.mapHeight,
+            state.gameTime, px, py,
+          );
+        } else {
+          let voxType: DungeonTileVoxelType = 'floor';
+          if (tile.type === 'wall') voxType = 'wall';
+          else if (tile.type === 'trap') voxType = 'trap';
+          else if (tile.type === 'stairs') voxType = 'stairs';
+          else if (tile.type === 'door') voxType = 'door';
+          else if (tile.type === 'chest') voxType = 'chest';
+          else voxType = 'floor';
+          this.voxel.drawDungeonTile(ctx, x, y, TILE_SIZE, voxType, tx, ty);
         }
       }
     }
     ctx.globalAlpha = 1;
 
+    // Sprite-based torch animations + room object decorations
+    if (this.tileRenderer.isReady()) {
+      this.tileRenderer.renderTorches(
+        ctx, state.tiles, state.mapWidth, state.mapHeight,
+        state.gameTime, state.visibleTiles,
+        startTX, startTY, endTX, endTY,
+      );
+      this.tileRenderer.renderDecorations(ctx, state.visibleTiles, state.mapWidth);
+    }
+
+    // Radial glow lighting on torch positions (always rendered)
     this.renderTorchGlow(ctx, state);
   }
 

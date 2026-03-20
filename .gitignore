@@ -16,4 +16,9 @@ vite.config.ts.*
 
 # Large asset packs (managed locally, not in git)
 public/assets/packs/
+# Tileset assets (downloaded separately per dev machine)
+public/assets/dungeon-tileset/
+public/assets/tropical-tileset/
+# Client-side asset packs (if any)
+client/public/assets/packs/
 .env*.local

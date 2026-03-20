@@ -321,3 +321,125 @@ export function generateLinearPatrol(
   // Fallback: just the two endpoints
   return [{ x: x1, y: y1 }, { x: x2, y: y2 }];
 }
+
+// ── Dungeon Pathfinding Adapter ────────────────────────────────
+// Uses DungeonGrid instead of WorldHeightmap. Same A* algorithm.
+
+import type { DungeonGrid } from './dungeon-grid';
+
+const DUNGEON_CELL = 40; // matches TILE_SIZE in dungeon-grid.ts
+
+/**
+ * Find a path on a DungeonGrid. Returns world-space waypoints.
+ * Same A* as findPath but uses DungeonGrid's walkable/cost interface.
+ */
+export function findDungeonPath(
+  startX: number, startY: number,
+  goalX: number, goalY: number,
+  grid: DungeonGrid,
+): PathResult {
+  const stx = Math.floor(startX / DUNGEON_CELL);
+  const sty = Math.floor(startY / DUNGEON_CELL);
+  const gtx = Math.floor(goalX / DUNGEON_CELL);
+  const gty = Math.floor(goalY / DUNGEON_CELL);
+
+  if (!grid.isGridWalkable(gtx, gty)) {
+    return { found: false, path: [], nodesExplored: 0 };
+  }
+  if (stx === gtx && sty === gty) {
+    return { found: true, path: [{ x: goalX, y: goalY }], nodesExplored: 0 };
+  }
+
+  const open = new MinHeap();
+  const closed = new Set<string>();
+  const gScores = new Map<string, number>();
+
+  const startNode: PathNode = {
+    tx: stx, ty: sty,
+    g: 0, h: octileDistance(stx, sty, gtx, gty),
+    f: octileDistance(stx, sty, gtx, gty),
+    parent: null,
+  };
+  open.push(startNode);
+  gScores.set(`${stx},${sty}`, 0);
+
+  let explored = 0;
+
+  while (open.length > 0 && explored < MAX_NODES) {
+    const current = open.pop()!;
+    const key = `${current.tx},${current.ty}`;
+
+    if (current.tx === gtx && current.ty === gty) {
+      const gridPath: { tx: number; ty: number }[] = [];
+      let node: PathNode | null = current;
+      while (node) {
+        gridPath.push({ tx: node.tx, ty: node.ty });
+        node = node.parent;
+      }
+      gridPath.reverse();
+      // Smooth path using dungeon grid LOS
+      const smoothed = smoothDungeonPath(gridPath, grid);
+      const worldPath = smoothed.map(p => ({
+        x: p.tx * DUNGEON_CELL + DUNGEON_CELL / 2,
+        y: p.ty * DUNGEON_CELL + DUNGEON_CELL / 2,
+      }));
+      return { found: true, path: worldPath, nodesExplored: explored };
+    }
+
+    if (closed.has(key)) continue;
+    closed.add(key);
+    explored++;
+
+    for (const [dx, dy, baseCost] of DIRS) {
+      const nx = current.tx + dx;
+      const ny = current.ty + dy;
+      const nkey = `${nx},${ny}`;
+
+      if (closed.has(nkey)) continue;
+      if (!grid.isGridWalkable(nx, ny)) continue;
+
+      // No corner cutting on diagonals
+      if (dx !== 0 && dy !== 0) {
+        if (!grid.isGridWalkable(current.tx + dx, current.ty)) continue;
+        if (!grid.isGridWalkable(current.tx, current.ty + dy)) continue;
+      }
+
+      const terrainCost = grid.getGridCost(nx, ny);
+      if (terrainCost >= Infinity) continue;
+
+      const newG = current.g + baseCost * terrainCost;
+      const prevG = gScores.get(nkey) ?? Infinity;
+
+      if (newG < prevG) {
+        const h = octileDistance(nx, ny, gtx, gty);
+        const neighbor: PathNode = {
+          tx: nx, ty: ny,
+          g: newG, h, f: newG + h,
+          parent: current,
+        };
+        gScores.set(nkey, newG);
+        open.push(neighbor);
+      }
+    }
+  }
+
+  return { found: false, path: [], nodesExplored: explored };
+}
+
+/** Smooth dungeon path by removing redundant waypoints */
+function smoothDungeonPath(
+  path: { tx: number; ty: number }[],
+  grid: DungeonGrid,
+): { tx: number; ty: number }[] {
+  if (path.length <= 2) return path;
+  const result: { tx: number; ty: number }[] = [path[0]];
+  for (let i = 1; i < path.length - 1; i++) {
+    const prev = result[result.length - 1];
+    const next = path[i + 1];
+    if (!grid.hasLineOfSight(prev.tx, prev.ty, next.tx, next.ty)) {
+      result.push(path[i]);
+    }
+  }
+  result.push(path[path.length - 1]);
+  return result;
+}
