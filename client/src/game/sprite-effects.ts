@@ -156,7 +156,7 @@ const EFFECT_FILE_MAP: Record<SpriteEffectType, EffectDef> = {
   os_thunder_proj:  { path: `${OS}/sprites/effects/thunder_projectile.png`, cols: 5, rows: 1, frameW: 32, frameH: 32, frames: 5 },
   os_thunder_proj2: { path: `${OS}/sprites/effects/thunder_projectile_2.png`, cols: 16, rows: 1, frameW: 48, frameH: 48, frames: 16 },
   os_wind_proj:     { path: `${OS}/sprites/effects/wind_projectile.png`, cols: 3, rows: 2, frameW: 32, frameH: 32, frames: 6 },
-  os_energy_proj:   { path: `${OS}/sprites/effects/general/energy_projectile.png`, cols: 4, rows: 1, frameW: 32, frameH: 32, frames: 4 },
+  os_energy_proj:   { path: `${OS}/sprites/effects/general/energy_projectile.png`, cols: 4, rows: 1, frameW: 50, frameH: 50, frames: 4 },
 
   // ── ObjectStore CDN — Explosions / AOE ──
   os_fire_explosion:  { path: `${OS}/sprites/effects/fire_explosion.png`, cols: 4, rows: 4, frameW: 64, frameH: 64, frames: 16 },
@@ -197,8 +197,8 @@ const EFFECT_FILE_MAP: Record<SpriteEffectType, EffectDef> = {
   os_smear_v1:     { path: `${OS}/sprites/effects/pixel/smear_v1.png`, cols: 6, rows: 1, frameW: 48, frameH: 48, frames: 6 },
   os_smear_v2:     { path: `${OS}/sprites/effects/pixel/smear_v2.png`, cols: 6, rows: 1, frameW: 48, frameH: 48, frames: 6 },
   os_smear_v3:     { path: `${OS}/sprites/effects/pixel/smear_v3.png`, cols: 6, rows: 1, frameW: 48, frameH: 48, frames: 6 },
-  os_thrust1:      { path: `${OS}/sprites/effects/pixel/thrust_1.png`, cols: 5, rows: 1, frameW: 48, frameH: 48, frames: 5 },
-  os_thrust2:      { path: `${OS}/sprites/effects/pixel/thrust_2.png`, cols: 5, rows: 1, frameW: 48, frameH: 48, frames: 5 },
+  os_thrust1:      { path: `${OS}/sprites/effects/pixel/smear_h1.png`, cols: 5, rows: 1, frameW: 48, frameH: 48, frames: 5 },  // fallback: thrust_1 404
+  os_thrust2:      { path: `${OS}/sprites/effects/pixel/smear_h2.png`, cols: 5, rows: 1, frameW: 48, frameH: 48, frames: 5 },  // fallback: thrust_2 404
   os_effect3_stun: { path: `${OS}/sprites/effects/pixel/effect_3.png`, cols: 1, rows: 5, frameW: 32, frameH: 32, frames: 5 },
   os_effect4_dodge:{ path: `${OS}/sprites/effects/pixel/effect_4.png`, cols: 1, rows: 5, frameW: 32, frameH: 32, frames: 5 },
 

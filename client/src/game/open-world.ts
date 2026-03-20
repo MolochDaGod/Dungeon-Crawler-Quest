@@ -93,6 +93,7 @@ import {
   renderVoxelProjectile, getClassRangedConfig
 } from './voxel-projectiles';
 import { projectileHitsCircle } from './spatial-math';
+import { checkAbilityCost, deductAbilityCost, getEffectiveCooldown, type ResourceState } from './ability-costs';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -1709,10 +1710,25 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
   if (!abilities || !abilities[abilityIndex]) return;
 
   const ab = abilities[abilityIndex];
-  if (p.abilityCooldowns[abilityIndex] > 0 || p.mp < ab.manaCost) return;
+  if (p.abilityCooldowns[abilityIndex] > 0) return;
 
-  p.mp -= ab.manaCost;
-  p.abilityCooldowns[abilityIndex] = ab.cooldown;
+  // Multi-resource cost check (mana + health + stamina)
+  const resources: ResourceState = { hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, stamina: p.stamina, maxStamina: p.maxStamina };
+  const costCheck = checkAbilityCost(ab, resources);
+  if (!costCheck.canCast) {
+    addText(state, p.x, p.y - 25, costCheck.reason, '#ef4444', 10);
+    return;
+  }
+
+  // Deduct costs (mana, health, stamina)
+  deductAbilityCost(resources, costCheck);
+  p.hp = resources.hp;
+  p.mp = resources.mp;
+  p.stamina = resources.stamina;
+
+  // Apply CDR to cooldown
+  const derived = computeDerivedStats(state.playerAttributes);
+  p.abilityCooldowns[abilityIndex] = getEffectiveCooldown(ab, derived);
   state.animFSM.tryTransition('ability');
 
   // Spell combo tracking — casting within 3s window stacks
