@@ -1,7 +1,37 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import css from '../MainPanel.module.css';
 import { CharacterData } from '@/game/character-data';
 import { AttributeId } from '@/game/attributes';
+import { Chart, RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip } from 'chart.js';
+
+// Register Chart.js components for radar chart
+Chart.register(RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip);
+
+// Build power tiers from the character builder
+const BUILD_TIERS = [
+  { name: 'Unclassified', minPower: 0,     color: '#4b5563', border: '#4b5563' },
+  { name: 'Normal',       minPower: 1000,  color: '#9ca3af', border: '#9ca3af' },
+  { name: 'Hero',         minPower: 2500,  color: '#3b82f6', border: '#3b82f6' },
+  { name: 'Epic',         minPower: 4000,  color: '#a855f7', border: '#a855f7' },
+  { name: 'Warlord',      minPower: 6000,  color: '#f97316', border: '#f97316' },
+  { name: 'Mystic Diamond',minPower: 8000, color: '#89f7fe', border: '#89f7fe' },
+];
+
+function getBuildTier(power: number) {
+  for (let i = BUILD_TIERS.length - 1; i >= 0; i--) {
+    if (power >= BUILD_TIERS[i].minPower) return BUILD_TIERS[i];
+  }
+  return BUILD_TIERS[0];
+}
+
+function getBuildRating(power: number): string {
+  if (power >= 8000) return 'S';
+  if (power >= 6000) return 'A';
+  if (power >= 4000) return 'B';
+  if (power >= 2500) return 'C';
+  if (power >= 1000) return 'D';
+  return 'F';
+}
 
 const ATTR_EMOJI: Record<string, string> = {
   strength: '💪', intellect: '🧠', vitality: '❤️', dexterity: '🎯',
@@ -84,8 +114,86 @@ export function AttributesTab({ data }: { data: CharacterData }) {
     </>
   );
 
+  // Combat power calculation (from character builder)
+  const combatPower = Math.floor(
+    d.health * 0.5 + d.mana * 0.3 + d.stamina * 0.2 +
+    d.damage * 8 + d.defense * 2 + d.block * 20 +
+    d.criticalChance * 30 + d.criticalDamage * 15 +
+    d.evasion * 25 + d.resistance * 20 +
+    d.armorPenetration * 18 + d.cooldownReduction * 12 +
+    d.movementSpeed * 10 + d.drainHealth * 40
+  );
+  const tier = getBuildTier(combatPower);
+  const rating = getBuildRating(combatPower);
+
+  // Spider graph data
+  const radarRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
+
+  useEffect(() => {
+    if (!radarRef.current) return;
+    if (chartRef.current) chartRef.current.destroy();
+
+    const attrValues = summary.attrs.map(a => a.total);
+    const attrLabels = summary.attrs.map(a => a.name);
+    const maxVal = Math.max(40, ...attrValues);
+
+    chartRef.current = new Chart(radarRef.current, {
+      type: 'radar',
+      data: {
+        labels: attrLabels,
+        datasets: [{
+          label: 'Attributes',
+          data: attrValues,
+          backgroundColor: `${tier.color}20`,
+          borderColor: tier.color,
+          borderWidth: 2,
+          pointBackgroundColor: tier.color,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1,
+          pointRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: {
+            beginAtZero: true,
+            max: maxVal + 5,
+            ticks: { display: false },
+            grid: { color: 'rgba(255,255,255,0.08)' },
+            angleLines: { color: 'rgba(255,255,255,0.08)' },
+            pointLabels: { color: '#9b8a6a', font: { size: 10 } },
+          },
+        },
+        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+      },
+    });
+
+    return () => { chartRef.current?.destroy(); };
+  }, [summary.attrs.map(a => a.total).join(',')]);
+
   return (
     <>
+      {/* Build Power Card */}
+      <div style={{
+        textAlign: 'center', padding: 12, marginBottom: 12, borderRadius: 10,
+        border: `2px solid ${tier.color}`, background: `${tier.color}08`,
+        boxShadow: `0 0 20px ${tier.color}22`,
+      }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: tier.color }}>{tier.name}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#e8d5b0', margin: '2px 0' }}>Combat Power</div>
+        <div style={{ fontSize: 28, fontWeight: 900, color: '#fbbf24' }}>{combatPower.toLocaleString()}</div>
+        <div style={{ fontSize: 11, color: '#8a7a5a' }}>Build Rating: <span style={{ fontWeight: 800, fontSize: 16, color: tier.color }}>{rating}</span></div>
+      </div>
+
+      {/* Spider Graph */}
+      <div style={{ height: 200, marginBottom: 12 }}>
+        <canvas ref={radarRef} />
+      </div>
+
+      {/* Attributes with + buttons */}
       <div className={css.sectionTitle}>
         Attributes
         {summary.unspentPoints > 0 && <span style={{ color: '#6ec96e', fontSize: 11, marginLeft: 8 }}>({summary.unspentPoints} pts)</span>}
