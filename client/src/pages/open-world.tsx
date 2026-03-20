@@ -19,6 +19,7 @@ import { loadKeybindings, matchesKeyDown, KeybindAction, KeybindConfig } from '@
 import hudFramePath from '@assets/hud-frame.png';
 import MainPanel from '@/components/MainPanel';
 import NpcDialog from '@/components/NpcDialog';
+import { IntroSequence, shouldShowIntro } from '@/components/IntroSequence';
 
 export default function OpenWorldPage() {
   const [, setLocation] = useLocation();
@@ -32,6 +33,7 @@ export default function OpenWorldPage() {
   const [zoneBanner, setZoneBanner] = useState<string | null>(null);
   const [showCharPanel, setShowCharPanel] = useState(false);
   const [showMissions, setShowMissions] = useState(false);
+  const [showIntro, setShowIntro] = useState(() => shouldShowIntro());
   const zoneBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uiBlocksInputRef = useRef(false);
 
@@ -150,7 +152,8 @@ export default function OpenWorldPage() {
       else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility4], e)) { e.preventDefault(); tryTargetOrCast(3); }
       // Combat
       if (matchesKeyDown(bindings[KeybindAction.DodgeRoll], e)) { e.preventDefault(); handleOWDodge(state); }
-      if (matchesKeyDown(bindings[KeybindAction.TargetLock], e)) { e.preventDefault(); handleOWTargetCycle(state); }
+      if (matchesKeyDown(bindings[KeybindAction.DungeonAbility4], e)) { e.preventDefault(); tryTargetOrCast(3); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility5], e)) { e.preventDefault(); tryTargetOrCast(4); }
       // UI toggles
       if (matchesKeyDown(bindings[KeybindAction.ToggleInventory], e)) state.showInventory = !state.showInventory;
       if (matchesKeyDown(bindings[KeybindAction.ToggleCharPanel], e)) setShowCharPanel(prev => !prev);
@@ -227,6 +230,15 @@ export default function OpenWorldPage() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="open-world-page">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" data-testid="canvas-openworld" />
+
+      {/* Intro sequence for new players */}
+      {showIntro && heroData && (
+        <IntroSequence
+          heroClass={heroData.heroClass}
+          heroRace={heroData.race}
+          onComplete={() => setShowIntro(false)}
+        />
+      )}
 
       {hud && (
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 9999, fontFamily: "'Oxanium', sans-serif" }}>

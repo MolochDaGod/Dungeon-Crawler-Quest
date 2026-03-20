@@ -533,7 +533,7 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
       spd: hd.spd, rng: hd.rng * 50,
       level: 1, xp: 0, gold: 0,
       items: [null, null, null, null, null, null],
-      abilityCooldowns: [0, 0, 0, 0],
+      abilityCooldowns: [0, 0, 0, 0, 0],
       facing: 0,
       animState: 'idle',
       animTimer: 0,
