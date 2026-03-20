@@ -94,6 +94,9 @@ import {
 } from './voxel-projectiles';
 import { projectileHitsCircle } from './spatial-math';
 import { checkAbilityCost, deductAbilityCost, getEffectiveCooldown, type ResourceState } from './ability-costs';
+import {
+  TownBuilding, ALL_TOWN_BUILDINGS, getBuildingNear, InteriorNPCDef,
+} from './town-buildings';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -420,6 +423,16 @@ export interface OpenWorldState {
   // Voxel projectiles (class ranged attacks + spell effects)
   voxelProjectiles: VoxelProjectile[];
   rangedAttackCooldown: number;
+
+  // ── Town building system ──
+  /** When non-null, player is inside this building */
+  activeBuilding: TownBuilding | null;
+  /** Player's position inside the building interior (0..1 of room) */
+  interiorPlayer: { x: number; y: number };
+  /** Which interior NPC is being talked to */
+  activeInteriorNPC: InteriorNPCDef | null;
+  /** Cooldown so one E press doesn't immediately exit+enter */
+  interactCooldown: number;
 }
 
 export interface OWHudState {
@@ -626,8 +639,14 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     boatDocks: BOAT_DOCKS,
     spawnerManager: null as any, // initialized below
     eventManager: createZoneEventManager(),
-  };
-
+    // Town building system
+    activeBuilding: null,
+    interiorPlayer: { x: 0.5, y: 0.75 },
+    activeInteriorNPC: null,
+    interactCooldown: 0,
+  } as unknown as OpenWorldState;
+  // Assigned separately because TypeScript requires these to exist at runtime
+  // but the interface uses them as non-optional for convenience
   state.voxelProjectiles = [];
   state.rangedAttackCooldown = 0;
 
@@ -813,15 +832,80 @@ export function handleOWHarvest(state: OpenWorldState): void {
   saveResourceInventory(state.resourceInventory);
 }
 
-/** Unified E-key interaction: harvest, NPC, dungeon entrance */
+/** Unified E-key interaction: harvest, NPC, dungeon entrance, building entry/exit */
 function handleOWInteract(state: OpenWorldState): void {
   if (state.player.dead) return;
+  if (state.interactCooldown > 0) return;
   const p = state.player;
+
+  // ── Inside a building: talk to NPC or exit via door ──
+  if (state.activeBuilding) {
+    const b = state.activeBuilding;
+    // Door exit: player near the bottom-centre (iy > 0.82)
+    if (state.interiorPlayer.y > 0.82) {
+      exitBuilding(state);
+      return;
+    }
+    // Talk to interior NPC
+    const iPx = state.interiorPlayer.x;
+    const iPy = state.interiorPlayer.y;
+    let nearest: InteriorNPCDef | null = null;
+    let nearestD = 0.18;
+    for (const inpc of b.npcs) {
+      const d = Math.sqrt((iPx - inpc.ix) ** 2 + (iPy - inpc.iy) ** 2);
+      if (d < nearestD) { nearestD = d; nearest = inpc; }
+    }
+    if (nearest) {
+      state.activeInteriorNPC = nearest;
+      // Innkeeper: restore HP and MP
+      if (nearest.role === 'innkeeper') {
+        const p = state.player;
+        const healed = p.maxHp - p.hp;
+        const restored = p.maxMp - p.mp;
+        p.hp = p.maxHp;
+        p.mp = p.maxMp;
+        if (healed > 0 || restored > 0) {
+          state.killFeed.push({ text: `${nearest.name}: Rested and recovered! (+${Math.floor(healed)} HP, +${Math.floor(restored)} MP)`, color: '#22c55e', time: state.gameTime });
+        } else {
+          const greeting = nearest.dialogue[Math.floor(Math.random() * nearest.dialogue.length)];
+          state.killFeed.push({ text: `${nearest.name}: "${greeting}"`, color: '#ffd700', time: state.gameTime });
+        }
+        return;
+      }
+      // All other roles: open the real NPC dialog panel
+      const roleToType: Record<string, OWNPC['type']> = {
+        vendor: 'merchant', blacksmith: 'crafter', trainer: 'trainer',
+        quest: 'quest', guard: 'quest',
+      };
+      const npcType: OWNPC['type'] = roleToType[nearest.role] || 'merchant';
+      const zone = state.activeBuilding!.zoneId;
+      const shopTier = Math.max(1, Math.min(8, Math.ceil((zone + 1) * 1.5)));
+      const syntheticNPC: OWNPC = {
+        id: -1,
+        x: state.player.x, y: state.player.y,
+        name: nearest.name,
+        type: npcType,
+        zoneId: zone,
+        facing: 0,
+        dialogue: nearest.dialogue,
+        shopTier,
+      };
+      openNPCDialog(state, syntheticNPC);
+    }
+    return;
+  }
 
   // Try dungeon entrance first (closest priority)
   const entrance = getDungeonEntranceNear(p.x, p.y, 80);
   if (entrance && distXY(p, entrance) < 60) {
     enterOWDungeon(state);
+    return;
+  }
+
+  // Try building entry
+  const bldg = getBuildingNear(p.x, p.y, 70);
+  if (bldg) {
+    enterBuilding(state, bldg);
     return;
   }
 
@@ -835,6 +919,23 @@ function handleOWInteract(state: OpenWorldState): void {
 
   // Fall through to harvesting
   handleOWHarvest(state);
+}
+
+/** Enter a town building */
+export function enterBuilding(state: OpenWorldState, bldg: TownBuilding): void {
+  state.activeBuilding = bldg;
+  state.interiorPlayer = { x: 0.5, y: 0.85 };
+  state.activeInteriorNPC = null;
+  state.interactCooldown = 0.5;
+  state.killFeed.push({ text: `Entered: ${bldg.name}`, color: '#c5a059', time: state.gameTime });
+}
+
+/** Exit current building back to world */
+export function exitBuilding(state: OpenWorldState): void {
+  state.activeBuilding = null;
+  state.activeInteriorNPC = null;
+  state.interactCooldown = 0.5;
+  state.killFeed.push({ text: 'Returned to the world.', color: '#9a9a9a', time: state.gameTime });
 }
 
 // ── NPC Dialog Open / Close ────────────────────────────────────
@@ -1108,6 +1209,48 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   } else {
     // Regen stamina when not sprinting
     p.stamina = Math.min(p.maxStamina, p.stamina + 15 * dt);
+  }
+
+  // Interact cooldown
+  if (state.interactCooldown > 0) state.interactCooldown = Math.max(0, state.interactCooldown - dt);
+
+  // ── Inside a building: use interior movement ──
+  if (state.activeBuilding) {
+    const ip = state.interiorPlayer;
+    let imx = 0, imy = 0;
+    if (keys.has(kUp)) imy = -1;
+    if (keys.has(kDown)) imy = 1;
+    if (keys.has(kLeft)) imx = -1;
+    if (keys.has(kRight)) imx = 1;
+    const ispd = p.spd * 0.8 * dt / state.activeBuilding.roomH;
+    if (imx !== 0 || imy !== 0) {
+      const ilen = Math.sqrt(imx * imx + imy * imy);
+      ip.x = Math.max(0.05, Math.min(0.95, ip.x + (imx / ilen) * ispd * 2.5));
+      ip.y = Math.max(0.1, Math.min(0.92, ip.y + (imy / ilen) * ispd * 1.8));
+      p.facing = Math.atan2(imy, imx);
+    }
+    // Dismiss interior NPC dialog if player moves away
+    if ((imx !== 0 || imy !== 0) && state.activeInteriorNPC) {
+      state.activeInteriorNPC = null;
+    }
+    // Skip world movement
+    p.vx = 0; p.vy = 0;
+    state.animFSM.tryTransition(imx !== 0 || imy !== 0 ? 'walk' : 'idle');
+    p.animState = state.animFSM.state;
+    p.animTimer = state.animFSM.timer;
+    // Camera follows player in world (interior renders in screen-space, no camera needed)
+    // Update ambient particles, effects etc but skip enemy spawning/combat
+    updateAmbientParticles(state, dt);
+    if (state.screenShake.timer > 0) {
+      state.screenShake.timer -= dt;
+      if (state.screenShake.timer <= 0) state.screenShake.intensity = 0;
+    }
+    for (const ft of state.floatingTexts) { ft.y += ft.vy * dt; ft.life -= dt; }
+    state.floatingTexts = state.floatingTexts.filter(ft => ft.life > 0);
+    state.killFeed = state.killFeed.filter(k => state.gameTime - k.time < 6);
+    // Interact key inside building
+    if (keys.has(kInteract)) handleOWInteract(state);
+    return;
   }
 
   // ── Skip movement while NPC dialog is open ──
@@ -2339,9 +2482,21 @@ function addSpellEffect(state: OpenWorldState, x: number, y: number, type: OWSpe
 
 function getNearbyInteractableLabel(state: OpenWorldState): string | null {
   const p = state.player;
+  // Inside building: exit prompt
+  if (state.activeBuilding) {
+    if (state.interiorPlayer.y > 0.80) return 'Exit building';
+    for (const inpc of state.activeBuilding.npcs) {
+      const d = Math.sqrt((state.interiorPlayer.x - inpc.ix) ** 2 + (state.interiorPlayer.y - inpc.iy) ** 2);
+      if (d < 0.18) return `Talk to ${inpc.name}`;
+    }
+    return null;
+  }
   // Dungeon entrance
   const ent = getDungeonEntranceNear(p.x, p.y, 80);
   if (ent && distXY(p, ent) < 60) return `Enter ${ent.name}`;
+  // Town building door
+  const bldg = getBuildingNear(p.x, p.y, 70);
+  if (bldg) return `Enter ${bldg.name}`;
   // NPC
   for (const npc of state.npcs) {
     if (distXY(p, npc) < 60) return `Talk to ${npc.name}`;
@@ -2485,6 +2640,174 @@ export function allocateOWAttribute(state: OpenWorldState, attrId: AttributeId):
 }
 
 // ── Renderer ─
+
+// ── Color utility ──────────────────────────────────────────────
+/** Lighten a hex color string by `amount` (0-255 each channel) */
+function shadeColor(hex: string, amount: number): string {
+  const c = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, ((c >> 16) & 0xff) + amount);
+  const g = Math.min(255, ((c >> 8) & 0xff) + amount);
+  const b = Math.min(255, (c & 0xff) + amount);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+// ── Town NPC sprite painter (procedural pixel-art style) ──────
+/**
+ * Draw a detailed 2D top-down NPC sprite using canvas 2D.
+ * Each role has distinct silhouette, outfit colors, and accessories.
+ */
+function drawTownNPCSprite(
+  ctx: CanvasRenderingContext2D,
+  wx: number, wy: number,
+  role: string,
+  name: string,
+  brightness: number,
+  distToPlayer: number,
+  gameTime: number,
+): void {
+  ctx.save();
+  ctx.translate(wx, wy);
+  ctx.globalAlpha = Math.max(0.5, brightness);
+
+  // Gentle bob animation
+  const bob = Math.sin(gameTime * 1.8 + wx * 0.01) * 1.5;
+
+  // Role palette
+  const palette: Record<string, { body: string; trim: string; skin: string; hat?: string }> = {
+    merchant:  { body: '#d97706', trim: '#f59e0b', skin: '#f9c784', hat: '#92400e' },
+    trainer:   { body: '#1d4ed8', trim: '#3b82f6', skin: '#f9c784', hat: '#1e3a8a' },
+    quest:     { body: '#15803d', trim: '#22c55e', skin: '#f9c784', hat: '#14532d' },
+    crafter:   { body: '#6b21a8', trim: '#a855f7', skin: '#f9c784', hat: '#3b0764' },
+  };
+  const pal = palette[role] || palette.quest;
+
+  const y0 = bob;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(0, 16, 8, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs (two rectangles)
+  ctx.fillStyle = pal.body;
+  ctx.fillRect(-5, y0 + 4, 4, 9);   // left leg
+  ctx.fillRect(1, y0 + 4, 4, 9);    // right leg
+
+  // Feet
+  ctx.fillStyle = '#1a1008';
+  ctx.fillRect(-6, y0 + 13, 5, 3);
+  ctx.fillRect(1, y0 + 13, 5, 3);
+
+  // Body / robe
+  ctx.fillStyle = pal.body;
+  ctx.fillRect(-7, y0 - 6, 14, 12);
+  // Trim stripe
+  ctx.fillStyle = pal.trim;
+  ctx.fillRect(-3, y0 - 5, 6, 10);
+
+  // Role accessory
+  ctx.save();
+  if (role === 'merchant') {
+    // Side satchel bag
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(6, y0 - 1, 5, 6);
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(7, y0, 3, 4);
+  } else if (role === 'trainer') {
+    // Scroll in left hand
+    ctx.fillStyle = '#e5d3b3';
+    ctx.fillRect(-11, y0 - 4, 4, 8);
+    ctx.fillStyle = '#b5a070';
+    ctx.fillRect(-11, y0 - 4, 4, 1);
+    ctx.fillRect(-11, y0 + 3, 4, 1);
+  } else if (role === 'quest') {
+    // Shield / badge on chest
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath();
+    ctx.arc(-2, y0 + 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText('!', -2.5, y0 + 5);
+  } else if (role === 'crafter') {
+    // Hammer in right hand
+    ctx.fillStyle = '#78716c';
+    ctx.fillRect(7, y0 - 6, 2, 9);  // handle
+    ctx.fillStyle = '#44403c';
+    ctx.fillRect(5, y0 - 9, 6, 4);  // head
+  }
+  ctx.restore();
+
+  // Arms
+  ctx.fillStyle = pal.trim;
+  ctx.fillRect(-11, y0 - 4, 5, 8); // left arm
+  ctx.fillRect(6, y0 - 4, 5, 8);  // right arm
+
+  // Neck
+  ctx.fillStyle = pal.skin;
+  ctx.fillRect(-2, y0 - 9, 4, 4);
+
+  // Head
+  ctx.fillStyle = pal.skin;
+  ctx.beginPath();
+  ctx.arc(0, y0 - 16, 7, 0, Math.PI * 2);
+  ctx.fill();
+  // Face highlight
+  ctx.fillStyle = 'rgba(255,255,200,0.25)';
+  ctx.beginPath();
+  ctx.arc(-2, y0 - 17, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Hat / head gear
+  if (pal.hat) {
+    ctx.fillStyle = pal.hat;
+    if (role === 'merchant') {
+      // Wide-brim hat
+      ctx.fillRect(-10, y0 - 22, 20, 3);
+      ctx.fillRect(-5, y0 - 27, 10, 6);
+    } else if (role === 'trainer') {
+      // Pointed mage hat
+      ctx.beginPath();
+      ctx.moveTo(0, y0 - 30);
+      ctx.lineTo(-8, y0 - 22);
+      ctx.lineTo(8, y0 - 22);
+      ctx.closePath();
+      ctx.fill();
+    } else if (role === 'quest') {
+      // Feathered cap
+      ctx.fillRect(-7, y0 - 24, 14, 4);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(4, y0 - 28, 3, 6);
+    } else if (role === 'crafter') {
+      // Hood
+      ctx.beginPath();
+      ctx.arc(0, y0 - 18, 9, Math.PI, 0);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Name tag
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  const nameW = Math.min(name.length * 5.5, 90);
+  ctx.fillRect(-nameW / 2 - 2, y0 - 42, nameW + 4, 11);
+  ctx.fillStyle = '#e0d0a8';
+  ctx.font = 'bold 8px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(name.length > 16 ? name.slice(0, 16) + '.' : name, 0, y0 - 33);
+
+  // [E] interact prompt when close
+  if (distToPlayer < 70) {
+    const pulse = 0.55 + Math.sin(Date.now() * 0.005) * 0.35;
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillText('[E] Talk', 0, y0 - 49);
+  }
+
+  ctx.restore();
+}
 
 // Zone terrain color palettes
 const ZONE_FLOOR_COLORS: Record<string, { base: string; accent: string }> = {
@@ -2635,6 +2958,11 @@ export class OpenWorldRenderer {
     // HUD overlays (screen space)
     this.renderComboDisplay(ctx, state, W, H);
     this.renderHeavyCooldownIndicator(ctx, state, W, H);
+
+    // Building interior (full-screen overlay, drawn last)
+    if (state.activeBuilding) {
+      this.renderBuildingInterior(ctx, state, W, H);
+    }
   }
 
   private renderTerrain(ctx: CanvasRenderingContext2D, state: OpenWorldState, cam: { x: number; y: number; zoom: number }, W: number, H: number, brightness: number): void {
@@ -2849,6 +3177,405 @@ export class OpenWorldRenderer {
       }
     }
 
+    ctx.restore();
+
+    // Draw town buildings (enterable) on top
+    this.renderTownBuildingExteriors(ctx, state, brightness);
+  }
+
+  /** Draw all enterable town buildings with glowing doors and [E] Enter prompts */
+  private renderTownBuildingExteriors(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
+    const p = state.player;
+
+    for (const tb of ALL_TOWN_BUILDINGS) {
+      const dx = tb.wx + tb.ww / 2 - p.x;
+      const dy = tb.wy + tb.wh / 2 - p.y;
+      if (Math.abs(dx) > 800 || Math.abs(dy) > 800) continue;
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0.5, brightness);
+
+      // Main body
+      ctx.fillStyle = tb.wallColor;
+      ctx.fillRect(tb.wx, tb.wy, tb.ww, tb.wh);
+
+      // Roof
+      ctx.fillStyle = shadeColor(tb.wallColor, 30);
+      ctx.beginPath();
+      ctx.moveTo(tb.wx - 4, tb.wy);
+      ctx.lineTo(tb.wx + tb.ww / 2, tb.wy - 14);
+      ctx.lineTo(tb.wx + tb.ww + 4, tb.wy);
+      ctx.closePath();
+      ctx.fill();
+
+      // Windows (two)
+      ctx.fillStyle = 'rgba(200,220,255,0.3)';
+      ctx.fillRect(tb.wx + 8, tb.wy + 10, 12, 10);
+      ctx.fillRect(tb.wx + tb.ww - 20, tb.wy + 10, 12, 10);
+      ctx.strokeStyle = tb.floorColor;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tb.wx + 8, tb.wy + 10, 12, 10);
+      ctx.strokeRect(tb.wx + tb.ww - 20, tb.wy + 10, 12, 10);
+
+      // Door (at bottom-centre)
+      const doorX = tb.wx + tb.ww / 2 - 6;
+      const doorY = tb.wy + tb.wh - 12;
+      ctx.fillStyle = '#2a1408';
+      ctx.fillRect(doorX, doorY, 12, 14);
+      ctx.strokeStyle = '#8b6914';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(doorX, doorY, 12, 14);
+      // Door knob
+      ctx.fillStyle = '#c5a059';
+      ctx.beginPath();
+      ctx.arc(doorX + 9, doorY + 7, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Building name label
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = '#e0d0a8';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(tb.name, tb.wx + tb.ww / 2, tb.wy - 18);
+
+      // [E] Enter prompt near door
+      const doorDist = Math.sqrt((p.x - tb.doorX) ** 2 + (p.y - tb.doorY) ** 2);
+      if (doorDist < 80) {
+        const pulse = 0.55 + Math.sin(Date.now() * 0.005) * 0.35;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('[E] Enter', tb.doorX, tb.doorY + 14);
+        // Door glow
+        ctx.globalAlpha = pulse * 0.25;
+        ctx.fillStyle = '#ffd700';
+        ctx.fillRect(doorX - 2, doorY - 2, 16, 18);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  /** Full-screen building interior overlay */
+  private renderBuildingInterior(ctx: CanvasRenderingContext2D, state: OpenWorldState, W: number, H: number): void {
+    const b = state.activeBuilding!;
+    const gameTime = state.gameTime;
+
+    // Room layout in screen-space, centred
+    const roomX = Math.floor((W - b.roomW) / 2);
+    const roomY = Math.floor((H - b.roomH) / 2);
+    const rW = b.roomW;
+    const rH = b.roomH;
+
+    // Dark vignette overlay over world
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Outer wall (stone/brick border) ──
+    ctx.fillStyle = b.wallColor;
+    ctx.fillRect(roomX - 12, roomY - 12, rW + 24, rH + 24);
+
+    // ── Floor ──
+    // Base floor color
+    ctx.fillStyle = b.floorColor;
+    ctx.fillRect(roomX, roomY, rW, rH);
+
+    // Planks pattern
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(roomX, roomY, rW, rH);
+    ctx.clip();
+    const plankH = 18;
+    for (let py = 0; py < rH; py += plankH) {
+      const even = Math.floor(py / plankH) % 2 === 0;
+      ctx.fillStyle = even ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.04)';
+      ctx.fillRect(roomX, roomY + py, rW, plankH);
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(roomX, roomY + py + plankH);
+      ctx.lineTo(roomX + rW, roomY + py + plankH);
+      ctx.stroke();
+    }
+    // Vertical plank lines (offset per row)
+    const plankW = 60;
+    for (let py = 0; py < rH; py += plankH) {
+      const off = (Math.floor(py / plankH) % 2) * (plankW / 2);
+      for (let px = off; px < rW + plankW; px += plankW) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(roomX + px, roomY + py);
+        ctx.lineTo(roomX + px, roomY + py + plankH);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    // ── Walls (top and sides) ──
+    ctx.fillStyle = shadeColor(b.wallColor, 15);
+    ctx.fillRect(roomX, roomY - 12, rW, 12);  // top wall
+    ctx.fillRect(roomX - 12, roomY, 12, rH);  // left wall
+    ctx.fillRect(roomX + rW, roomY, 12, rH);  // right wall
+
+    // Wall shadows
+    const grad = ctx.createLinearGradient(roomX, roomY, roomX, roomY + 40);
+    grad.addColorStop(0, 'rgba(0,0,0,0.3)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(roomX, roomY, rW, 40);
+
+    // ── Door at bottom ──
+    const dX = roomX + rW / 2 - 14;
+    const dY = roomY + rH - 1;
+    ctx.fillStyle = '#2a1408';
+    ctx.fillRect(dX, dY, 28, 14);
+    ctx.strokeStyle = '#8b6914';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(dX, dY, 28, 14);
+    ctx.fillStyle = '#c5a059';
+    ctx.beginPath();
+    ctx.arc(dX + 22, dY + 7, 2, 0, Math.PI * 2);
+    ctx.fill();
+    // [E] to exit
+    const nearDoor = state.interiorPlayer.y > 0.80;
+    const pulseDoor = 0.6 + Math.sin(Date.now() * 0.005) * 0.3;
+    ctx.globalAlpha = nearDoor ? pulseDoor : 0.4;
+    ctx.fillStyle = nearDoor ? '#ffd700' : '#aaa';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('[E] Exit', roomX + rW / 2, dY + 26);
+    ctx.globalAlpha = 1;
+
+    // ── Furniture ──
+    for (const f of b.furniture) {
+      const fx = roomX + f.ix * rW;
+      const fy = roomY + f.iy * rH;
+      this.drawInteriorFurniture(ctx, f.type, fx, fy, gameTime);
+    }
+
+    // ── Interior NPCs ──
+    for (const inpc of b.npcs) {
+      const nx = roomX + inpc.ix * rW;
+      const ny = roomY + inpc.iy * rH;
+      const npcDist = Math.sqrt(
+        (state.interiorPlayer.x - inpc.ix) ** 2 + (state.interiorPlayer.y - inpc.iy) ** 2,
+      );
+      drawTownNPCSprite(ctx, nx, ny, inpc.role, inpc.name, 1, npcDist * rH * 2.5, gameTime);
+    }
+
+    // ── Active interior NPC dialog bubble ──
+    if (state.activeInteriorNPC) {
+      const inpc = state.activeInteriorNPC;
+      const nx = roomX + inpc.ix * rW;
+      const ny = roomY + inpc.iy * rH;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      const bubW = 180, bubH = 44;
+      const bx = Math.max(roomX + 4, Math.min(roomX + rW - bubW - 4, nx - bubW / 2));
+      const by = ny - 70;
+      ctx.fillRect(bx, by, bubW, bubH);
+      ctx.strokeStyle = '#c5a059';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, bubW, bubH);
+      ctx.fillStyle = '#ffd700';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(inpc.name, bx + 6, by + 13);
+      ctx.fillStyle = '#e0d0a8';
+      ctx.font = '8px sans-serif';
+      // Word wrap at ~28 chars
+      const lastLine = inpc.dialogue[Math.floor(gameTime / 3) % inpc.dialogue.length] || '';
+      const words = lastLine.split(' ');
+      let line = '', lineY = by + 25;
+      for (const w of words) {
+        const test = line ? line + ' ' + w : w;
+        if (test.length > 30 && line) {
+          ctx.fillText(line, bx + 6, lineY);
+          line = w; lineY += 11;
+        } else { line = test; }
+      }
+      if (line) ctx.fillText(line, bx + 6, lineY);
+      ctx.restore();
+    }
+
+    // ── Player sprite inside ──
+    const plx = roomX + state.interiorPlayer.x * rW;
+    const ply = roomY + state.interiorPlayer.y * rH;
+    ctx.save();
+    ctx.translate(plx, ply);
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(0, 10, 8, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Body — use same hero voxel renderer as world view
+    const ihd = HEROES[state.player.heroDataId];
+    if (ihd) {
+      this.voxel.drawHeroVoxel(ctx, 0, 0,
+        RACE_COLORS[ihd.race] || '#888',
+        CLASS_COLORS[ihd.heroClass] || '#888',
+        ihd.heroClass, state.player.facing,
+        state.player.animState, state.player.animTimer,
+        ihd.race, ihd.name,
+        undefined, undefined, state.player.id, undefined, undefined, state.gameTime);
+    } else {
+      // Fallback sprite
+      ctx.fillStyle = '#4a7a3a';
+      ctx.fillRect(-6, -16, 12, 24);
+      ctx.fillStyle = '#f9c784';
+      ctx.beginPath(); ctx.arc(0, -22, 7, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+
+    // ── Building title ──
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(roomX, roomY - 34, rW, 22);
+    ctx.strokeStyle = '#c5a059';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(roomX, roomY - 34, rW, 22);
+    ctx.fillStyle = '#c5a059';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(b.name, roomX + rW / 2, roomY - 17);
+  }
+
+  /** Draw a single piece of interior furniture */
+  private drawInteriorFurniture(ctx: CanvasRenderingContext2D, type: string, cx: number, cy: number, gameTime: number): void {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.textAlign = 'center';
+
+    switch (type) {
+      case 'table':
+        ctx.fillStyle = '#8b6914';
+        ctx.fillRect(-18, -12, 36, 24);
+        ctx.strokeStyle = '#6b4a0a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-18, -12, 36, 24);
+        // Legs
+        ctx.fillStyle = '#5a3a0a';
+        ctx.fillRect(-16, 10, 4, 6);
+        ctx.fillRect(12, 10, 4, 6);
+        break;
+      case 'shelf':
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(-16, -20, 32, 8); // top shelf
+        ctx.fillRect(-16, -5, 32, 8);  // bottom shelf
+        ctx.fillRect(-16, -20, 4, 28); // left side
+        ctx.fillRect(12, -20, 4, 28);  // right side
+        // Items on shelf
+        ctx.fillStyle = '#a87040';
+        ctx.fillRect(-12, -18, 4, 6);
+        ctx.fillStyle = '#6a9040';
+        ctx.fillRect(-5, -18, 4, 6);
+        break;
+      case 'barrel':
+        ctx.fillStyle = '#5a3a1a';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 10, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#3a2010';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, -5, 10, 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(0, 5, 10, 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+      case 'chest':
+        ctx.fillStyle = '#8b5a10';
+        ctx.fillRect(-14, -8, 28, 18);
+        ctx.fillStyle = '#6b4010';
+        ctx.fillRect(-14, -8, 28, 6);
+        ctx.strokeStyle = '#c5a059';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-14, -8, 28, 18);
+        ctx.fillStyle = '#c5a059';
+        ctx.beginPath();
+        ctx.arc(0, 4, 3, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'anvil':
+        ctx.fillStyle = '#3a3a4a';
+        ctx.fillRect(-12, -4, 24, 10);
+        ctx.fillRect(-8, 4, 16, 6);
+        ctx.fillRect(-6, -10, 12, 8);
+        ctx.strokeStyle = '#5a5a6a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-12, -4, 24, 10);
+        break;
+      case 'bed':
+        // Frame
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(-16, -10, 32, 22);
+        // Mattress
+        ctx.fillStyle = '#e0d0b0';
+        ctx.fillRect(-13, -8, 26, 15);
+        // Pillow
+        ctx.fillStyle = '#fff8ee';
+        ctx.fillRect(-11, -8, 20, 6);
+        break;
+      case 'counter':
+        ctx.fillStyle = '#5a4030';
+        ctx.fillRect(-22, -8, 44, 16);
+        ctx.fillStyle = '#7a5040';
+        ctx.fillRect(-22, -8, 44, 5);
+        ctx.strokeStyle = '#3a2010';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-22, -8, 44, 16);
+        break;
+      case 'fireplace': {
+        ctx.fillStyle = '#3a3030';
+        ctx.fillRect(-18, -10, 36, 20);
+        ctx.fillRect(-15, -8, 30, 14); // opening
+        ctx.fillStyle = '#1a1010';
+        ctx.fillRect(-12, -6, 24, 10); // inner
+        // Fire animation
+        const fi = Math.sin(gameTime * 8) * 2;
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath();
+        ctx.moveTo(-8, 2);
+        ctx.lineTo(0, -8 + fi);
+        ctx.lineTo(8, 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath();
+        ctx.moveTo(-4, 2);
+        ctx.lineTo(0, -4 + fi);
+        ctx.lineTo(4, 2);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      }
+      case 'bookcase':
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(-12, -22, 24, 44);
+        // Books
+        const bookColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+        for (let bi = 0; bi < 3; bi++) {
+          for (let bj = 0; bj < 3; bj++) {
+            ctx.fillStyle = bookColors[(bi * 3 + bj) % bookColors.length];
+            ctx.fillRect(-10 + bj * 7, -18 + bi * 14, 6, 12);
+          }
+        }
+        break;
+      case 'rack':
+        // Weapon rack
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(-2, -18, 4, 36);
+        ctx.fillRect(-14, -8, 28, 3);
+        ctx.fillRect(-14, 5, 28, 3);
+        // Weapons on rack
+        ctx.fillStyle = '#78716c';
+        ctx.fillRect(-12, -16, 2, 32);
+        ctx.fillRect(-4, -16, 2, 32);
+        ctx.fillRect(4, -16, 2, 32);
+        ctx.fillRect(12, -16, 2, 32);
+        break;
+    }
     ctx.restore();
   }
 
@@ -3138,37 +3865,7 @@ export class OpenWorldRenderer {
     for (const npc of state.npcs) {
       const d = distXY(state.player, npc);
       if (d > 800) continue;
-
-      ctx.save();
-      ctx.translate(npc.x, npc.y);
-      ctx.globalAlpha = Math.max(0.4, brightness);
-
-      // Body
-      ctx.fillStyle = npc.type === 'merchant' ? '#f59e0b' : npc.type === 'trainer' ? '#3b82f6' : '#22c55e';
-      ctx.fillRect(-6, -12, 12, 24);
-
-      // Head
-      ctx.fillStyle = '#fbbf24';
-      ctx.beginPath();
-      ctx.arc(0, -16, 6, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Name
-      ctx.globalAlpha = 0.8;
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 9px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(npc.name, 0, -26);
-
-      // Interaction indicator
-      if (d < 60) {
-        ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.005) * 0.3;
-        ctx.fillStyle = '#ffd700';
-        ctx.font = '14px sans-serif';
-        ctx.fillText('!', 0, -34);
-      }
-
-      ctx.restore();
+      drawTownNPCSprite(ctx, npc.x, npc.y, npc.type, npc.name, brightness, d, state.gameTime);
     }
   }
 

@@ -9,7 +9,7 @@ import {
   OpenWorldRenderer, handleOWAbility, handleOWAttack, handleOWRangedAttack,
   updateOWMouseWorld, startOWTargeting, confirmOWTargeting, cancelOWTargeting,
   allocateOWAttribute, acceptOWMission, claimOWMission, enterOWDungeon,
-  handleOWDodge, handleOWTargetCycle, closeNPCDialog
+  handleOWDodge, handleOWTargetCycle, closeNPCDialog, exitBuilding
 } from '@/game/open-world';
 import { getAvailableMissions } from '@/game/missions';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
@@ -68,6 +68,7 @@ export default function OpenWorldPage() {
       const dt = Math.min(rawDt, 0.05);
       lastTime = now;
 
+      // Block input when UI panel, NPC dialog, or NPC dialog from inside building is open
       const activeKeys = (uiBlocksInputRef.current || state.activeNPC) ? emptyKeys : keysRef.current;
       updateOpenWorld(state, dt, activeKeys, bindings);
       renderer.render(state);
@@ -141,6 +142,8 @@ export default function OpenWorldPage() {
 
       if (key === 'escape') {
         if (state.targeting.active) { cancelOWTargeting(state); return; }
+        // Exit building before going to main menu
+        if (state.activeBuilding) { exitBuilding(state); return; }
         setLocation('/');
         return;
       }

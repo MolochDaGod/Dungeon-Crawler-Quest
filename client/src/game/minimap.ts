@@ -6,6 +6,17 @@
 
 import { ISLAND_ZONES, OPEN_WORLD_SIZE, getZoneColor, ZoneDef } from './zones';
 import { OpenWorldState, OWEnemy, OWNPC } from './open-world';
+import { ALL_TOWN_BUILDINGS, BuildingType } from './town-buildings';
+
+const BUILDING_MINIMAP_COLORS: Record<BuildingType, string> = {
+  inn:      '#f59e0b',
+  blacksmith: '#ef4444',
+  guild:    '#ffd700',
+  shop:     '#22c55e',
+  trainer:  '#3b82f6',
+  barracks: '#6366f1',
+  armory:   '#8b5cf6',
+};
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -126,6 +137,23 @@ export function renderMinimap(
         ctx.globalAlpha = 1;
       }
     }
+  }
+
+  // Town buildings (small squares with type color)
+  for (const tb of ALL_TOWN_BUILDINGS) {
+    const bCX = tb.wx + tb.ww / 2;
+    const bCY = tb.wy + tb.wh / 2;
+    if (!inView(bCX, bCY)) continue;
+    const bx = toMX(bCX);
+    const by = toMY(bCY);
+    ctx.fillStyle = BUILDING_MINIMAP_COLORS[tb.type] || '#888';
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(bx - 3, by - 3, 6, 6);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 0.5;
+    ctx.globalAlpha = 0.5;
+    ctx.strokeRect(bx - 3, by - 3, 6, 6);
+    ctx.globalAlpha = 1;
   }
 
   // NPCs
