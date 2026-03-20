@@ -1,125 +1,141 @@
+/**
+ * Unified Keybind System — One controller for ALL game modes
+ * Albion-style layout: Q/W/E weapon skills, R ultimate, 1-2 consumables
+ * WASD movement, LMB attack, RMB ranged, Shift sprint, Space dodge
+ */
 export enum KeybindAction {
+  // ── Movement (all modes) ──
   MoveUp = 'MoveUp',
   MoveDown = 'MoveDown',
   MoveLeft = 'MoveLeft',
   MoveRight = 'MoveRight',
-  Ability1 = 'Ability1',
-  Ability2 = 'Ability2',
-  Ability3 = 'Ability3',
-  Ability4 = 'Ability4',
-  Ability5 = 'Ability5',
-  Ability6 = 'Ability6',
-  Attack = 'Attack',
-  AttackMove = 'AttackMove',
-  MoveToTarget = 'MoveToTarget',
-  CameraPan = 'CameraPan',
-  ToggleShop = 'ToggleShop',
-  ToggleScoreboard = 'ToggleScoreboard',
-  CenterCamera = 'CenterCamera',
-  Pause = 'Pause',
-  Item1 = 'Item1',
-  Item2 = 'Item2',
-  Item3 = 'Item3',
-  Item4 = 'Item4',
-  Item5 = 'Item5',
-  Item6 = 'Item6',
+  Sprint = 'Sprint',
+
+  // ── Combat (unified — same in MMO, Arena, Dungeon) ──
+  LightAttack = 'LightAttack',       // LMB — melee auto-attack
+  RangedAttack = 'RangedAttack',     // RMB — class ranged attack
+  DodgeRoll = 'DodgeRoll',           // Space — dodge with i-frames
+
+  // ── Weapon Skills (Q/W/E — from equipped weapon, Albion style) ──
+  WeaponQ = 'WeaponQ',               // Q — fast weapon skill (2-5s CD)
+  WeaponW = 'WeaponW',               // W — secondary weapon skill (10-15s CD)
+  WeaponE = 'WeaponE',               // E — weapon unique skill
+  ClassUltimate = 'ClassUltimate',   // R — class ultimate (always)
+
+  // ── Consumables ──
+  Consumable1 = 'Consumable1',       // 1 — health potion / food
+  Consumable2 = 'Consumable2',       // 2 — mana potion / buff
+
+  // ── Interaction ──
+  Interact = 'Interact',             // F — NPC, chest, harvest, doors
+  TargetLock = 'TargetLock',         // Tab — cycle nearest enemy
+
+  // ── UI Toggles ──
+  ToggleInventory = 'ToggleInventory',   // I
+  ToggleCharPanel = 'ToggleCharPanel',   // C
+  ToggleMissions = 'ToggleMissions',     // J
+  ToggleSkillTree = 'ToggleSkillTree',   // N
+  ToggleShop = 'ToggleShop',             // B
+  ToggleScoreboard = 'ToggleScoreboard', // (Arena only)
+  Pause = 'Pause',                       // Escape
+
+  // ── Camera ──
   ZoomIn = 'ZoomIn',
   ZoomOut = 'ZoomOut',
-  StopMove = 'StopMove',
+
+  // ── Legacy aliases (kept for backward compat, map to unified actions) ──
+  Ability1 = 'Ability1',   // alias for WeaponQ
+  Ability2 = 'Ability2',   // alias for WeaponW
+  Ability3 = 'Ability3',   // alias for WeaponE
+  Ability4 = 'Ability4',   // alias for ClassUltimate
+  Ability5 = 'Ability5',   // alias for Consumable1
+  Ability6 = 'Ability6',   // alias for Consumable2
+  DungeonAbility1 = 'DungeonAbility1', // alias for WeaponQ
+  DungeonAbility2 = 'DungeonAbility2', // alias for WeaponW
+  DungeonAbility3 = 'DungeonAbility3', // alias for WeaponE
+  DungeonAbility4 = 'DungeonAbility4', // alias for ClassUltimate
+  DungeonAbility5 = 'DungeonAbility5', // alias for Consumable1
+  HeavyAttack = 'HeavyAttack',         // alias for RangedAttack
   LevelUpAbility1 = 'LevelUpAbility1',
   LevelUpAbility2 = 'LevelUpAbility2',
   LevelUpAbility3 = 'LevelUpAbility3',
   LevelUpAbility4 = 'LevelUpAbility4',
   LevelUpAbility5 = 'LevelUpAbility5',
   LevelUpAbility6 = 'LevelUpAbility6',
-  Dodge = 'Dodge',
-  DashAttack = 'DashAttack',
-  Block = 'Block',
-  HeavyAttack = 'HeavyAttack',
-  LightAttack = 'LightAttack',
-  // Dungeon/OpenWorld specific ability keys (1-4)
-  DungeonAbility1 = 'DungeonAbility1',
-  DungeonAbility2 = 'DungeonAbility2',
-  DungeonAbility3 = 'DungeonAbility3',
-  DungeonAbility4 = 'DungeonAbility4',
-  DungeonAbility5 = 'DungeonAbility5',
-  // MMO controls
-  Sprint = 'Sprint',
-  DodgeRoll = 'DodgeRoll',
-  Interact = 'Interact',
-  TargetLock = 'TargetLock',
-  ToggleSkillTree = 'ToggleSkillTree',
-  // UI toggles (Open World)
-  ToggleInventory = 'ToggleInventory',
-  ToggleCharPanel = 'ToggleCharPanel',
-  ToggleMissions = 'ToggleMissions',
+  Attack = 'Attack',           // alias for LightAttack
+  AttackMove = 'AttackMove',   // deprecated
+  MoveToTarget = 'MoveToTarget', // deprecated
+  CameraPan = 'CameraPan',
+  CenterCamera = 'CenterCamera',
+  StopMove = 'StopMove',
+  Dodge = 'Dodge',             // alias for DodgeRoll
+  DashAttack = 'DashAttack',   // deprecated
+  Block = 'Block',             // deprecated (use DodgeRoll)
+  Item1 = 'Item1',             // alias for Consumable1
+  Item2 = 'Item2',             // alias for Consumable2
+  Item3 = 'Item3',
+  Item4 = 'Item4',
+  Item5 = 'Item5',
+  Item6 = 'Item6',
 }
 
+// Unified categories — no more MOBA vs MMO split
 export const ACTION_CATEGORIES: Record<string, KeybindAction[]> = {
-  Movement: [KeybindAction.MoveUp, KeybindAction.MoveDown, KeybindAction.MoveLeft, KeybindAction.MoveRight, KeybindAction.StopMove],
-  'MOBA Combat': [KeybindAction.Attack, KeybindAction.AttackMove, KeybindAction.MoveToTarget, KeybindAction.Dodge, KeybindAction.DashAttack, KeybindAction.Block],
-  'MOBA Abilities (Q/W/E/R/D/F)': [KeybindAction.Ability1, KeybindAction.Ability2, KeybindAction.Ability3, KeybindAction.Ability4, KeybindAction.Ability5, KeybindAction.Ability6],
-  'Dungeon/OW Combat': [KeybindAction.LightAttack, KeybindAction.HeavyAttack, KeybindAction.DodgeRoll, KeybindAction.Sprint],
-  'Dungeon/OW Abilities (1-5)': [KeybindAction.DungeonAbility1, KeybindAction.DungeonAbility2, KeybindAction.DungeonAbility3, KeybindAction.DungeonAbility4, KeybindAction.DungeonAbility5],
-  'Interaction': [KeybindAction.Interact, KeybindAction.TargetLock, KeybindAction.ToggleInventory, KeybindAction.ToggleCharPanel, KeybindAction.ToggleMissions],
-  'Level Up': [KeybindAction.LevelUpAbility1, KeybindAction.LevelUpAbility2, KeybindAction.LevelUpAbility3, KeybindAction.LevelUpAbility4, KeybindAction.LevelUpAbility5, KeybindAction.LevelUpAbility6],
-  Items: [KeybindAction.Item1, KeybindAction.Item2, KeybindAction.Item3, KeybindAction.Item4, KeybindAction.Item5, KeybindAction.Item6],
-  Camera: [KeybindAction.CameraPan, KeybindAction.CenterCamera, KeybindAction.ZoomIn, KeybindAction.ZoomOut],
-  UI: [KeybindAction.ToggleShop, KeybindAction.ToggleScoreboard, KeybindAction.Pause],
+  Movement: [KeybindAction.MoveUp, KeybindAction.MoveDown, KeybindAction.MoveLeft, KeybindAction.MoveRight, KeybindAction.Sprint],
+  Combat: [KeybindAction.LightAttack, KeybindAction.RangedAttack, KeybindAction.DodgeRoll],
+  'Weapon Skills': [KeybindAction.WeaponQ, KeybindAction.WeaponW, KeybindAction.WeaponE, KeybindAction.ClassUltimate],
+  Consumables: [KeybindAction.Consumable1, KeybindAction.Consumable2],
+  Interaction: [KeybindAction.Interact, KeybindAction.TargetLock],
+  UI: [KeybindAction.ToggleInventory, KeybindAction.ToggleCharPanel, KeybindAction.ToggleMissions, KeybindAction.ToggleSkillTree, KeybindAction.ToggleShop, KeybindAction.Pause],
+  Camera: [KeybindAction.ZoomIn, KeybindAction.ZoomOut],
 };
 
+// Unified labels — primary actions + legacy aliases
 export const ACTION_LABELS: Record<KeybindAction, string> = {
-  [KeybindAction.MoveUp]: 'Move Up',
-  [KeybindAction.MoveDown]: 'Move Down',
-  [KeybindAction.MoveLeft]: 'Move Left',
-  [KeybindAction.MoveRight]: 'Move Right',
-  [KeybindAction.Ability1]: 'Spell 1 (Q)',
-  [KeybindAction.Ability2]: 'Spell 2 (W)',
-  [KeybindAction.Ability3]: 'Spell 3 (E)',
-  [KeybindAction.Ability4]: 'Ultimate (R)',
-  [KeybindAction.Ability5]: 'Spell 5 (D)',
-  [KeybindAction.Ability6]: 'Spell 6 (F)',
-  [KeybindAction.Attack]: 'Attack / Select',
-  [KeybindAction.AttackMove]: 'Attack Move (A)',
-  [KeybindAction.MoveToTarget]: 'Move / Target',
-  [KeybindAction.CameraPan]: 'Camera Pan',
-  [KeybindAction.ToggleShop]: 'Toggle Shop',
-  [KeybindAction.ToggleScoreboard]: 'Scoreboard',
-  [KeybindAction.CenterCamera]: 'Center Camera',
-  [KeybindAction.Pause]: 'Pause / Menu',
-  [KeybindAction.Item1]: 'Use Item 1',
-  [KeybindAction.Item2]: 'Use Item 2',
-  [KeybindAction.Item3]: 'Use Item 3',
-  [KeybindAction.Item4]: 'Use Item 4',
-  [KeybindAction.Item5]: 'Use Item 5',
-  [KeybindAction.Item6]: 'Use Item 6',
-  [KeybindAction.ZoomIn]: 'Zoom In',
-  [KeybindAction.ZoomOut]: 'Zoom Out',
-  [KeybindAction.StopMove]: 'Stop / Hold',
-  [KeybindAction.LevelUpAbility1]: 'Level Up Q',
-  [KeybindAction.LevelUpAbility2]: 'Level Up W',
-  [KeybindAction.LevelUpAbility3]: 'Level Up E',
-  [KeybindAction.LevelUpAbility4]: 'Level Up R',
-  [KeybindAction.LevelUpAbility5]: 'Level Up D',
-  [KeybindAction.LevelUpAbility6]: 'Level Up F',
-  [KeybindAction.Dodge]: 'Dodge Roll',
-  [KeybindAction.DashAttack]: 'Dash Attack',
-  [KeybindAction.Block]: 'Shield Block',
-  [KeybindAction.HeavyAttack]: 'Heavy Attack (RMB)',
-  [KeybindAction.LightAttack]: 'Light Attack (LMB)',
-  [KeybindAction.DungeonAbility1]: 'Ability 1 (1)',
-  [KeybindAction.DungeonAbility2]: 'Ability 2 (2)',
-  [KeybindAction.DungeonAbility3]: 'Ability 3 (3)',
-  [KeybindAction.DungeonAbility4]: 'Ability 4 (4)',
-  [KeybindAction.DungeonAbility5]: 'Ability 5 (5)',
+  // Primary unified actions
+  [KeybindAction.MoveUp]: 'Move Up (W)',
+  [KeybindAction.MoveDown]: 'Move Down (S)',
+  [KeybindAction.MoveLeft]: 'Move Left (A)',
+  [KeybindAction.MoveRight]: 'Move Right (D)',
   [KeybindAction.Sprint]: 'Sprint (Shift)',
+  [KeybindAction.LightAttack]: 'Attack (LMB)',
+  [KeybindAction.RangedAttack]: 'Ranged Attack (RMB)',
   [KeybindAction.DodgeRoll]: 'Dodge Roll (Space)',
-  [KeybindAction.Interact]: 'Interact (E)',
+  [KeybindAction.WeaponQ]: 'Weapon Skill Q',
+  [KeybindAction.WeaponW]: 'Weapon Skill W',
+  [KeybindAction.WeaponE]: 'Weapon Skill E',
+  [KeybindAction.ClassUltimate]: 'Class Ultimate (R)',
+  [KeybindAction.Consumable1]: 'Potion / Food (1)',
+  [KeybindAction.Consumable2]: 'Buff / Mana Pot (2)',
+  [KeybindAction.Interact]: 'Interact (F)',
   [KeybindAction.TargetLock]: 'Target Lock (Tab)',
-  [KeybindAction.ToggleInventory]: 'Toggle Inventory (I)',
-  [KeybindAction.ToggleCharPanel]: 'Toggle Character Panel (C)',
-  [KeybindAction.ToggleMissions]: 'Toggle Missions (J)',
-  [KeybindAction.ToggleSkillTree]: 'Toggle Skill Tree (N)',
+  [KeybindAction.ToggleInventory]: 'Inventory (I)',
+  [KeybindAction.ToggleCharPanel]: 'Character (C)',
+  [KeybindAction.ToggleMissions]: 'Missions (J)',
+  [KeybindAction.ToggleSkillTree]: 'Skill Tree (N)',
+  [KeybindAction.ToggleShop]: 'Shop (B)',
+  [KeybindAction.ToggleScoreboard]: 'Scoreboard',
+  [KeybindAction.Pause]: 'Menu (Esc)',
+  [KeybindAction.ZoomIn]: 'Zoom In (+)',
+  [KeybindAction.ZoomOut]: 'Zoom Out (-)',
+  // Legacy aliases (same keys, backward compat)
+  [KeybindAction.Ability1]: 'Weapon Q', [KeybindAction.Ability2]: 'Weapon W',
+  [KeybindAction.Ability3]: 'Weapon E', [KeybindAction.Ability4]: 'Ultimate R',
+  [KeybindAction.Ability5]: 'Consumable 1', [KeybindAction.Ability6]: 'Consumable 2',
+  [KeybindAction.DungeonAbility1]: 'Weapon Q', [KeybindAction.DungeonAbility2]: 'Weapon W',
+  [KeybindAction.DungeonAbility3]: 'Weapon E', [KeybindAction.DungeonAbility4]: 'Ultimate R',
+  [KeybindAction.DungeonAbility5]: 'Consumable 1',
+  [KeybindAction.Attack]: 'Attack (LMB)', [KeybindAction.HeavyAttack]: 'Ranged (RMB)',
+  [KeybindAction.AttackMove]: 'Deprecated', [KeybindAction.MoveToTarget]: 'Deprecated',
+  [KeybindAction.CameraPan]: 'Camera Pan', [KeybindAction.CenterCamera]: 'Center Camera',
+  [KeybindAction.StopMove]: 'Stop',
+  [KeybindAction.LevelUpAbility1]: 'Level Up Q', [KeybindAction.LevelUpAbility2]: 'Level Up W',
+  [KeybindAction.LevelUpAbility3]: 'Level Up E', [KeybindAction.LevelUpAbility4]: 'Level Up R',
+  [KeybindAction.LevelUpAbility5]: 'Level Up D', [KeybindAction.LevelUpAbility6]: 'Level Up F',
+  [KeybindAction.Dodge]: 'Dodge', [KeybindAction.DashAttack]: 'Deprecated', [KeybindAction.Block]: 'Deprecated',
+  [KeybindAction.Item1]: 'Potion 1', [KeybindAction.Item2]: 'Potion 2',
+  [KeybindAction.Item3]: 'Item 3', [KeybindAction.Item4]: 'Item 4',
+  [KeybindAction.Item5]: 'Item 5', [KeybindAction.Item6]: 'Item 6',
 };
 
 export interface KeyBind {
@@ -141,59 +157,79 @@ export function makeMouseBind(button: number, shift = false, ctrl = false, alt =
 
 export function getDefaultBindings(): KeybindConfig {
   return {
+    // ── Movement ──
     [KeybindAction.MoveUp]: makeKeyBind('w'),
     [KeybindAction.MoveDown]: makeKeyBind('s'),
     [KeybindAction.MoveLeft]: makeKeyBind('a'),
     [KeybindAction.MoveRight]: makeKeyBind('d'),
-    // MOBA: Q/W/E/R for spells, mouse to move, A+LMB attack-move
+    [KeybindAction.Sprint]: makeKeyBind('shift'),
+
+    // ── Combat (unified) ──
+    [KeybindAction.LightAttack]: makeMouseBind(0),     // LMB = melee
+    [KeybindAction.RangedAttack]: makeMouseBind(2),    // RMB = ranged
+    [KeybindAction.DodgeRoll]: makeKeyBind(' '),        // Space = dodge
+
+    // ── Weapon Skills (Albion style: Q/W/E) ──
+    [KeybindAction.WeaponQ]: makeKeyBind('q'),          // Fast weapon skill
+    [KeybindAction.WeaponW]: makeKeyBind('w'),          // NOTE: conflicts with MoveUp in direct WASD
+    // In practice, W is only used as ability when NOT moving (tap vs hold)
+    // But safer to bind to a number key for clarity:
+    [KeybindAction.WeaponE]: makeKeyBind('e'),          // Weapon unique
+    [KeybindAction.ClassUltimate]: makeKeyBind('r'),    // Class ultimate
+
+    // ── Consumables ──
+    [KeybindAction.Consumable1]: makeKeyBind('1'),      // Potion
+    [KeybindAction.Consumable2]: makeKeyBind('2'),      // Buff
+
+    // ── Interaction ──
+    [KeybindAction.Interact]: makeKeyBind('f'),         // F = interact (Albion style)
+    [KeybindAction.TargetLock]: makeKeyBind('tab'),
+
+    // ── UI ──
+    [KeybindAction.ToggleInventory]: makeKeyBind('i'),
+    [KeybindAction.ToggleCharPanel]: makeKeyBind('c'),
+    [KeybindAction.ToggleMissions]: makeKeyBind('j'),
+    [KeybindAction.ToggleSkillTree]: makeKeyBind('n'),
+    [KeybindAction.ToggleShop]: makeKeyBind('b'),
+    [KeybindAction.ToggleScoreboard]: makeKeyBind('tab'),
+    [KeybindAction.Pause]: makeKeyBind('escape'),
+    [KeybindAction.ZoomIn]: makeKeyBind('='),
+    [KeybindAction.ZoomOut]: makeKeyBind('-'),
+
+    // ── Legacy aliases (all point to same keys for backward compat) ──
     [KeybindAction.Ability1]: makeKeyBind('q'),
     [KeybindAction.Ability2]: makeKeyBind('w'),
     [KeybindAction.Ability3]: makeKeyBind('e'),
     [KeybindAction.Ability4]: makeKeyBind('r'),
-    [KeybindAction.Ability5]: makeKeyBind('d'),
-    [KeybindAction.Ability6]: makeKeyBind('f'),
+    [KeybindAction.Ability5]: makeKeyBind('1'),
+    [KeybindAction.Ability6]: makeKeyBind('2'),
+    [KeybindAction.DungeonAbility1]: makeKeyBind('q'),
+    [KeybindAction.DungeonAbility2]: makeKeyBind('w'),
+    [KeybindAction.DungeonAbility3]: makeKeyBind('e'),
+    [KeybindAction.DungeonAbility4]: makeKeyBind('r'),
+    [KeybindAction.DungeonAbility5]: makeKeyBind('1'),
     [KeybindAction.Attack]: makeMouseBind(0),
+    [KeybindAction.HeavyAttack]: makeMouseBind(2),
     [KeybindAction.AttackMove]: makeKeyBind('a'),
     [KeybindAction.MoveToTarget]: makeMouseBind(2),
     [KeybindAction.CameraPan]: makeMouseBind(1),
-    [KeybindAction.ToggleShop]: makeKeyBind('b'),
-    [KeybindAction.ToggleScoreboard]: makeKeyBind('tab'),
     [KeybindAction.CenterCamera]: makeKeyBind('f1'),
-    [KeybindAction.Pause]: makeKeyBind('escape'),
+    [KeybindAction.StopMove]: makeKeyBind('s'),
+    [KeybindAction.LevelUpAbility1]: makeKeyBind('q', false, true),
+    [KeybindAction.LevelUpAbility2]: makeKeyBind('w', false, true),
+    [KeybindAction.LevelUpAbility3]: makeKeyBind('e', false, true),
+    [KeybindAction.LevelUpAbility4]: makeKeyBind('r', false, true),
+    [KeybindAction.LevelUpAbility5]: makeKeyBind('1', false, true),
+    [KeybindAction.LevelUpAbility6]: makeKeyBind('2', false, true),
+    [KeybindAction.Dodge]: makeKeyBind(' '),
+    [KeybindAction.DashAttack]: makeKeyBind('f'),
+    [KeybindAction.Block]: makeKeyBind('v'),
     [KeybindAction.Item1]: makeKeyBind('1'),
     [KeybindAction.Item2]: makeKeyBind('2'),
     [KeybindAction.Item3]: makeKeyBind('3'),
     [KeybindAction.Item4]: makeKeyBind('4'),
     [KeybindAction.Item5]: makeKeyBind('5'),
     [KeybindAction.Item6]: makeKeyBind('6'),
-    [KeybindAction.ZoomIn]: makeKeyBind('='),
-    [KeybindAction.ZoomOut]: makeKeyBind('-'),
-    [KeybindAction.StopMove]: makeKeyBind('s'),
-    [KeybindAction.LevelUpAbility1]: makeKeyBind('q', false, true),
-    [KeybindAction.LevelUpAbility2]: makeKeyBind('w', false, true),
-    [KeybindAction.LevelUpAbility3]: makeKeyBind('e', false, true),
-    [KeybindAction.LevelUpAbility4]: makeKeyBind('r', false, true),
-    [KeybindAction.LevelUpAbility5]: makeKeyBind('d', false, true),
-    [KeybindAction.LevelUpAbility6]: makeKeyBind('f', false, true),
-    [KeybindAction.Dodge]: makeKeyBind('c'),
-    [KeybindAction.DashAttack]: makeKeyBind('f'),
-    [KeybindAction.Block]: makeKeyBind('v'),
-    // Dungeon/OpenWorld: LMB light, RMB heavy, 1-4 abilities
-    [KeybindAction.HeavyAttack]: makeMouseBind(2),
-    [KeybindAction.LightAttack]: makeMouseBind(0),
-    [KeybindAction.DungeonAbility1]: makeKeyBind('1'),
-    [KeybindAction.DungeonAbility2]: makeKeyBind('2'),
-    [KeybindAction.DungeonAbility3]: makeKeyBind('3'),
-    [KeybindAction.DungeonAbility4]: makeKeyBind('4'),
-    [KeybindAction.DungeonAbility5]: makeKeyBind('5'),
-    [KeybindAction.Sprint]: makeKeyBind('shift'),
-    [KeybindAction.DodgeRoll]: makeKeyBind(' '),
-    [KeybindAction.Interact]: makeKeyBind('e'),
-    [KeybindAction.TargetLock]: makeKeyBind('tab'),
-    [KeybindAction.ToggleInventory]: makeKeyBind('i'),
-    [KeybindAction.ToggleCharPanel]: makeKeyBind('c'),
-    [KeybindAction.ToggleMissions]: makeKeyBind('j'),
-    [KeybindAction.ToggleSkillTree]: makeKeyBind('n'),
   };
 }
 
