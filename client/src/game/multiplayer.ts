@@ -22,13 +22,17 @@ export interface MultiplayerConfig {
   enabled: boolean;
 }
 
+/** Resolve server URL: env var → saved setting → localhost fallback */
+const DEFAULT_SERVER_URL =
+  (import.meta as any).env?.VITE_MULTIPLAYER_URL || 'ws://localhost:2567';
+
 function loadConfig(): MultiplayerConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
   return {
-    serverUrl: 'ws://localhost:2567',
+    serverUrl: DEFAULT_SERVER_URL,
     playerName: 'Adventurer',
     enabled: false,
   };
