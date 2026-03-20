@@ -161,6 +161,7 @@ interface TimelineState {
   name: string;
   duration: number;
   loop: boolean;
+  returnToIdle: boolean; // Ensures animation ends at idle pose
   startTime: number;
   endTime: number;
   keyframes: MotionKeyframe[];
@@ -174,11 +175,12 @@ function defaultTimelineState(): TimelineState {
     name: 'custom_anim',
     duration: 1.0,
     loop: true,
+    returnToIdle: true, // Default: always return to idle
     startTime: 0,
     endTime: 1.0,
     keyframes: [
       { time: 0, pose: {}, easing: 'easeInOut' },
-      { time: 1.0, pose: {}, easing: 'easeInOut' },
+      { time: 1.0, pose: {}, easing: 'easeInOut' }, // Empty pose = idle
     ],
     selectedKeyframeIdx: 0,
     expandedPart: null,

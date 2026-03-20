@@ -46,6 +46,7 @@ export interface MotionPrimitive {
   duration: number;
   keyframes: Keyframe[];
   loop?: boolean;
+  returnToIdle?: boolean; // If true (default for non-loop), last keyframe blends to idle pose
 }
 
 function ease(t: number, type: string): number {
@@ -98,6 +99,9 @@ export function sampleMotion(motion: MotionPrimitive, time: number): FullPose {
   let t = time;
   if (motion.loop && motion.duration > 0) {
     t = t % motion.duration;
+  } else if (!motion.loop && t >= motion.duration) {
+    // Non-looping animations always return to idle when complete
+    return { leftLeg: zeroPose, rightLeg: zeroPose, leftArm: zeroPose, rightArm: zeroPose, torso: zeroPose, head: zeroPose, weapon: zeroPose, weaponGlow: 0 };
   }
   t = Math.max(0, Math.min(motion.duration, t));
 
@@ -287,14 +291,15 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
         leftLeg: { ox: 0, oy: 1, oz: 0 }, rightLeg: { ox: 0, oy: -1, oz: 0 },
         weapon: { ox: 2, oy: -2, oz: 0, rotation: -90 }
       }, glow: 1.0, easing: 'easeOut' },
-      { time: 0.65, pose: {
+      { time: 0.55, pose: {
         torso: { ox: 0, oy: 0, oz: 0 },
         weapon: { ox: 1, oy: -1, oz: 0, rotation: -60 }
       }, glow: 0.2, easing: 'easeOut' },
+      { time: 0.65, pose: {}, glow: 0 },
     ]
   },
 
-  thrust_linear: {
+  thrust_linear:
     name: 'thrust_linear',
     duration: 0.6,
     keyframes: [
@@ -396,14 +401,15 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
         leftLeg: { ox: 0, oy: -1, oz: 0 }, rightLeg: { ox: 0, oy: 1, oz: 0 },
         weapon: { ox: 0, oy: 0, oz: 3 }
       }, glow: 1.0, easing: 'easeOut' },
-      { time: 0.8, pose: {
+      { time: 0.7, pose: {
         leftArm: { ox: 0, oy: -1, oz: 1 }, rightArm: { ox: 0, oy: 1, oz: 1 },
         torso: { ox: 0, oy: 0, oz: 0, scale: 1.15 }, head: { ox: 0, oy: 0, oz: 1 },
-      }, glow: 0.3 },
+      }, glow: 0.3, easing: 'easeOut' },
+      { time: 0.8, pose: {}, glow: 0 },
     ]
   },
 
-  idle_breathe: {
+  idle_breathe:
     name: 'idle_breathe',
     duration: 3.0,
     loop: true,
