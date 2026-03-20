@@ -76,7 +76,7 @@ const PROJECTILE_CONFIGS: Record<VoxelProjectileType, ProjectileConfig> = {
   nature:        { speed: 200, hitRadius: 22, maxLife: 2.5, scale: 1.0,  spinSpeed: 0,     trailInterval: 0.06 },
   shadow:        { speed: 280, hitRadius: 16, maxLife: 2.0, scale: 1.1,  spinSpeed: 1,     trailInterval: 0.04 },
   thrown_axe:    { speed: 300, hitRadius: 14, maxLife: 1.8, scale: 1.0,  spinSpeed: 12,    trailInterval: 0.05 },
-  arrow:         { speed: 500, hitRadius: 10, maxLife: 1.5, scale: 0.7,  spinSpeed: 0,     trailInterval: 0.06 },
+  arrow:         { speed: 500, hitRadius: 12, maxLife: 1.5, scale: 1.2,  spinSpeed: 0,     trailInterval: 0.03 },
   magic_bolt:    { speed: 380, hitRadius: 14, maxLife: 2.0, scale: 1.0,  spinSpeed: 3,     trailInterval: 0.03 },
   thrown_dagger: { speed: 400, hitRadius: 10, maxLife: 1.2, scale: 0.6,  spinSpeed: 15,    trailInterval: 0.04 },
 };
@@ -413,27 +413,45 @@ export function renderVoxelProjectile(
     }
 
     case 'arrow': {
-      // Arrow pointing in travel direction (no rotation needed, already rotated by angle)
-      ctx.rotate(-proj.rotation); // Undo spin, arrows don't spin
-      ctx.rotate(proj.angle); // Face travel direction
-      ctx.globalAlpha = 0.9;
-      // Shaft
-      ctx.fillStyle = '#8a6a3a';
-      ctx.fillRect(-10 * s, -1 * s, 20 * s, 2 * s);
-      // Head
-      ctx.fillStyle = '#aaaaaa';
+      // Arrow with bright glow trail for visibility
+      ctx.rotate(-proj.rotation);
+      ctx.rotate(proj.angle);
+      // Motion blur / glow trail behind arrow
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#ffdd88';
+      ctx.fillRect(-30 * s, -3 * s, 30 * s, 6 * s);
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#ffcc44';
+      ctx.fillRect(-20 * s, -2 * s, 20 * s, 4 * s);
+      // Shaft (bright brown)
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#c5a059';
+      ctx.fillRect(-12 * s, -1.5 * s, 24 * s, 3 * s);
+      // Arrowhead (bright silver with glow)
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 6;
+      ctx.fillStyle = '#dddddd';
       ctx.beginPath();
-      ctx.moveTo(10 * s, -3 * s);
-      ctx.lineTo(14 * s, 0);
-      ctx.lineTo(10 * s, 3 * s);
+      ctx.moveTo(12 * s, -4 * s);
+      ctx.lineTo(18 * s, 0);
+      ctx.lineTo(12 * s, 4 * s);
       ctx.closePath();
       ctx.fill();
-      // Fletching
-      ctx.fillStyle = '#cc4444';
+      ctx.shadowBlur = 0;
+      // Fletching (bright red, larger)
+      ctx.fillStyle = '#ef4444';
       ctx.beginPath();
-      ctx.moveTo(-10 * s, -3 * s);
+      ctx.moveTo(-12 * s, -4 * s);
       ctx.lineTo(-8 * s, 0);
-      ctx.lineTo(-10 * s, 3 * s);
+      ctx.lineTo(-12 * s, 4 * s);
+      ctx.closePath();
+      ctx.fill();
+      // Second fletching
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(-14 * s, -3 * s);
+      ctx.lineTo(-11 * s, 0);
+      ctx.lineTo(-14 * s, 3 * s);
       ctx.closePath();
       ctx.fill();
       break;

@@ -99,9 +99,29 @@ import { checkAbilityCost, deductAbilityCost, getEffectiveCooldown, type Resourc
 
 const TILE_SIZE = 40;
 const OW_VIEW_RANGE = 800;       // pixels visible around player
-const SPAWN_RADIUS = 1200;       // only spawn/update enemies within this
-const DESPAWN_RADIUS = 1600;     // enemies beyond this are removed
-const AGGRO_RANGE = 400;
+const SPAWN_RADIUS = 1500;       // only spawn/update enemies within this
+const DESPAWN_RADIUS = 2000;     // enemies beyond this are removed
+const AGGRO_RANGE = 300;         // base aggro range (varies per enemy type)
+
+// Per-enemy aggro range multipliers (bigger/boss enemies detect from further)
+const AGGRO_MULTIPLIER: Record<string, number> = {
+  Slime: 0.6, Spider: 0.7, Imp: 0.8, 'Plague Rat Swarm': 0.5,
+  Skeleton: 0.9, Bandit: 1.0, 'Orc Grunt': 1.0, 'Timber Wolf': 1.2,
+  'Dark Archer': 1.3, 'Dark Mage': 1.1, Wraith: 1.1, Harpy: 1.2,
+  Golem: 0.8, 'Iron Sentinel': 0.7, 'Cave Bear': 1.0, Treant: 0.6,
+  Dragon: 1.5, 'Fire Drake': 1.3, 'Frost Wyrm': 1.4, 'Shadow Dragon': 1.5,
+  'Lich King': 1.5, 'Infernal Colossus': 1.6, 'Bandit Chief': 1.2,
+};
+
+function getEnemyAggroRange(type: string, isBoss: boolean): number {
+  const mult = AGGRO_MULTIPLIER[type] ?? 1.0;
+  return AGGRO_RANGE * mult * (isBoss ? 1.5 : 1.0);
+}
+
+// Leash = half the zone size (~500 for a 1000-wide zone)
+// Enemies chase player across half the zone before walking home
+const BASE_LEASH_RANGE = 800;    // half a zone width
+const BOSS_LEASH_RANGE = 1200;   // bosses chase further
 
 // Enemy attackStyle → weapon type for AI slash VFX
 const ENEMY_ATTACK_WEAPON: Record<string, WeaponType> = {
@@ -945,7 +965,7 @@ function spawnEnemiesNearPlayer(state: OpenWorldState): void {
           ccImmunityTimers: new Map(),
           homeX: ms.x,
           homeY: ms.y,
-          leashRange: 500,
+          leashRange: template.isBoss ? BOSS_LEASH_RANGE : BASE_LEASH_RANGE,
           zoneId: zone.id,
           spawnIndex: si,
           respawnTimer: 0,
@@ -1336,7 +1356,8 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
       continue;
     }
 
-    if (d < AGGRO_RANGE) {
+    const aggroRange = getEnemyAggroRange(enemy.type, enemy.isBoss);
+    if (d < aggroRange) {
       enemy.targetId = p.id;
       enemy.facing = angleBetween(enemy, p);
 

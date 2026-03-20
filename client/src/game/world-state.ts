@@ -62,9 +62,9 @@ const STORAGE_KEY = 'grudge_world_state';
 export function createWorldState(): WorldState {
   return {
     worldTime: 12.0,
-    dayDurationMinutes: 20,
-    sunriseHour: 6,
-    sunsetHour: 18,
+    dayDurationMinutes: 22,   // 22 real min = 24 game hours (18 min day + 4 min night)
+    sunriseHour: 5,            // sunrise at 5:00 (early morning light)
+    sunsetHour: 19.5,          // sunset at 19:30 (long golden hour)
     weather: WeatherType.Clear,
     weatherTimer: 0,
     weatherChangeInterval: 300,
@@ -158,16 +158,24 @@ export function getFormattedTime(ws: WorldState): string {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
-/** Returns 0.0 (midnight) to 1.0 (noon), smoothed via sine curve */
+/** Returns 0.0 (midnight) to 1.0 (noon), smoothed via sine curve
+ * Night minimum is 0.25 (not pitch black — game must be playable) */
 export function getSunIntensity(ws: WorldState): number {
   const t = ws.worldTime / 24;
   // Peak at noon (0.5), trough at midnight (0.0/1.0)
-  return Math.max(0.08, (Math.sin((t - 0.25) * Math.PI * 2) + 1) / 2);
+  const raw = (Math.sin((t - 0.25) * Math.PI * 2) + 1) / 2;
+  // Night floor: never below 0.25 so game is always visible
+  // Dawn/dusk: smooth transition with slight blue tint handled by renderer
+  return Math.max(0.25, raw);
 }
 
-/** Ambient brightness factor combining sun + weather */
+/** Ambient brightness factor combining sun + weather.
+ * Night minimum 0.2 ensures terrain/enemies always visible. */
 export function getAmbientBrightness(ws: WorldState): number {
-  return getSunIntensity(ws) * WEATHER_INFO[ws.weather].ambientMod;
+  const sun = getSunIntensity(ws);
+  const weather = WEATHER_INFO[ws.weather].ambientMod;
+  // Floor at 0.2 — game must be playable even in storm + midnight
+  return Math.max(0.2, sun * weather);
 }
 
 /** Movement speed multiplier from weather */
