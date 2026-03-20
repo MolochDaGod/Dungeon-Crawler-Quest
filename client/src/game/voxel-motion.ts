@@ -1239,12 +1239,21 @@ export interface SpellVFXPlan {
 }
 
 const COMBO_PATTERNS: Record<string, string[]> = {
-  swing_horizontal: ['combo_double_slash', 'combo_uppercut_slam', 'combo_spinning_cleave'],
+  // Sword: slash → uppercut → WHIRLWIND finisher
+  swing_horizontal: ['combo_double_slash', 'combo_uppercut_slam', 'combo_whirlwind_finisher'],
+  // Axe: overhead slam → backstep burst → spinning cleave
   swing_vertical_chop: ['combo_power_slam', 'combo_backstep_burst', 'combo_spinning_cleave'],
-  thrust_linear: ['combo_backstep_burst', 'combo_double_slash', 'combo_uppercut_slam'],
+  // Spear: triple thrust → double slash → uppercut lunge
+  thrust_linear: ['combo_backstep_burst', 'combo_backstep_burst', 'combo_uppercut_slam'],
+  // Hammer: power slam → double slash → whirlwind finisher
   slam_overhead: ['combo_power_slam', 'combo_double_slash', 'combo_whirlwind_finisher'],
-  claw_swipe: ['combo_double_slash', 'combo_double_slash', 'combo_whirlwind_finisher'],
+  // Greatsword: slash → spinning cleave → whirlwind
+  greatsword: ['combo_double_slash', 'combo_spinning_cleave', 'combo_whirlwind_finisher'],
+  // Claws: rapid slash → slash → whirlwind
+  claw_swipe: ['combo_double_slash', 'combo_spinning_cleave', 'combo_whirlwind_finisher'],
+  // Bow: backstep shots → backstep → spinning dodge-shot
   bow_draw_release: ['combo_backstep_burst', 'combo_backstep_burst', 'combo_spinning_cleave'],
+  // Staff: cast → spin → power slam
   staff_cast: ['staff_cast', 'combo_spinning_cleave', 'combo_power_slam'],
 };
 

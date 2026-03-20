@@ -145,15 +145,19 @@ export default function OpenWorldPage() {
         return;
       }
 
-      // Abilities (use Dungeon/OW 1-4 bindings, not MOBA Q/W/E/R)
-      if (matchesKeyDown(bindings[KeybindAction.DungeonAbility1], e)) { e.preventDefault(); tryTargetOrCast(0); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility2], e)) { e.preventDefault(); tryTargetOrCast(1); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility3], e)) { e.preventDefault(); tryTargetOrCast(2); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility4], e)) { e.preventDefault(); tryTargetOrCast(3); }
+      // Weapon skills 1-5
+      if (matchesKeyDown(bindings[KeybindAction.Skill1], e)) { e.preventDefault(); tryTargetOrCast(0); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill2], e)) { e.preventDefault(); tryTargetOrCast(1); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill3], e)) { e.preventDefault(); tryTargetOrCast(2); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill4], e)) { e.preventDefault(); tryTargetOrCast(3); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill5], e)) { e.preventDefault(); tryTargetOrCast(4); }
+      // Class abilities
+      if (matchesKeyDown(bindings[KeybindAction.ClassSkill], e)) { e.preventDefault(); /* TODO: class skill Q */ }
+      if (matchesKeyDown(bindings[KeybindAction.ClassDefensive], e)) { e.preventDefault(); /* TODO: class defensive R */ }
       // Combat
-      if (matchesKeyDown(bindings[KeybindAction.DodgeRoll], e)) { e.preventDefault(); handleOWDodge(state); }
-      if (matchesKeyDown(bindings[KeybindAction.DungeonAbility4], e)) { e.preventDefault(); tryTargetOrCast(3); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility5], e)) { e.preventDefault(); tryTargetOrCast(4); }
+      if (matchesKeyDown(bindings[KeybindAction.Dodge], e)) { e.preventDefault(); handleOWDodge(state); }
+      if (matchesKeyDown(bindings[KeybindAction.Backstep], e)) { e.preventDefault(); /* TODO: backstep X */ }
+      if (matchesKeyDown(bindings[KeybindAction.Block], e)) { e.preventDefault(); /* TODO: block/parry E */ }
       // UI toggles
       if (matchesKeyDown(bindings[KeybindAction.ToggleInventory], e)) state.showInventory = !state.showInventory;
       if (matchesKeyDown(bindings[KeybindAction.ToggleCharPanel], e)) setShowCharPanel(prev => !prev);

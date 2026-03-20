@@ -87,11 +87,19 @@ export default function DungeonGamePage() {
         return;
       }
 
-      // Dungeon/OW: abilities on 1/2/3/4
-      if (matchesKeyDown(bindings[KeybindAction.DungeonAbility1], e)) { e.preventDefault(); tryTargetOrCast(0); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility2], e)) { e.preventDefault(); tryTargetOrCast(1); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility3], e)) { e.preventDefault(); tryTargetOrCast(2); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility4], e)) { e.preventDefault(); tryTargetOrCast(3); }
+      // Weapon skills 1-5
+      if (matchesKeyDown(bindings[KeybindAction.Skill1], e)) { e.preventDefault(); tryTargetOrCast(0); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill2], e)) { e.preventDefault(); tryTargetOrCast(1); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill3], e)) { e.preventDefault(); tryTargetOrCast(2); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill4], e)) { e.preventDefault(); tryTargetOrCast(3); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill5], e)) { e.preventDefault(); tryTargetOrCast(4); }
+      // Class abilities
+      if (matchesKeyDown(bindings[KeybindAction.ClassSkill], e)) { e.preventDefault(); /* TODO: class skill Q */ }
+      if (matchesKeyDown(bindings[KeybindAction.ClassDefensive], e)) { e.preventDefault(); /* TODO: class defensive R */ }
+      // Combat
+      if (matchesKeyDown(bindings[KeybindAction.Dodge], e)) { e.preventDefault(); /* TODO: dodge */ }
+      if (matchesKeyDown(bindings[KeybindAction.Backstep], e)) { e.preventDefault(); /* TODO: backstep X */ }
+      if (matchesKeyDown(bindings[KeybindAction.Block], e)) { e.preventDefault(); /* TODO: block/parry E */ }
 
       if (key === 'i') state.showInventory = !state.showInventory;
       if (matchesKeyDown(bindings[KeybindAction.Pause], e)) { state.showInventory = false; state.paused = !state.paused; }

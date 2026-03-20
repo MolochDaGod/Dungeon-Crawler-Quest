@@ -1398,9 +1398,14 @@ function updateEnemies(state: OpenWorldState, dt: number): void {
           const spdMult = getSpeedMultiplier(enemy as any as CombatEntity);
 
           if (enemy.attackStyle === 'melee') {
-            // Melee: instant cone damage + slash VFX + small lunge
-            const lungeX = enemy.x + Math.cos(enemy.facing) * 8;
-            const lungeY = enemy.y + Math.sin(enemy.facing) * 8;
+            // Melee: wind-up line indicator → then cone damage + slash VFX + lunge
+            // Show directional line telegraph on the ground
+            addSpellEffect(state,
+              enemy.x + Math.cos(enemy.facing) * (enemy.size + 5),
+              enemy.y + Math.sin(enemy.facing) * (enemy.size + 5),
+              'enemy_slash', enemy.size + 20, '#cc3333', 0.4, enemy.facing);
+            const lungeX = enemy.x + Math.cos(enemy.facing) * 12;
+            const lungeY = enemy.y + Math.sin(enemy.facing) * 12;
             if (isWalkableOW(lungeX, lungeY)) { enemy.x = lungeX; enemy.y = lungeY; }
             if (d < enemy.rng + 20 && !p.dodgeInvuln) {
               const result = combatCalcDamage(
@@ -1768,8 +1773,6 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
   const nearest = findNearestEnemy(state, p, ab.range + 100);
   const abilityColor = CLASS_COLORS[hd.heroClass] || '#fff';
 
-  // Enhanced cast channeling VFX
-  addSpellEffect(state, p.x, p.y, 'cast_circle', 25 + p.spellComboCount * 3, abilityColor, 0.5);
   // Channeling particle burst
   for (let ci = 0; ci < 4 + p.spellComboCount * 2; ci++) {
     const ca = (ci / (4 + p.spellComboCount * 2)) * Math.PI * 2;
@@ -1795,7 +1798,6 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
         nearest.hp -= result.finalDamage;
         addText(state, nearest.x, nearest.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, result.isCrit ? '#ffd700' : abilityColor, result.isCrit ? 18 : 14);
         spawnParticles(state, nearest.x, nearest.y, abilityColor, 10 + p.spellComboCount * 2);
-        addSpellEffect(state, nearest.x, nearest.y, 'impact_ring', 35 + p.spellComboCount * 4, abilityColor, 0.5);
         triggerScreenShake(state, 3 + p.spellComboCount, 0.12);
         triggerHitFlash(state, nearest.id);
         const effects = getAbilityStatusEffects(ab.name, p.id, p.atk);
@@ -1826,7 +1828,6 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
           const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: e.def, activeEffects: e.activeEffects }, dmg, aoeOpts);
           e.hp -= result.finalDamage;
           addText(state, e.x, e.y - 15, `-${result.finalDamage}`, abilityColor, 12);
-          addSpellEffect(state, e.x, e.y, 'impact_ring', 24 + p.spellComboCount * 3, abilityColor, 0.35);
           triggerHitFlash(state, e.id);
           const effects = getAbilityStatusEffects(ab.name, p.id, p.atk);
           for (const eff of effects) applyStatusEffect(e as any as CombatEntity, eff);
@@ -1841,7 +1842,6 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
     case 'buff': {
       const effects = getAbilityStatusEffects(ab.name, p.id, p.atk);
       for (const eff of effects) applyStatusEffect(p as any as CombatEntity, eff);
-      addSpellEffect(state, p.x, p.y, 'cast_circle', 35, '#ffd700', 0.8);
       spawnParticles(state, p.x, p.y, '#ffd700', 15);
       break;
     }
@@ -1865,7 +1865,6 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
       p.shieldHp = 100 + p.def * 2;
       const effects = getAbilityStatusEffects(ab.name, p.id, p.atk);
       for (const eff of effects) applyStatusEffect(p as any as CombatEntity, eff);
-      addSpellEffect(state, p.x, p.y, 'cast_circle', 30, '#22c55e', 0.6);
       spawnParticles(state, p.x, p.y, '#22c55e', 10);
       break;
     }
@@ -1884,7 +1883,6 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
           const dashDmg = (ab.damage + p.atk * 0.5) * dashDerived.physDmgMult;
           const result = combatCalcDamage({ atk: p.atk, activeEffects: p.activeEffects }, { def: nearest.def, activeEffects: nearest.activeEffects }, dashDmg, dashOpts);
           nearest.hp -= result.finalDamage;
-          addSpellEffect(state, nearest.x, nearest.y, 'impact_ring', 25, abilityColor, 0.4);
           if (nearest.hp <= 0) killEnemy(state, nearest);
         }
       } else {
@@ -2272,8 +2270,6 @@ function spawnDeathBurst(state: OpenWorldState, x: number, y: number, color: str
       color: '#a855f7', size: 4,
     });
   }
-  // Impact ring spell effect
-  addSpellEffect(state, x, y, 'impact_ring', isBoss ? 60 : 30, color, 0.4);
 }
 
 // ── Ambient Particles ──────────────────────────────────────────
@@ -3269,35 +3265,66 @@ export class OpenWorldRenderer {
     ctx.translate(p.x, p.y);
     ctx.globalAlpha = Math.max(0.4, brightness);
 
-    // Player indicator ring
-    ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = (0.4 + Math.sin(Date.now() * 0.004) * 0.2) * brightness;
+    // Subtle ground shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
-    ctx.arc(0, 0, 20, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = Math.max(0.4, brightness);
+    ctx.ellipse(0, 4, 14, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
 
     const buffNames = p.activeEffects.map(e => e.name || '');
     this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, hd.heroClass, p.facing, p.animState, p.animTimer, hd.race, hd.name, undefined, undefined, p.id, p.shieldHp > 0 ? p.shieldHp : undefined, buffNames.length > 0 ? buffNames : undefined, state.gameTime);
 
+    // ── Styled nameplate ──
     ctx.globalAlpha = 1;
-    this.renderHealthBar(ctx, 0, -24, 20, p.hp, p.maxHp, '#22c55e');
+    const plateW = 52;
+    const plateH = 22;
+    const plateY = -36;
 
+    // Background
+    ctx.fillStyle = 'rgba(10,8,5,0.85)';
+    ctx.strokeStyle = 'rgba(197,160,89,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(-plateW / 2, plateY, plateW, plateH, 3);
+    ctx.fill();
+    ctx.stroke();
+
+    // Name
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(hd.name.split(' ').pop() || hd.name, 0, plateY + 8);
+
+    // Level badge
+    ctx.fillStyle = '#c5a059';
+    ctx.font = '6px sans-serif';
+    ctx.fillText(`Lv${p.level}`, 0, plateY + 14.5);
+
+    // HP bar
+    const barW = plateW - 6;
+    const hpPct = Math.max(0, p.hp / p.maxHp);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(-barW / 2, plateY + 16, barW, 3);
+    ctx.fillStyle = hpPct > 0.5 ? '#22c55e' : hpPct > 0.25 ? '#f59e0b' : '#ef4444';
+    ctx.fillRect(-barW / 2, plateY + 16, barW * hpPct, 3);
+
+    // MP bar
     const mpPct = p.mp / p.maxMp;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(-20, -18, 40, 3);
+    ctx.fillRect(-barW / 2, plateY + 20, barW, 2);
     ctx.fillStyle = '#6366f1';
-    ctx.fillRect(-20, -18, 40 * mpPct, 3);
+    ctx.fillRect(-barW / 2, plateY + 20, barW * mpPct, 2);
 
+    // Status effects (small colored pips)
     if (p.activeEffects.length > 0) {
-      let ox = -p.activeEffects.length * 5;
+      const effW = p.activeEffects.length * 6;
+      let ox = -effW / 2;
       for (const eff of p.activeEffects) {
         ctx.fillStyle = eff.color;
-        ctx.globalAlpha = 0.8;
-        ctx.fillRect(ox, -30, 8, 4);
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(ox, plateY - 5, 5, 3);
         ctx.globalAlpha = 1;
-        ox += 10;
+        ox += 6;
       }
     }
 
@@ -3730,39 +3757,89 @@ export class OpenWorldRenderer {
         break;
       }
       case 'enemy_aoe_telegraph': {
-        // Blinking circle warning on ground
-        const blink = Math.sin(Date.now() * 0.015) > 0 ? 0.5 : 0.2;
-        ctx.globalAlpha = blink * t;
-        ctx.strokeStyle = se.color;
+        // Albion-style: red circle that FILLS from edge to center over wind-up
+        const fillProgress = 1 - t; // 0 at start → 1 when it fires
+        const pulse = 1 + Math.sin(Date.now() * 0.012) * 0.04;
+        const r = se.radius * pulse;
+
+        // Outer border ring (always visible, red)
+        ctx.strokeStyle = '#cc2222';
         ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
+        ctx.globalAlpha = 0.7;
         ctx.beginPath();
-        ctx.arc(se.x, se.y, se.radius, 0, Math.PI * 2);
+        ctx.arc(se.x, se.y, r, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.setLineDash([]);
-        // Fill
-        ctx.globalAlpha = 0.08 * t;
-        ctx.fillStyle = se.color;
-        ctx.beginPath();
-        ctx.arc(se.x, se.y, se.radius, 0, Math.PI * 2);
-        ctx.fill();
+
+        // Filling red sweep — fills from 0% to 100% over the telegraph duration
+        if (fillProgress > 0) {
+          // Radial fill from edge inward
+          const fillR = r * fillProgress;
+          const grad = ctx.createRadialGradient(se.x, se.y, Math.max(0.1, r - fillR), se.x, se.y, r);
+          grad.addColorStop(0, 'rgba(200,30,30,0)');
+          grad.addColorStop(0.3, 'rgba(200,30,30,0.15)');
+          grad.addColorStop(1, 'rgba(220,40,40,0.45)');
+          ctx.fillStyle = grad;
+          ctx.globalAlpha = 0.5 + fillProgress * 0.4;
+          ctx.beginPath();
+          ctx.arc(se.x, se.y, r, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Inner progress circle (solid red, grows with fill)
+          ctx.fillStyle = 'rgba(255,60,60,0.35)';
+          ctx.globalAlpha = fillProgress * 0.6;
+          ctx.beginPath();
+          ctx.arc(se.x, se.y, fillR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Warning cross-hatch at >70% fill
+        if (fillProgress > 0.7) {
+          const urgency = (fillProgress - 0.7) / 0.3;
+          ctx.strokeStyle = '#ff4444';
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = urgency * 0.5;
+          // Cross pattern
+          ctx.beginPath();
+          ctx.moveTo(se.x - r * 0.5, se.y - r * 0.5);
+          ctx.lineTo(se.x + r * 0.5, se.y + r * 0.5);
+          ctx.moveTo(se.x + r * 0.5, se.y - r * 0.5);
+          ctx.lineTo(se.x - r * 0.5, se.y + r * 0.5);
+          ctx.stroke();
+        }
         break;
       }
       case 'enemy_aoe_blast': {
-        // Expanding blast ring
+        // Albion-style: rapid flash + expanding shockwave ring
         const bp = 1 - t;
-        const blastR = se.radius * (0.3 + bp * 0.7);
-        ctx.globalAlpha = t * 0.6;
-        ctx.fillStyle = se.color;
+        const blastR = se.radius * (0.5 + bp * 0.5);
+
+        // Ground scorch (persists briefly)
+        ctx.fillStyle = 'rgba(80,20,20,0.3)';
+        ctx.globalAlpha = t;
         ctx.beginPath();
-        ctx.arc(se.x, se.y, blastR, 0, Math.PI * 2);
+        ctx.arc(se.x, se.y, se.radius * 0.9, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3 * t;
+
+        // Expanding shockwave ring
+        ctx.strokeStyle = '#ff4444';
+        ctx.lineWidth = 4 * t;
         ctx.globalAlpha = t * 0.8;
+        ctx.shadowColor = '#ff4444';
+        ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.arc(se.x, se.y, blastR, 0, Math.PI * 2);
         ctx.stroke();
+
+        // Inner flash (bright white burst at start)
+        if (bp < 0.3) {
+          const flashAlpha = (0.3 - bp) * 3;
+          ctx.fillStyle = '#ffffff';
+          ctx.globalAlpha = flashAlpha * 0.6;
+          ctx.beginPath();
+          ctx.arc(se.x, se.y, se.radius * 0.4 * (1 - bp), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
         break;
       }
     }

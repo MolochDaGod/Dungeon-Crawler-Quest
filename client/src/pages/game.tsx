@@ -380,17 +380,18 @@ export default function GamePage() {
         }
         handlePlayerAbility(state, idx);
       };
-      // MMO-style: Use 1-5 for abilities (same as open-world), R for ultimate
-      if (matchesKeyDown(bindings[KeybindAction.DungeonAbility1], e)) { e.preventDefault(); tryAbility(0); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility2], e)) { e.preventDefault(); tryAbility(1); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility3], e)) { e.preventDefault(); tryAbility(2); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility4], e)) { e.preventDefault(); tryAbility(3); }
-      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility5], e)) { e.preventDefault(); tryAbility(4); }
-      // R key = class ultimate (slot 3 in ability array, same as open-world)
-      else if (key === 'r' && !e.repeat) { e.preventDefault(); tryAbility(3); }
+      // Weapon skills 1-5
+      if (matchesKeyDown(bindings[KeybindAction.Skill1], e)) { e.preventDefault(); tryAbility(0); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill2], e)) { e.preventDefault(); tryAbility(1); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill3], e)) { e.preventDefault(); tryAbility(2); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill4], e)) { e.preventDefault(); tryAbility(3); }
+      else if (matchesKeyDown(bindings[KeybindAction.Skill5], e)) { e.preventDefault(); tryAbility(4); }
+      // Class abilities
+      if (matchesKeyDown(bindings[KeybindAction.ClassSkill], e)) { e.preventDefault(); /* TODO: class skill Q */ }
+      if (matchesKeyDown(bindings[KeybindAction.ClassDefensive], e)) { e.preventDefault(); /* TODO: class defensive R */ }
 
       if (matchesKeyDown(bindings[KeybindAction.ToggleShop], e)) state.showShop = !state.showShop;
-      if (matchesKeyDown(bindings[KeybindAction.ToggleScoreboard], e)) { e.preventDefault(); state.showScoreboard = true; }
+      if (key === 'tab' && !e.repeat) { e.preventDefault(); state.showScoreboard = true; }
       if (matchesKeyDown(bindings[KeybindAction.Pause], e)) {
         if (mouseTarget.aoeIndicator.active) {
           mouseTarget.cancelTargeting();
@@ -405,37 +406,20 @@ export default function GamePage() {
           state.paused = !state.paused;
         }
       }
-      if (matchesKeyDown(bindings[KeybindAction.CenterCamera], e)) {
-        e.preventDefault();
-        const player = state.heroes[state.playerHeroIndex];
-        if (player) { state.camera.x = player.x; state.camera.y = player.y; }
-      }
 
-      if (matchesKeyDown(bindings[KeybindAction.StopMove], e)) {
-        handleStopCommand(state);
-      }
-
-      // E key: interact (unified with open-world)
-      // A/D used for movement now, no attack-move mode
-
+      // Combat
       if (matchesKeyDown(bindings[KeybindAction.Dodge], e)) {
         e.preventDefault();
         handleDodge(state);
         combatActor.send({ type: 'SPACE_DOWN' });
       }
-      if (matchesKeyDown(bindings[KeybindAction.DashAttack], e)) {
-        handleDashAttack(state);
+      if (matchesKeyDown(bindings[KeybindAction.Backstep], e)) {
+        e.preventDefault();
+        /* TODO: backstep X */
       }
       if (matchesKeyDown(bindings[KeybindAction.Block], e)) {
         handleBlock(state, true);
       }
-
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility1], e)) { e.preventDefault(); handleLevelUpAbility(state, 0); }
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility2], e)) { e.preventDefault(); handleLevelUpAbility(state, 1); }
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility3], e)) { e.preventDefault(); handleLevelUpAbility(state, 2); }
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility4], e)) { e.preventDefault(); handleLevelUpAbility(state, 3); }
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility5], e)) { e.preventDefault(); handleLevelUpAbility(state, 4); }
-      if (matchesKeyDown(bindings[KeybindAction.LevelUpAbility6], e)) { e.preventDefault(); handleLevelUpAbility(state, 5); }
 
       // N key: toggle skill tree panel
       if (key === 'n' && !e.repeat && !e.ctrlKey) {
@@ -453,7 +437,7 @@ export default function GamePage() {
     const onKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       keysRef.current.delete(key);
-      if (matchesKeyDown(bindings[KeybindAction.ToggleScoreboard], e) || key === 'tab') {
+      if (key === 'tab') {
         state.showScoreboard = false;
       }
       if (matchesKeyDown(bindings[KeybindAction.Block], e)) {

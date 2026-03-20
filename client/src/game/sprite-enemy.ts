@@ -173,8 +173,10 @@ export function drawSpriteEnemy(
   const drawW = meta.frameW * def.drawScale;
   const drawH = meta.frameH * def.drawScale;
 
-  const screenX = wx - camX - drawW / 2;
-  const screenY = wy - camY - drawH / 2;
+  // When called from open-world renderer, the canvas context is already
+  // camera-translated, so we just draw at world position directly.
+  const screenX = wx - drawW / 2;
+  const screenY = wy - drawH / 2;
 
   if (sheet?.complete) {
     ctx.drawImage(sheet, sx, sy, meta.frameW, meta.frameH, screenX, screenY, drawW, drawH);

@@ -43,12 +43,33 @@ function blend(hex1: string, hex2: string, t: number): string {
   return rgbToHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
 }
 
+/**
+ * 8-directional facing:
+ *   0 = up, 1 = right, 2 = down, 3 = left
+ *   4 = up-right, 5 = down-right, 6 = down-left, 7 = up-left
+ */
 function facingToDir(facing: number): number {
   const a = ((facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  if (a < Math.PI * 0.25 || a >= Math.PI * 1.75) return 1;
-  if (a < Math.PI * 0.75) return 2;
-  if (a < Math.PI * 1.25) return 3;
-  return 0;
+  // 8 sectors of 45° each, starting from right (0 rad)
+  const sector = Math.round(a / (Math.PI * 0.25)) % 8;
+  //  sector 0 = right, 1 = down-right, 2 = down, 3 = down-left,
+  //  4 = left, 5 = up-left, 6 = up, 7 = up-right
+  const MAP = [1, 5, 2, 6, 3, 7, 0, 4];
+  return MAP[sector];
+}
+
+/** For rendering: map 8-dir to the nearest cardinal (0-3) for the voxel model */
+function dirToCardinal(dir: number): number {
+  if (dir < 4) return dir;
+  // Diagonals: 4=up-right→right(1), 5=down-right→right(1), 6=down-left→left(3), 7=up-left→left(3)
+  return dir === 4 ? 1 : dir === 5 ? 1 : dir === 6 ? 3 : 3;
+}
+
+/** Skew angle for diagonal facing (slight body lean) */
+function dirToSkew(dir: number): number {
+  if (dir < 4) return 0; // cardinals: no skew
+  // diagonals: slight lean toward the vertical component
+  return dir === 4 ? -0.12 : dir === 5 ? 0.12 : dir === 6 ? 0.12 : -0.12;
 }
 
 function seededRandom(x: number, y: number): number {
@@ -4840,7 +4861,17 @@ export class VoxelRenderer {
     const isoX = cs;
     const isoY = cs * 0.5;
 
-    const dir = facingToDir(facing);
+    const dir8 = facingToDir(facing);
+    const dir = dir8 < 4 ? dir8 : dirToCardinal(dir8);
+    const skew = dirToSkew(dir8);
+
+    // Apply diagonal skew for 8-dir facing
+    if (skew !== 0) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.transform(1, skew, 0, 1, 0, 0);
+      ctx.translate(-cx, -cy);
+    }
 
     for (let z = 0; z < model.length; z++) {
       const layer = model[z];
@@ -4903,6 +4934,10 @@ export class VoxelRenderer {
           }
         }
       }
+    }
+
+    if (skew !== 0) {
+      ctx.restore();
     }
   }
 

@@ -39,14 +39,12 @@ function saveGraphicsSettings(settings: GraphicsSettings): void {
   localStorage.setItem('grudge_volume', String(settings.masterVolume));
 }
 
-const MOBA_CATEGORIES = ['Movement', 'MOBA Combat', 'MOBA Abilities (Q/W/E/R)', 'Level Up', 'Items', 'Camera', 'UI'];
-const OW_CATEGORIES = ['Movement', 'Dungeon/OW Combat', 'Dungeon/OW Abilities (1-4)', 'Interaction', 'Items', 'Camera', 'UI'];
 
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const [bindings, setBindings] = useState<KeybindConfig>(loadKeybindings);
   const [rebinding, setRebinding] = useState<KeybindAction | null>(null);
-  const [modeTab, setModeTab] = useState<'moba' | 'openworld' | 'all'>('openworld');
+  const [modeTab, setModeTab] = useState<'all'>('all');
   const [graphics, setGraphics] = useState<GraphicsSettings>(loadGraphicsSettings);
 
   const handleRebind = useCallback((action: KeybindAction) => {
@@ -111,7 +109,7 @@ export default function SettingsPage() {
     saveGraphicsSettings(updated);
   };
 
-  const filteredCategories = modeTab === 'moba' ? MOBA_CATEGORIES : modeTab === 'openworld' ? OW_CATEGORIES : Object.keys(ACTION_CATEGORIES);
+  const filteredCategories = Object.keys(ACTION_CATEGORIES);
 
   return (
     <div
@@ -141,29 +139,6 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        <div className="flex mb-6" style={{ gap: 0 }} data-testid="panel-mode-tabs">
-          {([['openworld', 'Open World'], ['moba', 'MOBA Arena'], ['all', 'All Controls']] as const).map(([mode, label]) => (
-            <button
-              key={mode}
-              className="flex-1 py-3 text-sm font-bold uppercase tracking-wider cursor-pointer transition-all"
-              style={{
-                background: modeTab === mode
-                  ? 'linear-gradient(to bottom, rgba(197,160,89,0.15), rgba(197,160,89,0.05))'
-                  : 'linear-gradient(to bottom, rgba(10,15,10,0.8), rgba(10,10,10,0.8))',
-                borderBottom: modeTab === mode ? '2px solid #c5a059' : '2px solid rgba(197,160,89,0.15)',
-                borderTop: modeTab === mode ? '1px solid rgba(197,160,89,0.3)' : '1px solid rgba(197,160,89,0.08)',
-                borderLeft: '1px solid rgba(197,160,89,0.08)',
-                borderRight: '1px solid rgba(197,160,89,0.08)',
-                color: modeTab === mode ? '#c5a059' : '#666',
-                borderRadius: '6px 6px 0 0',
-              }}
-              onClick={() => setModeTab(mode)}
-              data-testid={`button-tab-${mode}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
 
         {rebinding && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" data-testid="panel-rebind-overlay">
