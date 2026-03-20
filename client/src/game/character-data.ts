@@ -93,7 +93,21 @@ export interface CharacterData {
 
 export function loadCharacterData(): CharacterData {
   const heroId = localStorage.getItem('grudge_hero_id');
-  const hero = HEROES.find(h => String(h.id) === heroId) ?? null;
+  // Support custom-created heroes stored in localStorage
+  let hero = HEROES.find(h => String(h.id) === heroId) ?? null;
+  if (!hero) {
+    try {
+      const custom = localStorage.getItem('grudge_custom_hero');
+      if (custom) {
+        const parsed = JSON.parse(custom) as HeroData;
+        if (String(parsed.id) === heroId) {
+          hero = parsed;
+          // Ensure it's in the runtime array
+          if (!HEROES.find(h => h.id === parsed.id)) HEROES.push(parsed);
+        }
+      }
+    } catch { /* ignore parse errors */ }
+  }
   const heroClass = hero?.heroClass ?? 'Warrior';
   const heroRace = hero?.race ?? 'Human';
 

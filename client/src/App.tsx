@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import CharacterSelect from "@/pages/character-select";
+import CreateCharacter from "@/pages/create-character";
 import GamePage from "@/pages/game";
 import SettingsPage from "@/pages/settings";
 import OpenWorldPage from "@/pages/open-world";
@@ -24,6 +25,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/character-select" component={CharacterSelect} />
+      <Route path="/create-character" component={CreateCharacter} />
       <Route path="/game" component={GamePage} />
       <Route path="/open-world" component={OpenWorldPage} />
       <Route path="/settings" component={SettingsPage} />
