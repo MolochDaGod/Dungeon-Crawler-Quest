@@ -109,11 +109,11 @@ export const SPELL_REGISTRY: Record<string, SpellDefinition> = {
     pattern: 'expanding_ring',
     element: 'frost',
     totalDamage: 180,
-    radius: 200,
+    radius: 120,
     duration: 0.6,
     tickRate: 0.1,
     range: 0, // self-cast
-    expandSpeed: 400,
+    expandSpeed: 300,
     stunDuration: 1.5,
     trailColor: 'purple',
     castVfx: 'os_frostbolt',
@@ -414,7 +414,7 @@ export function updateActiveSpell(spell: ActiveSpell, dt: number): SpellTickResu
   if (spell.duration > 0 && spell.elapsed >= spell.duration) {
     result.done = true;
     if (spell.endVfx) {
-      result.vfxSpawns.push({ type: spell.endVfx, x: spell.x, y: spell.y, scale: 1.5, duration: 800 });
+      result.vfxSpawns.push({ type: spell.endVfx, x: spell.x, y: spell.y, scale: 2.5, duration: 800 });
     }
     return result;
   }
@@ -438,7 +438,7 @@ export function updateActiveSpell(spell: ActiveSpell, dt: number): SpellTickResu
           // Random position within radius for VFX variety
           const ox = (Math.random() - 0.5) * spell.radius;
           const oy = (Math.random() - 0.5) * spell.radius;
-          result.vfxSpawns.push({ type: spell.tickVfx, x: spell.x + ox, y: spell.y + oy, scale: 1.0, duration: 600 });
+          result.vfxSpawns.push({ type: spell.tickVfx, x: spell.x + ox, y: spell.y + oy, scale: 1.5, duration: 600 });
         }
       }
       break;
@@ -455,7 +455,7 @@ export function updateActiveSpell(spell: ActiveSpell, dt: number): SpellTickResu
         const oy = (Math.random() - 0.5) * spell.radius * 1.5;
         result.damages.push({ entityId: -1, damage: spell.damage });
         if (spell.tickVfx) {
-          result.vfxSpawns.push({ type: spell.tickVfx, x: spell.x + ox, y: spell.y + oy, scale: 1.4, duration: 700 });
+          result.vfxSpawns.push({ type: spell.tickVfx, x: spell.x + ox, y: spell.y + oy, scale: 2.0, duration: 700 });
         }
       }
       result.aoeVisuals.push({
@@ -483,7 +483,7 @@ export function updateActiveSpell(spell: ActiveSpell, dt: number): SpellTickResu
         spell.tickTimer = 0;
         result.damages.push({ entityId: -1, damage: spell.damage });
         if (spell.tickVfx) {
-          result.vfxSpawns.push({ type: spell.tickVfx, x: spell.x, y: spell.y, scale: (spell.currentRadius || 50) / 100, duration: 500 });
+          result.vfxSpawns.push({ type: spell.tickVfx, x: spell.x, y: spell.y, scale: Math.max(1.0, (spell.currentRadius || 50) / 40), duration: 500 });
         }
       }
       break;
@@ -503,7 +503,7 @@ export function updateActiveSpell(spell: ActiveSpell, dt: number): SpellTickResu
         spell.tickTimer = 0;
         result.damages.push({ entityId: -2, damage: spell.damage }); // -2 = moving AoE
         if (spell.tickVfx) {
-          result.vfxSpawns.push({ type: spell.tickVfx, x: spell.moveX, y: spell.moveY, scale: 1.2, duration: 600 });
+          result.vfxSpawns.push({ type: spell.tickVfx, x: spell.moveX, y: spell.moveY, scale: 1.8, duration: 600 });
         }
       }
       break;
@@ -527,7 +527,7 @@ export function updateActiveSpell(spell: ActiveSpell, dt: number): SpellTickResu
           });
         }
         if (spell.castVfx) {
-          result.vfxSpawns.push({ type: spell.castVfx, x: spell.x, y: spell.y, scale: 1.0, duration: 500 });
+          result.vfxSpawns.push({ type: spell.castVfx, x: spell.x, y: spell.y, scale: 1.5, duration: 500 });
         }
       }
       result.done = spell.elapsed > 0.1;
@@ -565,7 +565,7 @@ export function updateActiveSpell(spell: ActiveSpell, dt: number): SpellTickResu
           });
         }
         if (spell.castVfx) {
-          result.vfxSpawns.push({ type: spell.castVfx, x: spell.x, y: spell.y, scale: 1.5, duration: 700 });
+          result.vfxSpawns.push({ type: spell.castVfx, x: spell.x, y: spell.y, scale: 2.5, duration: 700 });
         }
       }
       result.done = spell.elapsed > 0.15;

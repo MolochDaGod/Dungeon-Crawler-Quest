@@ -412,36 +412,43 @@ interface SignatureVfx {
 }
 
 export const HERO_SIGNATURE_VFX: Record<string, SignatureVfx> = {
-  'Sir Aldric Valorheart':    { effect: 'os_holy_light',       scale: 1.8, duration: 1000 },
-  'Gareth Moonshadow':        { effect: 'os_arcane_mist',      scale: 1.6, duration: 900 },
-  'Archmage Elara Brightspire': { effect: 'os_arcane_lightning', scale: 2.0, duration: 1100 },
-  'Kael Shadowblade':         { effect: 'os_demon_slash1',     scale: 1.8, duration: 800 },
-  'Ulfgar Bonecrusher':       { effect: 'os_earth_bump',       scale: 2.0, duration: 900 },
-  'Hrothgar Fangborn':        { effect: 'os_worge_tornado',    scale: 1.8, duration: 1200 },
-  'Volka Stormborn':          { effect: 'os_ice_vfx2',         scale: 2.0, duration: 1100 },
-  'Svala Windrider':          { effect: 'os_wind_breath',      scale: 1.8, duration: 900 },
-  'Thane Ironshield':         { effect: 'os_earth_wall',       scale: 1.6, duration: 900 },
-  'Bromm Earthshaker':        { effect: 'os_fire_explosion',   scale: 2.0, duration: 1000 },
-  'Runa Forgekeeper':         { effect: 'os_flamestrike',      scale: 2.0, duration: 1000 },
-  'Durin Tunnelwatcher':      { effect: 'os_thunder_proj2',    scale: 1.8, duration: 800 },
-  'Thalion Bladedancer':      { effect: 'os_arcane_slash',     scale: 2.0, duration: 1000 },
-  'Sylara Wildheart':         { effect: 'os_healing_regen',    scale: 1.8, duration: 1100 },
-  'Lyra Stormweaver':         { effect: 'os_arcane_bolt',      scale: 2.2, duration: 1000 },
-  'Aelindra Swiftbow':        { effect: 'os_holy_impact',      scale: 1.8, duration: 800 },
-  'Grommash Ironjaw':         { effect: 'os_crit_slash',       scale: 2.2, duration: 900 },
-  'Fenris Bloodfang':         { effect: 'os_fire_explosion2',  scale: 2.0, duration: 1000 },
-  "Zul'jin the Hexmaster":    { effect: 'os_flamestrike',      scale: 2.2, duration: 1100 },
-  'Razak Deadeye':            { effect: 'os_thunder_hit',      scale: 1.8, duration: 800 },
-  'Lord Malachar':            { effect: 'os_frozen_ice',       scale: 2.0, duration: 1000 },
-  'The Ghoulfather':          { effect: 'os_arcane_mist',      scale: 2.2, duration: 1100 },
-  'Necromancer Vexis':        { effect: 'os_frostbolt',        scale: 2.0, duration: 1000 },
-  'Shade Whisper':            { effect: 'os_thunder_proj2',    scale: 1.8, duration: 900 },
-  'Racalvin the Pirate King': { effect: 'os_fire_explosion2',  scale: 2.2, duration: 1100 },
-  'Cpt. John Wayne':          { effect: 'os_beam_holy',        scale: 2.0, duration: 1200 },
+  'Sir Aldric Valorheart':    { effect: 'os_holy_light',       scale: 3.0, duration: 1000 },
+  'Gareth Moonshadow':        { effect: 'os_arcane_mist',      scale: 2.5, duration: 900 },
+  'Archmage Elara Brightspire': { effect: 'os_arcane_lightning', scale: 3.5, duration: 1100 },
+  'Kael Shadowblade':         { effect: 'os_demon_slash1',     scale: 3.0, duration: 800 },
+  'Ulfgar Bonecrusher':       { effect: 'os_earth_bump',       scale: 3.5, duration: 900 },
+  'Hrothgar Fangborn':        { effect: 'os_worge_tornado',    scale: 3.0, duration: 1200 },
+  'Volka Stormborn':          { effect: 'os_ice_vfx2',         scale: 3.5, duration: 1100 },
+  'Svala Windrider':          { effect: 'os_wind_breath',      scale: 3.0, duration: 900 },
+  'Thane Ironshield':         { effect: 'os_earth_wall',       scale: 2.5, duration: 900 },
+  'Bromm Earthshaker':        { effect: 'os_fire_explosion',   scale: 3.5, duration: 1000 },
+  'Runa Forgekeeper':         { effect: 'os_flamestrike',      scale: 3.5, duration: 1000 },
+  'Durin Tunnelwatcher':      { effect: 'os_thunder_proj2',    scale: 3.0, duration: 800 },
+  'Thalion Bladedancer':      { effect: 'os_arcane_slash',     scale: 3.5, duration: 1000 },
+  'Sylara Wildheart':         { effect: 'os_healing_regen',    scale: 3.0, duration: 1100 },
+  'Lyra Stormweaver':         { effect: 'os_arcane_bolt',      scale: 4.0, duration: 1000 },
+  'Aelindra Swiftbow':        { effect: 'os_holy_impact',      scale: 3.0, duration: 800 },
+  'Grommash Ironjaw':         { effect: 'os_crit_slash',       scale: 4.0, duration: 900 },
+  'Fenris Bloodfang':         { effect: 'os_fire_explosion2',  scale: 3.5, duration: 1000 },
+  "Zul'jin the Hexmaster":    { effect: 'os_flamestrike',      scale: 4.0, duration: 1100 },
+  'Razak Deadeye':            { effect: 'os_thunder_hit',      scale: 3.0, duration: 800 },
+  'Lord Malachar':            { effect: 'os_frozen_ice',       scale: 3.5, duration: 1000 },
+  'The Ghoulfather':          { effect: 'os_arcane_mist',      scale: 4.0, duration: 1100 },
+  'Necromancer Vexis':        { effect: 'os_frostbolt',        scale: 3.5, duration: 1000 },
+  'Shade Whisper':            { effect: 'os_thunder_proj2',    scale: 3.0, duration: 900 },
+  'Racalvin the Pirate King': { effect: 'os_fire_explosion2',  scale: 4.0, duration: 1100 },
+  'Cpt. John Wayne':          { effect: 'os_beam_holy',        scale: 3.5, duration: 1200 },
 };
 
 // ── Constants ──────────────────────────────────────────────────
 const LEGACY_FRAME_SIZE = 100;
+/**
+ * Maximum base render dimension (in world units) before scale is applied.
+ * Sprites larger than this are normalized down so effects stay proportional
+ * to heroes (~36px wide). Without this, 384×512 custom sprites render at
+ * 10-15× hero size even at scale 1.0.
+ */
+const MAX_BASE_SIZE = 64;
 
 // ── SpriteEffectSystem ─────────────────────────────────────────
 export class SpriteEffectSystem {
@@ -550,8 +557,12 @@ export class SpriteEffectSystem {
       const sx = col * sheet.frameW;
       const sy = row * sheet.frameH;
 
-      const drawW = sheet.frameW * effect.scale;
-      const drawH = sheet.frameH * effect.scale;
+      // Normalize oversized sprites down to MAX_BASE_SIZE so effects stay
+      // proportional to heroes (~36px body). Small sprites pass through as-is.
+      const maxDim = Math.max(sheet.frameW, sheet.frameH);
+      const normalize = maxDim > MAX_BASE_SIZE ? MAX_BASE_SIZE / maxDim : 1;
+      const drawW = sheet.frameW * normalize * effect.scale;
+      const drawH = sheet.frameH * normalize * effect.scale;
 
       ctx.drawImage(
         sheet.image,

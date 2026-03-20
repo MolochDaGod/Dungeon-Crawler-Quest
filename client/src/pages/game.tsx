@@ -380,14 +380,15 @@ export default function GamePage() {
         }
         handlePlayerAbility(state, idx);
       };
-      if (matchesKeyDown(bindings[KeybindAction.Ability1], e)) tryAbility(0);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability2], e)) tryAbility(1);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability3], e)) tryAbility(2);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability4], e)) tryAbility(3);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability5], e)) tryAbility(4);
-      else if (matchesKeyDown(bindings[KeybindAction.Ability6], e)) tryAbility(5);
+      // MMO-style: Use 1-5 for abilities (same as open-world), R for ultimate
+      if (matchesKeyDown(bindings[KeybindAction.DungeonAbility1], e)) { e.preventDefault(); tryAbility(0); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility2], e)) { e.preventDefault(); tryAbility(1); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility3], e)) { e.preventDefault(); tryAbility(2); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility4], e)) { e.preventDefault(); tryAbility(3); }
+      else if (matchesKeyDown(bindings[KeybindAction.DungeonAbility5], e)) { e.preventDefault(); tryAbility(4); }
+      // R key = class ultimate (slot 3 in ability array, same as open-world)
+      else if (key === 'r' && !e.repeat) { e.preventDefault(); tryAbility(3); }
 
-      if (matchesKeyDown(bindings[KeybindAction.Attack], e)) handlePlayerAttack(state);
       if (matchesKeyDown(bindings[KeybindAction.ToggleShop], e)) state.showShop = !state.showShop;
       if (matchesKeyDown(bindings[KeybindAction.ToggleScoreboard], e)) { e.preventDefault(); state.showScoreboard = true; }
       if (matchesKeyDown(bindings[KeybindAction.Pause], e)) {
@@ -414,11 +415,8 @@ export default function GamePage() {
         handleStopCommand(state);
       }
 
-      // A key: enter attack-move mode (next LMB click will attack-move to that position)
-      if (key === 'a' && !e.repeat) {
-        state.cursorMode = 'attack';
-        (state as any)._attackMoveMode = true;
-      }
+      // E key: interact (unified with open-world)
+      // A/D used for movement now, no attack-move mode
 
       if (matchesKeyDown(bindings[KeybindAction.Dodge], e)) {
         e.preventDefault();
@@ -482,6 +480,7 @@ export default function GamePage() {
       };
     };
 
+    // ── MMO-style controls (unified with open-world) ──
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       combatActor.send({ type: 'RMB_DOWN' });
@@ -491,16 +490,13 @@ export default function GamePage() {
         state.cursorMode = 'default';
         return;
       }
+      // MMO RMB: ranged attack toward mouse (same as open-world)
       const wp = getWorldPos(e);
-      const lungeTriggered = handleRmbMelee(state, wp.x, wp.y);
-      if (lungeTriggered) {
-        state.cursorMode = 'attack';
-        setTimeout(() => { if (state.cursorMode === 'attack') state.cursorMode = 'default'; }, 400);
-        return;
+      const p = state.heroes[state.playerHeroIndex];
+      if (p && !p.dead) {
+        p.facing = Math.atan2(wp.y - p.y, wp.x - p.x);
+        handlePlayerAttack(state); // Use attack toward mouse direction
       }
-      state.cursorMode = 'move';
-      handleRightClick(state, wp.x, wp.y);
-      setTimeout(() => { if (state.cursorMode === 'move') state.cursorMode = 'default'; }, 250);
     };
 
     const onMouseDown = (e: MouseEvent) => {
@@ -508,12 +504,8 @@ export default function GamePage() {
         combatActor.send({ type: 'LMB_DOWN' });
         const wp = getWorldPos(e);
 
-        // Attack-move mode: A then LMB → move to click, auto-attack first enemy in range
-        if ((state as any)._attackMoveMode) {
-          (state as any)._attackMoveMode = false;
-          state.cursorMode = 'default';
-          handleAttackMoveClick(state, wp.x, wp.y);
-        } else if (mouseTarget.aoeIndicator.active) {
+        // MMO LMB: melee attack (face target, auto-attack)
+        if (mouseTarget.aoeIndicator.active) {
           const targetPos = mouseTarget.confirmAOETarget();
           if (targetPos) {
             const p = state.heroes[state.playerHeroIndex];
@@ -547,7 +539,12 @@ export default function GamePage() {
           state.cursorMode = 'default';
           handlePlayerAbility(state, abIdx);
         } else {
-          // Normal LMB: select/target entity at click position
+          // MMO LMB: direct melee attack toward mouse
+          const p = state.heroes[state.playerHeroIndex];
+          if (p && !p.dead) {
+            p.facing = Math.atan2(wp.y - p.y, wp.x - p.x);
+            handlePlayerAttack(state);
+          }
         }
       }
       if (e.button === 1) {

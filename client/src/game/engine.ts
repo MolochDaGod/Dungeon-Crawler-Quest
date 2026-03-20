@@ -639,64 +639,41 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   if (player && !player.dead) {
     const playerSpdMult = getSpeedMultiplier(player as any as CombatEntity);
     const playerRooted = isRooted(player as any as CombatEntity);
-    // MOBA: No WASD/arrow movement — mouse right-click to move, A+LMB attack-move
-    if (!playerRooted && player.isAttackMoving && player.attackMoveTarget) {
-      const d = dist(player, player.attackMoveTarget);
-      const nearEnemy = findNearestEnemy(state, player, player.rng + 50);
-      if (nearEnemy) {
-        player.targetId = nearEnemy.id;
-        player.vx = 0;
-        player.vy = 0;
-      } else if (d < 10) {
+
+    // ── MMO-style WASD direct movement (unified with open-world) ──
+    if (!playerRooted) {
+      let mx = 0, my = 0;
+      if (keys.has('w') || keys.has('arrowup')) my = -1;
+      if (keys.has('s') || keys.has('arrowdown')) my = 1;
+      if (keys.has('a') || keys.has('arrowleft')) mx = -1;
+      if (keys.has('d') || keys.has('arrowright')) mx = 1;
+
+      if (mx !== 0 || my !== 0) {
+        const len = Math.sqrt(mx * mx + my * my);
+        const sprintMult = keys.has('shift') ? 1.6 : 1.0;
+        const speed = player.spd * 2 * playerSpdMult * sprintMult;
+        player.vx = (mx / len) * speed;
+        player.vy = (my / len) * speed;
+        player.facing = Math.atan2(my, mx);
+        player.animState = 'walk';
+        // Clear any old click-to-move targets
+        player.moveTarget = null;
         player.attackMoveTarget = null;
         player.isAttackMoving = false;
-        player.vx = 0;
-        player.vy = 0;
-        player.animState = 'idle';
-      } else {
-        const angle = angleTo(player, player.attackMoveTarget);
-        const speed = player.spd * 1.8 * playerSpdMult;
-        player.vx = Math.cos(angle) * speed;
-        player.vy = Math.sin(angle) * speed;
-        player.facing = angle;
-        player.animState = 'walk';
-      }
-    } else if (!playerRooted && player.moveTarget) {
-      const d = dist(player, player.moveTarget);
-      if (d < 10) {
-        player.moveTarget = null;
-        player.vx = 0;
-        player.vy = 0;
-        player.animState = 'idle';
-      } else {
-        const angle = angleTo(player, player.moveTarget);
-        const speed = player.spd * 1.8 * playerSpdMult;
-        player.vx = Math.cos(angle) * speed;
-        player.vy = Math.sin(angle) * speed;
-        player.facing = angle;
-        player.animState = 'walk';
-      }
-    } else if (!player.stopCommand && player.targetId === null && !player.moveTarget && !player.isAttackMoving) {
-      const nearEnemy = state.autoAttackEnabled ? findNearestEnemy(state, player, player.rng + 30) : null;
-      if (nearEnemy) {
-        player.targetId = nearEnemy.id;
+        player.stopCommand = false;
       } else {
         player.vx = 0;
         player.vy = 0;
         if (player.animState === 'walk') player.animState = 'idle';
       }
-    } else if (player.stopCommand) {
-      player.vx = 0;
-      player.vy = 0;
-      if (player.animState === 'walk') player.animState = 'idle';
     } else {
       player.vx = 0;
       player.vy = 0;
-      if (player.animState === 'walk') player.animState = 'idle';
     }
 
-    if (keys.has(' ')) {
-      const target = findNearestEnemy(state, player, player.rng + 30);
+    // Tab: target lock nearest enemy
+    if (keys.has('tab')) {
+      const target = findNearestEnemy(state, player, player.rng + 200);
       if (target) player.targetId = target.id;
     }
 
@@ -1901,24 +1878,24 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
   const abilityVfx = ABILITY_VFX[ab.name];
   if (abilityVfx) {
     if (abilityVfx.cast) {
-      state.pendingSpriteEffects.push({ type: abilityVfx.cast, x: hero.x, y: hero.y, scale: 1.2, duration: 700 });
+      state.pendingSpriteEffects.push({ type: abilityVfx.cast, x: hero.x, y: hero.y, scale: 1.5, duration: 700 });
     }
     if (abilityVfx.aoe) {
       const cx = target ? target.x : hero.x;
       const cy = target ? target.y : hero.y;
-      state.pendingSpriteEffects.push({ type: abilityVfx.aoe, x: cx, y: cy, scale: 1.5, duration: 900 });
+      state.pendingSpriteEffects.push({ type: abilityVfx.aoe, x: cx, y: cy, scale: 2.5, duration: 900 });
     }
     if (abilityVfx.impact && target) {
-      state.pendingSpriteEffects.push({ type: abilityVfx.impact, x: target.x, y: target.y, scale: 1.0, duration: 500 });
+      state.pendingSpriteEffects.push({ type: abilityVfx.impact, x: target.x, y: target.y, scale: 1.2, duration: 500 });
     }
     if (abilityVfx.projectile) {
-      state.pendingSpriteEffects.push({ type: abilityVfx.projectile, x: hero.x, y: hero.y, scale: 1.0, duration: 600 });
+      state.pendingSpriteEffects.push({ type: abilityVfx.projectile, x: hero.x, y: hero.y, scale: 0.7, duration: 600 });
     }
   } else {
     // Fallback: class-level VFX from ObjectStore
     const classVfx = CLASS_SPELL_VFX[heroData.heroClass];
     if (classVfx && classVfx[abilityIndex]) {
-      state.pendingSpriteEffects.push({ type: classVfx[abilityIndex], x: hero.x, y: hero.y, scale: 1.5, duration: 800 });
+      state.pendingSpriteEffects.push({ type: classVfx[abilityIndex], x: hero.x, y: hero.y, scale: 2.0, duration: 800 });
     }
   }
   // Hero signature VFX on ultimate abilities (slot index 3 = R)
@@ -1944,7 +1921,7 @@ export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: n
     state.activeSpells.push(activeSpell);
     // Cast VFX
     if (spellDef.castVfx) {
-      state.pendingSpriteEffects.push({ type: spellDef.castVfx, x: hero.x, y: hero.y, scale: 1.3, duration: 700 });
+      state.pendingSpriteEffects.push({ type: spellDef.castVfx, x: hero.x, y: hero.y, scale: 1.8, duration: 700 });
     }
     spawnCastBurst(state, hero.x, hero.y, abilityColor, 14);
     state.screenShake = spellDef.duration > 2 ? 0.12 : 0.08;
