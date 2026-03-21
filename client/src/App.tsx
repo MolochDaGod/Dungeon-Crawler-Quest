@@ -20,7 +20,6 @@ import WorldEditorPage from "@/pages/world-editor";
 import CharacterPage from "@/pages/character";
 import IslandPage from "@/pages/island";
 import AIDebugPage from "@/pages/ai-debug";
-import SpaceConquestPage from "@/pages/space-conquest";
 import { useEffect } from "react";
 
 function Router() {
@@ -42,7 +41,6 @@ function Router() {
       <Route path="/character" component={CharacterPage} />
       <Route path="/island" component={IslandPage} />
       <Route path="/ai-debug" component={AIDebugPage} />
-      <Route path="/space-conquest" component={SpaceConquestPage} />
       <Route component={NotFound} />
     </Switch>
   );

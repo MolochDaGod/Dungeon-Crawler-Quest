@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Sword, Shield, Skull, Crown, Settings, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree, Rocket } from 'lucide-react';
+import { Sword, Shield, Skull, Crown, Settings, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree, Lock } from 'lucide-react';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld' | 'spaceconquest'>('arena');
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPass, setAdminPass] = useState('');
   const [titlePulse, setTitlePulse] = useState(false);
 
   useEffect(() => {
@@ -82,13 +84,36 @@ export default function Home() {
 
   const handlePlay = () => {
     localStorage.setItem('grudge_mode', selectedMode);
-    if (selectedMode === 'spaceconquest') {
-      setLocation('/space-conquest');
-    } else if (selectedMode === 'openworld') {
-      setLocation('/character-select');
+    // Check if player has a saved character — if so, go directly to game
+    const savedHeroId = localStorage.getItem('grudge_hero_id');
+    const savedHero = localStorage.getItem('grudge_custom_hero');
+    if (savedHeroId && savedHero) {
+      // Existing character — go to game
+      if (selectedMode === 'spaceconquest') setLocation('/space-conquest');
+      else if (selectedMode === 'openworld') setLocation('/open-world-play');
+      else setLocation('/game');
     } else {
+      // No character — go to character creation (WoW-classic flow)
+      setLocation('/create-character');
+    }
+  };
+
+  const handleAdminLogin = () => {
+    // Simple admin gate — allows access to the legacy hero select
+    if (adminPass === 'grudge' || adminPass === 'admin') {
+      localStorage.setItem('grudge_admin', 'true');
       setLocation('/character-select');
     }
+    setShowAdminLogin(false);
+    setAdminPass('');
+  };
+
+  const handleNewCharacter = () => {
+    // Clear saved character and go to creation
+    localStorage.removeItem('grudge_hero_id');
+    localStorage.removeItem('grudge_custom_hero');
+    localStorage.setItem('grudge_mode', selectedMode);
+    setLocation('/create-character');
   };
 
   return (
@@ -128,10 +153,10 @@ export default function Home() {
             WARLORDS
           </h2>
           <p className="text-gray-300 max-w-xl mx-auto text-lg mb-2" data-testid="text-tagline">
-            Command 26 legendary heroes across 6 races in epic battle.
+            Create your warrior. Choose your destiny. Enter the world.
           </p>
           <p className="text-gray-500 text-sm mb-6">
-            Choose your mode below
+            6 Races &bull; 4 Classes &bull; 17 Weapon Types &bull; Choose your mode
           </p>
         </div>
 
@@ -168,22 +193,6 @@ export default function Home() {
               Explore a vast island. Enter dungeon events, earn reputation, and defeat world bosses.
             </p>
           </button>
-          <button
-            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
-              selectedMode === 'spaceconquest'
-                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
-                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
-            }`}
-            onClick={() => setSelectedMode('spaceconquest')}
-            data-testid="button-mode-spaceconquest"
-          >
-            <Rocket className="w-12 h-12" />
-            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>SPACE CONQUEST</span>
-            <span className="text-xs text-gray-400">RTS &bull; 8 Planets &bull; Fleets &bull; AI Neutrals</span>
-            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
-              Conquer planets, build fleets, harvest resources. Defeat neutrals to claim each world.
-            </p>
-          </button>
         </div>
 
         <div className="flex flex-col gap-3 items-center mb-8">
@@ -194,7 +203,7 @@ export default function Home() {
             onClick={handlePlay}
             data-testid="button-play"
           >
-            {selectedMode === 'arena' ? 'ENTER THE ARENA' : selectedMode === 'spaceconquest' ? 'LAUNCH CONQUEST' : 'EXPLORE THE WORLD'}
+            {selectedMode === 'arena' ? 'ENTER THE ARENA' : 'EXPLORE THE WORLD'}
           </Button>
 
           <div className="flex gap-4 mt-2">

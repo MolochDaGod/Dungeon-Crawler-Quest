@@ -227,8 +227,6 @@ export default function CreateCharacter() {
       const mode = localStorage.getItem('grudge_mode') || 'arena';
       if (mode === 'openworld') {
         setLocation('/open-world-play');
-      } else if (mode === 'spaceconquest') {
-        setLocation('/space-conquest');
       } else {
         setLocation('/game');
       }
