@@ -1,0 +1,537 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-02-16",
+  "total": 112,
+  "categories": {
+    "ore": {
+      "iconBase": "Res",
+      "items": [
+        {
+          "id": "scrap-ore",
+          "name": "Scrap Ore",
+          "tier": 0,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒ¬¿",
+          "grudgeType": "material"
+        },
+        {
+          "id": "copper-ore",
+          "name": "Copper Ore",
+          "tier": 1,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒ¬¿",
+          "grudgeType": "material"
+        },
+        {
+          "id": "iron-ore",
+          "name": "Iron Ore",
+          "tier": 2,
+          "gatheredBy": "Miner",
+          "emoji": "Γ¢Å∩╕Å",
+          "grudgeType": "material"
+        },
+        {
+          "id": "steel-ore",
+          "name": "Steel Ore",
+          "tier": 3,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒö⌐",
+          "grudgeType": "material"
+        },
+        {
+          "id": "mithril-ore",
+          "name": "Mithril Ore",
+          "tier": 4,
+          "gatheredBy": "Miner",
+          "emoji": "Γ£¿",
+          "grudgeType": "material"
+        },
+        {
+          "id": "adamantine-ore",
+          "name": "Adamantine Ore",
+          "tier": 5,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒÆÄ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "orichalcum-ore",
+          "name": "Orichalcum Ore",
+          "tier": 6,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒîƒ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "starmetal-ore",
+          "name": "Starmetal Ore",
+          "tier": 7,
+          "gatheredBy": "Miner",
+          "emoji": "Γÿä∩╕Å",
+          "grudgeType": "material"
+        },
+        {
+          "id": "divine-ore",
+          "name": "Divine Ore",
+          "tier": 8,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒææ",
+          "grudgeType": "material"
+        }
+      ]
+    },
+    "ingot": {
+      "iconBase": "Res",
+      "items": [
+        {
+          "id": "scrap-ingot",
+          "name": "Scrap Ingot",
+          "tier": 0,
+          "emoji": "≡ƒƒñ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "copper-ingot",
+          "name": "Copper Ingot",
+          "tier": 1,
+          "emoji": "≡ƒƒ½",
+          "grudgeType": "material"
+        },
+        {
+          "id": "iron-ingot",
+          "name": "Iron Ingot",
+          "tier": 2,
+          "emoji": "Γ¼¢",
+          "grudgeType": "material"
+        },
+        {
+          "id": "steel-ingot",
+          "name": "Steel Ingot",
+          "tier": 3,
+          "emoji": "Γ¼£",
+          "grudgeType": "material"
+        },
+        {
+          "id": "mithril-ingot",
+          "name": "Mithril Ingot",
+          "tier": 4,
+          "emoji": "≡ƒö╡",
+          "grudgeType": "material"
+        },
+        {
+          "id": "adamantine-ingot",
+          "name": "Adamantine Ingot",
+          "tier": 5,
+          "emoji": "≡ƒƒú",
+          "grudgeType": "material"
+        },
+        {
+          "id": "orichalcum-ingot",
+          "name": "Orichalcum Ingot",
+          "tier": 6,
+          "emoji": "≡ƒƒí",
+          "grudgeType": "material"
+        },
+        {
+          "id": "starmetal-ingot",
+          "name": "Starmetal Ingot",
+          "tier": 7,
+          "emoji": "Γ¡É",
+          "grudgeType": "material"
+        },
+        {
+          "id": "divine-ingot",
+          "name": "Divine Ingot",
+          "tier": 8,
+          "emoji": "≡ƒææ",
+          "grudgeType": "material"
+        }
+      ]
+    },
+    "wood": {
+      "iconBase": "Res",
+      "items": [
+        {
+          "id": "driftwood-log",
+          "name": "Driftwood Log",
+          "tier": 0,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒ¬╡",
+          "grudgeType": "material"
+        },
+        {
+          "id": "pine-log",
+          "name": "Pine Log",
+          "tier": 1,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒ¬╡",
+          "grudgeType": "material"
+        },
+        {
+          "id": "oak-log",
+          "name": "Oak Log",
+          "tier": 2,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒî│",
+          "grudgeType": "material"
+        },
+        {
+          "id": "maple-log",
+          "name": "Maple Log",
+          "tier": 3,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒìü",
+          "grudgeType": "material"
+        },
+        {
+          "id": "ash-log",
+          "name": "Ash Log",
+          "tier": 4,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒî▓",
+          "grudgeType": "material"
+        },
+        {
+          "id": "ironwood-log",
+          "name": "Ironwood Log",
+          "tier": 5,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒ¬ô",
+          "grudgeType": "material"
+        },
+        {
+          "id": "ebony-log",
+          "name": "Ebony Log",
+          "tier": 6,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒûñ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "wyrmwood-log",
+          "name": "Wyrmwood Log",
+          "tier": 7,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒÉë",
+          "grudgeType": "material"
+        },
+        {
+          "id": "worldtree-log",
+          "name": "Worldtree Log",
+          "tier": 8,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒîì",
+          "grudgeType": "material"
+        }
+      ]
+    },
+    "cloth": {
+      "iconBase": "Loot",
+      "items": [
+        {
+          "id": "rag-thread",
+          "name": "Rag Thread",
+          "tier": 0,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒº╢",
+          "grudgeType": "material"
+        },
+        {
+          "id": "linen-thread",
+          "name": "Linen Thread",
+          "tier": 1,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒº╡",
+          "grudgeType": "material"
+        },
+        {
+          "id": "wool-thread",
+          "name": "Wool Thread",
+          "tier": 2,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒÉæ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "cotton-thread",
+          "name": "Cotton Thread",
+          "tier": 3,
+          "gatheredBy": "Mystic",
+          "emoji": "Γÿü∩╕Å",
+          "grudgeType": "material"
+        },
+        {
+          "id": "silk-thread",
+          "name": "Silk Thread",
+          "tier": 4,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒò╕∩╕Å",
+          "grudgeType": "material"
+        },
+        {
+          "id": "moonweave-thread",
+          "name": "Moonweave Thread",
+          "tier": 5,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒîÖ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "starweave-thread",
+          "name": "Starweave Thread",
+          "tier": 6,
+          "gatheredBy": "Mystic",
+          "emoji": "Γ¡É",
+          "grudgeType": "material"
+        },
+        {
+          "id": "voidweave-thread",
+          "name": "Voidweave Thread",
+          "tier": 7,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒò│∩╕Å",
+          "grudgeType": "material"
+        },
+        {
+          "id": "divine-thread",
+          "name": "Divine Thread",
+          "tier": 8,
+          "gatheredBy": "Mystic",
+          "emoji": "Γ£¿",
+          "grudgeType": "material"
+        }
+      ]
+    },
+    "leather": {
+      "iconBase": "Loot",
+      "items": [
+        {
+          "id": "scraps-leather",
+          "name": "Scraps Leather",
+          "tier": 0,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒÑ⌐",
+          "grudgeType": "material"
+        },
+        {
+          "id": "rawhide",
+          "name": "Rawhide",
+          "tier": 1,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒª┤",
+          "grudgeType": "material"
+        },
+        {
+          "id": "thick-hide",
+          "name": "Thick Hide",
+          "tier": 2,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒÉé",
+          "grudgeType": "material"
+        },
+        {
+          "id": "rugged-leather",
+          "name": "Rugged Leather",
+          "tier": 3,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒºÑ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "hardened-leather",
+          "name": "Hardened Leather",
+          "tier": 4,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒ¢í∩╕Å",
+          "grudgeType": "material"
+        },
+        {
+          "id": "wyrm-leather",
+          "name": "Wyrm Leather",
+          "tier": 5,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒÉ▓",
+          "grudgeType": "material"
+        },
+        {
+          "id": "infernal-leather",
+          "name": "Infernal Leather",
+          "tier": 6,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒÿê",
+          "grudgeType": "material"
+        },
+        {
+          "id": "titan-leather",
+          "name": "Titan Leather",
+          "tier": 7,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒªú",
+          "grudgeType": "material"
+        },
+        {
+          "id": "divine-leather",
+          "name": "Divine Leather",
+          "tier": 8,
+          "gatheredBy": "Forester",
+          "emoji": "≡ƒæ╝",
+          "grudgeType": "material"
+        }
+      ]
+    },
+    "essence": {
+      "iconBase": "Loot",
+      "items": [
+        {
+          "id": "faint-essence",
+          "name": "Faint Essence",
+          "tier": 0,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒÆ¿",
+          "grudgeType": "material"
+        },
+        {
+          "id": "minor-essence",
+          "name": "Minor Essence",
+          "tier": 1,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒÆº",
+          "grudgeType": "material"
+        },
+        {
+          "id": "lesser-essence",
+          "name": "Lesser Essence",
+          "tier": 2,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒÆÖ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "greater-essence",
+          "name": "Greater Essence",
+          "tier": 3,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒÆ£",
+          "grudgeType": "material"
+        },
+        {
+          "id": "superior-essence",
+          "name": "Superior Essence",
+          "tier": 4,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒö«",
+          "grudgeType": "material"
+        },
+        {
+          "id": "refined-essence",
+          "name": "Refined Essence",
+          "tier": 5,
+          "gatheredBy": "Mystic",
+          "emoji": "ΓÜù∩╕Å",
+          "grudgeType": "material"
+        },
+        {
+          "id": "perfect-essence",
+          "name": "Perfect Essence",
+          "tier": 6,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒÆÄ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "ancient-essence",
+          "name": "Ancient Essence",
+          "tier": 7,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒîÇ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "divine-essence",
+          "name": "Divine Essence",
+          "tier": 8,
+          "gatheredBy": "Mystic",
+          "emoji": "≡ƒææ",
+          "grudgeType": "material"
+        }
+      ]
+    },
+    "gem": {
+      "iconBase": "Loot",
+      "items": [
+        {
+          "id": "pebble-gem",
+          "name": "Pebble Gem",
+          "tier": 0,
+          "gatheredBy": "Miner",
+          "emoji": "ΓÜ¬",
+          "grudgeType": "material"
+        },
+        {
+          "id": "rough-gem",
+          "name": "Rough Gem",
+          "tier": 1,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒÆá",
+          "grudgeType": "material"
+        },
+        {
+          "id": "flawed-gem",
+          "name": "Flawed Gem",
+          "tier": 2,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒö╖",
+          "grudgeType": "material"
+        },
+        {
+          "id": "standard-gem",
+          "name": "Standard Gem",
+          "tier": 3,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒö╢",
+          "grudgeType": "material"
+        },
+        {
+          "id": "fine-gem",
+          "name": "Fine Gem",
+          "tier": 4,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒÆÄ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "pristine-gem",
+          "name": "Pristine Gem",
+          "tier": 5,
+          "gatheredBy": "Miner",
+          "emoji": "ΓÖª∩╕Å",
+          "grudgeType": "material"
+        },
+        {
+          "id": "flawless-gem",
+          "name": "Flawless Gem",
+          "tier": 6,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒîƒ",
+          "grudgeType": "material"
+        },
+        {
+          "id": "radiant-gem",
+          "name": "Radiant Gem",
+          "tier": 7,
+          "gatheredBy": "Miner",
+          "emoji": "Γ£¿",
+          "grudgeType": "material"
+        },
+        {
+          "id": "divine-gem",
+          "name": "Divine Gem",
+          "tier": 8,
+          "gatheredBy": "Miner",
+          "emoji": "≡ƒææ",
+          "grudgeType": "material"
+        }
+      ]
+    }
+  }
+}

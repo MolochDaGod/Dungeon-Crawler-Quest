@@ -62,6 +62,12 @@ export interface EquipmentInstance {
 
   // Attribute bonuses
   attributeBonus?: Partial<Record<AttributeId, number>>;
+
+  // ObjectStore fields (optional — present when item comes from OS registry)
+  iconUrl?: string;          // full URL to ObjectStore icon image
+  lore?: string;             // item lore text
+  abilities?: string[];      // weapon ability names
+  signatureAbility?: string; // weapon signature ability
 }
 
 // ── Player Equipment State ─────────────────────────────────────

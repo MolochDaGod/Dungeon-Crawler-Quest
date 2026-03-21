@@ -325,7 +325,7 @@ export interface OWNPC {
   shopTier: number;     // controls equipment tier sold
 }
 
-export type NPCDialogTab = 'shop' | 'quests' | 'train' | 'craft';
+export type NPCDialogTab = 'shop' | 'quests' | 'train' | 'craft' | 'consumables';
 
 export interface ActiveNPCDialog {
   npc: OWNPC;

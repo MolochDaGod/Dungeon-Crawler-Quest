@@ -574,7 +574,7 @@ export default function GamePage() {
 
     eventTarget.addEventListener('contextmenu', onContextMenu);
     eventTarget.addEventListener('mousedown', onMouseDown);
-    eventTarget.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mouseup', onMouseUp);
     eventTarget.addEventListener('mousemove', onMouseMove);
     eventTarget.addEventListener('wheel', onWheel);
     window.addEventListener('keydown', onKeyDown);
@@ -585,9 +585,9 @@ export default function GamePage() {
       if (resizeHandler) window.removeEventListener('resize', resizeHandler);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('mouseup', onMouseUp);
       eventTarget.removeEventListener('contextmenu', onContextMenu);
       eventTarget.removeEventListener('mousedown', onMouseDown);
-      eventTarget.removeEventListener('mouseup', onMouseUp);
       eventTarget.removeEventListener('mousemove', onMouseMove);
       eventTarget.removeEventListener('wheel', onWheel);
       if (renderer3d) renderer3d.dispose();

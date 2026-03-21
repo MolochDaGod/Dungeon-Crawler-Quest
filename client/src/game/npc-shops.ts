@@ -1,16 +1,31 @@
 /**
  * NPC Shop System
  * Per-zone shop inventories, buy/sell, trainer respec, crafter recipe access.
+ * Uses ObjectStore registry for real items when loaded, legacy fallback otherwise.
  */
 
 import { EquipmentInstance, generateRandomEquipment, EquipSlot, addToBag, removeFromBag, saveEquipmentBag } from './equipment';
 import { ISLAND_ZONES } from './zones';
 import type { OpenWorldState } from './open-world';
+import {
+  generateOSEquipment, getConsumablesByLevel, getConsumableEffect,
+  OSConsumable, ConsumableEffect, isRegistryLoaded,
+} from './grudge-items';
 
 // ── Shop Item ──────────────────────────────────────────────────
 
 export interface ShopItem {
   equipment: EquipmentInstance;
+  buyPrice: number;
+  sold: boolean;
+}
+
+// ── Consumable Shop Item ───────────────────────────────────────
+
+export interface ConsumableShopItem {
+  consumable: OSConsumable;
+  effect: ConsumableEffect;
+  category: string;
   buyPrice: number;
   sold: boolean;
 }
@@ -39,19 +54,35 @@ const SHOP_SLOTS: EquipSlot[] = ['helm', 'shoulder', 'chest', 'hands', 'feet', '
 export function generateShopInventory(zoneId: number, playerLevel: number): ShopItem[] {
   const zone = ISLAND_ZONES.find(z => z.id === zoneId);
   const baseTier = zone ? Math.max(1, Math.min(8, Math.ceil(zone.requiredLevel / 3))) : 1;
-  const count = 8 + Math.floor(Math.random() * 5); // 8-12 items
+  const count = 10 + Math.floor(Math.random() * 5); // 10-14 items
   const items: ShopItem[] = [];
+  const useOS = isRegistryLoaded();
 
   for (let i = 0; i < count; i++) {
     // Slight tier variance: baseTier ± 1
     const tier = Math.max(1, Math.min(8, baseTier + Math.floor(Math.random() * 3) - 1));
-    const slot = SHOP_SLOTS[i % SHOP_SLOTS.length];
-    const equip = generateRandomEquipment(tier, slot);
+    const slot = SHOP_SLOTS[i % SHOP_SLOTS.length] as EquipSlot;
+    const equip = useOS ? generateOSEquipment(tier, slot) : generateRandomEquipment(tier, slot);
     items.push({
       equipment: equip,
       buyPrice: buyPriceFor(equip),
       sold: false,
     });
+  }
+  return items;
+}
+
+export function generateConsumableInventory(playerLevel: number): ConsumableShopItem[] {
+  const items: ConsumableShopItem[] = [];
+  const cats = ['redFoods', 'greenFoods', 'blueFoods', 'mysticPotions'];
+
+  for (const cat of cats) {
+    const pool = getConsumablesByLevel(cat, playerLevel, 4);
+    for (const c of pool) {
+      const effect = getConsumableEffect(c, cat);
+      const price = Math.max(2, Math.floor(c.lvl * 0.8));
+      items.push({ consumable: c, effect, category: cat, buyPrice: price, sold: false });
+    }
   }
   return items;
 }
@@ -116,16 +147,30 @@ export function respecAttributes(state: OpenWorldState): ShopTransaction {
   return { success: true, reason: 'Respecced', goldChange: -cost };
 }
 
+// ── Buy Consumable ────────────────────────────────────────────
+
+export function buyConsumable(state: OpenWorldState, item: ConsumableShopItem): ShopTransaction {
+  if (item.sold) return { success: false, reason: 'Already sold', goldChange: 0 };
+  if (state.player.gold < item.buyPrice) return { success: false, reason: 'Not enough gold', goldChange: 0 };
+  state.player.gold -= item.buyPrice;
+  item.sold = true;
+  state.killFeed.push({ text: `Bought ${item.consumable.name} for ${item.buyPrice}g`, color: '#22c55e', time: state.gameTime });
+  return { success: true, reason: 'Purchased', goldChange: -item.buyPrice };
+}
+
 // ── Shop Cache (per-zone, regenerates on re-entry) ─────────────
 
-const _shopCache = new Map<string, { items: ShopItem[]; timestamp: number }>();
+const _shopCache = new Map<string, { items: ShopItem[]; timestamp: number; usedOS?: boolean }>();
 
 export function getOrCreateShop(zoneId: number, playerLevel: number): ShopItem[] {
   const key = `${zoneId}-${playerLevel}`;
   const cached = _shopCache.get(key);
-  if (cached && Date.now() - cached.timestamp < 300_000) return cached.items; // 5 min cache
+  // Refresh cache if OS registry just loaded
+  const stale = cached && Date.now() - cached.timestamp > 300_000;
+  const needsOSRefresh = cached && !cached.usedOS && isRegistryLoaded();
+  if (cached && !stale && !needsOSRefresh) return cached.items;
   const items = generateShopInventory(zoneId, playerLevel);
-  _shopCache.set(key, { items, timestamp: Date.now() });
+  _shopCache.set(key, { items, timestamp: Date.now(), usedOS: isRegistryLoaded() });
   return items;
 }
 
@@ -133,4 +178,16 @@ export function refreshShop(zoneId: number, playerLevel: number): ShopItem[] {
   const key = `${zoneId}-${playerLevel}`;
   _shopCache.delete(key);
   return getOrCreateShop(zoneId, playerLevel);
+}
+
+// ── Consumable shop cache ──────────────────────────────────────
+
+const _consumableCache = new Map<number, { items: ConsumableShopItem[]; timestamp: number }>();
+
+export function getOrCreateConsumableShop(playerLevel: number): ConsumableShopItem[] {
+  const cached = _consumableCache.get(playerLevel);
+  if (cached && Date.now() - cached.timestamp < 600_000) return cached.items;
+  const items = generateConsumableInventory(playerLevel);
+  _consumableCache.set(playerLevel, { items, timestamp: Date.now() });
+  return items;
 }

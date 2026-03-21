@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import {
   HEROES, CLASS_COLORS, RACE_COLORS, ABILITY_ICONS, getHeroAbilities
 } from '@/game/types';
+import { getAbilitiesWithWeapon } from '@/game/weapon-skills';
 import {
   OpenWorldState, OWHudState,
   createOpenWorldState, updateOpenWorld, getOWHudState,
@@ -113,7 +114,7 @@ export default function OpenWorldPage() {
 
     const tryTargetOrCast = (abilityIndex: number) => {
       const hd = HEROES[state.player.heroDataId];
-      const abs = getHeroAbilities(hd.race, hd.heroClass);
+      const abs = getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass);
       const ab = abs[abilityIndex];
       if (ab && (ab.castType === 'ground_aoe' || ab.castType === 'skillshot' || ab.castType === 'cone' || ab.castType === 'line')) {
         startOWTargeting(state, abilityIndex);
@@ -154,13 +155,18 @@ export default function OpenWorldPage() {
       else if (matchesKeyDown(bindings[KeybindAction.Skill3], e)) { e.preventDefault(); tryTargetOrCast(2); }
       else if (matchesKeyDown(bindings[KeybindAction.Skill4], e)) { e.preventDefault(); tryTargetOrCast(3); }
       else if (matchesKeyDown(bindings[KeybindAction.Skill5], e)) { e.preventDefault(); tryTargetOrCast(4); }
-      // Class abilities
-      if (matchesKeyDown(bindings[KeybindAction.ClassSkill], e)) { e.preventDefault(); /* TODO: class skill Q */ }
-      if (matchesKeyDown(bindings[KeybindAction.ClassDefensive], e)) { e.preventDefault(); /* TODO: class defensive R */ }
+      // Class abilities (Q, E, R mirror weapon skill slots)
+      if (matchesKeyDown(bindings[KeybindAction.ClassSkill], e)) { e.preventDefault(); tryTargetOrCast(0); }
+      if (matchesKeyDown(bindings[KeybindAction.ClassDefensive], e)) {
+        e.preventDefault();
+        const hd = HEROES[state.player.heroDataId];
+        const abs = getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass);
+        tryTargetOrCast(abs.length - 1);
+      }
       // Combat
       if (matchesKeyDown(bindings[KeybindAction.Dodge], e)) { e.preventDefault(); handleOWDodge(state); }
-      if (matchesKeyDown(bindings[KeybindAction.Backstep], e)) { e.preventDefault(); /* TODO: backstep X */ }
-      if (matchesKeyDown(bindings[KeybindAction.Block], e)) { e.preventDefault(); /* TODO: block/parry E */ }
+      if (matchesKeyDown(bindings[KeybindAction.Backstep], e)) { e.preventDefault(); handleOWDodge(state); }
+      if (matchesKeyDown(bindings[KeybindAction.Block], e)) { e.preventDefault(); tryTargetOrCast(1); }
       // UI toggles
       if (matchesKeyDown(bindings[KeybindAction.ToggleInventory], e)) state.showInventory = !state.showInventory;
       if (matchesKeyDown(bindings[KeybindAction.ToggleCharPanel], e)) setShowCharPanel(prev => !prev);

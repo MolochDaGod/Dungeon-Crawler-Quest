@@ -457,7 +457,7 @@ export const combatMachine = createMachine({
         ],
       }),
       on: {
-        RMB_UP: { target: 'idle' },
+        RMB_UP: { target: 'idle', actions: assign({ isRmbHeld: false }) },
         TICK: {
           actions: assign({
             vfxQueue: [spawnVFX('slash', '#ef4444', 30, 0.15, { angle: Math.random() * Math.PI * 2 })],

@@ -306,20 +306,28 @@ export default function MainPanel({ hud, stateRef, heroData, abilities, abilityN
       {/* ═══ BOTTOM BAR — Hotbar ═══ */}
       <div className={css.bottomBar}>
         <div className={css.hotbar}>
-          {Array.from({ length: 10 }).map((_, i) => {
-            const key = i < 9 ? `${i + 1}` : '0';
-            // Slots 0-3 = abilities, 4 = empty, 5-9 = consumables (future)
-            const isAbility = i < 4;
-            const cd = isAbility ? hud.abilityCooldowns[i] : 0;
-            const name = isAbility ? (abilityNames[i] || abilities[i]?.name || '') : '';
+          {/* Skill slots 1-4 — actual abilities with their key bindings */}
+          {abilities.slice(0, 4).map((ab, i) => {
+            const cd = hud.abilityCooldowns[i] || 0;
+            const name = abilityNames[i] || ab.name;
             return (
-              <div key={i} className={css.hbSlot} title={name} style={cd > 0 ? { opacity: 0.5 } : undefined}>
-                <span className={css.hbKey}>{key}</span>
-                {isAbility && name && <span style={{ fontSize: 8, textAlign: 'center', color: '#f5e2c1', lineHeight: 1.1 }}>{name.slice(0, 6)}</span>}
+              <div key={`ab-${i}`} className={css.hbSlot} title={`${name}: ${abilityDescs[i] || ab.description}`} style={cd > 0 ? { opacity: 0.5 } : undefined}>
+                <span className={css.hbKey}>{ab.key}</span>
+                {name && <span style={{ fontSize: 8, textAlign: 'center', color: '#f5e2c1', lineHeight: 1.1 }}>{name.slice(0, 6)}</span>}
                 {cd > 0 && <span style={{ position: 'absolute', bottom: 2, fontSize: 8, color: '#d4a400' }}>{cd.toFixed(1)}</span>}
               </div>
             );
           })}
+          {/* Slot 5 — empty spacer */}
+          <div className={css.hbSlot} style={{ opacity: 0.3 }}>
+            <span className={css.hbKey}>5</span>
+          </div>
+          {/* Consumable slots 6-8 */}
+          {[6, 7, 8].map(key => (
+            <div key={`con-${key}`} className={css.hbSlot} title="Consumable slot">
+              <span className={css.hbKey}>{key}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
