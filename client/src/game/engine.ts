@@ -272,7 +272,8 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     showScoreboard: false,
     killFeed: [],
     terrainMap: savedMap ? savedMap.terrain : generateTerrainMap(),
-    collisionMap: savedMap?.collision || null,
+    // collisionMap loaded from saved map data (stored as 'any' — accessed via isTileBlocked)
+    ...(savedMap?.collision ? { collisionMap: savedMap.collision } : {}),
     decorations: savedMap ? savedMap.decorations.map(d => ({ x: d.x, y: d.y, type: d.type, seed: d.seed })) : generateDecorations(),
     jungleCamps: [],
     cursorMode: 'default',

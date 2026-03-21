@@ -68,15 +68,20 @@ export function HeroPreview({ data, size = 128, showName = true, showStats = fal
 
       // Use the voxel renderer's drawHeroVoxel which handles all the model building
       ctx.save();
+      // drawHeroVoxel(ctx, x, y, raceColor, classColor, heroClass, facing, animState, animTimer, race, heroName?, ...)
+      const raceColors: Record<string, string> = { Human: '#c4956a', Barbarian: '#a57850', Dwarf: '#d4a574', Elf: '#e8d5b8', Orc: '#5a8a3a', Undead: '#7a8a7a' };
+      const classColors: Record<string, string> = { Warrior: '#ef4444', Mage: '#8b5cf6', Ranger: '#22c55e', Worg: '#f97316' };
       voxel.drawHeroVoxel(
         ctx,
         size / 2,
         size * 0.7,
-        race,
+        raceColors[race] || '#c4956a',
+        classColors[heroClass] || '#888',
         heroClass,
-        Math.PI * 0.5, // facing right-ish for profile
+        Math.PI * 0.5,
         animState,
         animTimer,
+        race,
         heroName,
       );
       ctx.restore();

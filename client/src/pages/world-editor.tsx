@@ -203,8 +203,8 @@ export default function WorldEditorPage() {
           ctx.lineCap = 'round';
           for (const road of ZONE_ROADS) {
             ctx.beginPath();
-            ctx.moveTo(road.fromX, road.fromY);
-            ctx.lineTo(road.toX, road.toY);
+            ctx.moveTo(road.from.x, road.from.y);
+            ctx.lineTo(road.to.x, road.to.y);
             ctx.stroke();
           }
           ctx.globalAlpha = 1;

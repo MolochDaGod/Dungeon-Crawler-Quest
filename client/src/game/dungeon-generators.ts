@@ -72,9 +72,11 @@ const BOSS_TYPES = [
 
 function scaleEnemy(base: typeof ENEMY_TYPES[0], floor: number, difficulty: number) {
   const mult = 1 + (floor - 1) * 0.15 + (difficulty - 1) * 0.1;
+  const scaledHp = Math.floor(base.hp * mult);
   return {
     ...base,
-    hp: Math.floor(base.hp * mult),
+    hp: scaledHp,
+    maxHp: scaledHp,
     atk: Math.floor(base.atk * mult),
     def: Math.floor(base.def * mult),
     xpValue: Math.floor(base.xp * mult),

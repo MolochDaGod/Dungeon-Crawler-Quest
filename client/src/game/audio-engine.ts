@@ -287,7 +287,7 @@ export class AudioEngine {
 
   private updateCategoryVolumes(cat: SoundCategory): void {
     const catVol = this.getCategoryVolume(cat);
-    for (const [, active] of this.sounds) {
+    for (const active of Array.from(this.sounds.values())) {
       if (active.def.category === cat) {
         active.howl.volume((active.def.volume ?? 1) * catVol);
       }
