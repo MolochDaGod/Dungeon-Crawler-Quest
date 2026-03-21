@@ -87,6 +87,10 @@ import { getTileMapRenderer } from './tile-renderer';
 import { getSpriteDefForEnemy, drawSpriteEnemy, mapOWAnimState, preloadSpriteEnemies } from './sprite-enemy';
 import { getZoneLayout, drawDecoration, drawAnimal, updateAnimal, drawHeroesGuild, type ZoneDecorLayout, type LiveAnimal } from './world-decorations';
 import { resolveMovement } from './world-collision';
+import {
+  getNearbyPlayer, openInteractMenu, closeInteractMenu,
+  createInteractMenuState, type InteractMenuState,
+} from './player-interact';
 import { renderWalls, renderWaterArea } from './world-collision';
 import { ZONE_5_AREAS, getZone5Area, collidesWithWall, isDeepWater } from './node-map';
 import {
@@ -869,11 +873,36 @@ export function handleOWHarvest(state: OpenWorldState): void {
   saveResourceInventory(state.resourceInventory);
 }
 
-/** Unified E-key interaction: harvest, NPC, dungeon entrance, building entry/exit */
+/** Unified E-key interaction: player > NPC > building > dungeon > harvest */
 function handleOWInteract(state: OpenWorldState): void {
   if (state.player.dead) return;
   if (state.interactCooldown > 0) return;
   const p = state.player;
+
+  // ── Player interaction (highest priority) ──
+  if (!state.activeBuilding) {
+    const aiHeroes = (state.aiHeroes || []).map(h => ({
+      id: h.heroDataId ?? 0, name: h.name ?? 'Hero',
+      race: h.race ?? 'Human', heroClass: h.heroClass ?? 'Warrior',
+      level: h.level ?? 1, x: h.x, y: h.y, dead: h.dead ?? false,
+    }));
+    const nearbyPlayer = getNearbyPlayer(p.x, p.y, aiHeroes);
+    if (nearbyPlayer) {
+      // Initialize interact menu if not present
+      if (!(state as any)._interactMenu) {
+        (state as any)._interactMenu = createInteractMenuState();
+      }
+      const menu = (state as any)._interactMenu as InteractMenuState;
+      if (menu.open && menu.target?.sessionId === nearbyPlayer.sessionId) {
+        // Already open for this player — close it (toggle)
+        closeInteractMenu(menu);
+      } else {
+        openInteractMenu(menu, nearbyPlayer, (state as any)._partyState, (state as any)._guildState);
+      }
+      state.interactCooldown = 0.3;
+      return;
+    }
+  }
 
   // ── Inside a building: talk to NPC or exit via door ──
   if (state.activeBuilding) {
@@ -2556,6 +2585,17 @@ function getNearbyInteractableLabel(state: OpenWorldState): string | null {
       if (d < 0.18) return `Talk to ${inpc.name}`;
     }
     return null;
+  }
+  // Nearby player (highest priority in overworld)
+  const aiHeroes = (state.aiHeroes || []).map(h => ({
+    id: h.heroDataId ?? 0, name: h.name ?? 'Hero',
+    race: h.race ?? 'Human', heroClass: h.heroClass ?? 'Warrior',
+    level: h.level ?? 1, x: h.x, y: h.y, dead: h.dead ?? false,
+  }));
+  const nearbyPlayer = getNearbyPlayer(p.x, p.y, aiHeroes);
+  if (nearbyPlayer) {
+    const tag = nearbyPlayer.isAI ? 'AI' : 'Player';
+    return `${nearbyPlayer.name} [${tag}] — Lv${nearbyPlayer.level} ${nearbyPlayer.heroClass}`;
   }
   // Dungeon entrance
   const ent = getDungeonEntranceNear(p.x, p.y, 80);
