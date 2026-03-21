@@ -230,7 +230,10 @@ export class WorldHeightmap {
   isWalkable(worldX: number, worldY: number, hasBoat: boolean): boolean {
     if (worldX < 0 || worldY < 0 || worldX >= OPEN_WORLD_SIZE || worldY >= OPEN_WORLD_SIZE) return false;
     const cell = this.getCell(worldX, worldY);
-    if (!cell) return false; // outside any zone = impassable wilderness
+    if (!cell) {
+      // Outside any zone = ocean water. Boats can navigate, walking cannot.
+      return hasBoat;
+    }
     if (cell.walkable) return true;
     if (hasBoat && cell.boatable) return true;
     // Allow shallow water on foot (slow wade)
@@ -247,7 +250,7 @@ export class WorldHeightmap {
   /** Is this any water? */
   isWater(worldX: number, worldY: number): boolean {
     const cell = this.getCell(worldX, worldY);
-    if (!cell) return false;
+    if (!cell) return true; // outside zones = ocean
     return cell.terrain === TerrainLayer.SHALLOW_WATER || cell.terrain === TerrainLayer.DEEP_WATER;
   }
 
@@ -260,7 +263,7 @@ export class WorldHeightmap {
   /** Get terrain layer at world position */
   getTerrainLayer(worldX: number, worldY: number): TerrainLayer {
     const cell = this.getCell(worldX, worldY);
-    return cell?.terrain ?? TerrainLayer.CLIFF; // outside world = impassable
+    return cell?.terrain ?? TerrainLayer.DEEP_WATER; // outside zones = ocean
   }
 
   /** Get water depth at world position */
@@ -272,7 +275,7 @@ export class WorldHeightmap {
   /** Movement speed multiplier based on terrain */
   getSpeedMultiplier(worldX: number, worldY: number, hasBoat: boolean): number {
     const cell = this.getCell(worldX, worldY);
-    if (!cell) return 0;
+    if (!cell) return hasBoat ? 2.0 : 0; // ocean: fast by boat, impassable on foot
     switch (cell.terrain) {
       case TerrainLayer.ROAD: return 1.2;       // roads are faster
       case TerrainLayer.BRIDGE: return 1.1;
@@ -290,7 +293,7 @@ export class WorldHeightmap {
   /** Check if a grid cell is walkable (for pathfinding) */
   isGridWalkable(tx: number, ty: number, hasBoat: boolean): boolean {
     const cell = this.cells.get(`${tx},${ty}`);
-    if (!cell) return false;
+    if (!cell) return hasBoat; // ocean = boats only
     if (cell.walkable) return true;
     if (hasBoat && cell.boatable) return true;
     if (cell.terrain === TerrainLayer.SHALLOW_WATER) return true;
@@ -300,7 +303,7 @@ export class WorldHeightmap {
   /** Get movement cost for a grid cell (for A* pathfinding) */
   getGridCost(tx: number, ty: number, hasBoat: boolean): number {
     const cell = this.cells.get(`${tx},${ty}`);
-    if (!cell) return Infinity;
+    if (!cell) return hasBoat ? 0.5 : Infinity; // ocean = cheap by boat, impassable on foot
     switch (cell.terrain) {
       case TerrainLayer.ROAD: return 0.8;
       case TerrainLayer.BRIDGE: return 0.9;

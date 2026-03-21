@@ -75,10 +75,10 @@ export function renderMinimap(
   const inView = (wx: number, wy: number) =>
     wx >= viewX && wx <= viewX + viewSize && wy >= viewY && wy <= viewY + viewSize;
 
-  // Background
+  // Background — ocean blue instead of black
   ctx.save();
 
-  ctx.fillStyle = 'rgba(10,10,20,0.85)';
+  ctx.fillStyle = 'rgba(12,30,60,0.9)';
   ctx.strokeStyle = '#c5a059';
   ctx.lineWidth = 2;
   ctx.fillRect(mx, my, size, size);
@@ -230,10 +230,10 @@ export function renderMinimap(
     ctx.textAlign = 'center';
     ctx.fillText(currentZone.name, mx + size / 2, my - 4);
   } else {
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = '#4488aa';
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Wilderness', mx + size / 2, my - 4);
+    ctx.fillText('Ocean', mx + size / 2, my - 4);
   }
 }
 

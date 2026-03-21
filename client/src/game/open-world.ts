@@ -542,10 +542,26 @@ function isWalkableOW(x: number, y: number): boolean {
   return true;
 }
 
+/** Check if a world position is near any zone edge (for shoreline foam) */
+function isNearAnyZone(wx: number, wy: number, dist: number): boolean {
+  for (const zone of ISLAND_ZONES) {
+    const b = zone.bounds;
+    // Check if we're outside the zone but within `dist` pixels of its edge
+    if (wx >= b.x - dist && wx <= b.x + b.w + dist &&
+        wy >= b.y - dist && wy <= b.y + b.h + dist) {
+      // But NOT inside the zone itself
+      if (wx < b.x || wx > b.x + b.w || wy < b.y || wy > b.y + b.h) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Get terrain type for a tile based on which zone it falls in
 function getTerrainForPosition(wx: number, wy: number): DungeonTileVoxelType {
   const zone = getZoneAtPosition(wx, wy);
-  if (!zone) return 'wall'; // outside any zone = impassable terrain
+  if (!zone) return 'floor'; // outside zones = ocean (walkable by boat)
   return ZONE_TERRAIN[zone.terrainType] || 'floor';
 }
 
@@ -3103,16 +3119,50 @@ export class OpenWorldRenderer {
 
         const x = tx * TILE_SIZE;
         const y = ty * TILE_SIZE;
+        const seed = (tx * 17 + ty * 31) % 100;
 
         if (!zone) {
-          // Wilderness / impassable
-          ctx.fillStyle = `rgba(20,20,20,${brightness})`;
+          // Ocean water — animated deep sea (NO black void)
+          const now = Date.now();
+          const wavePhase = Math.sin(now * 0.001 + tx * 0.7 + ty * 0.5);
+          const wavePhase2 = Math.cos(now * 0.0008 + tx * 0.3 - ty * 0.6);
+          const depthR = 12 + wavePhase * 4;
+          const depthG = 35 + wavePhase2 * 8;
+          const depthB = 70 + wavePhase * 10 + wavePhase2 * 5;
+          ctx.globalAlpha = Math.max(0.4, brightness);
+          ctx.fillStyle = `rgb(${Math.floor(depthR)},${Math.floor(depthG)},${Math.floor(depthB)})`;
           ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+          // Wave crest highlights (moving white lines)
+          const waveCrest = Math.sin(now * 0.002 + tx * 2.1 + ty * 1.3);
+          if (waveCrest > 0.6) {
+            ctx.fillStyle = `rgba(80,140,200,${(waveCrest - 0.6) * 0.3})`;
+            ctx.fillRect(x + 2, y + (seed % 8) * 4, TILE_SIZE - 4, 2);
+          }
+          // Deep wave trough shadows
+          const waveTrough = Math.sin(now * 0.0015 + tx * 1.5 - ty * 0.8);
+          if (waveTrough < -0.5) {
+            ctx.fillStyle = `rgba(5,15,40,${(-waveTrough - 0.5) * 0.15})`;
+            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+          }
+          // Foam near zone edges (shoreline effect)
+          const nearZone = isNearAnyZone(wx, wy, 120);
+          if (nearZone) {
+            const foamIntensity = Math.sin(now * 0.003 + tx * 1.5 + ty * 1.2) * 0.5 + 0.5;
+            ctx.fillStyle = `rgba(180,220,240,${foamIntensity * 0.3 * brightness})`;
+            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+            // Foam dots
+            if (seed > 70) {
+              ctx.fillStyle = `rgba(220,240,255,${foamIntensity * 0.4})`;
+              ctx.beginPath();
+              ctx.arc(x + (seed % 30) + 5, y + ((seed * 3) % 30) + 5, 1.5 + foamIntensity, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          ctx.globalAlpha = 1;
           continue;
         }
 
         const colors = ZONE_FLOOR_COLORS[zone.terrainType] || ZONE_FLOOR_COLORS.grass;
-        const seed = (tx * 17 + ty * 31) % 100;
         const baseColor = seed > 60 ? colors.accent : colors.base;
 
         ctx.globalAlpha = Math.max(0.3, brightness);
