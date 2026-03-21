@@ -696,9 +696,14 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
   generateNPCs(state);
   generateResourceNodes(state);
 
-  // Spawn AI faction heroes
-  const { createAllAIHeroes } = require('./ai-hero-brain');
-  (state as any).aiHeroes = createAllAIHeroes();
+  // Spawn AI faction heroes (dynamic import — avoids require() in Vite ESM bundle)
+  (state as any).aiHeroes = [];
+  import('./ai-hero-brain').then(mod => {
+    (state as any)._aiHeroBrainModule = mod;
+    (state as any).aiHeroes = mod.createAllAIHeroes();
+  }).catch(() => {
+    (state as any).aiHeroes = [];
+  });
 
   // Initial zone discovery
   const enterEvents = onZoneDiscovered(state.playerProgress, startZone.id, startZone.name);
@@ -1458,8 +1463,8 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   state.voxelProjectiles = state.voxelProjectiles.filter(vp => !vp.dead);
 
   // ── AI Faction Heroes ──
-  if (state.aiHeroes && state.aiHeroes.length > 0) {
-    const { tickAIHero } = require('./ai-hero-brain');
+  if (state.aiHeroes && state.aiHeroes.length > 0 && (state as any)._aiHeroBrainModule) {
+    const { tickAIHero } = (state as any)._aiHeroBrainModule;
     const aiCtx = {
       heightmap: state.heightmap,
       gameTime: state.gameTime,

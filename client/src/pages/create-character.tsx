@@ -65,37 +65,40 @@ const CLASS_BASE_STATS: Record<string, { hp: number; atk: number; def: number; s
   Worg:    { hp: 210, atk: 23, def: 14, spd: 65, rng: 1.5, mp: 95 },
 };
 
-// Class → allowed weapon categories (from game design rules)
-const CLASS_ALLOWED_WEAPONS: Record<string, { type: string; label: string; emoji: string }[]> = {
+// ObjectStore CDN icon base for weapon types
+const OS_ICON = 'https://molochdagod.github.io/ObjectStore/icons/weapons';
+
+// Class → allowed weapon categories with ObjectStore icon paths
+const CLASS_ALLOWED_WEAPONS: Record<string, { type: string; label: string; icon: string }[]> = {
   Warrior: [
-    { type: 'swords', label: 'Sword & Shield', emoji: '⚔️' },
-    { type: 'greatsword', label: 'Greatsword', emoji: '🗡️' },
-    { type: 'greataxes', label: 'Great Axe', emoji: '🪓' },
-    { type: 'hammers', label: 'War Hammer', emoji: '🔨' },
-    { type: 'axes1h', label: 'Axe & Shield', emoji: '🛡️' },
-    { type: 'spear', label: 'Spear', emoji: '🔱' },
+    { type: 'swords', label: 'Sword & Shield', icon: `${OS_ICON}/swords.png` },
+    { type: 'greatsword', label: 'Greatsword', icon: `${OS_ICON}/greatswords.png` },
+    { type: 'greataxes', label: 'Great Axe', icon: `${OS_ICON}/greataxes.png` },
+    { type: 'hammers', label: 'War Hammer', icon: `${OS_ICON}/hammers.png` },
+    { type: 'axes1h', label: 'Axe & Shield', icon: `${OS_ICON}/axes1h.png` },
+    { type: 'spear', label: 'Spear', icon: `${OS_ICON}/spears.png` },
   ],
   Mage: [
-    { type: 'arcaneStaves', label: 'Arcane Staff', emoji: '🔮' },
-    { type: 'fireStaves', label: 'Fire Staff', emoji: '🔥' },
-    { type: 'frostStaves', label: 'Frost Staff', emoji: '❄️' },
-    { type: 'lightningStaves', label: 'Lightning Staff', emoji: '⚡' },
-    { type: 'natureStaves', label: 'Nature Staff', emoji: '🌿' },
-    { type: 'holyStaves', label: 'Holy Staff', emoji: '✨' },
+    { type: 'arcaneStaves', label: 'Arcane Staff', icon: `${OS_ICON}/arcaneStaves.png` },
+    { type: 'fireStaves', label: 'Fire Staff', icon: `${OS_ICON}/fireStaves.png` },
+    { type: 'frostStaves', label: 'Frost Staff', icon: `${OS_ICON}/frostStaves.png` },
+    { type: 'lightningStaves', label: 'Lightning Staff', icon: `${OS_ICON}/lightningStaves.png` },
+    { type: 'natureStaves', label: 'Nature Staff', icon: `${OS_ICON}/natureStaves.png` },
+    { type: 'holyStaves', label: 'Holy Staff', icon: `${OS_ICON}/holyStaves.png` },
   ],
   Ranger: [
-    { type: 'bow', label: 'Longbow', emoji: '🏹' },
-    { type: 'crossbows', label: 'Crossbow', emoji: '🎯' },
-    { type: 'guns', label: 'Firearm', emoji: '🔫' },
-    { type: 'daggers', label: 'Daggers', emoji: '🗡️' },
-    { type: 'spear', label: 'Spear', emoji: '🔱' },
+    { type: 'bow', label: 'Longbow', icon: `${OS_ICON}/bows.png` },
+    { type: 'crossbows', label: 'Crossbow', icon: `${OS_ICON}/crossbows.png` },
+    { type: 'guns', label: 'Firearm', icon: `${OS_ICON}/guns.png` },
+    { type: 'daggers', label: 'Daggers', icon: `${OS_ICON}/daggers.png` },
+    { type: 'spear', label: 'Spear', icon: `${OS_ICON}/spears.png` },
   ],
   Worg: [
-    { type: 'daggers', label: 'Claws / Daggers', emoji: '🐾' },
-    { type: 'scythes', label: 'Scythe', emoji: '⚰️' },
-    { type: 'axes1h', label: 'Hatchets', emoji: '🪓' },
-    { type: 'spear', label: 'Spear', emoji: '🔱' },
-    { type: 'hammers', label: 'Mace', emoji: '🔨' },
+    { type: 'daggers', label: 'Claws / Daggers', icon: `${OS_ICON}/daggers.png` },
+    { type: 'scythes', label: 'Scythe', icon: `${OS_ICON}/scythes.png` },
+    { type: 'axes1h', label: 'Hatchets', icon: `${OS_ICON}/axes1h.png` },
+    { type: 'spear', label: 'Spear', icon: `${OS_ICON}/spears.png` },
+    { type: 'hammers', label: 'Mace', icon: `${OS_ICON}/hammers.png` },
   ],
 };
 
@@ -360,7 +363,7 @@ export default function CreateCharacter() {
                     border: `2px solid ${weapon === w.type ? CLASS_COLORS[heroClass] : 'rgba(255,255,255,0.08)'}`,
                     boxShadow: weapon === w.type ? `0 0 20px ${CLASS_COLORS[heroClass]}30` : 'none',
                   }}>
-                    <div style={{ fontSize: 28, marginBottom: 4 }}>{w.emoji}</div>
+                    <img src={w.icon} alt={w.label} crossOrigin="anonymous" style={{ width: 36, height: 36, objectFit: 'contain', imageRendering: 'pixelated', margin: '0 auto 4px', display: 'block', filter: weapon === w.type ? `drop-shadow(0 0 4px ${CLASS_COLORS[heroClass]})` : 'none' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <div style={{ fontSize: 14, fontWeight: 700, color: weapon === w.type ? CLASS_COLORS[heroClass] : '#ddd' }}>{w.label}</div>
                     {isDefault && <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', marginTop: 4, display: 'inline-block' }}>RACIAL DEFAULT</span>}
                   </div>
