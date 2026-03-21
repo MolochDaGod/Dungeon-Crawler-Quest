@@ -176,9 +176,107 @@
   border: 2px solid #3a2a1a; border-radius: 6px;
   background: linear-gradient(135deg, #221710, #1a0f08);
   cursor: pointer; transition: .15s;
+  position: relative;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
 }
-.invCell:hover { border-color: #d4a400; box-shadow: 0 0 8px rgba(212,164,0,.25); }
+.invCell:hover { border-color: #d4a400; box-shadow: 0 0 8px rgba(212,164,0,.25); cursor: grab; }
 .invCellFilled { border-color: #5a4020; }
+.invCellDragging { opacity: 0.4; border-color: #d4a400 !important; box-shadow: 0 0 12px rgba(212,164,0,.5); }
+
+/* Inventory icon image */
+.invIcon {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border-radius: 4px;
+  display: block;
+}
+.invSlotEmoji {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%; height: 100%;
+  line-height: 1;
+}
+.invTierBadge {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 7px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  text-shadow: 0 0 4px #000, 0 0 2px #000;
+  pointer-events: none;
+}
+
+/* ═══ EQUIPMENT SLOT DRAG OVER ═══ */
+.eqSlotOver {
+  border-color: #d4a400 !important;
+  background: rgba(212,164,0,.15) !important;
+  box-shadow: 0 0 10px rgba(212,164,0,.3);
+}
+
+/* ═══ ITEM TOOLTIP ═══ */
+.itemTooltip {
+  min-width: 200px;
+  max-width: 280px;
+  background: linear-gradient(170deg, #1a120c, #110c07);
+  border: 1px solid #c9950a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.9), 0 0 16px rgba(201,149,10,.2);
+  font-family: 'Crimson Text', Georgia, serif;
+  color: #f5e2c1;
+}
+.ttTitle {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.ttMeta {
+  font-size: 10px;
+  color: #9b7d52;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding-bottom: 5px;
+}
+.ttStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+.ttStat {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.ttPassive {
+  font-size: 10px;
+  color: #a855f7;
+  margin-top: 4px;
+}
+.ttLore {
+  font-size: 9px;
+  color: #7a6040;
+  font-style: italic;
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255,255,255,.04);
+}
+.ttHint {
+  font-size: 9px;
+  color: #4a3a2a;
+  margin-top: 6px;
+  text-align: right;
+}
 .trashZone {
   padding: 8px 12px; border-top: 1px solid #3a2a1a;
   display: flex; align-items: center; gap: 8px;

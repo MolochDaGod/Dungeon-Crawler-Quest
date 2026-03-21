@@ -1,0 +1,917 @@
+{
+  "public/assets/models/bears/werebear_0.png": {
+    "filename": "werebear_0.png",
+    "hash": "398810238f9c69428ee8aa6084487fcd601481d093edbd6d840c6251cc7a3b2f",
+    "category": "sprite-bear"
+  },
+  "public/assets/models/bears/werebear_brown_armor.png": {
+    "filename": "werebear_brown_armor.png",
+    "hash": "1d344bfb538af96e6484a12dbcedd3eae737717d4b94ea1fbe4602d7c25954da",
+    "category": "sprite-bear"
+  },
+  "public/assets/models/bears/werebear_brown_bare.png": {
+    "filename": "werebear_brown_bare.png",
+    "hash": "d2649417cdd7633d7a2bfe2929bcf58de32937d44bcb620f023c5968eba1f3ac",
+    "category": "sprite-bear"
+  },
+  "public/assets/models/bears/werebear_brown_shirt.png": {
+    "filename": "werebear_brown_shirt.png",
+    "hash": "072f96db2843053fc9af9978c6098eba32b840d3b842cf9df15a27a721a02ad3",
+    "category": "sprite-bear"
+  },
+  "public/assets/models/bears/werebear_white.png": {
+    "filename": "werebear_white.png",
+    "hash": "35fe3db491c1c806b0c6b7b1de8c15fd9be5f07a60ee14d3806a5564295df64e",
+    "category": "sprite-bear"
+  },
+  "public/assets/models/bears/werebear_white_armor.png": {
+    "filename": "werebear_white_armor.png",
+    "hash": "a9e4c0e595578c384e63530ed0c1e1892f7613440e36e565b952c9b20d3d8110",
+    "category": "sprite-bear"
+  },
+  "public/assets/models/bears/werebear_white_armor_rusty.png": {
+    "filename": "werebear_white_armor_rusty.png",
+    "hash": "c40130a18ee0c54c18b70a2a395e3a79568ed935c21cfe70dc723144a4ea0d88",
+    "category": "sprite-bear"
+  },
+  "public/assets/models/bears/werebear_white_bare.png": {
+    "filename": "werebear_white_bare.png",
+    "hash": "2a3f3a82638a4821ce270b7551a6d4d1fc1c196ea7a7c96d42e1d1cc85f3ce4c",
+    "category": "sprite-bear"
+  },
+  "public/assets/models/bears/werebear_white_shirt.png": {
+    "filename": "werebear_white_shirt.png",
+    "hash": "64fb78c35d2f79117acc23ab1047658f06cd305e030b2ba70df4502c4c39aab9",
+    "category": "sprite-bear"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-0-Building-1.png": {
+    "filename": "Iso-0-Building-1.png",
+    "hash": "488ba328684c38b2c61ea95e5ae4396731a29a607300d6b886df47a1472bf7ba",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-1-Boat.png": {
+    "filename": "Iso-1-Boat.png",
+    "hash": "2dd45bd389e48af4ea03af391da037a6191d98f4ad8bca65dcdbf4141da30a0a",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-10-PalmTree.png": {
+    "filename": "Iso-10-PalmTree.png",
+    "hash": "5fb454003f430908e722ce8450de353b3995dd7575637762733f954ee521ede2",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-2-Paddle.png": {
+    "filename": "Iso-2-Paddle.png",
+    "hash": "5bf105ab534fa4b22f1a57ce8373e8a92a22bbd309bf9ccfc63b5d319c74d1e7",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-3-Rowboat.png": {
+    "filename": "Iso-3-Rowboat.png",
+    "hash": "f600ee9b6d9b4b832742a6bb8fd8fac9621c2bb11b6d8dbe5cb5d45419eaa821",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-4-Sand-1.png": {
+    "filename": "Iso-4-Sand-1.png",
+    "hash": "032ffb88822824942da43e67709644aeb3f5a3d645147e20578ae83f73d80d9e",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-5-Sand-2.png": {
+    "filename": "Iso-5-Sand-2.png",
+    "hash": "3b934e382ea936399837575812cc325b1da8d7f0fecf46f4066e5a3c8fa8c9ac",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-6-Rock-4.png": {
+    "filename": "Iso-6-Rock-4.png",
+    "hash": "a9b2dc1f8cc2dec88059899f8e1bff405e167602a6b15f936f48d9153ea67f4c",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-7-Chest.png": {
+    "filename": "Iso-7-Chest.png",
+    "hash": "6ed807c83beb350f4f93589031600684adcce193e5ca4f5b01961ca2c67d4e22",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-8-Lantern-1.png": {
+    "filename": "Iso-8-Lantern-1.png",
+    "hash": "de1b5a79191ab01feb097ca1a164a0bf51c2cca4e64508fcf3d8478fb975fa54",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/island/Free Sample/Iso-9-Bridge-2.png": {
+    "filename": "Iso-9-Bridge-2.png",
+    "hash": "1cce52096d0b0ef5fddfe0084b26cbbc0205f3e4550d0951407971d743504752",
+    "category": "sprite-environment-island"
+  },
+  "attached_assets/staging/enemyassets/FreeSample/SoulGothic_-1-LightPole-1.png": {
+    "filename": "SoulGothic_-1-LightPole-1.png",
+    "hash": "3109e6961c1356d92fae995c649289dfbee6b62bad30d40d954f60d7cf5e70d3",
+    "category": "sprite-environment-gothic"
+  },
+  "attached_assets/staging/enemyassets/FreeSample/SoulGothic_-13-Tower-3.png": {
+    "filename": "SoulGothic_-13-Tower-3.png",
+    "hash": "4a5762dea15f687c3f4c3d610a05cbb83e7c930d00f11e7377df02b62031410d",
+    "category": "sprite-environment-gothic"
+  },
+  "attached_assets/staging/enemyassets/FreeSample/SoulGothic_-15-Tower-4.png": {
+    "filename": "SoulGothic_-15-Tower-4.png",
+    "hash": "5767308b66df40c5f00732e1a087c3a16b68032e9ed823736e05de9a74591b40",
+    "category": "sprite-environment-gothic"
+  },
+  "attached_assets/staging/enemyassets/FreeSample/SoulGothic_-24-FenceModule-10.png": {
+    "filename": "SoulGothic_-24-FenceModule-10.png",
+    "hash": "4c30487b14eaa208cf320c86454d9d1be0fcb8269f187622aae63cdaf55e380a",
+    "category": "sprite-environment-gothic"
+  },
+  "attached_assets/staging/enemyassets/FreeSample/SoulGothic_-33-Tomb-4.png": {
+    "filename": "SoulGothic_-33-Tomb-4.png",
+    "hash": "052897d0739775540051f75fb8543bc394def92c77038e6e6ae091fa3a2bf802",
+    "category": "sprite-environment-gothic"
+  },
+  "attached_assets/staging/boat-island/FreeSample/Textures/T_Boat_diffuse.png": {
+    "filename": "T_Boat_diffuse.png",
+    "hash": "3684f33fbfc6dc6cdbe1451ceccdb39768a7c1854b5ae2d3f3092b17ca7fd694",
+    "category": "texture-island"
+  },
+  "attached_assets/staging/boat-island/FreeSample/Textures/T_Buildings_diffuse.png": {
+    "filename": "T_Buildings_diffuse.png",
+    "hash": "7afe8c42e362cb50ed6a8cac52a33f4bcba82bdf1b7c59353b3b5f6eb10db5b0",
+    "category": "texture-island"
+  },
+  "attached_assets/staging/boat-island/FreeSample/Textures/T_PropsA_diffuse.png": {
+    "filename": "T_PropsA_diffuse.png",
+    "hash": "65789b73f2caf499d045ac3122c6e6ab0a120c29700d8824d439a242f43bc581",
+    "category": "texture-island"
+  },
+  "attached_assets/staging/boat-island/FreeSample/Textures/T_PropsB_diffuse.png": {
+    "filename": "T_PropsB_diffuse.png",
+    "hash": "601b979da5571cf0141079cd63e8b24c6d3ad2a5f27a79634c77c2e075350636",
+    "category": "texture-island"
+  },
+  "attached_assets/staging/shop/FreeSample/Textures/Diffuse/BAKE_Blocks_DiffuseMap- 4K.png": {
+    "filename": "BAKE_Blocks_DiffuseMap- 4K.png",
+    "hash": "492584ed32a884c3fa3a146c3dc41850cbe32feabdf0f13d14dddee630d63d9e",
+    "category": "texture-dungeon"
+  },
+  "attached_assets/staging/shop/FreeSample/Textures/Diffuse/BAKE_Props_grp1_DiffuseMap- 4K.png": {
+    "filename": "BAKE_Props_grp1_DiffuseMap- 4K.png",
+    "hash": "7db2f08ab1049bc1d0d262fc16a8281c90cefe8c823ee69d5c3ac14dcd11760e",
+    "category": "texture-dungeon"
+  },
+  "attached_assets/staging/shop/FreeSample/Textures/Diffuse/BAKE_Props_grp2_DiffuseMap- 4K.png": {
+    "filename": "BAKE_Props_grp2_DiffuseMap- 4K.png",
+    "hash": "065d4380d4d0ab024d29cbefe84c218fae7b2a1fe286d65c553d3444293dce54",
+    "category": "texture-dungeon"
+  },
+  "attached_assets/staging/shop/FreeSample/Textures/Diffuse/BAKE_Walls_DiffuseMap- 4K.png": {
+    "filename": "BAKE_Walls_DiffuseMap- 4K.png",
+    "hash": "b1b425c7eca2764a8f49c6d816b7aab01ee0817cb747b77096266678c8ec7c31",
+    "category": "texture-dungeon"
+  },
+  "attached_assets\\staging\\ancient-artifacts\\Package\\AncientArtifacts-0.obj": {
+    "filename": "AncientArtifacts-0.obj",
+    "hash": "353ac35d41846b12583c2ecdfadf44d276a042b202fe749d914426d1e6964037",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-artifacts\\Package\\AncientArtifacts-1.obj": {
+    "filename": "AncientArtifacts-1.obj",
+    "hash": "99ebe75823f14bdee361f06948e1138e908932d4a1d95800e72186427613708c",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-artifacts\\Package\\AncientArtifacts.vox": {
+    "filename": "AncientArtifacts.vox",
+    "hash": "31e9fcbacb4cb69cd904d87ff09d6b9fe09e53ecdf12ca9b89fd86d486457c56",
+    "category": "voxel-source"
+  },
+  "attached_assets\\staging\\ancient-cosmic-portal\\Package\\AncientCosmicPortal-0-Portal_Stairs.obj": {
+    "filename": "AncientCosmicPortal-0-Portal_Stairs.obj",
+    "hash": "f33e2f784fb1f1e06d54cccd0fcecbb848a4c73438494bb203b891ce79e732da",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-cosmic-portal\\Package\\AncientCosmicPortal-1-Portal_Rings.obj": {
+    "filename": "AncientCosmicPortal-1-Portal_Rings.obj",
+    "hash": "2f23fc0e19d91011b8b255e5359aac0ba07efd32b33a0a90e263b1a637c3f899",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-cosmic-portal\\Package\\AncientCosmicPortal-2-Portal_Arch.obj": {
+    "filename": "AncientCosmicPortal-2-Portal_Arch.obj",
+    "hash": "3f358a4d02f992cdbcf3992c913d6b68da15dcd59f45dc7cf6dffa9e90d80144",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-cosmic-portal\\Package\\AncientCosmicPortal.vox": {
+    "filename": "AncientCosmicPortal.vox",
+    "hash": "45f8d05b9516789f66429b2fb8e9297b8b39f1d386943d9e30f1a5448639a59a",
+    "category": "voxel-source"
+  },
+  "attached_assets\\staging\\ancient-crash-site\\Package\\AncientCrashSite.obj": {
+    "filename": "AncientCrashSite.obj",
+    "hash": "298c97af7bfaf94b120276f318c5b52c711b0a19151240347ae859bc63e457b8",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-crash-site\\Package\\AncientCrashSite.vox": {
+    "filename": "AncientCrashSite.vox",
+    "hash": "fb86a0d9676aba5193e29c65b99148cec3143b719618fba52e2c3f0bbb6708bf",
+    "category": "voxel-source"
+  },
+  "attached_assets\\staging\\ancient-reliques\\Package\\AncientReliques-0-Alient_Statue.obj": {
+    "filename": "AncientReliques-0-Alient_Statue.obj",
+    "hash": "7c06aa51f93e7c52277f9f23f1b9f58846c382a13c1b798aa298a2dc7dfde490",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-reliques\\Package\\AncientReliques-1-GiantStatue_Hand.obj": {
+    "filename": "AncientReliques-1-GiantStatue_Hand.obj",
+    "hash": "8b38588318322e5f7efd5930d52ab8be3d809592125e060ae60804c767550274",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-reliques\\Package\\AncientReliques-2-GiantStatue_Hand.obj": {
+    "filename": "AncientReliques-2-GiantStatue_Hand.obj",
+    "hash": "13eb5262027b20d3a8c8f15ce2b67727b94e72c6ea6f547669a705f19e8808aa",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-reliques\\Package\\AncientReliques-3-Head_Totem.obj": {
+    "filename": "AncientReliques-3-Head_Totem.obj",
+    "hash": "f2a43031d5ba2f5efdd35ff562a0484685cffff40dd1f0f333a1c0213a8b346c",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-reliques\\Package\\AncientReliques-4-Collumn_Ruin.obj": {
+    "filename": "AncientReliques-4-Collumn_Ruin.obj",
+    "hash": "810f79b145ea3b4ae1c0315f015ffb9064d863c6e44f42be6ff1b5d8d76e555c",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-reliques\\Package\\AncientReliques-5-Collumn.obj": {
+    "filename": "AncientReliques-5-Collumn.obj",
+    "hash": "d96c91ec52842b8909b2546d19af4fec5216f5ad5cdd9454a2089bc1740dd2a0",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-reliques\\Package\\AncientReliques.vox": {
+    "filename": "AncientReliques.vox",
+    "hash": "a3c948c8fcf530b355eb5810b640acd53179e029a53a71bbfbf50642f3c17d12",
+    "category": "voxel-source"
+  },
+  "attached_assets\\staging\\ancient-rock-statues\\Package\\AncientRockStatues.obj": {
+    "filename": "AncientRockStatues.obj",
+    "hash": "2f57680c987838e782e4b161eace96cc74305c6a9ba069fb20908b1668c78177",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-rock-statues\\Package\\AncientRockStatues.vox": {
+    "filename": "AncientRockStatues.vox",
+    "hash": "816ff7206ac91de9b49482dab69fdc13efdd4864e0a8769f30f64da24dbe7f6d",
+    "category": "voxel-source"
+  },
+  "attached_assets\\staging\\ancient-temple\\Package\\AncientTemple.obj": {
+    "filename": "AncientTemple.obj",
+    "hash": "65622e97a875a627e36fe8cbbf694c43a8b1a69c789b6c937af91ae2e016dd3a",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-temple\\Package\\AncientTemple.vox": {
+    "filename": "AncientTemple.vox",
+    "hash": "734120b480c2cb5a75baead8754a2862a53538a242e7eae11bfd1bc71e700897",
+    "category": "voxel-source"
+  },
+  "attached_assets\\staging\\ancient-treasure\\Package\\AncientTreasure.obj": {
+    "filename": "AncientTreasure.obj",
+    "hash": "8264aa4f1c1ed2ab4d698ea261b36a98623b656859527c4465404d4bacda9405",
+    "category": "model-ancient"
+  },
+  "attached_assets\\staging\\ancient-treasure\\Package\\AncientTreasure.vox": {
+    "filename": "AncientTreasure.vox",
+    "hash": "7e16b9927a61aabbd2f35d5db2268c36e12c0ccf42fe64b6b7b3ac04b18a0b25",
+    "category": "voxel-source"
+  },
+  "public\\assets\\models\\characters\\Animated_Character_Base.glb": {
+    "filename": "Animated_Character_Base.glb",
+    "hash": "0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\Animated_Human.glb": {
+    "filename": "Animated_Human.glb",
+    "hash": "ce4d543e82e455d5a1253798c9759f12b9eec74929ddbca464447eeaa3a42c5d",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\Animated_Wizard.glb": {
+    "filename": "Animated_Wizard.glb",
+    "hash": "d55c33bfe920f99e0816180c0b655661800d6c96042de87507604ecf71bf7ef8",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\Animated_Woman.glb": {
+    "filename": "Animated_Woman.glb",
+    "hash": "a2212729826b718e59e698211ed3951c22459b48733b1ee6a24fac0abf74dca8",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\Animated_Zombie.glb": {
+    "filename": "Animated_Zombie.glb",
+    "hash": "02d990c2e442855a7a524a75b51982dc07aec3ee44a48243d61988e125e75a60",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\Anne.glb": {
+    "filename": "Anne.glb",
+    "hash": "cfee1b57f380ff4b51fc0b88c9d4750ea1748936eb8b7d5557291913077d1e30",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\BarbarianGlad.glb": {
+    "filename": "BarbarianGlad.glb",
+    "hash": "113e42f32dc42e6d3959443201e00b5fd0d8bae655255903dd21ec1bb73d7501",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\berserker.glb": {
+    "filename": "berserker.glb",
+    "hash": "0078279d71358f0e4768aeaf9e61a5c64b6ee25264ea2df0e58e71d825e3aa1c",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\Character_Toon_Animated.glb": {
+    "filename": "Character_Toon_Animated.glb",
+    "hash": "a24a3bc1160b9ee730f0d01d0a6d2c8c74e35fa9a5671843d9a4a61444a95119",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\CharcterNoMesh.glb": {
+    "filename": "CharcterNoMesh.glb",
+    "hash": "0c27fb147da460dbbecd2ef1f3f236e6db0838dab2668cfd3f32049204cc802d",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\crusaders_knight.glb": {
+    "filename": "crusaders_knight.glb",
+    "hash": "5d1c480738ac2d6cecc8d2b5eeac06e1f08cdb2b4601f2d8c164e412d710589c",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\dwarf_enforcer.glb": {
+    "filename": "dwarf_enforcer.glb",
+    "hash": "c45a7ba12715df7882778fb930c231a152761a9234f9119c11cb91702b6cb23b",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\ElfRanger.glb": {
+    "filename": "ElfRanger.glb",
+    "hash": "a4ec0f0156366a6122315719d6e745d2c5b15bf821c3e68c9e014724a5a2e915",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\elf_enforcer.glb": {
+    "filename": "elf_enforcer.glb",
+    "hash": "1dbaed6e303ce496c28f8e196264e4ba2a879e18c9b8bc79ebfc4acc660bf48f",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\fabledworker.glb": {
+    "filename": "fabledworker.glb",
+    "hash": "85a4e28fdfc946254f281b76d5287315b125dc4ba8e130c041ee227b7ef6b887",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\graatorc.glb": {
+    "filename": "graatorc.glb",
+    "hash": "a9cb0049c4ca11da576c292a9c10b78f71f9bca3373440b3a9980accca72ceb0",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\humandeathgiver.glb": {
+    "filename": "humandeathgiver.glb",
+    "hash": "5c08845d09f7ebff00f9702ad8cf1d1dba79b6dd4381a371bf286b901af1f3eb",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\orcpeon.glb": {
+    "filename": "orcpeon.glb",
+    "hash": "ab9ab9724681b499c1e053c0587f0e46cd3b6db0a538ce00ef93915f5e534e32",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\Pirate_Captain.glb": {
+    "filename": "Pirate_Captain.glb",
+    "hash": "688b0db0487dadaa6dbbf9e5613793aa9c1280902255212bd51bc46ff17f695d",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\siegeman.glb": {
+    "filename": "siegeman.glb",
+    "hash": "66d5e743c84e5f2445ae2ed0b4160637481a88636d4bb4739cea61fec27bcd7e",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\Skeleton.glb": {
+    "filename": "Skeleton.glb",
+    "hash": "80be43fa7bd961faef44fa82a8067048a48ba329d65fed663a184ee73a18aacb",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\skeletong_warrior.glb": {
+    "filename": "skeletong_warrior.glb",
+    "hash": "80be43fa7bd961faef44fa82a8067048a48ba329d65fed663a184ee73a18aacb",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\survivealtoon.glb": {
+    "filename": "survivealtoon.glb",
+    "hash": "68fd36b0452fdca34aa559168102c7b0138b5ea6eeb605b0a8d502768056bfce",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\characters\\undeadworker.glb": {
+    "filename": "undeadworker.glb",
+    "hash": "171929cf696820a994d9f6f367cc4abe899520721c6fe570138c3016ca4a1103",
+    "category": "model-character"
+  },
+  "public\\assets\\models\\creatures\\GoblinCr3w.glb": {
+    "filename": "GoblinCr3w.glb",
+    "hash": "4bab31f3a13ee1ac8cdc362dcf8a177918b98c3fbf3e9fe42e4a0b4c45c6fcaa",
+    "category": "model-creature"
+  },
+  "public\\assets\\models\\creatures\\Red_Dragon.glb": {
+    "filename": "Red_Dragon.glb",
+    "hash": "b8092c588ba33a274b30fc4f457d5d15b13a79ad679c8ade7baa04749cbe703d",
+    "category": "model-creature"
+  },
+  "public\\assets\\models\\creatures\\Sea_Monster_Scene.glb": {
+    "filename": "Sea_Monster_Scene.glb",
+    "hash": "72522fc4496f81f3d4e17b5a200d1d57ec72ae2c6248400dbd5d0a327b5cff35",
+    "category": "model-creature"
+  },
+  "public\\assets\\models\\creatures\\Shark.glb": {
+    "filename": "Shark.glb",
+    "hash": "385b9eba21f56832c36f3088dcc4440145ecc7225371e7d08539561e27f5d7d5",
+    "category": "model-creature"
+  },
+  "public\\assets\\models\\creatures\\skullgoon.glb": {
+    "filename": "skullgoon.glb",
+    "hash": "285dd50d74c131cb08d234d483a876421ce7bd77215594d1aa43839feed4ed84",
+    "category": "model-creature"
+  },
+  "public\\assets\\models\\creatures\\Tentacle.glb": {
+    "filename": "Tentacle.glb",
+    "hash": "dc0682c4c2b06637dca579671e1f15749d86d16c8a99dd5caac29e7ea8f10617",
+    "category": "model-creature"
+  },
+  "public\\assets\\models\\creatures\\Velociraptor.glb": {
+    "filename": "Velociraptor.glb",
+    "hash": "1d9ecad0a65c0c858a216ff25f224d02b18ce86fa0ed4df8f9ecece43f3a745c",
+    "category": "model-creature"
+  },
+  "public\\assets\\models\\creatures\\Wolf.glb": {
+    "filename": "Wolf.glb",
+    "hash": "16ac96339d06f7def9af20d5d9b27622d61e53580dab43970c9edb1bffbe8f84",
+    "category": "model-creature"
+  },
+  "public\\assets\\models\\environment\\Banner.glb": {
+    "filename": "Banner.glb",
+    "hash": "7e29fd7a4142ad3f174e7fd3ef91f7903ae6434e36e8a6d8865ddb9eb212f570",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Bridge.glb": {
+    "filename": "Bridge.glb",
+    "hash": "fcbb062b9594ef136c4fea91ccfd3c69664d762fcc4bacda19df42b12692c432",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Campfire.glb": {
+    "filename": "Campfire.glb",
+    "hash": "78440616172fc4d211bfd003ef0d571b3bdd509caccb01d27ddb18b854d7a6b7",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Camp_Fire.glb": {
+    "filename": "Camp_Fire.glb",
+    "hash": "e41bfa7e6ffa9cbd5f7644f49cd255d5f459c210ba14ba7c215a72b4f3d64188",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Castle.glb": {
+    "filename": "Castle.glb",
+    "hash": "461abb4eaf5a41da81b0133495d62e724c25b42ad418993929de8a1e473a690f",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\CaveScene.glb": {
+    "filename": "CaveScene.glb",
+    "hash": "50f75320ecab9249a031988abdb45abcd0f42412bd4abf86856b27cf9baf0b17",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Chest.glb": {
+    "filename": "Chest.glb",
+    "hash": "07193221a749d5dcf2b0a3d82d4ee9831da2e2c4ca71b395050a88bb2babe75b",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Dragon.glb": {
+    "filename": "Dragon.glb",
+    "hash": "983f28d4864199f45e1ca67005466d35f2381f08ecf2e234735bf65ecd7be252",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Flag.glb": {
+    "filename": "Flag.glb",
+    "hash": "ac75a6cb5328baf68fb1cad86204191f9717e20cfcccc600b3f10c4a1d260cbd",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Fortress.glb": {
+    "filename": "Fortress.glb",
+    "hash": "eb94eb5cdb09d4f1e5a8fc1c8ce3071689ab7ec68d04b4cb597d690ba7dab703",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Gravestone.glb": {
+    "filename": "Gravestone.glb",
+    "hash": "5a16d90062beaa28f16e6cdaf940f0b3e370901f0a3672fd633270062077977d",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\MarketStalls.glb": {
+    "filename": "MarketStalls.glb",
+    "hash": "c9b8d3836761846191a24f76fa58ace42e9b3d18e7c76fe5f9feb3c8d725889c",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Mountain.glb": {
+    "filename": "Mountain.glb",
+    "hash": "b529e1446c114319fe3f49fb79389b3a22a22fd331bea74de70dd6d725ad52de",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\PortalDoor.glb": {
+    "filename": "PortalDoor.glb",
+    "hash": "e5d4a8f6915e774bc4bdc0437ea2c71db01d572172b4a7a03831bfe66f338ca2",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Rock.glb": {
+    "filename": "Rock.glb",
+    "hash": "69de800a8bf7799ee79ccc0bfda054e11f22a0ae1c8df4fe7cbdd4e9d90dd95d",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Shrine.glb": {
+    "filename": "Shrine.glb",
+    "hash": "7a27c35473929b13b0d59606b7147ea499bc0e280768705c40cf8c65662e3e50",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\SlimeEnemy.glb": {
+    "filename": "SlimeEnemy.glb",
+    "hash": "1432712fb6a0734adbed0a13fea9d1f793908e6757dd0e4fd97f20aeb9021d6a",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Statue.glb": {
+    "filename": "Statue.glb",
+    "hash": "7584ac4aba0f2521a01d2ee8f3c4dd830edcb90bf30015c50d9918bdc9dff3bd",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Stone.glb": {
+    "filename": "Stone.glb",
+    "hash": "c64ef059e834ace5b936815389d835bb0ae61f55a4703c04f3c1b73d0398d5de",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Tent.glb": {
+    "filename": "Tent.glb",
+    "hash": "2f3519156ebbd28ab47a3d8600cecfcbbea63cc25eba044effa154b280d87d48",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Throne.glb": {
+    "filename": "Throne.glb",
+    "hash": "050fe983f700a1e18734e4feb8f9aa0c033b0feb9ba44b1fc6bebe8399c73044",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Torch.glb": {
+    "filename": "Torch.glb",
+    "hash": "f6a8c78b5a79175df86e25fc9ba3b470101dc78529c05fe64d977c90b65610af",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\TreasureChest.glb": {
+    "filename": "TreasureChest.glb",
+    "hash": "26f5cd9ed3d83d93d898c859eacd5a043780b54066a115ba77cb835b98c9afe9",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Tree.glb": {
+    "filename": "Tree.glb",
+    "hash": "13a45f89430f2a171f25bf42516819bda1298d787da78d816abd2767c7d03c4e",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Tree_Lava.glb": {
+    "filename": "Tree_Lava.glb",
+    "hash": "120b936070b3aadded3c9191d960b3a9470dae275a617eb9b97c55a5dde510ab",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\VillageMarket.glb": {
+    "filename": "VillageMarket.glb",
+    "hash": "a9ded34097efad3bb34f097f885805e96dd4c0d7f0f7a516cfe539d0b0139b3f",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\environment\\Well.glb": {
+    "filename": "Well.glb",
+    "hash": "8e5158984421cfd8ec5040a318a2627911a6dcd7e4b43172bdd7d36f367ad3db",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\props\\Port.glb": {
+    "filename": "Port.glb",
+    "hash": "e60aed8072719ac20a2b0d9578cb0da22ec0d4b362fc81c97eed21b8739ec296",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\props\\Sail_Boat.glb": {
+    "filename": "Sail_Boat.glb",
+    "hash": "dd0d959f66c058e2afcfc01227f80b83347b5105d324690596a0c0eb6e65fb95",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\props\\Sail_Ship.glb": {
+    "filename": "Sail_Ship.glb",
+    "hash": "797c86a5d558e543a623b7e963982f2c447941d79eeff19ee5ac77a4f02dc8ea",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\props\\Shipping_Port.glb": {
+    "filename": "Shipping_Port.glb",
+    "hash": "47ec6781831808cf6593048514064832711ed71e25d1af316e1ae5c010720b8e",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\props\\Ship_(1).glb": {
+    "filename": "Ship_(1).glb",
+    "hash": "b3cfa69180926216867e1060f442c6de8db405d60edd777ad658e1a162f5ae67",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\props\\Ship_Wreck.glb": {
+    "filename": "Ship_Wreck.glb",
+    "hash": "b1a16e1873498c58d6d4fd26532cc06dfea9d58721ef038dc36dae63ae93a25f",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\props\\weaponschest.glb": {
+    "filename": "weaponschest.glb",
+    "hash": "5e237c89f4d57182bd730674f0de6f3fd49089f8f25e0179fc1208a86097c70b",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\structures\\Arch.glb": {
+    "filename": "Arch.glb",
+    "hash": "0880e4d333e1958274052a67f11844548729f9b969f3d255d6f72a763921463a",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\structures\\Cabin_Shed.glb": {
+    "filename": "Cabin_Shed.glb",
+    "hash": "c1ff1683101d3b532fa031b239e02d03d3fb24916e9a4515b7ebe2d9137ba280",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\structures\\Coliseum.glb": {
+    "filename": "Coliseum.glb",
+    "hash": "73e01dc0c76c25d77716953e6454c5bd2a0b8aa7de0806bdf9d99e0557b4efe0",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\structures\\Crypt.glb": {
+    "filename": "Crypt.glb",
+    "hash": "725d2c3dc8a89741769312c4ba3a4b3200c6f81e3ed668105252f8c3584ce34c",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\structures\\Fantasy_Barracks.glb": {
+    "filename": "Fantasy_Barracks.glb",
+    "hash": "cfa287a38da4c661457c2bb16cb2af3d65158361d7d9490f7c743eaf86e24d58",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\structures\\Forge.glb": {
+    "filename": "Forge.glb",
+    "hash": "a23ca6ed663d203f69640c81c9dc469cc580ca40f2696dcd3dc50dd976aab83e",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\structures\\Hellhouse.glb": {
+    "filename": "Hellhouse.glb",
+    "hash": "9b800cfbd3f82948d3c796f733125310a2635a21fc6724df8618f0e010b180f4",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\structures\\Necropolis_Walls.glb": {
+    "filename": "Necropolis_Walls.glb",
+    "hash": "bff4793f1fd02885f0bf706259ae93d5d246742a146df5155c4da7c6eee2cc17",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\structures\\Storage_House.glb": {
+    "filename": "Storage_House.glb",
+    "hash": "2f817a1bd2281eb0eeca731655c35fe4f524ac06c2221a701af9f7025165e3f2",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\structures\\Tree_House.glb": {
+    "filename": "Tree_House.glb",
+    "hash": "f0f54ba23d2ba2fa07389ff8793127e4775b06e14cc42d44935d0e7ae56c5de1",
+    "category": "model-environment"
+  },
+  "public\\assets\\models\\turrets\\Cannon.glb": {
+    "filename": "Cannon.glb",
+    "hash": "42fc3ab826391f16a2f5868abe018a7c5342c77464df3af74c88bdc40803091a",
+    "category": "model-tower"
+  },
+  "public\\assets\\models\\turrets\\Castle_Tower.glb": {
+    "filename": "Castle_Tower.glb",
+    "hash": "c2387bdaa86da1dcf21af4fab140c4f9537e50825ec610e08b6a7dd7fe95fdfe",
+    "category": "model-tower"
+  },
+  "public\\assets\\models\\turrets\\Flamethrower_Turret.glb": {
+    "filename": "Flamethrower_Turret.glb",
+    "hash": "68251ecc1b6e3c8f6153f1eff723546b304cea0abc2894685ce8d127df6933f7",
+    "category": "model-tower"
+  },
+  "public\\assets\\models\\turrets\\Gun_Cannon_Turret.glb": {
+    "filename": "Gun_Cannon_Turret.glb",
+    "hash": "af4bccfea466c9c2c426bfcf41cbad953af20c2a7af840ae318e2f468a9b1c82",
+    "category": "model-tower"
+  },
+  "public\\assets\\models\\turrets\\Mortar_Tower.glb": {
+    "filename": "Mortar_Tower.glb",
+    "hash": "f98e8ae87bf45014055dc7deaea2b75122363e9a9a7a2f293607b3baf5f4cebe",
+    "category": "model-tower"
+  },
+  "public\\assets\\models\\turrets\\Rail_Gun_Turret.glb": {
+    "filename": "Rail_Gun_Turret.glb",
+    "hash": "b31f595ff18e5bd4300bf3e2f3cc44b806a89ece0171196efb5360e331a8d51c",
+    "category": "model-tower"
+  },
+  "public\\assets\\models\\turrets\\Tower3.glb": {
+    "filename": "Tower3.glb",
+    "hash": "fb6985609c3ef0ac47b77306d90065e75f31e2f0a985ea475c1aca7f28b8a37d",
+    "category": "model-tower"
+  },
+  "public\\assets\\models\\weapons\\Armor.glb": {
+    "filename": "Armor.glb",
+    "hash": "14653b35dbe63a81fb6627defa00e9098e46207a271f8a7082de7321aa628aa8",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Arrow.glb": {
+    "filename": "Arrow.glb",
+    "hash": "453c36581550123b5db04e3541612b3de8a42f2b4ca21b4a4c9a025fe2995d4c",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Axe.glb": {
+    "filename": "Axe.glb",
+    "hash": "0dd80ed77a80d71bf3210410f1bfd7f1d0f1ac14feb4974cc4b4e540cbea57bb",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Boots.glb": {
+    "filename": "Boots.glb",
+    "hash": "4fa4372d9af01c2cd0e67462c9afdd3eba86feccdb8fe3fef3f71fb51b7cca94",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Bow.glb": {
+    "filename": "Bow.glb",
+    "hash": "5588062032b5fff32a466a07f1c0b7cf2553e2c3babb5d37e01320db1b7d3018",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Dagger.glb": {
+    "filename": "Dagger.glb",
+    "hash": "59cdd0eeec26f70a43ed754b26dce9dae51fe3d1eee846d36fec92b951dd982c",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Helmet.glb": {
+    "filename": "Helmet.glb",
+    "hash": "afa91de0a1753dabc2e9953e0dade78571202f0744a070cc9f4c241e68b59286",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Mace.glb": {
+    "filename": "Mace.glb",
+    "hash": "42e31707bf18ac2e5dbd6ab1f0981c233e375b5f7277a36cb81226e8aabf9f82",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Shield.glb": {
+    "filename": "Shield.glb",
+    "hash": "0421c6a6bcca2cdd5a18f72f6436e5679a423744979c6019b60bb3139347180f",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Spellbook.glb": {
+    "filename": "Spellbook.glb",
+    "hash": "a7998f9d199232ab52c91e7b137471fdc26c121e985968399666455aa7b545e1",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Staff.glb": {
+    "filename": "Staff.glb",
+    "hash": "8c0dbd0bc20dc586163124c745b10852a6f215b646084dc74955e92f77824401",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\SummonersWand.glb": {
+    "filename": "SummonersWand.glb",
+    "hash": "c75c01beaa2f84f41a3e97ece457af052eaeef41cf2e29df843fb7910c4a3ab2",
+    "category": "model-weapon"
+  },
+  "public\\assets\\models\\weapons\\Sword.glb": {
+    "filename": "Sword.glb",
+    "hash": "ebf6a37a1570d3c01822f3e65ae3dca76a76fcc1943ed33bdcd90dc75329218a",
+    "category": "model-weapon"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/arrow_A.gltf": {
+    "filename": "arrow_A.gltf",
+    "hash": "5bad1b841eb691d61c2229b2e4c8830002752fcf1ab5a2547bfc35cad74685c9",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/arrow_B.gltf": {
+    "filename": "arrow_B.gltf",
+    "hash": "dc55236fb90c6b72f7cc9bb55b547dfd919a8f5ff335a53414d4938a51974d4e",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/axe_A.gltf": {
+    "filename": "axe_A.gltf",
+    "hash": "94441195e9a690a58119bf78d6dabe90a313afc5d8a97d84604661d16840535c",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/axe_B.gltf": {
+    "filename": "axe_B.gltf",
+    "hash": "675b5a1da2b2b003962ee7999ef07f4e8ff8233d085d10e023156bcae36048c6",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/axe_C.gltf": {
+    "filename": "axe_C.gltf",
+    "hash": "afb302b8f3dd916d98156eb940ac968de8c592642df0a32567c69f7ce02f5292",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/bow_A.gltf": {
+    "filename": "bow_A.gltf",
+    "hash": "479ba466ddcf3e11656fc1a7f414b7b5be23fe1d652fb992e1ee8eee0d5ef4dd",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/bow_A_withString.gltf": {
+    "filename": "bow_A_withString.gltf",
+    "hash": "a01fc3f9412b414efa62aed49e3556bb270d6dce11011fafded55f6af75bb152",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/bow_B.gltf": {
+    "filename": "bow_B.gltf",
+    "hash": "b3a51fd8d2533cfe5aef83ba5ae04e845e9d5e80b22d4d15d48fba96372439b7",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/bow_B_withString.gltf": {
+    "filename": "bow_B_withString.gltf",
+    "hash": "7c6d4d8e5b568d022f3fe14dbe048fa4862f17d8055ef4bf1a28c83de4ba97c8",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/dagger_A.gltf": {
+    "filename": "dagger_A.gltf",
+    "hash": "a1f98d2184ebd1d91c853173ce6f56c89787d3177ed54b50e036e8c33cbb800c",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/dagger_B.gltf": {
+    "filename": "dagger_B.gltf",
+    "hash": "38ed89d667417ef0b92c6259e0c2fa97b7f5f3b83fc18d9f3a9e8387f091a60a",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/fistweapon_A.gltf": {
+    "filename": "fistweapon_A.gltf",
+    "hash": "a9f24c5b04631488d4b295fe3b718073cf6b96f38c2e300836a569acee65c46b",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/fistweapon_A_stacked.gltf": {
+    "filename": "fistweapon_A_stacked.gltf",
+    "hash": "9cf2c428d24f54b094c8ebbb1b5f18b3aa007d62530b093228968dadabe6a2ae",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/fistweapon_B.gltf": {
+    "filename": "fistweapon_B.gltf",
+    "hash": "8c1a0decb26f4b5ed3e52e30b0fe544fff3a430f5cbd2fac8cfe194201f32823",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/fistweapon_B_stacked.gltf": {
+    "filename": "fistweapon_B_stacked.gltf",
+    "hash": "60393d6bdbe62f4f7a171f5e423d3cd284caef26ea6224d7f2a971fc2c92ea0d",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/halberd.gltf": {
+    "filename": "halberd.gltf",
+    "hash": "0b9d3f0c56525c181b6088f652caf2eec25216d9ec5abdb59646582392ef791e",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/hammer_A.gltf": {
+    "filename": "hammer_A.gltf",
+    "hash": "499544e3488326e5d51851c05a1fd77b515fe10e6c00ff54150e17feabd3b5ea",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/hammer_B.gltf": {
+    "filename": "hammer_B.gltf",
+    "hash": "90ed7353fefc6b63d8f3dac157f966205b7a5ffbeb1556a230dd6e69f04c8d82",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/hammer_C.gltf": {
+    "filename": "hammer_C.gltf",
+    "hash": "238cddce1fededc0833a7b4b7fd08e41013893728afd5df05ee8c4c9352cb439",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/shield_A.gltf": {
+    "filename": "shield_A.gltf",
+    "hash": "3634e520841d408a021c247c613084299e3a57458a4d3fa1ee84a9ba37fd5d9b",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/shield_B.gltf": {
+    "filename": "shield_B.gltf",
+    "hash": "4dfe59a9d33a950cbac48cdef2c7cb09b95482949ad07e815722d7537726c6b6",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/shield_C.gltf": {
+    "filename": "shield_C.gltf",
+    "hash": "047cf9da3e52c8d8f38932d9a5649e86e7ee28c5e692d7efa767d67a64378d95",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/spear_A.gltf": {
+    "filename": "spear_A.gltf",
+    "hash": "7299baf7d4f948b7839d616746c791fa57af74a9ccb8903692715f1fd8c947e4",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/staff_A.gltf": {
+    "filename": "staff_A.gltf",
+    "hash": "f369dd0b26fb9cb922141e8ac2772b4bf99a18df04e2d8848e9679f8b35fbc80",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/staff_B.gltf": {
+    "filename": "staff_B.gltf",
+    "hash": "15f6015928ddb4aba4d523606571e1648942ad81c1e8ea239f1c87e3aac93833",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_A.gltf": {
+    "filename": "sword_A.gltf",
+    "hash": "137cc318e9f36339a088524243071187da8adff3b5735f1d5330ed1577f54851",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_B.gltf": {
+    "filename": "sword_B.gltf",
+    "hash": "265840768f36afc22fc75e7a5a8c98fd33d199b2b4a6b76653fd2bd37fb8093f",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_C.gltf": {
+    "filename": "sword_C.gltf",
+    "hash": "f18406c1792f90ba214bd836d88be06b498252f6e937a3bbd5e36a0617650573",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_D.gltf": {
+    "filename": "sword_D.gltf",
+    "hash": "3a475e38d3f6a52da3829b4bc78cc8a67c3945408b188f7e9092ab5c53a740ea",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/sword_E.gltf": {
+    "filename": "sword_E.gltf",
+    "hash": "94fa216bac0984dac29cb7d0a4ebea4b1981c131624d0fc9ecec142b230ee998",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/kaykit-weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/wand_A.gltf": {
+    "filename": "wand_A.gltf",
+    "hash": "f914bb6a9a5d581e5f46da466a9e6cb925727997bbe0924e2fcc41e7db68f0d2",
+    "category": "model-weapon-kaykit"
+  },
+  "attached_assets/staging/voxel-rpg-characters/Content/Textures/DungeonCrawler_Character.png": {
+    "filename": "DungeonCrawler_Character.png",
+    "hash": "1ea2b024974d61766951142ea5bf6fb1596921b28b7bf8f158574b52946b201a",
+    "category": "texture-character-palette"
+  }
+}

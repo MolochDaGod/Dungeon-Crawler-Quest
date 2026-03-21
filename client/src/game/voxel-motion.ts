@@ -299,7 +299,7 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
     ]
   },
 
-  thrust_linear:
+  thrust_linear: {
     name: 'thrust_linear',
     duration: 0.6,
     keyframes: [
@@ -409,7 +409,7 @@ export const MOTION_LIBRARY: Record<string, MotionPrimitive> = {
     ]
   },
 
-  idle_breathe:
+  idle_breathe: {
     name: 'idle_breathe',
     duration: 3.0,
     loop: true,

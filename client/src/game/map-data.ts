@@ -32,6 +32,49 @@ export interface MapCampfire {
   team: number;
 }
 
+export type SpawnerType = 'minion' | 'boss' | 'neutral' | 'event';
+export interface MapSpawner {
+  id: number;
+  x: number;
+  y: number;
+  type: SpawnerType;
+  team: number;        // -1 = neutral
+  interval: number;    // seconds between spawns
+  mobTypes: string[];  // e.g. ['wolf','bear']
+  count: number;       // mobs per spawn
+  label: string;
+}
+
+export type EventTrigger = 'proximity' | 'timer' | 'interact';
+export interface MapEvent {
+  id: number;
+  x: number;
+  y: number;
+  radius: number;
+  triggerType: EventTrigger;
+  eventAction: string; // e.g. 'ambush', 'quest_start', 'boss_spawn'
+  label: string;
+}
+
+export type VendorType = 'shop' | 'faction' | 'crafting';
+export interface MapVendor {
+  id: number;
+  x: number;
+  y: number;
+  vendorType: VendorType;
+  name: string;
+}
+
+export type ResourceType = 'ore' | 'herb' | 'wood' | 'fish' | 'gem';
+export interface MapHarvestable {
+  id: number;
+  x: number;
+  y: number;
+  resourceType: ResourceType;
+  tier: number;        // 1-5
+  respawnTime: number; // seconds
+}
+
 export interface MapData {
   version: number;
   mapSize: number;
@@ -46,7 +89,12 @@ export interface MapData {
   campfires: MapCampfire[];
   laneWaypoints: Vec2[][];
   basePositions: Vec2[];
+  spawners: MapSpawner[];
+  events: MapEvent[];
+  vendors: MapVendor[];
+  harvestables: MapHarvestable[];
   nextDecoId: number;
+  nextPlaceableId: number;
 }
 
 const STORAGE_KEY = 'grudge_moba_map';
@@ -95,7 +143,12 @@ export function createDefaultMapData(): MapData {
       { x: 300, y: 3700 },
       { x: 3700, y: 300 },
     ],
+    spawners: [],
+    events: [],
+    vendors: [],
+    harvestables: [],
     nextDecoId: 1,
+    nextPlaceableId: 1,
   };
 }
 
@@ -161,6 +214,8 @@ export const TERRAIN_TYPES = [
   { id: 7, name: 'Base Red', color: '#5a1a1a' },
   { id: 8, name: 'River', color: '#1a5a7a' },
   { id: 9, name: 'Jungle Path', color: '#3a3020' },
+  { id: 10, name: 'Dense Woods', color: '#0f2e0a' },
+  { id: 11, name: 'Stone Wall', color: '#3a3a4a' },
 ] as const;
 
 export const DECORATION_CATEGORIES = [
@@ -228,3 +283,34 @@ export const CAMP_TYPES = [
   { id: 'buff' as const, name: 'Buff Camp', color: '#a855f7', mobCount: 1 },
   { id: 'boss' as const, name: 'Boss Pit', color: '#ef4444', mobCount: 1 },
 ] as const;
+
+export const SPAWNER_TYPES: { id: SpawnerType; name: string; color: string }[] = [
+  { id: 'minion', name: 'Minion Spawner', color: '#3b82f6' },
+  { id: 'boss', name: 'Boss Spawner', color: '#ef4444' },
+  { id: 'neutral', name: 'Neutral Spawner', color: '#a3a3a3' },
+  { id: 'event', name: 'Event Spawner', color: '#f59e0b' },
+];
+
+export const EVENT_TRIGGERS: { id: EventTrigger; name: string }[] = [
+  { id: 'proximity', name: 'Proximity' },
+  { id: 'timer', name: 'Timer' },
+  { id: 'interact', name: 'Interact' },
+];
+
+export const EVENT_ACTIONS = [
+  'ambush', 'quest_start', 'boss_spawn', 'loot_drop', 'trap', 'cutscene', 'portal', 'buff_zone',
+];
+
+export const VENDOR_TYPES: { id: VendorType; name: string; color: string }[] = [
+  { id: 'shop', name: 'Shop', color: '#ffd700' },
+  { id: 'faction', name: 'Faction Vendor', color: '#a855f7' },
+  { id: 'crafting', name: 'Crafting Station', color: '#f97316' },
+];
+
+export const RESOURCE_TYPES: { id: ResourceType; name: string; color: string; icon: string }[] = [
+  { id: 'ore', name: 'Ore Vein', color: '#78716c', icon: '⛏️' },
+  { id: 'herb', name: 'Herb', color: '#4ade80', icon: '🌿' },
+  { id: 'wood', name: 'Wood', color: '#a16207', icon: '🪵' },
+  { id: 'fish', name: 'Fishing Spot', color: '#38bdf8', icon: '🐟' },
+  { id: 'gem', name: 'Gem Deposit', color: '#c084fc', icon: '💎' },
+];

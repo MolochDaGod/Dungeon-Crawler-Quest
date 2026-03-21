@@ -21,6 +21,7 @@ import {
   loadKeybindings, matchesKeyDown, KeybindAction, KeyBind
 } from '@/game/keybindings';
 import { createCombatActor, CombatVFX, COMBAT_ACTION_NAMES, COMBAT_HOTKEY_LEGEND } from '@/game/combat-machine';
+import { initGLBSprites } from '@/game/glb-sprites';
 import { MouseTargetingManager } from '@/game/mouse-targeting';
 import { PhysicsWorld, createPhysicsWorld } from '@/game/physics';
 import {
@@ -193,6 +194,9 @@ export default function GamePage() {
 
     const state = createInitialState(heroId, team);
     stateRef.current = state;
+
+    // Load GLB effect sprites in background
+    initGLBSprites('/effects/');
 
     const combatActor = createCombatActor();
     combatActor.start();

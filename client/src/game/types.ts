@@ -15,6 +15,10 @@ export interface HeroData {
   quote: string;
   isSecret?: boolean;
   equippedWeaponId?: string;
+  /** When true, this hero is an AI faction NPC — not a player-selectable character */
+  isAINpc?: boolean;
+  /** Zone IDs where this AI NPC patrols */
+  patrolZoneIds?: number[];
 }
 
 export interface AbilityDef {
@@ -445,6 +449,21 @@ export const HEROES: HeroData[] = [
   { id: 24, name: "Racalvin the Pirate King", title: "The Scourge of the Seven Seas", race: "Barbarian", heroClass: "Ranger", faction: "Pirates", rarity: "Legendary", hp: 225, atk: 30, def: 9, spd: 78, rng: 6.5, mp: 105, quote: "The sea does not bow. Neither do I.", isSecret: true },
   { id: 25, name: "Cpt. John Wayne", title: "The Sky Captain", race: "Human", heroClass: "Warrior", faction: "Pirates", rarity: "Legendary", hp: 240, atk: 30, def: 18, spd: 60, rng: 2.5, mp: 90, quote: "The ground is for those who've given up dreaming.", isSecret: true }
 ];
+
+// Mark all hardcoded heroes as AI faction NPCs and assign patrol zones
+for (const h of HEROES) {
+  h.isAINpc = true;
+  // Assign patrol zones by faction
+  switch (h.faction) {
+    case 'Crusade': h.patrolZoneIds = [0, 1, 8, 16]; break;  // Starting Village, Forest, Crusade Island, North Coast
+    case 'Fabled':  h.patrolZoneIds = [9, 14, 17]; break;     // Fabled Island, Fisherman's Haven, West Coast
+    case 'Legion':  h.patrolZoneIds = [5, 10, 18]; break;     // Undead Crypts, Legion Outpost, East Coast
+    case 'Pirates': h.patrolZoneIds = [11, 19]; break;         // Pirate Cove, South Coast
+  }
+}
+
+/** All 26 original heroes — now AI faction NPCs. Use this alias for clarity. */
+export const AI_HEROES = HEROES;
 
 export const RACE_COLORS: Record<string, string> = {
   Human: '#94a3b8', Barbarian: '#f43f5e', Dwarf: '#f59e0b',

@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import css from './MainPanel.module.css';
 import { OWHudState } from '@/game/open-world';
 import { OpenWorldState } from '@/game/open-world';
-import { allocateOWAttribute, claimOWMission } from '@/game/open-world';
+import { allocateOWAttribute, claimOWMission, equipBagItemOW } from '@/game/open-world';
 import { AttributeId } from '@/game/attributes';
-import { HeroData, AbilityDef, CLASS_COLORS, ABILITY_ICONS } from '@/game/types';
+import { HeroData, AbilityDef, CLASS_COLORS, ABILITY_ICONS, RACE_COLORS } from '@/game/types';
 import { VoxelRenderer } from '@/game/voxel';
 
 /* ── Emoji helpers for attributes ── */
@@ -129,7 +129,17 @@ function VoxelHeroCanvas({ race, heroClass, heroName }: { race: string; heroClas
       ctx.ellipse(64, 115, 28, 6, 0, 0, Math.PI * 2);
       ctx.fill();
       // Hero
-      voxel.drawHeroVoxel(ctx, 64, 100, race, heroClass, Math.PI * 0.5, 'idle', timerRef.current, heroName);
+      voxel.drawHeroVoxel(
+        ctx, 64, 100,
+        RACE_COLORS[race] || '#c4956a',
+        CLASS_COLORS[heroClass] || '#8b8b8b',
+        heroClass,
+        Math.PI * 0.5,
+        'idle',
+        timerRef.current,
+        race,
+        heroName,
+      );
       animRef.current = requestAnimationFrame(frame);
     }
     frame();
@@ -255,7 +265,7 @@ export default function MainPanel({ hud, stateRef, heroData, abilities, abilityN
           <div className={css.contentArea}>
 
             {/* ── Equipment ── */}
-            {tab === 'equip' && <EquipmentTab hud={hud} eqMap={eqMap} />}
+            {tab === 'equip' && <EquipmentTab hud={hud} eqMap={eqMap} stateRef={stateRef} />}
 
             {/* ── Attributes ── */}
             {tab === 'attrs' && <AttributesTab hud={hud} stateRef={stateRef} />}
@@ -281,26 +291,7 @@ export default function MainPanel({ hud, stateRef, heroData, abilities, abilityN
         </div>
 
         {/* ── Right Column: Inventory ── */}
-        <div className={css.rightCol}>
-          <div className={css.invHeader}>
-            <h3>Inventory</h3>
-            <span className={css.goldDisplay}>🪙 {hud.gold}</span>
-          </div>
-          <div className={css.invGrid}>
-            {Array.from({ length: 36 }).map((_, i) => {
-              const item = hud.bagItems[i];
-              return (
-                <div key={i} className={`${css.invCell} ${item ? css.invCellFilled : ''}`} title={item ? `T${item.tier} ${item.name}` : 'Empty'}>
-                  {item && <span style={{ fontSize: 9, color: '#f5e2c1', textAlign: 'center', display: 'block', lineHeight: '1.1', padding: 2, overflow: 'hidden' }}>{item.name}</span>}
-                </div>
-              );
-            })}
-          </div>
-          <div className={css.trashZone}>
-            <div className={css.trashSlot}>🗑</div>
-            <span className={css.trashLabel}>Drag to destroy</span>
-          </div>
-        </div>
+        <InventoryPanel hud={hud} stateRef={stateRef} rerender={() => {}} />
       </div>
 
       {/* ═══ BOTTOM BAR — Hotbar ═══ */}
@@ -334,21 +325,182 @@ export default function MainPanel({ hud, stateRef, heroData, abilities, abilityN
   );
 }
 
-/* ════════════════════════════════════════════════════════════════
+/* ═════════════════════════════════════════════════════════════════
+   SHARED: Item Tooltip
+   ═════════════════════════════════════════════════════════════════ */
+
+const SLOT_EMOJI: Record<string, string> = {
+  helm: '🪖', shoulder: '🦺', chest: '👘', hands: '🧤',
+  feet: '💟', ring: '💍', necklace: '💿', cape: '🧣',
+  mainhand: '⚔️', offhand: '🛡️',
+};
+
+const TIER_COLORS: Record<number, string> = {
+  1: '#9ca3af', 2: '#6ec96e', 3: '#60a5fa', 4: '#a855f7',
+  5: '#f59e0b', 6: '#ef4444', 7: '#ff6bff', 8: '#ffd700',
+};
+
+interface BagItem { id: string; name: string; slot: string; tier: number; atk: number; def: number; hp: number; mp: number; iconUrl?: string; passive?: string; lore?: string; setName: string; }
+
+function ItemTooltip({ item }: { item: BagItem }) {
+  return (
+    <div className={css.itemTooltip}>
+      <div className={css.ttTitle} style={{ color: TIER_COLORS[item.tier] || '#d4a400' }}>
+        {item.name}
+      </div>
+      <div className={css.ttMeta}>
+        {SLOT_EMOJI[item.slot] || '•'} {item.slot} · <span style={{ color: TIER_COLORS[item.tier] }}>T{item.tier}</span>
+        {item.setName && item.setName !== 'Unknown' && <span style={{ color: '#a855f7' }}> · {item.setName} Set</span>}
+      </div>
+      <div className={css.ttStats}>
+        {item.atk > 0 && <span className={css.ttStat} style={{ color: '#ef4444' }}>⚔ ATK +{item.atk}</span>}
+        {item.def > 0 && <span className={css.ttStat} style={{ color: '#60a5fa' }}>🛡 DEF +{item.def}</span>}
+        {item.hp > 0 && <span className={css.ttStat} style={{ color: '#22c55e' }}>❤ HP +{item.hp}</span>}
+        {item.mp > 0 && <span className={css.ttStat} style={{ color: '#818cf8' }}>🔮 MP +{item.mp}</span>}
+      </div>
+      {item.passive && <div className={css.ttPassive}>• {item.passive}</div>}
+      {item.lore && <div className={css.ttLore}>&ldquo;{item.lore}&rdquo;</div>}
+      <div className={css.ttHint}>Double-click or drag to equip</div>
+    </div>
+  );
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   INVENTORY PANEL (right column)
+   ═════════════════════════════════════════════════════════════════ */
+
+function InventoryPanel({ hud, stateRef, rerender }: { hud: OWHudState; stateRef: React.MutableRefObject<OpenWorldState | null>; rerender: () => void }) {
+  const [, forceRender] = useState(0);
+  const refresh = useCallback(() => forceRender(n => n + 1), []);
+  const [hoveredItem, setHoveredItem] = useState<BagItem | null>(null);
+  const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState<string | null>(null);
+
+  const handleEquip = useCallback((itemId: string) => {
+    if (!stateRef.current) return;
+    equipBagItemOW(stateRef.current, itemId);
+    refresh();
+  }, [stateRef, refresh]);
+
+  const handleDragStart = (e: React.DragEvent, itemId: string) => {
+    e.dataTransfer.setData('itemId', itemId);
+    setDragging(itemId);
+  };
+
+  const handleDragEnd = () => setDragging(null);
+
+  return (
+    <div className={css.rightCol}>
+      <div className={css.invHeader}>
+        <h3>Inventory</h3>
+        <span className={css.goldDisplay}>🪙 {hud.gold}g</span>
+      </div>
+      <div className={css.invGrid}>
+        {Array.from({ length: 36 }).map((_, i) => {
+          const item = hud.bagItems[i] as BagItem | undefined;
+          return (
+            <div
+              key={i}
+              className={`${css.invCell} ${item ? css.invCellFilled : ''} ${dragging === item?.id ? css.invCellDragging : ''}`}
+              draggable={!!item}
+              onDragStart={item ? (e) => handleDragStart(e, item.id) : undefined}
+              onDragEnd={handleDragEnd}
+              onDoubleClick={item ? () => handleEquip(item.id) : undefined}
+              onMouseEnter={item ? (e) => { setHoveredItem(item); setHoverPos({ x: e.clientX, y: e.clientY }); } : undefined}
+              onMouseMove={item ? (e) => setHoverPos({ x: e.clientX, y: e.clientY }) : undefined}
+              onMouseLeave={() => setHoveredItem(null)}
+            >
+              {item && (
+                <>
+                  {item.iconUrl
+                    ? <img src={item.iconUrl} alt={item.name} className={css.invIcon} draggable={false} />
+                    : <span className={css.invSlotEmoji}>{SLOT_EMOJI[item.slot] || '•'}</span>
+                  }
+                  <div className={css.invTierBadge} style={{ color: TIER_COLORS[item.tier] }}>T{item.tier}</div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Trash zone */}
+      <div className={css.trashZone}
+        onDragOver={e => e.preventDefault()}
+        onDrop={e => {
+          const id = e.dataTransfer.getData('itemId');
+          if (id && stateRef.current) {
+            const { removeFromBag: removeFn, saveEquipmentBag: saveBag } = require('@/game/equipment');
+            removeFn(stateRef.current.equipmentBag, id);
+            saveBag(stateRef.current.equipmentBag);
+            refresh();
+          }
+        }}
+      >
+        <div className={css.trashSlot}>🗑</div>
+        <span className={css.trashLabel}>Drag to destroy</span>
+      </div>
+
+      {/* Floating tooltip */}
+      {hoveredItem && (
+        <div
+          style={{ position: 'fixed', left: hoverPos.x + 14, top: hoverPos.y - 10, zIndex: 99999, pointerEvents: 'none' }}
+        >
+          <ItemTooltip item={hoveredItem} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═════════════════════════════════════════════════════════════════
    TAB COMPONENTS
-   ════════════════════════════════════════════════════════════════ */
+   ═════════════════════════════════════════════════════════════════ */
 
 /* ── Equipment Tab ── */
-function EquipmentTab({ hud, eqMap }: { hud: OWHudState; eqMap: Map<string, typeof hud.equipSlots[0]> }) {
+function EquipmentTab({ hud, eqMap, stateRef }: { hud: OWHudState; eqMap: Map<string, typeof hud.equipSlots[0]>; stateRef: React.MutableRefObject<OpenWorldState | null> }) {
+  const [, forceRender] = useState(0);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+
+  const handleDrop = (e: React.DragEvent, slotLabel: string) => {
+    e.preventDefault();
+    setDragOver(null);
+    const itemId = e.dataTransfer.getData('itemId');
+    if (!itemId || !stateRef.current) return;
+    // Only equip if the item matches the slot
+    const item = stateRef.current.equipmentBag.items.find(i => i.id === itemId);
+    if (!item) return;
+    const targetSlot = eqMap.get(slotLabel);
+    if (targetSlot && item.slot.toLowerCase() !== targetSlot.slot.toLowerCase()) {
+      return; // Wrong slot type
+    }
+    equipBagItemOW(stateRef.current, itemId);
+    forceRender(n => n + 1);
+  };
+
   const renderSlot = (label: string) => {
     const slot = eqMap.get(label);
+    const isDragOver = dragOver === label;
     return (
-      <div className={css.eqSlot} key={label} title={slot?.item ? `${slot.item.name} (T${slot.item.tier})` : label}>
-        <span className={css.eqSlotLabel}>{slot?.icon || '·'} {label}</span>
+      <div
+        key={label}
+        className={`${css.eqSlot} ${isDragOver ? css.eqSlotOver : ''}`}
+        onDragOver={e => { e.preventDefault(); setDragOver(label); }}
+        onDragLeave={() => setDragOver(null)}
+        onDrop={e => handleDrop(e, label)}
+      >
+        <span className={css.eqSlotLabel}>
+          {slot?.icon || SLOT_EMOJI[slot?.slot || ''] || '·'} {label}
+        </span>
         {slot?.item ? (
-          <span className={css.eqSlotItem}>{slot.item.name}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 9, color: TIER_COLORS[slot.item.tier] }}>T{slot.item.tier}</span>
+            <span className={css.eqSlotItem}>{slot.item.name}</span>
+          </div>
         ) : (
-          <span className={css.eqSlotItem} style={{ color: '#6b5535' }}>Empty</span>
+          <span className={css.eqSlotItem} style={{ color: isDragOver ? '#d4a400' : '#6b5535' }}>
+            {isDragOver ? 'Drop here' : 'Empty'}
+          </span>
         )}
       </div>
     );
@@ -375,6 +527,10 @@ function EquipmentTab({ hud, eqMap }: { hud: OWHudState; eqMap: Map<string, type
           ))}
         </>
       )}
+
+      <div style={{ marginTop: 10, fontSize: 10, color: '#6b5535', textAlign: 'center' }}>
+        Drag items from inventory → slots · Double-click to auto-equip
+      </div>
     </>
   );
 }

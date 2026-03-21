@@ -171,21 +171,26 @@ interface BodyPartPose {
   scale?: number;
 }
 
-function getAnimPoses(heroClass: string, animState: string, animTimer: number, weaponType?: WeaponType): {
+function getAnimPoses(heroClass: string, animState: string, animTimer: number, weaponType?: WeaponType, globalTime?: number): {
   leftLeg: BodyPartPose; rightLeg: BodyPartPose;
   leftArm: BodyPartPose; rightArm: BodyPartPose;
   torso: BodyPartPose; head: BodyPartPose;
   weapon: BodyPartPose; weaponGlow: number;
 } {
-  const t = animTimer;
+  // For cyclic animations (idle/walk), use monotonic globalTime so the cycle
+  // never stutters when the FSM timer resets on transitions.
+  const t = animTimer;           // FSM timer — resets on state entry (for timed animations)
+  const gt = globalTime ?? t;   // global time — never resets (for cyclic animations)
+
+  const idleBreath = Math.sin(gt * 1.5) * 0.7; // visible ±1 voxel breathing
   const idle = {
     leftLeg: { ox: 0, oy: 0, oz: 0 },
     rightLeg: { ox: 0, oy: 0, oz: 0 },
-    leftArm: { ox: 0, oy: 0, oz: 0 },
-    rightArm: { ox: 0, oy: 0, oz: 0 },
-    torso: { ox: 0, oy: 0, oz: Math.round(Math.sin(t * 2) * 0.3) },
-    head: { ox: 0, oy: 0, oz: 0 },
-    weapon: { ox: 0, oy: 0, oz: 0 },
+    leftArm: { ox: Math.round(Math.sin(gt * 1.5 + 0.3) * 0.4), oy: 0, oz: Math.round(idleBreath * 0.3) },
+    rightArm: { ox: Math.round(-Math.sin(gt * 1.5 + 0.3) * 0.4), oy: 0, oz: Math.round(idleBreath * 0.3) },
+    torso: { ox: 0, oy: 0, oz: Math.round(idleBreath) },
+    head: { ox: 0, oy: 0, oz: Math.round(Math.sin(gt * 1.5 + 0.2) * 0.6) },
+    weapon: { ox: 0, oy: 0, oz: Math.round(idleBreath * 0.5) },
     weaponGlow: 0
   };
 
@@ -193,13 +198,13 @@ function getAnimPoses(heroClass: string, animState: string, animTimer: number, w
 
   if (animState === 'walk') {
     const freq = 10;
-    const phase = Math.sin(t * freq);
-    const phase2 = Math.cos(t * freq);
+    const phase = Math.sin(gt * freq);
+    const phase2 = Math.cos(gt * freq);
     const stride = 2.5;
     const liftHeight = 1.4;
-    const bounce = Math.abs(Math.sin(t * freq * 2)) * 0.6;
-    const hipSway = Math.sin(t * freq) * 0.4;
-    const headBob = Math.sin(t * freq * 2 + 0.5) * 0.35;
+    const bounce = Math.abs(Math.sin(gt * freq * 2)) * 0.6;
+    const hipSway = Math.sin(gt * freq) * 0.4;
+    const headBob = Math.sin(gt * freq * 2 + 0.5) * 0.35;
     return {
       leftLeg: { ox: 0, oy: Math.round(phase * stride), oz: Math.round(Math.max(0, -phase) * liftHeight) },
       rightLeg: { ox: 0, oy: Math.round(-phase * stride), oz: Math.round(Math.max(0, phase) * liftHeight) },
@@ -905,7 +910,7 @@ function buildAxeShieldWeapon(wP: BodyPartPose, rA: BodyPartPose, setV: (z: numb
   setV(3 + rA.oz, 3 + rA.oy, 6 + rA.ox, '#777777');
 }
 
-function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number, heroName?: string, heroItems?: ({ id: number } | null)[], equipAppearance?: EquipmentAppearance | null): VoxelModel {
+function buildHeroModel(race: string, heroClass: string, animState: string, animTimer: number, heroName?: string, heroItems?: ({ id: number } | null)[], equipAppearance?: EquipmentAppearance | null, globalTime?: number): VoxelModel {
   const isPirate = heroName?.includes('Racalvin') || heroName?.includes('Pirate King');
   const skin = RACE_SKIN[race] || '#c4956a';
   const classArmorBase = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
@@ -925,7 +930,7 @@ function buildHeroModel(race: string, heroClass: string, animState: string, anim
     }
   }
 
-  const poses = getAnimPoses(heroClass, animState, animTimer, weaponType);
+  const poses = getAnimPoses(heroClass, animState, animTimer, weaponType, globalTime);
 
   const setV = (z: number, y: number, x: number, c: string) => {
     if (z >= 0 && z < H && y >= 0 && y < D && x >= 0 && x < W) {
@@ -2655,7 +2660,7 @@ export class VoxelRenderer {
       if (trail) { trail.update(time); if (trail.getPoints().length > 0) drawWeaponTrail(ctx, trail.getPoints(), vfxColor, 2, facing); }
     }
 
-    const model = buildHeroModel(race, heroClass, animState, animTimer, heroName, heroItems);
+    const model = buildHeroModel(race, heroClass, animState, animTimer, heroName, heroItems, undefined, time);
 
     if (animState === 'death') {
       let debris = this.deathDebrisCache.get(eid);

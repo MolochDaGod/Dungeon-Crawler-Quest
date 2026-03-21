@@ -1,0 +1,2172 @@
+{
+  "public/assets/models/characters/Animated_Character_Base.glb": {
+    "sizeMB": 0.3,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "mixamo.com",
+        "channels": 53,
+        "duration": 10
+      }
+    ]
+  },
+  "public/assets/models/characters/Animated_Human.glb": {
+    "sizeMB": 0.7,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Human Armature|ArmatureAction.002",
+        "channels": 38,
+        "duration": 0.63
+      },
+      {
+        "name": "Human Armature|Death",
+        "channels": 38,
+        "duration": 3.5
+      },
+      {
+        "name": "Human Armature|Idle",
+        "channels": 31,
+        "duration": 10
+      },
+      {
+        "name": "Human Armature|Jump",
+        "channels": 36,
+        "duration": 1
+      },
+      {
+        "name": "Human Armature|Punch",
+        "channels": 37,
+        "duration": 1
+      },
+      {
+        "name": "Human Armature|Run",
+        "channels": 38,
+        "duration": 0.63
+      },
+      {
+        "name": "Human Armature|Walk",
+        "channels": 34,
+        "duration": 1
+      },
+      {
+        "name": "Human Armature|Working",
+        "channels": 38,
+        "duration": 6.42
+      }
+    ]
+  },
+  "public/assets/models/characters/Animated_Wizard.glb": {
+    "sizeMB": 1.1,
+    "meshes": 6,
+    "animations": [
+      {
+        "name": "CharacterArmature|Death",
+        "channels": 21,
+        "duration": 1.17
+      },
+      {
+        "name": "CharacterArmature|Idle",
+        "channels": 9,
+        "duration": 3.13
+      },
+      {
+        "name": "CharacterArmature|Idle_Attacking",
+        "channels": 21,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|Idle_Weapon",
+        "channels": 10,
+        "duration": 3.13
+      },
+      {
+        "name": "CharacterArmature|PickUp",
+        "channels": 18,
+        "duration": 1.25
+      },
+      {
+        "name": "CharacterArmature|Punch",
+        "channels": 29,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|RecieveHit",
+        "channels": 16,
+        "duration": 0.63
+      },
+      {
+        "name": "CharacterArmature|RecieveHit_2",
+        "channels": 21,
+        "duration": 0.63
+      },
+      {
+        "name": "CharacterArmature|Roll",
+        "channels": 24,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|Run",
+        "channels": 16,
+        "duration": 0.88
+      },
+      {
+        "name": "CharacterArmature|Run_Weapon",
+        "channels": 16,
+        "duration": 0.88
+      },
+      {
+        "name": "CharacterArmature|Spell1",
+        "channels": 25,
+        "duration": 1.21
+      },
+      {
+        "name": "CharacterArmature|Spell2",
+        "channels": 24,
+        "duration": 1.46
+      },
+      {
+        "name": "CharacterArmature|Staff_Attack",
+        "channels": 23,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|Walk",
+        "channels": 28,
+        "duration": 1.25
+      }
+    ]
+  },
+  "public/assets/models/characters/Animated_Woman.glb": {
+    "sizeMB": 1.5,
+    "meshes": 4,
+    "animations": [
+      {
+        "name": "CharacterArmature|Death",
+        "channels": 24,
+        "duration": 1.33
+      },
+      {
+        "name": "CharacterArmature|Gun_Shoot",
+        "channels": 29,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|HitRecieve",
+        "channels": 12,
+        "duration": 0.71
+      },
+      {
+        "name": "CharacterArmature|HitRecieve_2",
+        "channels": 12,
+        "duration": 0.71
+      },
+      {
+        "name": "CharacterArmature|Idle",
+        "channels": 21,
+        "duration": 2.08
+      },
+      {
+        "name": "CharacterArmature|Idle_Gun",
+        "channels": 34,
+        "duration": 2.08
+      },
+      {
+        "name": "CharacterArmature|Idle_Gun_Pointing",
+        "channels": 34,
+        "duration": 2.08
+      },
+      {
+        "name": "CharacterArmature|Idle_Gun_Shoot",
+        "channels": 37,
+        "duration": 0.83
+      },
+      {
+        "name": "CharacterArmature|Idle_Neutral",
+        "channels": 22,
+        "duration": 2.08
+      },
+      {
+        "name": "CharacterArmature|Idle_Sword",
+        "channels": 34,
+        "duration": 2.08
+      },
+      {
+        "name": "CharacterArmature|Interact",
+        "channels": 15,
+        "duration": 1.58
+      },
+      {
+        "name": "CharacterArmature|Kick_Left",
+        "channels": 54,
+        "duration": 1.17
+      },
+      {
+        "name": "CharacterArmature|Kick_Right",
+        "channels": 54,
+        "duration": 1.17
+      },
+      {
+        "name": "CharacterArmature|Punch_Left",
+        "channels": 55,
+        "duration": 1.04
+      },
+      {
+        "name": "CharacterArmature|Punch_Right",
+        "channels": 55,
+        "duration": 1.04
+      },
+      {
+        "name": "CharacterArmature|Roll",
+        "channels": 57,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|Run",
+        "channels": 53,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|Run_Back",
+        "channels": 53,
+        "duration": 1.04
+      },
+      {
+        "name": "CharacterArmature|Run_Left",
+        "channels": 55,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|Run_Right",
+        "channels": 55,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|Run_Shoot",
+        "channels": 53,
+        "duration": 1.04
+      },
+      {
+        "name": "CharacterArmature|Sword_Slash",
+        "channels": 34,
+        "duration": 1.29
+      },
+      {
+        "name": "CharacterArmature|Walk",
+        "channels": 29,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|Wave",
+        "channels": 22,
+        "duration": 2.08
+      }
+    ]
+  },
+  "public/assets/models/characters/Animated_Zombie.glb": {
+    "sizeMB": 0.7,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Zombie|ZombieBite",
+        "channels": 35,
+        "duration": 5.04
+      },
+      {
+        "name": "Zombie|ZombieCrawl",
+        "channels": 39,
+        "duration": 5.13
+      },
+      {
+        "name": "Zombie|ZombieIdle",
+        "channels": 23,
+        "duration": 5.54
+      },
+      {
+        "name": "Zombie|ZombieRun",
+        "channels": 36,
+        "duration": 0.79
+      },
+      {
+        "name": "Zombie|ZombieWalk",
+        "channels": 36,
+        "duration": 4
+      }
+    ]
+  },
+  "public/assets/models/characters/Anne.glb": {
+    "sizeMB": 0.7,
+    "meshes": 2,
+    "animations": [
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Death|CharacterArmature|Dea",
+        "channels": 20,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Duck|CharacterArmature|Duck",
+        "channels": 16,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|HitReact|CharacterArmature|",
+        "channels": 14,
+        "duration": 0.58
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Idle|CharacterArmature|Idle",
+        "channels": 13,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Idle|CharacterArmature",
+        "channels": 16,
+        "duration": 0.5
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Land|CharacterArmature",
+        "channels": 16,
+        "duration": 0.33
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump|CharacterArmature|Jump",
+        "channels": 16,
+        "duration": 0.33
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|No|CharacterArmature|No",
+        "channels": 13,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Punch|CharacterArmature|Pun",
+        "channels": 24,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Run|CharacterArmature|Run",
+        "channels": 27,
+        "duration": 0.71
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Sword|CharacterArmature|Swo",
+        "channels": 27,
+        "duration": 0.83
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Walk|CharacterArmature|Walk",
+        "channels": 24,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Wave|CharacterArmature|Wave",
+        "channels": 15,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Yes|CharacterArmature|Yes",
+        "channels": 13,
+        "duration": 1.67
+      }
+    ]
+  },
+  "public/assets/models/characters/BarbarianGlad.glb": {
+    "sizeMB": 4.8,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Block1",
+        "channels": 72,
+        "duration": 2.5
+      },
+      {
+        "name": "Block2",
+        "channels": 72,
+        "duration": 3.5
+      },
+      {
+        "name": "Block3",
+        "channels": 72,
+        "duration": 1.6
+      },
+      {
+        "name": "Boxing_Guard_Prep_Straight_Punch",
+        "channels": 72,
+        "duration": 8.57
+      },
+      {
+        "name": "Boxing_Guard_Step_Knee_Strike",
+        "channels": 72,
+        "duration": 2.7
+      },
+      {
+        "name": "Charged_Ground_Slam",
+        "channels": 72,
+        "duration": 4.87
+      },
+      {
+        "name": "Charged_Upward_Slash",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Face_Punch_Reaction",
+        "channels": 72,
+        "duration": 1.1
+      },
+      {
+        "name": "Hit_Reaction_to_Waist",
+        "channels": 72,
+        "duration": 2.83
+      },
+      {
+        "name": "Jump_Rope",
+        "channels": 72,
+        "duration": 2.23
+      },
+      {
+        "name": "Jumping_Punch",
+        "channels": 72,
+        "duration": 1.77
+      },
+      {
+        "name": "Knock_Down",
+        "channels": 72,
+        "duration": 3.47
+      },
+      {
+        "name": "Punch_Combo_1",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "Right_Upper_Hook_from_Guard",
+        "channels": 72,
+        "duration": 3.2
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 1.63
+      },
+      {
+        "name": "Shot_and_Fall_Backward",
+        "channels": 72,
+        "duration": 2.5
+      },
+      {
+        "name": "Slap_Reaction",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 1.5
+      },
+      {
+        "name": "jumping_jacks",
+        "channels": 72,
+        "duration": 3.97
+      }
+    ]
+  },
+  "public/assets/models/characters/berserker.glb": {
+    "sizeMB": 6.9,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Alert_Quick_Turn_Right",
+        "channels": 72,
+        "duration": 1.63
+      },
+      {
+        "name": "Axe_Spin_Attack",
+        "channels": 72,
+        "duration": 3.17
+      },
+      {
+        "name": "Block8",
+        "channels": 72,
+        "duration": 5.67
+      },
+      {
+        "name": "Burpee_Exercise",
+        "channels": 72,
+        "duration": 2.33
+      },
+      {
+        "name": "Catching_Breath",
+        "channels": 72,
+        "duration": 5.33
+      },
+      {
+        "name": "Charged_Ground_Slam",
+        "channels": 72,
+        "duration": 2.5
+      },
+      {
+        "name": "Charged_Upward_Slash",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Double_Blade_Spin",
+        "channels": 72,
+        "duration": 7
+      },
+      {
+        "name": "Fall_Dead_from_Abdominal_Injury",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "Idle_02",
+        "channels": 72,
+        "duration": 3.67
+      },
+      {
+        "name": "Idle_03",
+        "channels": 72,
+        "duration": 2.03
+      },
+      {
+        "name": "Jump_with_Arms_Open",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Knock_Down",
+        "channels": 72,
+        "duration": 2.8
+      },
+      {
+        "name": "Roll_Dodge_2",
+        "channels": 72,
+        "duration": 3.2
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 3.5
+      },
+      {
+        "name": "Stand_Up1",
+        "channels": 72,
+        "duration": 8.27
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 2.5
+      }
+    ]
+  },
+  "public/assets/models/characters/Character_Toon_Animated.glb": {
+    "sizeMB": 0.6,
+    "meshes": 3,
+    "animations": [
+      {
+        "name": "Attacking_Idle",
+        "channels": 21,
+        "duration": 1.67
+      },
+      {
+        "name": "Dagger_Attack",
+        "channels": 21,
+        "duration": 0.75
+      },
+      {
+        "name": "Dagger_Attack2",
+        "channels": 23,
+        "duration": 1.25
+      },
+      {
+        "name": "Death",
+        "channels": 19,
+        "duration": 1.17
+      },
+      {
+        "name": "PickUp",
+        "channels": 18,
+        "duration": 1.25
+      },
+      {
+        "name": "Punch",
+        "channels": 29,
+        "duration": 0.75
+      },
+      {
+        "name": "RecieveHit",
+        "channels": 16,
+        "duration": 0.63
+      },
+      {
+        "name": "RecieveHit_Attacking",
+        "channels": 21,
+        "duration": 0.63
+      },
+      {
+        "name": "Roll",
+        "channels": 25,
+        "duration": 1
+      },
+      {
+        "name": "Run",
+        "channels": 19,
+        "duration": 0.88
+      },
+      {
+        "name": "Walk",
+        "channels": 28,
+        "duration": 1.25
+      },
+      {
+        "name": "Idle",
+        "channels": 9,
+        "duration": 3.13
+      },
+      {
+        "name": "CharacterArmature|Attacking_Idle",
+        "channels": 21,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|Dagger_Attack",
+        "channels": 21,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|Dagger_Attack2",
+        "channels": 23,
+        "duration": 1.25
+      },
+      {
+        "name": "CharacterArmature|Death",
+        "channels": 19,
+        "duration": 1.17
+      },
+      {
+        "name": "CharacterArmature|Idle",
+        "channels": 9,
+        "duration": 3.13
+      },
+      {
+        "name": "CharacterArmature|PickUp",
+        "channels": 18,
+        "duration": 1.25
+      },
+      {
+        "name": "CharacterArmature|Punch",
+        "channels": 29,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|RecieveHit",
+        "channels": 16,
+        "duration": 0.63
+      },
+      {
+        "name": "CharacterArmature|RecieveHit_Attacking",
+        "channels": 21,
+        "duration": 0.63
+      },
+      {
+        "name": "CharacterArmature|Roll",
+        "channels": 24,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|Run",
+        "channels": 18,
+        "duration": 0.88
+      },
+      {
+        "name": "CharacterArmature|Walk",
+        "channels": 27,
+        "duration": 1.25
+      }
+    ]
+  },
+  "public/assets/models/characters/dwarf_enforcer.glb": {
+    "sizeMB": 13.8,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Chest_Pound_Taunt",
+        "channels": 72,
+        "duration": 4.83
+      },
+      {
+        "name": "Excited_Walk_F",
+        "channels": 72,
+        "duration": 2.5
+      },
+      {
+        "name": "Jump_Over_Obstacle_2",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Knock_Down",
+        "channels": 72,
+        "duration": 3.53
+      },
+      {
+        "name": "Male_Head_Down_Charge",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "Punch_Combo_5",
+        "channels": 72,
+        "duration": 0.9
+      },
+      {
+        "name": "Rightward_Spin",
+        "channels": 72,
+        "duration": 0.53
+      },
+      {
+        "name": "Roll_Dodge_1",
+        "channels": 72,
+        "duration": 8
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 1.27
+      },
+      {
+        "name": "Shield_Push_Left",
+        "channels": 72,
+        "duration": 1.27
+      },
+      {
+        "name": "Walk_Backward_with_Sword_Shield",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 2.8
+      },
+      {
+        "name": "Zombie_Scream",
+        "channels": 72,
+        "duration": 2.23
+      },
+      {
+        "name": "mage_soell_cast_1",
+        "channels": 72,
+        "duration": 9.77
+      },
+      {
+        "name": "mage_soell_cast_2",
+        "channels": 72,
+        "duration": 3.83
+      },
+      {
+        "name": "mage_soell_cast_4",
+        "channels": 72,
+        "duration": 2.4
+      },
+      {
+        "name": "push_up",
+        "channels": 72,
+        "duration": 1.53
+      }
+    ]
+  },
+  "public/assets/models/characters/ElfRanger.glb": {
+    "sizeMB": 25.3,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Hit_Reaction_to_Waist",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Hit_Reaction",
+        "channels": 72,
+        "duration": 4.53
+      },
+      {
+        "name": "Not_Your_Mom",
+        "channels": 72,
+        "duration": 2.8
+      },
+      {
+        "name": "Parkour_Vault_with_Roll",
+        "channels": 72,
+        "duration": 0.57
+      },
+      {
+        "name": "Punch_Combo_5",
+        "channels": 72,
+        "duration": 1.63
+      },
+      {
+        "name": "Right_Hand_Sword_Slash",
+        "channels": 72,
+        "duration": 3.83
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Sweep_Kick",
+        "channels": 72,
+        "duration": 2.3
+      },
+      {
+        "name": "Sweeping_Kick",
+        "channels": 72,
+        "duration": 2.77
+      },
+      {
+        "name": "Thrust_Slash",
+        "channels": 72,
+        "duration": 7.03
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 1.5
+      },
+      {
+        "name": "Weapon_Combo_2",
+        "channels": 72,
+        "duration": 2.33
+      },
+      {
+        "name": "Zombie_Scream",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "mage_soell_cast_2",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "mage_soell_cast_6",
+        "channels": 72,
+        "duration": 1.77
+      },
+      {
+        "name": "run_fast_2",
+        "channels": 72,
+        "duration": 1.63
+      },
+      {
+        "name": "slide_right",
+        "channels": 72,
+        "duration": 2.1
+      },
+      {
+        "name": "sliding_rool",
+        "channels": 72,
+        "duration": 4.07
+      }
+    ]
+  },
+  "public/assets/models/characters/elf_enforcer.glb": {
+    "sizeMB": 13.8,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Chest_Pound_Taunt",
+        "channels": 72,
+        "duration": 2.4
+      },
+      {
+        "name": "Excited_Walk_F",
+        "channels": 72,
+        "duration": 1.27
+      },
+      {
+        "name": "Jump_Over_Obstacle_2",
+        "channels": 72,
+        "duration": 0.9
+      },
+      {
+        "name": "Knock_Down",
+        "channels": 72,
+        "duration": 2.5
+      },
+      {
+        "name": "Male_Head_Down_Charge",
+        "channels": 72,
+        "duration": 1.27
+      },
+      {
+        "name": "Punch_Combo_5",
+        "channels": 72,
+        "duration": 2.8
+      },
+      {
+        "name": "Rightward_Spin",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "Roll_Dodge_1",
+        "channels": 72,
+        "duration": 1.53
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 4.83
+      },
+      {
+        "name": "Shield_Push_Left",
+        "channels": 72,
+        "duration": 9.77
+      },
+      {
+        "name": "Walk_Backward_with_Sword_Shield",
+        "channels": 72,
+        "duration": 0.53
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 8
+      },
+      {
+        "name": "Zombie_Scream",
+        "channels": 72,
+        "duration": 3.53
+      },
+      {
+        "name": "mage_soell_cast_1",
+        "channels": 72,
+        "duration": 2.23
+      },
+      {
+        "name": "mage_soell_cast_2",
+        "channels": 72,
+        "duration": 3.83
+      },
+      {
+        "name": "mage_soell_cast_4",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "push_up",
+        "channels": 72,
+        "duration": 1.03
+      }
+    ]
+  },
+  "public/assets/models/characters/fabledworker.glb": {
+    "sizeMB": 22.2,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Agree_Gesture",
+        "channels": 72,
+        "duration": 1.83
+      },
+      {
+        "name": "Alert",
+        "channels": 72,
+        "duration": 1.3
+      },
+      {
+        "name": "Arise",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Heavy_Hammer_Swing",
+        "channels": 72,
+        "duration": 2.87
+      },
+      {
+        "name": "Left_Short_Hook_from_Guard",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 13
+      },
+      {
+        "name": "Sneaky_Walk",
+        "channels": 72,
+        "duration": 4
+      },
+      {
+        "name": "Standard_Forward_Charge_inplace",
+        "channels": 72,
+        "duration": 1.83
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 1.03
+      }
+    ]
+  },
+  "public/assets/models/characters/graatorc.glb": {
+    "sizeMB": 13.3,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Charged_Spell_Cast",
+        "channels": 72,
+        "duration": 3.2
+      },
+      {
+        "name": "Charged_Upward_Slash",
+        "channels": 72,
+        "duration": 2.7
+      },
+      {
+        "name": "Combat_Idle_Turn_Left",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Elbow_Strike",
+        "channels": 72,
+        "duration": 2.47
+      },
+      {
+        "name": "Face_Punch_Reaction",
+        "channels": 72,
+        "duration": 1
+      },
+      {
+        "name": "Flying_Fist_Kick",
+        "channels": 72,
+        "duration": 1.77
+      },
+      {
+        "name": "Idle_10",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Idle_13",
+        "channels": 72,
+        "duration": 4.87
+      },
+      {
+        "name": "Jumping_Punch",
+        "channels": 72,
+        "duration": 8.27
+      },
+      {
+        "name": "Knock_Down",
+        "channels": 72,
+        "duration": 1.1
+      },
+      {
+        "name": "Left_Hook_from_Guard",
+        "channels": 72,
+        "duration": 1.53
+      },
+      {
+        "name": "Left_Jab_from_Guard",
+        "channels": 72,
+        "duration": 2.67
+      },
+      {
+        "name": "Punch_Combo",
+        "channels": 72,
+        "duration": 1.27
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 4.67
+      },
+      {
+        "name": "Slap_Reaction",
+        "channels": 72,
+        "duration": 3.67
+      },
+      {
+        "name": "Stand_Up1",
+        "channels": 72,
+        "duration": 2.5
+      },
+      {
+        "name": "Two_Handed_Parry",
+        "channels": 72,
+        "duration": 2.47
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 1.37
+      },
+      {
+        "name": "jumping_jacks",
+        "channels": 72,
+        "duration": 2.83
+      },
+      {
+        "name": "push_up",
+        "channels": 72,
+        "duration": 11.4
+      }
+    ]
+  },
+  "public/assets/models/characters/humandeathgiver.glb": {
+    "sizeMB": 12.6,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Basic_Jump",
+        "channels": 72,
+        "duration": 2.83
+      },
+      {
+        "name": "Double_Combo_Attack",
+        "channels": 72,
+        "duration": 3.17
+      },
+      {
+        "name": "Left_Slash",
+        "channels": 72,
+        "duration": 2.33
+      },
+      {
+        "name": "Rightward_Spin",
+        "channels": 72,
+        "duration": 2.33
+      },
+      {
+        "name": "Run_and_Jump",
+        "channels": 72,
+        "duration": 4.37
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 1.33
+      },
+      {
+        "name": "Simple_Kick",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Sword_Judgment",
+        "channels": 72,
+        "duration": 3.67
+      },
+      {
+        "name": "Sword_Parry_Backward_2",
+        "channels": 72,
+        "duration": 5.9
+      },
+      {
+        "name": "Sword_Parry_Backward_5",
+        "channels": 72,
+        "duration": 8
+      },
+      {
+        "name": "Sword_Shout",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Sword_and_Shield_Alert_Turn_Left",
+        "channels": 72,
+        "duration": 0.57
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "Weapon_Combo",
+        "channels": 72,
+        "duration": 6.17
+      }
+    ]
+  },
+  "public/assets/models/characters/orcpeon.glb": {
+    "sizeMB": 25.3,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Alert",
+        "channels": 72,
+        "duration": 1.77
+      },
+      {
+        "name": "Archery_Shot_1",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Arise",
+        "channels": 72,
+        "duration": 2.23
+      },
+      {
+        "name": "Attack",
+        "channels": 72,
+        "duration": 3.2
+      },
+      {
+        "name": "Axe_Spin_Attack",
+        "channels": 72,
+        "duration": 1.53
+      },
+      {
+        "name": "BeHit_FlyUp",
+        "channels": 72,
+        "duration": 2.8
+      },
+      {
+        "name": "Block4",
+        "channels": 72,
+        "duration": 1.53
+      },
+      {
+        "name": "Charged_Ground_Slam",
+        "channels": 72,
+        "duration": 2.67
+      },
+      {
+        "name": "Charged_Slash",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Charged_Spell_Cast_2",
+        "channels": 72,
+        "duration": 4
+      },
+      {
+        "name": "Charged_Spell_Cast",
+        "channels": 72,
+        "duration": 1.83
+      },
+      {
+        "name": "Charged_Upward_Slash",
+        "channels": 72,
+        "duration": 2.5
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 2.73
+      },
+      {
+        "name": "slide_right",
+        "channels": 72,
+        "duration": 1.03
+      }
+    ]
+  },
+  "public/assets/models/characters/Pirate_Captain.glb": {
+    "sizeMB": 0.6,
+    "meshes": 3,
+    "animations": [
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Death|CharacterArmature|Dea",
+        "channels": 18,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Duck|CharacterArmature|Duck",
+        "channels": 14,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|HitReact|CharacterArmature|",
+        "channels": 12,
+        "duration": 0.58
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Idle|CharacterArmature|Idle",
+        "channels": 14,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Idle|CharacterArmature",
+        "channels": 14,
+        "duration": 0.5
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Land|CharacterArmature",
+        "channels": 14,
+        "duration": 0.33
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump|CharacterArmature|Jump",
+        "channels": 14,
+        "duration": 0.33
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|No|CharacterArmature|No",
+        "channels": 20,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Punch|CharacterArmature|Pun",
+        "channels": 21,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Run|CharacterArmature|Run",
+        "channels": 25,
+        "duration": 0.71
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Sword|CharacterArmature|Swo",
+        "channels": 18,
+        "duration": 0.83
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Walk|CharacterArmature|Walk",
+        "channels": 22,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Wave|CharacterArmature|Wave",
+        "channels": 23,
+        "duration": 1.5
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Yes|CharacterArmature|Yes",
+        "channels": 12,
+        "duration": 1.67
+      }
+    ]
+  },
+  "public/assets/models/characters/siegeman.glb": {
+    "sizeMB": 5.2,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Basic_Jump",
+        "channels": 72,
+        "duration": 2.1
+      },
+      {
+        "name": "Charged_Upward_Slash",
+        "channels": 72,
+        "duration": 5
+      },
+      {
+        "name": "Jump_Rope",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Jump_Run",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Jump_and_Slam_Back_Down",
+        "channels": 72,
+        "duration": 8.57
+      },
+      {
+        "name": "Jump_with_Arms_Open",
+        "channels": 72,
+        "duration": 3.67
+      },
+      {
+        "name": "Jump_with_Arms_and_Legs_Open",
+        "channels": 72,
+        "duration": 0.6
+      },
+      {
+        "name": "Jumping_Punch",
+        "channels": 72,
+        "duration": 2.9
+      },
+      {
+        "name": "Knock_Down_1",
+        "channels": 72,
+        "duration": 8
+      },
+      {
+        "name": "Lean_Forward_Sprint_inplace",
+        "channels": 72,
+        "duration": 2.6
+      },
+      {
+        "name": "Limping_Walk_3",
+        "channels": 72,
+        "duration": 2.27
+      },
+      {
+        "name": "Punch_Combo_2",
+        "channels": 72,
+        "duration": 1.1
+      },
+      {
+        "name": "Rightward_Spin",
+        "channels": 72,
+        "duration": 5.9
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 3.2
+      },
+      {
+        "name": "Slap_Reaction",
+        "channels": 72,
+        "duration": 2.77
+      },
+      {
+        "name": "Stumble_Walk",
+        "channels": 72,
+        "duration": 2.53
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 2.7
+      },
+      {
+        "name": "falling_down",
+        "channels": 72,
+        "duration": 3.27
+      },
+      {
+        "name": "jumping_jacks",
+        "channels": 72,
+        "duration": 4.87
+      }
+    ]
+  },
+  "public/assets/models/characters/Skeleton.glb": {
+    "sizeMB": 0.8,
+    "meshes": 2,
+    "animations": [
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Death|CharacterArmature|Dea",
+        "channels": 20,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Duck|CharacterArmature|Duck",
+        "channels": 16,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|HitReact|CharacterArmature|",
+        "channels": 14,
+        "duration": 0.58
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Idle|CharacterArmature|Idle",
+        "channels": 13,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Idlea|CharacterArmatur",
+        "channels": 16,
+        "duration": 0.5
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Idle|CharacterArmature",
+        "channels": 16,
+        "duration": 0.5
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Land|CharacterArmature",
+        "channels": 16,
+        "duration": 0.33
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump|CharacterArmature|Jump",
+        "channels": 16,
+        "duration": 0.33
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|No|CharacterArmature|No",
+        "channels": 13,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Punch|CharacterArmature|Pun",
+        "channels": 24,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Run|CharacterArmature|Run",
+        "channels": 27,
+        "duration": 0.71
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Sword|CharacterArmature|Swo",
+        "channels": 23,
+        "duration": 0.83
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Walk|CharacterArmature|Walk",
+        "channels": 24,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Wave|CharacterArmature|Wave",
+        "channels": 15,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Yes|CharacterArmature|Yes",
+        "channels": 13,
+        "duration": 1.67
+      }
+    ]
+  },
+  "public/assets/models/characters/skeletong_warrior.glb": {
+    "sizeMB": 0.8,
+    "meshes": 2,
+    "animations": [
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Death|CharacterArmature|Dea",
+        "channels": 20,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Duck|CharacterArmature|Duck",
+        "channels": 16,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|HitReact|CharacterArmature|",
+        "channels": 14,
+        "duration": 0.58
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Idle|CharacterArmature|Idle",
+        "channels": 13,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Idlea|CharacterArmatur",
+        "channels": 16,
+        "duration": 0.5
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Idle|CharacterArmature",
+        "channels": 16,
+        "duration": 0.5
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump_Land|CharacterArmature",
+        "channels": 16,
+        "duration": 0.33
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Jump|CharacterArmature|Jump",
+        "channels": 16,
+        "duration": 0.33
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|No|CharacterArmature|No",
+        "channels": 13,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Punch|CharacterArmature|Pun",
+        "channels": 24,
+        "duration": 0.75
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Run|CharacterArmature|Run",
+        "channels": 27,
+        "duration": 0.71
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Sword|CharacterArmature|Swo",
+        "channels": 23,
+        "duration": 0.83
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Walk|CharacterArmature|Walk",
+        "channels": 24,
+        "duration": 1
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Wave|CharacterArmature|Wave",
+        "channels": 15,
+        "duration": 1.67
+      },
+      {
+        "name": "CharacterArmature|CharacterArmature|CharacterArmature|Yes|CharacterArmature|Yes",
+        "channels": 13,
+        "duration": 1.67
+      }
+    ]
+  },
+  "public/assets/models/characters/undeadworker.glb": {
+    "sizeMB": 31,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Boxing_Guard_Prep_Straight_Punch",
+        "channels": 72,
+        "duration": 0.53
+      },
+      {
+        "name": "Dodge_and_Counter",
+        "channels": 72,
+        "duration": 2.5
+      },
+      {
+        "name": "Fall_Dead_from_Abdominal_Injury",
+        "channels": 72,
+        "duration": 5
+      },
+      {
+        "name": "Female_Head_Down_Charge",
+        "channels": 72,
+        "duration": 4.67
+      },
+      {
+        "name": "Flying_Fist_Kick",
+        "channels": 72,
+        "duration": 1.23
+      },
+      {
+        "name": "Hit_Reaction_1",
+        "channels": 72,
+        "duration": 8.67
+      },
+      {
+        "name": "Injured_Walk",
+        "channels": 72,
+        "duration": 1.5
+      },
+      {
+        "name": "Knock_Down",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Punch_Combo_2",
+        "channels": 72,
+        "duration": 4.53
+      },
+      {
+        "name": "Right_Hand_Sword_Slash",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 5
+      },
+      {
+        "name": "Swim_Forward",
+        "channels": 72,
+        "duration": 3.97
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 9.33
+      },
+      {
+        "name": "swimming_to_edge",
+        "channels": 72,
+        "duration": 3.5
+      }
+    ]
+  },
+  "public/assets/models/creatures/GoblinCr3w.glb": {
+    "sizeMB": 13.5,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Crouch_Charge_and_Throw",
+        "channels": 72,
+        "duration": 4.53
+      },
+      {
+        "name": "Fall_Dead_from_Abdominal_Injury",
+        "channels": 72,
+        "duration": 5
+      },
+      {
+        "name": "Jump_Over_Obstacle_2",
+        "channels": 72,
+        "duration": 0.9
+      },
+      {
+        "name": "Jumping_Punch",
+        "channels": 72,
+        "duration": 2.7
+      },
+      {
+        "name": "Lunge_Spin_Kick",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "Punch_Combo_1",
+        "channels": 72,
+        "duration": 2.53
+      },
+      {
+        "name": "Reaping_Swing",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Roll_Dodge_1",
+        "channels": 72,
+        "duration": 5.93
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Stand_Dodge_2",
+        "channels": 72,
+        "duration": 7.7
+      },
+      {
+        "name": "Swim_Forward",
+        "channels": 72,
+        "duration": 2.23
+      },
+      {
+        "name": "Swim_Idle",
+        "channels": 72,
+        "duration": 2.27
+      },
+      {
+        "name": "Thomas_Flair_to_Jump_Up",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "Thrust_Slash",
+        "channels": 72,
+        "duration": 4.53
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 3.5
+      },
+      {
+        "name": "Weapon_Combo_2",
+        "channels": 72,
+        "duration": 1.63
+      },
+      {
+        "name": "swimming_to_edge",
+        "channels": 72,
+        "duration": 1.27
+      }
+    ]
+  },
+  "public/assets/models/creatures/Shark.glb": {
+    "sizeMB": 0.5,
+    "meshes": 2,
+    "animations": [
+      {
+        "name": "SharkArmature|SharkArmature|SharkArmature|Swim_Bite|SharkArmature|Swim_Bite",
+        "channels": 14,
+        "duration": 1.08
+      },
+      {
+        "name": "SharkArmature|SharkArmature|SharkArmature|Swim_Fast|SharkArmature|Swim_Fast",
+        "channels": 12,
+        "duration": 1
+      },
+      {
+        "name": "SharkArmature|SharkArmature|SharkArmature|Swim|SharkArmature|Swim",
+        "channels": 12,
+        "duration": 1.33
+      }
+    ]
+  },
+  "public/assets/models/creatures/skullgoon.glb": {
+    "sizeMB": 14,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Charged_Upward_Slash",
+        "channels": 72,
+        "duration": 1.3
+      },
+      {
+        "name": "Idle_03",
+        "channels": 72,
+        "duration": 2.5
+      },
+      {
+        "name": "Idle_10",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Knock_Down",
+        "channels": 72,
+        "duration": 1.03
+      },
+      {
+        "name": "Left_Jab_from_Guard",
+        "channels": 72,
+        "duration": 3.2
+      },
+      {
+        "name": "Left_Short_Hook_from_Guard",
+        "channels": 72,
+        "duration": 5.33
+      },
+      {
+        "name": "Lunge_Spin_Kick",
+        "channels": 72,
+        "duration": 1.77
+      },
+      {
+        "name": "Running",
+        "channels": 72,
+        "duration": 0.63
+      },
+      {
+        "name": "Stand_Up1",
+        "channels": 72,
+        "duration": 8.27
+      },
+      {
+        "name": "Standard_Forward_Charge",
+        "channels": 72,
+        "duration": 4.53
+      },
+      {
+        "name": "Swim_Forward",
+        "channels": 72,
+        "duration": 1.63
+      },
+      {
+        "name": "Swim_Idle",
+        "channels": 72,
+        "duration": 3
+      },
+      {
+        "name": "Walking",
+        "channels": 72,
+        "duration": 5
+      },
+      {
+        "name": "mage_soell_cast_4",
+        "channels": 72,
+        "duration": 2.23
+      },
+      {
+        "name": "swimming_to_edge",
+        "channels": 72,
+        "duration": 3.67
+      }
+    ]
+  },
+  "public/assets/models/creatures/Velociraptor.glb": {
+    "sizeMB": 0.3,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Armature|Velociraptor_Attack",
+        "channels": 29,
+        "duration": 0.83
+      },
+      {
+        "name": "Armature|Velociraptor_Death",
+        "channels": 25,
+        "duration": 1.29
+      },
+      {
+        "name": "Armature|Velociraptor_Idle",
+        "channels": 17,
+        "duration": 2.5
+      },
+      {
+        "name": "Armature|Velociraptor_Jump",
+        "channels": 31,
+        "duration": 1.13
+      },
+      {
+        "name": "Armature|Velociraptor_Run",
+        "channels": 34,
+        "duration": 0.54
+      },
+      {
+        "name": "Armature|Velociraptor_Walk",
+        "channels": 35,
+        "duration": 2.42
+      }
+    ]
+  },
+  "public/assets/models/creatures/Wolf.glb": {
+    "sizeMB": 0.9,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Attack",
+        "channels": 33,
+        "duration": 1.33
+      },
+      {
+        "name": "Death",
+        "channels": 41,
+        "duration": 1.04
+      },
+      {
+        "name": "Eating",
+        "channels": 29,
+        "duration": 2.5
+      },
+      {
+        "name": "Gallop",
+        "channels": 45,
+        "duration": 0.54
+      },
+      {
+        "name": "Gallop_Jump",
+        "channels": 49,
+        "duration": 0.92
+      },
+      {
+        "name": "Idle_HitReact_Left",
+        "channels": 31,
+        "duration": 0.67
+      },
+      {
+        "name": "Idle_HitReact_Right",
+        "channels": 32,
+        "duration": 0.67
+      },
+      {
+        "name": "Jump_ToIdle",
+        "channels": 49,
+        "duration": 1.33
+      },
+      {
+        "name": "Walk",
+        "channels": 41,
+        "duration": 1.04
+      },
+      {
+        "name": "Idle_2_HeadLow",
+        "channels": 27,
+        "duration": 4
+      },
+      {
+        "name": "Idle_2",
+        "channels": 28,
+        "duration": 3.33
+      },
+      {
+        "name": "Idle",
+        "channels": 25,
+        "duration": 3.33
+      },
+      {
+        "name": "AnimalArmature|Attack",
+        "channels": 33,
+        "duration": 1.33
+      },
+      {
+        "name": "AnimalArmature|Death",
+        "channels": 41,
+        "duration": 1.04
+      },
+      {
+        "name": "AnimalArmature|Eating",
+        "channels": 29,
+        "duration": 2.5
+      },
+      {
+        "name": "AnimalArmature|Gallop",
+        "channels": 45,
+        "duration": 0.54
+      },
+      {
+        "name": "AnimalArmature|Gallop_Jump",
+        "channels": 49,
+        "duration": 0.92
+      },
+      {
+        "name": "AnimalArmature|Idle",
+        "channels": 25,
+        "duration": 3.33
+      },
+      {
+        "name": "AnimalArmature|Idle_2",
+        "channels": 28,
+        "duration": 3.33
+      },
+      {
+        "name": "AnimalArmature|Idle_2_HeadLow",
+        "channels": 27,
+        "duration": 4
+      },
+      {
+        "name": "AnimalArmature|Idle_HitReact_Left",
+        "channels": 31,
+        "duration": 0.67
+      },
+      {
+        "name": "AnimalArmature|Idle_HitReact_Right",
+        "channels": 32,
+        "duration": 0.67
+      },
+      {
+        "name": "AnimalArmature|Jump_ToIdle",
+        "channels": 49,
+        "duration": 1.33
+      },
+      {
+        "name": "AnimalArmature|Walk",
+        "channels": 41,
+        "duration": 1.04
+      }
+    ]
+  },
+  "public/assets/models/environment/Bridge.glb": {
+    "sizeMB": 0.2,
+    "meshes": 1,
+    "animations": [
+      {
+        "name": "Bridge-wooden-lighter|Fisher|Take 001|BaseLayer",
+        "channels": 1,
+        "duration": 0
+      },
+      {
+        "name": "Bridge-wooden-lighter|Fisher|Take 001|BaseLayer.001",
+        "channels": 1,
+        "duration": 0
+      },
+      {
+        "name": "Bridge-wooden-lighter|Fisher|Take 001|BaseLayer.002",
+        "channels": 1,
+        "duration": 0
+      }
+    ]
+  },
+  "public/assets/models/environment/Dragon.glb": {
+    "sizeMB": 0.3,
+    "meshes": 2,
+    "animations": [
+      {
+        "name": "DragonArmature|Dragon_Attack",
+        "channels": 25,
+        "duration": 0.88
+      },
+      {
+        "name": "DragonArmature|Dragon_Attack2",
+        "channels": 22,
+        "duration": 1.67
+      },
+      {
+        "name": "DragonArmature|Dragon_Death",
+        "channels": 24,
+        "duration": 1.21
+      },
+      {
+        "name": "DragonArmature|Dragon_Flying",
+        "channels": 16,
+        "duration": 1.67
+      },
+      {
+        "name": "DragonArmature|Dragon_Hit",
+        "channels": 22,
+        "duration": 1.67
+      }
+    ]
+  },
+  "public/assets/models/environment/SlimeEnemy.glb": {
+    "sizeMB": 0.2,
+    "meshes": 3,
+    "animations": [
+      {
+        "name": "MonsterArmature|Bite_Front",
+        "channels": 8,
+        "duration": 0.5
+      },
+      {
+        "name": "MonsterArmature|Bite_InPlace",
+        "channels": 9,
+        "duration": 0.67
+      },
+      {
+        "name": "MonsterArmature|Dance",
+        "channels": 10,
+        "duration": 0.83
+      },
+      {
+        "name": "MonsterArmature|Death",
+        "channels": 10,
+        "duration": 0.46
+      },
+      {
+        "name": "MonsterArmature|HitRecieve",
+        "channels": 10,
+        "duration": 0.38
+      },
+      {
+        "name": "MonsterArmature|Idle",
+        "channels": 7,
+        "duration": 2.5
+      },
+      {
+        "name": "MonsterArmature|Jump",
+        "channels": 9,
+        "duration": 0.54
+      },
+      {
+        "name": "MonsterArmature|No",
+        "channels": 9,
+        "duration": 0.5
+      },
+      {
+        "name": "MonsterArmature|Walk",
+        "channels": 10,
+        "duration": 0.54
+      },
+      {
+        "name": "MonsterArmature|Yes",
+        "channels": 8,
+        "duration": 0.5
+      }
+    ]
+  },
+  "public/effects/Root.glb": {
+    "sizeMB": 0.3,
+    "meshes": 3,
+    "animations": [
+      {
+        "name": "Take 001",
+        "channels": 31,
+        "duration": 3.33
+      }
+    ]
+  }
+}

@@ -102,6 +102,19 @@ function seededRandom(x: number, y: number): number {
 
 const TILE_GRID = Math.ceil(MAP_SIZE / 80);
 
+/** Check if a world position is blocked by collision map or impassable terrain */
+function isTileBlocked(state: MobaState, wx: number, wy: number): boolean {
+  const tx = Math.floor(wx / 80);
+  const ty = Math.floor(wy / 80);
+  if (tx < 0 || ty < 0 || tx >= TILE_GRID || ty >= TILE_GRID) return true;
+  // Check collision grid from map editor
+  if ((state as any).collisionMap?.[ty]?.[tx]) return true;
+  // Water and dense-woods/stone-wall terrain block movement
+  const terrainIdx = state.terrainMap[ty]?.[tx] ?? 0;
+  if (terrainIdx === 3 || terrainIdx === 11) return true; // water, stone wall
+  return false;
+}
+
 function isOnLaneStatic(x: number, y: number): boolean {
   for (const lane of LANE_WAYPOINTS) {
     for (let i = 1; i < lane.length; i++) {
@@ -155,7 +168,7 @@ function generateTerrainMap(): number[][] {
   return grid;
 }
 
-const TERRAIN_LOOKUP: TerrainType[] = ['grass', 'dirt', 'stone', 'water', 'lane', 'jungle', 'base_blue', 'base_red', 'river', 'jungle_path'];
+const TERRAIN_LOOKUP: TerrainType[] = ['grass', 'dirt', 'stone', 'water', 'lane', 'jungle', 'base_blue', 'base_red', 'river', 'jungle_path', 'jungle', 'stone'];
 
 function generateDecorations(): { x: number; y: number; type: string; seed: number }[] {
   const decos: { x: number; y: number; type: string; seed: number }[] = [];
@@ -209,11 +222,31 @@ function generateDecorations(): { x: number; y: number; type: string; seed: numb
   return decos;
 }
 
+// Try to load map from server, fallback to localStorage
+let _serverMap: MapData | null = null;
+let _serverMapFetched = false;
+
+async function fetchServerMap(): Promise<MapData | null> {
+  if (_serverMapFetched) return _serverMap;
+  _serverMapFetched = true;
+  try {
+    const res = await fetch('/api/map');
+    if (res.ok) {
+      _serverMap = await res.json();
+      return _serverMap;
+    }
+  } catch {}
+  return null;
+}
+
+// Kick off fetch early (non-blocking)
+fetchServerMap();
+
 export function createInitialState(playerHeroId: number, playerTeam: number): MobaState {
   // Preload trail effect images
   preloadTrails();
-  // Load saved map from admin editor if available
-  const savedMap = loadMapData();
+  // Load saved map: prefer server map, then localStorage, then generate
+  const savedMap = _serverMap || loadMapData();
 
   initTowerPositions();
 
@@ -239,6 +272,7 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     showScoreboard: false,
     killFeed: [],
     terrainMap: savedMap ? savedMap.terrain : generateTerrainMap(),
+    collisionMap: savedMap?.collision || null,
     decorations: savedMap ? savedMap.decorations.map(d => ({ x: d.x, y: d.y, type: d.type, seed: d.seed })) : generateDecorations(),
     jungleCamps: [],
     cursorMode: 'default',
@@ -979,10 +1013,19 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
     runHeroAI(state, hero, dt);
   }
 
-  hero.x += hero.vx * dt;
-  hero.y += hero.vy * dt;
-  hero.x = Math.max(50, Math.min(MAP_SIZE - 50, hero.x));
-  hero.y = Math.max(50, Math.min(MAP_SIZE - 50, hero.y));
+  // Apply movement with collision check
+  const newX = hero.x + hero.vx * dt;
+  const newY = hero.y + hero.vy * dt;
+  const clampX = Math.max(50, Math.min(MAP_SIZE - 50, newX));
+  const clampY = Math.max(50, Math.min(MAP_SIZE - 50, newY));
+  if (!isTileBlocked(state, clampX, clampY)) {
+    hero.x = clampX;
+    hero.y = clampY;
+  } else if (!isTileBlocked(state, clampX, hero.y)) {
+    hero.x = clampX; // Slide along X
+  } else if (!isTileBlocked(state, hero.x, clampY)) {
+    hero.y = clampY; // Slide along Y
+  }
 
   if (hero.attackWindup <= 0 && hero.attackBackswing <= 0 && hero.targetId !== null) {
     const target = findEntityById(state, hero.targetId);

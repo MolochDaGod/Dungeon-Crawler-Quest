@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import {
-  MapData, MapDecoration, MapCampDef, createDefaultMapData,
-  saveMapData, loadMapData, downloadMapJSON, importMapJSON,
+  MapData, MapDecoration, MapCampDef, MapSpawner, MapEvent, MapVendor, MapHarvestable,
+  createDefaultMapData, saveMapData, loadMapData, downloadMapJSON, importMapJSON,
   TERRAIN_TYPES, DECORATION_TYPES, DECORATION_CATEGORIES, CAMP_TYPES,
+  SPAWNER_TYPES, EVENT_TRIGGERS, EVENT_ACTIONS, VENDOR_TYPES, RESOURCE_TYPES,
   TILE_SIZE, GRID_SIZE,
+  SpawnerType, EventTrigger, VendorType, ResourceType,
 } from '../game/map-data';
 import { MAP_SIZE } from '../game/types';
 import {
@@ -12,7 +14,7 @@ import {
   GeneratedDecoration,
 } from '../game/ai-map-gen';
 
-type Tool = 'terrain' | 'height' | 'object' | 'camp' | 'lane' | 'collision' | 'erase' | 'select' | 'ai-fill' | 'ai-scatter';
+type Tool = 'terrain' | 'height' | 'object' | 'camp' | 'lane' | 'collision' | 'erase' | 'select' | 'ai-fill' | 'ai-scatter' | 'spawner' | 'event' | 'vendor' | 'harvest';
 
 interface Camera { x: number; y: number; zoom: number; }
 
@@ -21,6 +23,10 @@ const TOOLS: { id: Tool; label: string; key: string }[] = [
   { id: 'height', label: '⬆ Height', key: '2' },
   { id: 'object', label: '🌲 Object', key: '3' },
   { id: 'camp', label: '⚔ Camp', key: '4' },
+  { id: 'spawner', label: '👾 Spawner', key: '' },
+  { id: 'event', label: '⚡ Event', key: '' },
+  { id: 'vendor', label: '🏪 Vendor', key: '' },
+  { id: 'harvest', label: '⛏ Harvest', key: '' },
   { id: 'lane', label: '🛤 Lane', key: '5' },
   { id: 'collision', label: '🧱 Collision', key: '6' },
   { id: 'erase', label: '🗑 Erase', key: '7' },
@@ -52,6 +58,25 @@ export default function MapAdminPage() {
   const [showLanes, setShowLanes] = useState(true);
   const [gizmoMode, setGizmoMode] = useState<'move' | 'scale' | 'rotate'>('move');
   const [statusMsg, setStatusMsg] = useState('');
+  // New tool state
+  const [spawnerType, setSpawnerType] = useState<SpawnerType>('neutral');
+  const [spawnerTeam, setSpawnerTeam] = useState(-1);
+  const [spawnerInterval, setSpawnerInterval] = useState(60);
+  const [spawnerCount, setSpawnerCount] = useState(3);
+  const [spawnerLabel, setSpawnerLabel] = useState('Spawn Point');
+  const [eventTrigger, setEventTrigger] = useState<EventTrigger>('proximity');
+  const [eventAction, setEventAction] = useState('ambush');
+  const [eventRadius, setEventRadius] = useState(120);
+  const [eventLabel, setEventLabel] = useState('Event');
+  const [vendorType, setVendorType] = useState<VendorType>('shop');
+  const [vendorName, setVendorName] = useState('Merchant');
+  const [resourceType, setResourceType] = useState<ResourceType>('ore');
+  const [resourceTier, setResourceTier] = useState(1);
+  const [resourceRespawn, setResourceRespawn] = useState(120);
+  const [showSpawners, setShowSpawners] = useState(true);
+  const [showEvents, setShowEvents] = useState(true);
+  const [showVendors, setShowVendors] = useState(true);
+  const [showHarvestables, setShowHarvestables] = useState(true);
   // AI tool state
   const [aiBiomePreset, setAiBiomePreset] = useState<BiomePreset>(MOBA_BIOME_PRESETS[0]);
   const [aiSeed, setAiSeed] = useState(42);
@@ -120,19 +145,51 @@ export default function MapAdminPage() {
   const paintTerrain = useCallback((wx: number, wy: number, value: number) => {
     const { tx, ty } = worldToTile(wx, wy);
     const r = brushSize - 1;
+    const isDenseWoods = value === 10;
+    const isStoneWall = value === 11;
     setMapData(prev => {
       const terrain = prev.terrain.map(row => [...row]);
+      const collision = prev.collision.map(row => [...row]);
+      let newDecos = [...prev.decorations];
+      let nextId = prev.nextDecoId;
       for (let dy = -r; dy <= r; dy++) {
         for (let dx = -r; dx <= r; dx++) {
           const px = tx + dx, py = ty + dy;
           if (px >= 0 && px < GRID_SIZE && py >= 0 && py < GRID_SIZE) {
             if (dx * dx + dy * dy <= r * r + r) {
               terrain[py][px] = value;
+              // Dense Woods: auto-collision + scatter trees
+              if (isDenseWoods || isStoneWall) {
+                collision[py][px] = true;
+              }
+              if (isDenseWoods && Math.random() < 0.3) {
+                const treeTypes = ['tree', 'pine_tree', 'tree_large', 'tree_twisted'];
+                newDecos.push({
+                  id: nextId++,
+                  x: px * TILE_SIZE + Math.random() * TILE_SIZE,
+                  y: py * TILE_SIZE + Math.random() * TILE_SIZE,
+                  type: treeTypes[Math.floor(Math.random() * treeTypes.length)],
+                  seed: Math.floor(Math.random() * 10000),
+                  scale: 0.8 + Math.random() * 1.2,
+                  rotation: Math.random() * 360,
+                });
+              }
+              if (isStoneWall && Math.random() < 0.25) {
+                newDecos.push({
+                  id: nextId++,
+                  x: px * TILE_SIZE + Math.random() * TILE_SIZE,
+                  y: py * TILE_SIZE + Math.random() * TILE_SIZE,
+                  type: Math.random() > 0.5 ? 'rock_large' : 'rock',
+                  seed: Math.floor(Math.random() * 10000),
+                  scale: 0.8 + Math.random() * 1.0,
+                  rotation: Math.random() * 360,
+                });
+              }
             }
           }
         }
       }
-      return { ...prev, terrain };
+      return { ...prev, terrain, collision, decorations: newDecos, nextDecoId: nextId };
     });
   }, [brushSize]);
 
@@ -141,17 +198,35 @@ export default function MapAdminPage() {
     const r = brushSize - 1;
     setMapData(prev => {
       const heightmap = prev.heightmap.map(row => [...row]);
+      const terrain = prev.terrain.map(row => [...row]);
+      const collision = prev.collision.map(row => [...row]);
       for (let dy = -r; dy <= r; dy++) {
         for (let dx = -r; dx <= r; dx++) {
           const px = tx + dx, py = ty + dy;
           if (px >= 0 && px < GRID_SIZE && py >= 0 && py < GRID_SIZE) {
             if (dx * dx + dy * dy <= r * r + r) {
               heightmap[py][px] = value;
+              // Auto-rules: height 0 = water, height 3+ = cliff/impassable
+              if (value === 0) {
+                terrain[py][px] = 3; // Water
+                collision[py][px] = false;
+              } else if (value >= 3) {
+                collision[py][px] = true;
+              } else {
+                // Restore ground if lowering from cliff
+                if (collision[py][px] && terrain[py][px] !== 10 && terrain[py][px] !== 11) {
+                  collision[py][px] = false;
+                }
+                // Restore grass if raising from water
+                if (terrain[py][px] === 3 || terrain[py][px] === 8) {
+                  terrain[py][px] = 0; // Grass
+                }
+              }
             }
           }
         }
       }
-      return { ...prev, heightmap };
+      return { ...prev, heightmap, terrain, collision };
     });
   }, [brushSize]);
 
@@ -206,20 +281,60 @@ export default function MapAdminPage() {
     });
   }, [activeLaneIdx]);
 
-  const eraseAt = useCallback((wx: number, wy: number) => {
+  const placeSpawner = useCallback((wx: number, wy: number) => {
     setMapData(prev => {
-      // Erase decorations within 60px
-      const decos = prev.decorations.filter(d => {
-        const dx = d.x - wx, dy = d.y - wy;
-        return Math.sqrt(dx * dx + dy * dy) > 60;
-      });
-      // Erase camps within 80px
-      const camps = prev.camps.filter(c => {
-        const dx = c.x - wx, dy = c.y - wy;
-        return Math.sqrt(dx * dx + dy * dy) > 80;
-      });
-      return { ...prev, decorations: decos, camps };
+      const s: MapSpawner = {
+        id: prev.nextPlaceableId, x: wx, y: wy,
+        type: spawnerType, team: spawnerTeam,
+        interval: spawnerInterval, mobTypes: [], count: spawnerCount,
+        label: spawnerLabel,
+      };
+      return { ...prev, spawners: [...prev.spawners, s], nextPlaceableId: prev.nextPlaceableId + 1 };
     });
+  }, [spawnerType, spawnerTeam, spawnerInterval, spawnerCount, spawnerLabel]);
+
+  const placeEvent = useCallback((wx: number, wy: number) => {
+    setMapData(prev => {
+      const e: MapEvent = {
+        id: prev.nextPlaceableId, x: wx, y: wy,
+        radius: eventRadius, triggerType: eventTrigger,
+        eventAction: eventAction, label: eventLabel,
+      };
+      return { ...prev, events: [...prev.events, e], nextPlaceableId: prev.nextPlaceableId + 1 };
+    });
+  }, [eventTrigger, eventAction, eventRadius, eventLabel]);
+
+  const placeVendor = useCallback((wx: number, wy: number) => {
+    setMapData(prev => {
+      const v: MapVendor = {
+        id: prev.nextPlaceableId, x: wx, y: wy,
+        vendorType: vendorType, name: vendorName,
+      };
+      return { ...prev, vendors: [...prev.vendors, v], nextPlaceableId: prev.nextPlaceableId + 1 };
+    });
+  }, [vendorType, vendorName]);
+
+  const placeHarvestable = useCallback((wx: number, wy: number) => {
+    setMapData(prev => {
+      const h: MapHarvestable = {
+        id: prev.nextPlaceableId, x: wx, y: wy,
+        resourceType: resourceType, tier: resourceTier, respawnTime: resourceRespawn,
+      };
+      return { ...prev, harvestables: [...prev.harvestables, h], nextPlaceableId: prev.nextPlaceableId + 1 };
+    });
+  }, [resourceType, resourceTier, resourceRespawn]);
+
+  const eraseAt = useCallback((wx: number, wy: number) => {
+    const dist = (a: { x: number; y: number }) => Math.sqrt((a.x - wx) ** 2 + (a.y - wy) ** 2);
+    setMapData(prev => ({
+      ...prev,
+      decorations: prev.decorations.filter(d => dist(d) > 60),
+      camps: prev.camps.filter(c => dist(c) > 80),
+      spawners: prev.spawners.filter(s => dist(s) > 80),
+      events: prev.events.filter(e => dist(e) > 80),
+      vendors: prev.vendors.filter(v => dist(v) > 60),
+      harvestables: prev.harvestables.filter(h => dist(h) > 60),
+    }));
   }, []);
 
   // Mouse handlers
@@ -279,10 +394,15 @@ export default function MapAdminPage() {
     else if (tool === 'collision') paintCollision(wx, wy, true);
     else if (tool === 'object') placeObject(wx, wy);
     else if (tool === 'camp') placeCamp(wx, wy);
+    else if (tool === 'spawner') placeSpawner(wx, wy);
+    else if (tool === 'event') placeEvent(wx, wy);
+    else if (tool === 'vendor') placeVendor(wx, wy);
+    else if (tool === 'harvest') placeHarvestable(wx, wy);
     else if (tool === 'lane') addLaneWaypoint(wx, wy);
     else if (tool === 'erase') eraseAt(wx, wy);
   }, [tool, terrainType, brushSize, heightValue, selectedDecoType, selectedCampType, objectScale, objectRotation,
-    paintTerrain, paintHeight, paintCollision, placeObject, placeCamp, addLaneWaypoint, eraseAt, pushUndo, screenToWorld]);
+    paintTerrain, paintHeight, paintCollision, placeObject, placeCamp, placeSpawner, placeEvent, placeVendor, placeHarvestable,
+    addLaneWaypoint, eraseAt, pushUndo, screenToWorld]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -637,6 +757,114 @@ export default function MapAdminPage() {
         ctx.fillText(`T${cf.team}`, cf.x, cf.y + 25);
       }
 
+      // Draw spawners
+      if (showSpawners) {
+        for (const sp of md.spawners ?? []) {
+          if (sp.x < viewLeft - 200 || sp.x > viewRight + 200 || sp.y < viewTop - 200 || sp.y > viewBottom + 200) continue;
+          const st = SPAWNER_TYPES.find(s => s.id === sp.type);
+          const color = st?.color || '#aaa';
+          const pulse = 40 + Math.sin(Date.now() / 400) * 8;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 3;
+          ctx.globalAlpha = 0.6;
+          ctx.setLineDash([6, 4]);
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, pulse, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.globalAlpha = 0.15;
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = color;
+          ctx.font = 'bold 14px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`S:${sp.label}`, sp.x, sp.y + 5);
+          ctx.font = '10px monospace';
+          ctx.fillStyle = '#ccc';
+          ctx.fillText(`${sp.type} x${sp.count}`, sp.x, sp.y + 20);
+        }
+      }
+
+      // Draw events
+      if (showEvents) {
+        for (const ev of md.events ?? []) {
+          if (ev.x < viewLeft - 200 || ev.x > viewRight + 200 || ev.y < viewTop - 200 || ev.y > viewBottom + 200) continue;
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([8, 6]);
+          ctx.globalAlpha = 0.5;
+          ctx.beginPath();
+          ctx.arc(ev.x, ev.y, ev.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = 'rgba(245,158,11,0.08)';
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#f59e0b';
+          ctx.font = 'bold 13px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`⚡${ev.label}`, ev.x, ev.y + 4);
+          ctx.font = '9px monospace';
+          ctx.fillStyle = '#fbbf24';
+          ctx.fillText(`${ev.triggerType}:${ev.eventAction}`, ev.x, ev.y + 18);
+        }
+      }
+
+      // Draw vendors
+      if (showVendors) {
+        for (const vn of md.vendors ?? []) {
+          if (vn.x < viewLeft - 100 || vn.x > viewRight + 100 || vn.y < viewTop - 100 || vn.y > viewBottom + 100) continue;
+          const vt = VENDOR_TYPES.find(v => v.id === vn.vendorType);
+          const color = vt?.color || '#ffd700';
+          // Diamond marker
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.9;
+          ctx.save();
+          ctx.translate(vn.x, vn.y);
+          ctx.rotate(Math.PI / 4);
+          ctx.fillRect(-10, -10, 20, 20);
+          ctx.restore();
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 2;
+          ctx.save();
+          ctx.translate(vn.x, vn.y);
+          ctx.rotate(Math.PI / 4);
+          ctx.strokeRect(-10, -10, 20, 20);
+          ctx.restore();
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(vn.name, vn.x, vn.y + 22);
+        }
+      }
+
+      // Draw harvestables
+      if (showHarvestables) {
+        for (const hr of md.harvestables ?? []) {
+          if (hr.x < viewLeft - 100 || hr.x > viewRight + 100 || hr.y < viewTop - 100 || hr.y > viewBottom + 100) continue;
+          const rt = RESOURCE_TYPES.find(r => r.id === hr.resourceType);
+          const color = rt?.color || '#aaa';
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.8;
+          ctx.beginPath();
+          ctx.arc(hr.x, hr.y, 8 + hr.tier * 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.fillStyle = '#fff';
+          ctx.font = '10px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`T${hr.tier}`, hr.x, hr.y + 4);
+          ctx.font = '9px monospace';
+          ctx.fillStyle = color;
+          ctx.fillText(rt?.name || hr.resourceType, hr.x, hr.y + 20);
+        }
+      }
+
       // Base positions
       for (let i = 0; i < md.basePositions.length; i++) {
         const bp = md.basePositions[i];
@@ -689,10 +917,26 @@ export default function MapAdminPage() {
     return () => cancelAnimationFrame(animRef.current);
   }, [showGrid, showCollision, showCamps, showLanes, selectedDecoId, gizmoMode, aiSelectStart, aiSelectEnd, tool]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Save to localStorage
     saveMapData(mapData);
-    setStatusMsg('Map saved to game!');
-    setTimeout(() => setStatusMsg(''), 2000);
+    // Save to server
+    try {
+      const res = await fetch('/api/map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mapData),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStatusMsg(`Saved to server! (${Math.round(data.size / 1024)}KB)`);
+      } else {
+        setStatusMsg('Saved locally (server unavailable)');
+      }
+    } catch {
+      setStatusMsg('Saved locally (server offline)');
+    }
+    setTimeout(() => setStatusMsg(''), 3000);
   };
 
   const handleExport = () => downloadMapJSON(mapData);
@@ -903,6 +1147,104 @@ export default function MapAdminPage() {
           </>
         )}
 
+        {tool === 'spawner' && (
+          <>
+            <div className="text-xs text-gray-400 uppercase font-bold">Spawner Type</div>
+            <div className="space-y-1">
+              {SPAWNER_TYPES.map(st => (
+                <button key={st.id} onClick={() => setSpawnerType(st.id)}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs ${spawnerType === st.id ? 'ring-2 ring-amber-500 bg-gray-800' : 'bg-gray-800/50 hover:bg-gray-800'}`}>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: st.color }} />
+                  <span className="text-gray-300">{st.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Team</div>
+            <select value={spawnerTeam} onChange={e => setSpawnerTeam(Number(e.target.value))}
+              className="w-full bg-gray-800 text-white text-xs rounded px-2 py-1">
+              <option value={-1}>Neutral</option>
+              <option value={0}>Blue (0)</option>
+              <option value={1}>Red (1)</option>
+            </select>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Spawn Count</div>
+            <input type="range" min={1} max={10} value={spawnerCount} onChange={e => setSpawnerCount(Number(e.target.value))}
+              className="w-full accent-amber-500" />
+            <div className="text-amber-400 text-xs text-center">{spawnerCount} mobs</div>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Interval (sec)</div>
+            <input type="number" min={10} max={600} value={spawnerInterval} onChange={e => setSpawnerInterval(Number(e.target.value))}
+              className="w-full bg-gray-800 text-white text-xs rounded px-2 py-1" />
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Label</div>
+            <input type="text" value={spawnerLabel} onChange={e => setSpawnerLabel(e.target.value)}
+              className="w-full bg-gray-800 text-white text-xs rounded px-2 py-1" />
+          </>
+        )}
+
+        {tool === 'event' && (
+          <>
+            <div className="text-xs text-gray-400 uppercase font-bold">Trigger Type</div>
+            <div className="space-y-1">
+              {EVENT_TRIGGERS.map(et => (
+                <button key={et.id} onClick={() => setEventTrigger(et.id)}
+                  className={`w-full px-2 py-1.5 rounded text-xs ${eventTrigger === et.id ? 'bg-amber-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                  {et.name}
+                </button>
+              ))}
+            </div>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Action</div>
+            <select value={eventAction} onChange={e => setEventAction(e.target.value)}
+              className="w-full bg-gray-800 text-white text-xs rounded px-2 py-1">
+              {EVENT_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Radius</div>
+            <input type="range" min={40} max={400} step={10} value={eventRadius}
+              onChange={e => setEventRadius(Number(e.target.value))} className="w-full accent-amber-500" />
+            <div className="text-amber-400 text-xs text-center">{eventRadius}px</div>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Label</div>
+            <input type="text" value={eventLabel} onChange={e => setEventLabel(e.target.value)}
+              className="w-full bg-gray-800 text-white text-xs rounded px-2 py-1" />
+          </>
+        )}
+
+        {tool === 'vendor' && (
+          <>
+            <div className="text-xs text-gray-400 uppercase font-bold">Vendor Type</div>
+            <div className="space-y-1">
+              {VENDOR_TYPES.map(vt => (
+                <button key={vt.id} onClick={() => setVendorType(vt.id)}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs ${vendorType === vt.id ? 'ring-2 ring-amber-500 bg-gray-800' : 'bg-gray-800/50 hover:bg-gray-800'}`}>
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: vt.color }} />
+                  <span className="text-gray-300">{vt.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">NPC Name</div>
+            <input type="text" value={vendorName} onChange={e => setVendorName(e.target.value)}
+              className="w-full bg-gray-800 text-white text-xs rounded px-2 py-1" />
+          </>
+        )}
+
+        {tool === 'harvest' && (
+          <>
+            <div className="text-xs text-gray-400 uppercase font-bold">Resource Type</div>
+            <div className="space-y-1">
+              {RESOURCE_TYPES.map(rt => (
+                <button key={rt.id} onClick={() => setResourceType(rt.id)}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs ${resourceType === rt.id ? 'ring-2 ring-amber-500 bg-gray-800' : 'bg-gray-800/50 hover:bg-gray-800'}`}>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: rt.color }} />
+                  <span className="text-gray-300">{rt.icon} {rt.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Tier</div>
+            <input type="range" min={1} max={5} value={resourceTier} onChange={e => setResourceTier(Number(e.target.value))}
+              className="w-full accent-amber-500" />
+            <div className="text-amber-400 text-xs text-center">Tier {resourceTier}</div>
+            <div className="text-xs text-gray-400 uppercase font-bold mt-2">Respawn (sec)</div>
+            <input type="number" min={10} max={600} value={resourceRespawn} onChange={e => setResourceRespawn(Number(e.target.value))}
+              className="w-full bg-gray-800 text-white text-xs rounded px-2 py-1" />
+          </>
+        )}
+
         {tool === 'lane' && (
           <>
             <div className="text-xs text-gray-400 uppercase font-bold">Lane Editor</div>
@@ -959,7 +1301,7 @@ export default function MapAdminPage() {
         {tool === 'erase' && (
           <>
             <div className="text-xs text-gray-400 uppercase font-bold">Eraser</div>
-            <p className="text-gray-500 text-[10px]">Click/drag to remove decorations and camps near cursor.</p>
+            <p className="text-gray-500 text-[10px]">Click/drag to remove objects, camps, spawners, events, vendors, and harvestables near cursor.</p>
           </>
         )}
 
@@ -1026,6 +1368,10 @@ export default function MapAdminPage() {
             { label: 'Collision', value: showCollision, setter: setShowCollision },
             { label: 'Camps', value: showCamps, setter: setShowCamps },
             { label: 'Lanes', value: showLanes, setter: setShowLanes },
+            { label: 'Spawners', value: showSpawners, setter: setShowSpawners },
+            { label: 'Events', value: showEvents, setter: setShowEvents },
+            { label: 'Vendors', value: showVendors, setter: setShowVendors },
+            { label: 'Harvestables', value: showHarvestables, setter: setShowHarvestables },
           ].map(tog => (
             <label key={tog.label} className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer mb-1">
               <input type="checkbox" checked={tog.value} onChange={() => tog.setter(v => !v)} className="accent-amber-500" />
@@ -1040,6 +1386,10 @@ export default function MapAdminPage() {
           <div className="text-[10px] text-gray-500 space-y-0.5">
             <div>Objects: {mapData.decorations.length}</div>
             <div>Camps: {mapData.camps.length}</div>
+            <div>Spawners: {mapData.spawners?.length || 0}</div>
+            <div>Events: {mapData.events?.length || 0}</div>
+            <div>Vendors: {mapData.vendors?.length || 0}</div>
+            <div>Harvestables: {mapData.harvestables?.length || 0}</div>
             <div>Lanes: {mapData.laneWaypoints.filter(l => l.length > 0).length}</div>
             <div>Map: {MAP_SIZE}x{MAP_SIZE} ({GRID_SIZE}x{GRID_SIZE} tiles)</div>
           </div>

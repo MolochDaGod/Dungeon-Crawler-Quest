@@ -58,7 +58,7 @@ import {
   PlayerEquipment, loadEquipment, saveEquipment,
   EquipmentBag, loadEquipmentBag, saveEquipmentBag,
   equipItem, computeEquipmentStats, computeSetBonuses,
-  generateRandomEquipment, addToBag, SetBonus
+  generateRandomEquipment, addToBag, removeFromBag, SetBonus
 } from './equipment';
 import {
   MissionLog, ActiveMission, MissionReward,
@@ -433,6 +433,9 @@ export interface OpenWorldState {
   activeInteriorNPC: InteriorNPCDef | null;
   /** Cooldown so one E press doesn't immediately exit+enter */
   interactCooldown: number;
+
+  /** AI faction heroes living in the world */
+  aiHeroes: import('./ai-hero-brain').AIHeroInstance[];
 }
 
 export interface OWHudState {
@@ -497,7 +500,7 @@ export interface OWHudState {
   activeNPC: ActiveNPCDialog | null;
   // Equipment
   equipSlots: { slot: string; label: string; icon: string; item: { name: string; tier: number; atk: number; def: number; hp: number; setName: string } | null }[];
-  bagItems: { id: string; name: string; slot: string; tier: number; atk: number; def: number; hp: number }[];
+  bagItems: { id: string; name: string; slot: string; tier: number; atk: number; def: number; hp: number; mp: number; iconUrl?: string; passive?: string; lore?: string; setName: string }[];
   setBonuses: { setName: string; pieces: number }[];
   // Professions
   gatheringProfs: { id: string; name: string; icon: string; color: string; level: number; xp: number; xpToNext: number; tier: number; tierName: string; tierColor: string }[];
@@ -658,6 +661,10 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
   // Generate NPCs and resource nodes from zone definitions
   generateNPCs(state);
   generateResourceNodes(state);
+
+  // Spawn AI faction heroes
+  const { createAllAIHeroes } = require('./ai-hero-brain');
+  (state as any).aiHeroes = createAllAIHeroes();
 
   // Initial zone discovery
   const enterEvents = onZoneDiscovered(state.playerProgress, startZone.id, startZone.name);
@@ -1384,6 +1391,29 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
     }
   }
   state.voxelProjectiles = state.voxelProjectiles.filter(vp => !vp.dead);
+
+  // ── AI Faction Heroes ──
+  if (state.aiHeroes && state.aiHeroes.length > 0) {
+    const { tickAIHero } = require('./ai-hero-brain');
+    const aiCtx = {
+      heightmap: state.heightmap,
+      gameTime: state.gameTime,
+      dt,
+      enemies: state.enemies
+        .filter(e => !e.dead)
+        .map(e => ({ id: e.id, x: e.x, y: e.y, hp: e.hp, maxHp: e.maxHp, faction: '', dead: e.dead })),
+      harvestables: state.resourceNodes
+        .filter(r => !r.depleted)
+        .map(r => ({ x: r.x, y: r.y, resourceType: r.professionId, tier: r.tier })),
+      allAIHeroes: state.aiHeroes,
+      playerX: p.x,
+      playerY: p.y,
+      playerFaction: 'Docks', // player is neutral for now
+    };
+    for (const aiHero of state.aiHeroes) {
+      tickAIHero(aiHero, aiCtx);
+    }
+  }
 
   // Particles
   for (const pt of state.particles) {
@@ -2605,7 +2635,11 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
         };
       });
     })(),
-    bagItems: state.equipmentBag.items.slice(0, 20).map(i => ({ id: i.id, name: i.name, slot: i.slot, tier: i.tier, atk: i.atk, def: i.def, hp: i.hp })),
+    bagItems: state.equipmentBag.items.slice(0, 36).map(i => ({
+      id: i.id, name: i.name, slot: i.slot, tier: i.tier,
+      atk: i.atk, def: i.def, hp: i.hp, mp: i.mp,
+      iconUrl: i.iconUrl, passive: i.passive, lore: i.lore, setName: i.setName,
+    })),
     setBonuses: computeSetBonuses(state.playerEquipment).map(b => ({ setName: b.setName, pieces: b.pieces })),
     // Professions
     ...(() => {
@@ -2616,6 +2650,52 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
       };
     })(),
   };
+}
+
+// ── Equip bag item from inventory ─────────────────────────────
+
+export function equipBagItemOW(state: OpenWorldState, itemId: string): boolean {
+  const item = state.equipmentBag.items.find(i => i.id === itemId);
+  if (!item) return false;
+
+  const result = equipItem(state.playerEquipment, item);
+  if (!result.success) return false;
+
+  // Remove equipped item from bag; return displaced item to bag
+  removeFromBag(state.equipmentBag, itemId);
+  if (result.removedItem) addToBag(state.equipmentBag, result.removedItem);
+  saveEquipment(state.playerEquipment);
+  saveEquipmentBag(state.equipmentBag);
+
+  // Recalculate player stats from base + attributes + equipment
+  const hd = HEROES[state.player.heroDataId];
+  const baseStats = heroStatsAtLevel(hd, state.player.level);
+  const stats = applyAttributeBonus(baseStats, state.playerAttributes, hd.heroClass);
+  const eqStats = computeEquipmentStats(state.playerEquipment);
+  const p = state.player;
+  const oldMaxHp = p.maxHp;
+  p.maxHp = stats.hp + eqStats.hp;
+  p.hp = Math.min(p.hp + (p.maxHp - oldMaxHp), p.maxHp);
+  p.atk = stats.atk + eqStats.atk;
+  p.def = stats.def + eqStats.def;
+  p.spd = stats.spd + eqStats.spd;
+  p.maxMp = stats.mp + eqStats.mp;
+
+  // Re-init weapon loadout if a mainhand was just equipped
+  if (result.weaponChanged && result.newWeaponType) {
+    const osKey = getOSWeaponTypeKey(result.newWeaponType);
+    buildWeaponLoadout(osKey, result.newWeaponId ?? null, hd.race, hd.heroClass).then(loadout => {
+      if (loadout) {
+        applySavedSelections(loadout);
+        state.weaponLoadout = loadout;
+        state.weaponLoadoutReady = true;
+        saveLoadout(loadout);
+      }
+    });
+  }
+
+  state.killFeed.push({ text: `Equipped: ${item.name}`, color: '#d4a400', time: state.gameTime });
+  return true;
 }
 
 /** Allocate an attribute point from the open world */

@@ -30,7 +30,11 @@ export const GLB_EFFECT_MAP: Record<string, { file: string; label: string }> = {
   ice_lance:      { file: 'Ice Lance.glb',             label: 'Ice Lance' },
   ice_lance_2:    { file: 'Ice Lance 2.glb',           label: 'Ice Lance II' },
   ice_lance_3:    { file: 'Ice Lance 3.glb',           label: 'Ice Lance III' },
+  ice_rock:       { file: 'Ice Rock.glb',              label: 'Ice Rock' },
   nature_shield:  { file: 'Nature_Shield.glb',         label: 'Nature Shield' },
+  dark_shield:    { file: 'Dark_Shield.glb',           label: 'Dark Shield' },
+  distortion:     { file: 'Distortion.glb',            label: 'Distortion' },
+  crystal:        { file: 'Crystal.glb',               label: 'Crystal' },
   potion:         { file: 'Potion.glb',                label: 'Potion' },
   rock_icicle:    { file: 'Rock Icicle.glb',           label: 'Rock Icicle' },
   root:           { file: 'Root.glb',                  label: 'Root' },
@@ -43,15 +47,23 @@ export const GLB_EFFECT_MAP: Record<string, { file: string; label: string }> = {
 export const CLASS_PROJECTILE_SPRITE: Record<string, string> = {
   Mage: 'ice_lance',
   Warrior: 'fireball',
-  Ranger: 'rock_icicle',
+  Ranger: 'ice_rock',
   Worg: 'skull',
 };
 
 export const CLASS_SHIELD_SPRITE: Record<string, string> = {
   Mage: 'nature_shield',
-  Warrior: 'nature_shield',
+  Warrior: 'dark_shield',
   Ranger: 'nature_shield',
-  Worg: 'nature_shield',
+  Worg: 'dark_shield',
+};
+
+/** Distortion/crystal used for special ability overlays */
+export const CLASS_SPECIAL_SPRITE: Record<string, string> = {
+  Mage: 'crystal',
+  Warrior: 'distortion',
+  Ranger: 'crystal',
+  Worg: 'distortion',
 };
 
 // ── Offscreen Renderer ─────────────────────────────────────────

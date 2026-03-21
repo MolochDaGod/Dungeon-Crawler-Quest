@@ -214,6 +214,21 @@ export const MODEL_PATHS = {
     racalvinSlash: '/assets/models/heroes/racalvin/slash.fbx',
     racalvinJump: '/assets/models/heroes/racalvin/jump.fbx',
   },
+  // FreeContent mixamo T-pose characters (retargetable with any animation)
+  mixamo: {
+    tpose00: '/assets/models/characters/tpose_character.glb',
+    tpose01: '/assets/models/characters/tpose_character01.glb',
+    tpose02: '/assets/models/characters/tpose_character02.glb',
+    tpose03: '/assets/models/characters/tpose_character03.glb',
+    tpose04: '/assets/models/characters/tpose_character04.glb',
+    tpose05: '/assets/models/characters/tpose_character05.glb',
+    tpose06: '/assets/models/characters/tpose_character06.glb',
+    tpose07: '/assets/models/characters/tpose_character07.glb',
+    tpose08: '/assets/models/characters/tpose_character08.glb',
+    tpose09: '/assets/models/characters/tpose_character09.glb',
+    tpose10: '/assets/models/characters/tpose_character10.glb',
+    tpose11: '/assets/models/characters/tpose_character11.glb',
+  },
   environment: {
     castle: '/assets/models/environment/Castle.glb',
     fortress: '/assets/models/environment/Fortress.glb',
@@ -305,6 +320,99 @@ export function createAnimatedEntity(model: LoadedModel): AnimatedEntity {
     actions.set(clip.name.toLowerCase(), action);
   });
   return { group: model.scene, mixer, actions, currentAction: '' };
+}
+
+// ── Animation Library Integration ──────────────────────────────
+
+import { getAnim, getDefaultAnimSet, AnimEntry } from './animation-library';
+import { applyRetargetedClip, findSkeleton } from './animation-retarget';
+
+const libraryClipCache = new Map<string, THREE.AnimationClip>();
+const libraryLoadingPromises = new Map<string, Promise<THREE.AnimationClip | null>>();
+
+/**
+ * Load an animation clip by its library ID (e.g. 'combat.sword_slash').
+ * Automatically retargets the clip to the target model's skeleton.
+ *
+ * @param animId - Canonical animation ID from animation-library.ts
+ * @param targetGroup - The Three.js group to retarget the clip for
+ * @returns The animation clip, retargeted for the target skeleton
+ */
+export async function loadAnimationFromLibrary(
+  animId: string,
+  targetGroup: THREE.Group,
+): Promise<THREE.AnimationClip | null> {
+  const entry = getAnim(animId);
+  if (!entry) {
+    console.warn(`[anim-lib] Unknown animation: ${animId}`);
+    return null;
+  }
+
+  // Check cache first (source clip, before retargeting)
+  const cacheKey = `${entry.source}::${entry.clipName}`;
+  let sourceClip = libraryClipCache.get(cacheKey) ?? null;
+
+  if (!sourceClip) {
+    // Check if already loading
+    if (libraryLoadingPromises.has(cacheKey)) {
+      sourceClip = await libraryLoadingPromises.get(cacheKey)!;
+    } else {
+      const loadPromise = loadClipFromSource(entry);
+      libraryLoadingPromises.set(cacheKey, loadPromise);
+      sourceClip = await loadPromise;
+      libraryLoadingPromises.delete(cacheKey);
+      if (sourceClip) libraryClipCache.set(cacheKey, sourceClip);
+    }
+  }
+
+  if (!sourceClip) return null;
+
+  // Retarget to the target skeleton
+  return applyRetargetedClip(sourceClip, targetGroup);
+}
+
+async function loadClipFromSource(entry: AnimEntry): Promise<THREE.AnimationClip | null> {
+  const path = `/assets/models/${entry.source}`;
+  try {
+    const model = await loadGLB(path);
+    const clip = model.animations.find(a => a.name === entry.clipName);
+    if (clip) return clip;
+    // Fallback: try partial name match
+    const partial = model.animations.find(a =>
+      a.name.includes(entry.clipName) || entry.clipName.includes(a.name)
+    );
+    return partial ?? model.animations[0] ?? null;
+  } catch {
+    // Try FBX fallback
+    try {
+      const fbxPath = path.replace('.glb', '.fbx');
+      const model = await loadFBX(fbxPath);
+      return model.animations.find(a => a.name === entry.clipName) ?? model.animations[0] ?? null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
+ * Load a full default animation set for a character class and apply to an entity.
+ * Returns the entity with all standard animations ready to play.
+ */
+export async function loadAnimSetForEntity(
+  entity: AnimatedEntity,
+  heroClass: string,
+): Promise<void> {
+  const animSet = getDefaultAnimSet(heroClass);
+  const promises = Object.entries(animSet).map(async ([key, animId]) => {
+    if (entity.actions.has(key)) return; // Already loaded
+    const clip = await loadAnimationFromLibrary(animId, entity.group);
+    if (clip) {
+      clip.name = key;
+      const action = entity.mixer.clipAction(clip);
+      entity.actions.set(key, action);
+    }
+  });
+  await Promise.allSettled(promises);
 }
 
 export function playAnimation(entity: AnimatedEntity, name: string, crossFade: number = 0.2) {
