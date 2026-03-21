@@ -100,7 +100,8 @@ function VoxelHeroCanvas({ race, heroClass, heroName }: { race: string; heroClas
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const voxelRef = useRef<VoxelRenderer | null>(null);
   const animRef = useRef<number>(0);
-  const timerRef = useRef<number>(0);
+  // Use performance.now() so idle breathing is visible from first frame
+  const startRef = useRef<number>(performance.now());
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -109,36 +110,46 @@ function VoxelHeroCanvas({ race, heroClass, heroName }: { race: string; heroClas
     const voxel = voxelRef.current;
     const ctx = canvas.getContext('2d')!;
     let running = true;
-    let last = performance.now();
+    startRef.current = performance.now();
 
     function frame() {
       if (!running) return;
-      const now = performance.now();
-      timerRef.current += (now - last) / 1000;
-      last = now;
-      ctx.clearRect(0, 0, 128, 140);
+      const gt = (performance.now() - startRef.current) / 1000;
+      // Slow oscillating rotation: sweeps ±30° around a base south-east facing
+      const baseFacing = Math.PI * 0.45;
+      const facing = baseFacing + Math.sin(gt * 0.6) * 0.5;
+
+      ctx.clearRect(0, 0, 148, 160);
       // Background gradient
-      const g = ctx.createRadialGradient(64, 70, 0, 64, 70, 80);
+      const g = ctx.createRadialGradient(74, 85, 0, 74, 85, 90);
       g.addColorStop(0, '#2a2218');
       g.addColorStop(1, '#1a1410');
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 128, 140);
+      ctx.fillRect(0, 0, 148, 160);
+      // Subtle floor reflection
+      const fg = ctx.createLinearGradient(0, 110, 0, 140);
+      fg.addColorStop(0, 'rgba(197,160,89,0.06)');
+      fg.addColorStop(1, 'transparent');
+      ctx.fillStyle = fg;
+      ctx.fillRect(20, 110, 108, 30);
       // Shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.beginPath();
-      ctx.ellipse(64, 115, 28, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(74, 125, 32, 7, 0, 0, Math.PI * 2);
       ctx.fill();
       // Hero
       voxel.drawHeroVoxel(
-        ctx, 64, 100,
+        ctx, 74, 112,
         RACE_COLORS[race] || '#c4956a',
         CLASS_COLORS[heroClass] || '#8b8b8b',
         heroClass,
-        Math.PI * 0.5,
+        facing,
         'idle',
-        timerRef.current,
+        gt, // FSM timer (reused as animTimer)
         race,
         heroName,
+        undefined, undefined, undefined, undefined, undefined,
+        gt, // gameTime — drives smooth idle breathing
       );
       animRef.current = requestAnimationFrame(frame);
     }
@@ -149,9 +160,9 @@ function VoxelHeroCanvas({ race, heroClass, heroName }: { race: string; heroClas
   return (
     <canvas
       ref={canvasRef}
-      width={128}
-      height={140}
-      style={{ width: 128, height: 140, borderRadius: 8, imageRendering: 'pixelated' }}
+      width={148}
+      height={160}
+      style={{ width: 148, height: 160, borderRadius: 8, imageRendering: 'pixelated' }}
     />
   );
 }
@@ -493,9 +504,18 @@ function EquipmentTab({ hud, eqMap, stateRef }: { hud: OWHudState; eqMap: Map<st
           {slot?.icon || SLOT_EMOJI[slot?.slot || ''] || '·'} {label}
         </span>
         {slot?.item ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 9, color: TIER_COLORS[slot.item.tier] }}>T{slot.item.tier}</span>
-            <span className={css.eqSlotItem}>{slot.item.name}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {slot.item.iconUrl && (
+              <img
+                src={slot.item.iconUrl}
+                alt={slot.item.name}
+                style={{ width: 20, height: 20, objectFit: 'contain', imageRendering: 'pixelated', flexShrink: 0 }}
+              />
+            )}
+            <div>
+              <div style={{ fontSize: 8, color: TIER_COLORS[slot.item.tier], fontWeight: 700 }}>T{slot.item.tier} {slot.item.setName !== 'Unknown' ? slot.item.setName : ''}</div>
+              <span className={css.eqSlotItem}>{slot.item.name}</span>
+            </div>
           </div>
         ) : (
           <span className={css.eqSlotItem} style={{ color: isDragOver ? '#d4a400' : '#6b5535' }}>

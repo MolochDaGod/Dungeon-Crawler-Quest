@@ -60,6 +60,7 @@ import {
   equipItem, computeEquipmentStats, computeSetBonuses,
   generateRandomEquipment, addToBag, removeFromBag, SetBonus
 } from './equipment';
+import { ConsumableHotbarItem } from './npc-shops';
 import {
   MissionLog, ActiveMission, MissionReward,
   loadMissionLog, saveMissionLog, getAvailableMissions,
@@ -436,6 +437,9 @@ export interface OpenWorldState {
 
   /** AI faction heroes living in the world */
   aiHeroes: import('./ai-hero-brain').AIHeroInstance[];
+
+  /** Consumable hotbar — 3 slots for keys 6, 7, 8 */
+  consumableSlots: [ConsumableHotbarItem | null, ConsumableHotbarItem | null, ConsumableHotbarItem | null];
 }
 
 export interface OWHudState {
@@ -499,8 +503,9 @@ export interface OWHudState {
   // NPC dialog
   activeNPC: ActiveNPCDialog | null;
   // Equipment
-  equipSlots: { slot: string; label: string; icon: string; item: { name: string; tier: number; atk: number; def: number; hp: number; setName: string } | null }[];
+  equipSlots: { slot: string; label: string; icon: string; item: { name: string; tier: number; atk: number; def: number; hp: number; setName: string; iconUrl?: string } | null }[];
   bagItems: { id: string; name: string; slot: string; tier: number; atk: number; def: number; hp: number; mp: number; iconUrl?: string; passive?: string; lore?: string; setName: string }[];
+  consumableHotbar: ({ name: string; category: string; iconPath: string | null; count: number; color: string } | null)[];
   setBonuses: { setName: string; pieces: number }[];
   // Professions
   gatheringProfs: { id: string; name: string; icon: string; color: string; level: number; xp: number; xpToNext: number; tier: number; tierName: string; tierColor: string }[];
@@ -647,6 +652,8 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     interiorPlayer: { x: 0.5, y: 0.75 },
     activeInteriorNPC: null,
     interactCooldown: 0,
+    // Consumable hotbar
+    consumableSlots: [null, null, null] as [ConsumableHotbarItem | null, ConsumableHotbarItem | null, ConsumableHotbarItem | null],
   } as unknown as OpenWorldState;
   // Assigned separately because TypeScript requires these to exist at runtime
   // but the interface uses them as non-optional for convenience
@@ -2631,7 +2638,7 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
         const item = state.playerEquipment.slots[s.id as keyof typeof state.playerEquipment.slots];
         return {
           slot: s.id, label: s.label, icon: s.icon,
-          item: item ? { name: item.name, tier: item.tier, atk: item.atk, def: item.def, hp: item.hp, setName: item.setName } : null,
+      item: item ? { name: item.name, tier: item.tier, atk: item.atk, def: item.def, hp: item.hp, setName: item.setName, iconUrl: item.iconUrl } : null,
         };
       });
     })(),
@@ -2641,6 +2648,10 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
       iconUrl: i.iconUrl, passive: i.passive, lore: i.lore, setName: i.setName,
     })),
     setBonuses: computeSetBonuses(state.playerEquipment).map(b => ({ setName: b.setName, pieces: b.pieces })),
+    consumableHotbar: state.consumableSlots.map(slot => slot ? {
+      name: slot.name, category: slot.category,
+      iconPath: slot.iconPath, count: slot.count, color: slot.color,
+    } : null),
     // Professions
     ...(() => {
       const ps = getProfessionSummaries(state.playerProfessions);
@@ -2650,6 +2661,37 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
       };
     })(),
   };
+}
+
+// ── Use consumable from hotbar slot ───────────────────────────
+
+export function useConsumableHotbar(state: OpenWorldState, slotIndex: number): void {
+  if (slotIndex < 0 || slotIndex > 2) return;
+  const item = state.consumableSlots[slotIndex];
+  if (!item) return;
+  const p = state.player;
+  const eff = item.effect;
+
+  if (eff.healHp > 0) {
+    p.hp = Math.min(p.maxHp, p.hp + eff.healHp);
+    addText(state, p.x, p.y - 28, `+${eff.healHp} HP`, '#22c55e', 14);
+    spawnParticles(state, p.x, p.y, '#22c55e', 6);
+  }
+  if (eff.healMp > 0) {
+    p.mp = Math.min(p.maxMp, p.mp + eff.healMp);
+    addText(state, p.x, p.y - 38, `+${eff.healMp} MP`, '#818cf8', 12);
+    spawnParticles(state, p.x, p.y, '#818cf8', 4);
+  }
+  if (eff.atkPct > 0) {
+    addText(state, p.x, p.y - 32, `ATK +${Math.round(eff.atkPct * 100)}%`, '#fbbf24', 12);
+  }
+  if (eff.defPct > 0) {
+    addText(state, p.x, p.y - 32, `DEF +${Math.round(eff.defPct * 100)}%`, '#60a5fa', 12);
+  }
+
+  state.killFeed.push({ text: `♥ ${item.name}`, color: item.color, time: state.gameTime });
+  item.count--;
+  if (item.count <= 0) state.consumableSlots[slotIndex] = null;
 }
 
 // ── Equip bag item from inventory ─────────────────────────────

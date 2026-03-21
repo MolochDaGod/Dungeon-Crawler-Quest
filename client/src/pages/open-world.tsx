@@ -10,8 +10,10 @@ import {
   OpenWorldRenderer, handleOWAbility, handleOWAttack, handleOWRangedAttack,
   updateOWMouseWorld, startOWTargeting, confirmOWTargeting, cancelOWTargeting,
   allocateOWAttribute, acceptOWMission, claimOWMission, enterOWDungeon,
-  handleOWDodge, handleOWTargetCycle, closeNPCDialog, exitBuilding
+  handleOWDodge, handleOWTargetCycle, closeNPCDialog, exitBuilding,
+  useConsumableHotbar,
 } from '@/game/open-world';
+import { OS_BASE } from '@/game/grudge-items';
 import { getAvailableMissions } from '@/game/missions';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
 import { initGLBSprites } from '@/game/glb-sprites';
@@ -155,6 +157,10 @@ export default function OpenWorldPage() {
       else if (matchesKeyDown(bindings[KeybindAction.Skill3], e)) { e.preventDefault(); tryTargetOrCast(2); }
       else if (matchesKeyDown(bindings[KeybindAction.Skill4], e)) { e.preventDefault(); tryTargetOrCast(3); }
       else if (matchesKeyDown(bindings[KeybindAction.Skill5], e)) { e.preventDefault(); tryTargetOrCast(4); }
+      // Consumable hotbar 6-8
+      if (key === '6') { e.preventDefault(); useConsumableHotbar(state, 0); }
+      if (key === '7') { e.preventDefault(); useConsumableHotbar(state, 1); }
+      if (key === '8') { e.preventDefault(); useConsumableHotbar(state, 2); }
       // Class abilities (Q, E, R mirror weapon skill slots)
       if (matchesKeyDown(bindings[KeybindAction.ClassSkill], e)) { e.preventDefault(); tryTargetOrCast(0); }
       if (matchesKeyDown(bindings[KeybindAction.ClassDefensive], e)) {
@@ -579,24 +585,58 @@ export default function OpenWorldPage() {
                     );
                   })}
                   <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, transparent, #c5a059, transparent)', margin: '0 4px' }} />
-                  {hud.items.map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-center"
-                      style={{
-                        width: 38, height: 50,
-                        background: item ? 'linear-gradient(135deg, #1a1a2e, #0a0a15)' : 'linear-gradient(135deg, #0a0a0a, #050505)',
-                        border: `1px solid ${item ? '#c5a05980' : '#222'}`,
-                        borderRadius: 3,
-                        color: item ? '#c5a059' : '#333',
-                        fontSize: 9,
-                        fontWeight: 'bold',
-                      }}
-                      title={item?.name}
-                    >
-                      {item ? item.name.split(' ').map(w => w[0]).join('') : ''}
-                    </div>
-                  ))}
+                  {/* Consumable slots 6-8 */}
+                  {[0, 1, 2].map(slotIdx => {
+                    const cs = hud.consumableHotbar?.[slotIdx];
+                    const iconUrl = cs?.iconPath ? `${OS_BASE}${cs.iconPath}` : null;
+                    return (
+                      <div
+                        key={`cons-${slotIdx}`}
+                        className="relative flex items-center justify-center"
+                        style={{
+                          width: 44, height: 50,
+                          background: cs
+                            ? `linear-gradient(135deg, ${cs.color}22, ${cs.color}11)`
+                            : 'linear-gradient(135deg, #0a0a0a, #050505)',
+                          border: `2px solid ${cs ? cs.color + '80' : '#2a2a2a'}`,
+                          borderRadius: 4,
+                          cursor: cs ? 'pointer' : 'default',
+                          transition: '.15s',
+                          flexShrink: 0,
+                        }}
+                        title={cs ? `[${6 + slotIdx}] ${cs.name} (${cs.count}x)` : `Slot ${6 + slotIdx} — buy consumables from merchants`}
+                        onClick={() => stateRef.current && useConsumableHotbar(stateRef.current, slotIdx)}
+                      >
+                        {cs ? (
+                          <>
+                            {iconUrl
+                              ? <img src={iconUrl} alt={cs.name} style={{ width: '72%', height: '72%', objectFit: 'contain', imageRendering: 'pixelated' }} draggable={false} />
+                              : <span style={{ fontSize: 16 }}>{
+                                  cs.category === 'redFoods' ? '🍖'
+                                  : cs.category === 'greenFoods' ? '🥦'
+                                  : cs.category === 'blueFoods' ? '🫐'
+                                  : '⚗️'
+                                }</span>
+                            }
+                            {/* Count badge */}
+                            <span style={{
+                              position: 'absolute', bottom: 2, right: 3,
+                              fontSize: 9, fontWeight: 800,
+                              color: cs.color,
+                              textShadow: '0 0 4px #000, 0 0 4px #000',
+                            }}>{cs.count}</span>
+                          </>
+                        ) : (
+                          <span style={{ fontSize: 9, color: '#2a2a2a', fontWeight: 700 }}>{6 + slotIdx}</span>
+                        )}
+                        {/* Key label */}
+                        <span style={{
+                          position: 'absolute', top: 2, left: 3,
+                          fontSize: 8, color: cs ? '#888' : '#333', fontWeight: 700,
+                        }}>{6 + slotIdx}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

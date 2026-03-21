@@ -9,8 +9,24 @@ import { ISLAND_ZONES } from './zones';
 import type { OpenWorldState } from './open-world';
 import {
   generateOSEquipment, getConsumablesByLevel, getConsumableEffect,
-  OSConsumable, ConsumableEffect, isRegistryLoaded,
+  OSConsumable, ConsumableEffect, isRegistryLoaded, OS_BASE,
 } from './grudge-items';
+
+// ── Consumable Hotbar Item (persisted in state.consumableSlots) ────────────
+
+const CAT_COLOR: Record<string, string> = {
+  redFoods: '#ef4444', greenFoods: '#22c55e',
+  blueFoods: '#60a5fa', mysticPotions: '#a855f7',
+};
+
+export interface ConsumableHotbarItem {
+  name: string;
+  category: string;
+  iconPath: string | null;
+  count: number;
+  effect: ConsumableEffect;
+  color: string;
+}
 
 // ── Shop Item ──────────────────────────────────────────────────
 
@@ -154,6 +170,35 @@ export function buyConsumable(state: OpenWorldState, item: ConsumableShopItem): 
   if (state.player.gold < item.buyPrice) return { success: false, reason: 'Not enough gold', goldChange: 0 };
   state.player.gold -= item.buyPrice;
   item.sold = true;
+
+  // Add to consumable hotbar slots (3 slots)
+  const slots = (state as any).consumableSlots as (ConsumableHotbarItem | null)[] | undefined;
+  if (slots) {
+    const newItem: ConsumableHotbarItem = {
+      name: item.consumable.name,
+      category: item.category,
+      iconPath: item.consumable.icon?.startsWith('/') ? item.consumable.icon : null,
+      count: 1,
+      effect: item.effect,
+      color: CAT_COLOR[item.category] || '#d4a400',
+    };
+    // Stack with existing
+    let stacked = false;
+    for (let i = 0; i < slots.length; i++) {
+      if (slots[i]?.name === newItem.name) {
+        slots[i]!.count++;
+        stacked = true;
+        break;
+      }
+    }
+    // Fill empty slot
+    if (!stacked) {
+      for (let i = 0; i < slots.length; i++) {
+        if (!slots[i]) { slots[i] = newItem; break; }
+      }
+    }
+  }
+
   state.killFeed.push({ text: `Bought ${item.consumable.name} for ${item.buyPrice}g`, color: '#22c55e', time: state.gameTime });
   return { success: true, reason: 'Purchased', goldChange: -item.buyPrice };
 }

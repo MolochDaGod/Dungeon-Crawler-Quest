@@ -46,7 +46,7 @@ const CANVAS_EFFECT_TYPES: EffectType[] = [
   'heavy_slash', 'enemy_slash', 'enemy_aoe_telegraph', 'enemy_aoe_blast',
 ];
 
-type TabId = "heroes" | "minions" | "monsters" | "structures" | "effects" | "environment" | "animals";
+type TabId = "heroes" | "minions" | "monsters" | "structures" | "effects" | "environment" | "animals" | "glb_effects" | "map_objects" | "characters" | "tiles";
 type GizmoMode = "move" | "rotate" | "scale";
 type BrushId = "pose" | "wave" | "pulse" | "spin" | "bounce" | "tremble";
 
@@ -79,12 +79,16 @@ const GIZMO_SCREEN_POSITIONS: Record<string, { sx: number; sy: number }> = {
 
 const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "heroes", label: "Heroes", icon: User },
+  { id: "characters", label: "3D Models", icon: Layers },
   { id: "minions", label: "Minions", icon: Footprints },
   { id: "monsters", label: "Monsters", icon: Bug },
   { id: "structures", label: "Structures", icon: Castle },
-  { id: "effects", label: "Effects", icon: Sparkles },
+  { id: "effects", label: "Sprite FX", icon: Sparkles },
+  { id: "glb_effects", label: "GLB Effects", icon: Zap },
   { id: "environment", label: "Environment", icon: TreePine },
   { id: "animals", label: "Animals", icon: Bird },
+  { id: "map_objects", label: "Map Objects", icon: Mountain },
+  { id: "tiles", label: "Tiles", icon: Layers },
 ];
 
 interface EditorState {
@@ -2378,6 +2382,196 @@ export default function EntityEditorPage() {
             {activeTab === "animals" && (
               <AnimalsPanel state={state} setState={setState} playing={playing} setPlaying={setPlaying}
                 speed={speed} setSpeed={setSpeed} animTimer={animTimer} resetTimer={resetTimer} />
+            )}
+            {activeTab === "glb_effects" && (
+              <div className="space-y-4">
+                <SectionHeader title="GLB Effect Models" />
+                <p className="text-gray-500 text-[10px]">3D GLB spell effects rendered as 2D sprites. Used for projectiles, shields, and ability overlays.</p>
+                <div className="space-y-1">
+                  {[
+                    { id: 'fireball', name: 'Fireball', color: '#ef4444', file: 'Fireball.glb' },
+                    { id: 'ice_lance', name: 'Ice Lance', color: '#38bdf8', file: 'Ice Lance.glb' },
+                    { id: 'ice_lance_2', name: 'Ice Lance II', color: '#0ea5e9', file: 'Ice Lance 2.glb' },
+                    { id: 'ice_lance_3', name: 'Ice Lance III', color: '#0284c7', file: 'Ice Lance 3.glb' },
+                    { id: 'ice_rock', name: 'Ice Rock', color: '#67e8f9', file: 'Ice Rock.glb' },
+                    { id: 'dark_shield', name: 'Dark Shield', color: '#6b21a8', file: 'Dark_Shield.glb' },
+                    { id: 'nature_shield', name: 'Nature Shield', color: '#22c55e', file: 'Nature_Shield.glb' },
+                    { id: 'distortion', name: 'Distortion', color: '#a855f7', file: 'Distortion.glb' },
+                    { id: 'crystal', name: 'Crystal', color: '#06b6d4', file: 'Crystal.glb' },
+                    { id: 'skull', name: 'Skull', color: '#f87171', file: 'Skull.glb' },
+                    { id: 'root', name: 'Root', color: '#65a30d', file: 'Root.glb' },
+                    { id: 'rock_icicle', name: 'Rock Icicle', color: '#64748b', file: 'Rock Icicle.glb' },
+                    { id: 'potion', name: 'Potion', color: '#ec4899', file: 'Potion.glb' },
+                    { id: 'tome', name: 'Tome', color: '#f59e0b', file: 'Tome.glb' },
+                    { id: 'book', name: 'Book', color: '#d97706', file: 'Book.glb' },
+                  ].map(eff => (
+                    <div key={eff.id} className="flex items-center gap-2 bg-black/20 rounded px-2 py-1.5 hover:bg-black/30 transition-colors">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: eff.color }} />
+                      <span className="text-gray-300 text-xs flex-1">{eff.name}</span>
+                      <span className="text-gray-600 text-[10px]">{eff.file}</span>
+                    </div>
+                  ))}
+                </div>
+                <SectionHeader title="Class Mappings" />
+                <div className="bg-black/20 rounded p-3 text-xs space-y-1">
+                  <div className="flex justify-between"><span className="text-gray-500">Warrior</span><span className="text-red-400">Fireball + Dark Shield</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Mage</span><span className="text-blue-400">Ice Lance + Nature Shield</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Ranger</span><span className="text-green-400">Ice Rock + Nature Shield</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Worg</span><span className="text-amber-400">Skull + Dark Shield</span></div>
+                </div>
+              </div>
+            )}
+            {activeTab === "characters" && (
+              <div className="space-y-4">
+                <SectionHeader title="GLB Character Models" />
+                <p className="text-gray-500 text-[10px]">All 3D character models with embedded animations. Click to see details.</p>
+                {[
+                  { cat: 'Animated Characters', items: [
+                    { name: 'Human', file: 'Animated_Human.glb', anims: 8 },
+                    { name: 'Wizard', file: 'Animated_Wizard.glb', anims: 15 },
+                    { name: 'Woman', file: 'Animated_Woman.glb', anims: 24 },
+                    { name: 'Zombie', file: 'Animated_Zombie.glb', anims: 5 },
+                    { name: 'Anne', file: 'Anne.glb', anims: 14 },
+                    { name: 'Pirate Captain', file: 'Pirate_Captain.glb', anims: 14 },
+                    { name: 'Skeleton', file: 'Skeleton.glb', anims: 15 },
+                    { name: 'Toon Character', file: 'Character_Toon_Animated.glb', anims: 24 },
+                  ]},
+                  { cat: 'Faction Heroes', items: [
+                    { name: 'Barbarian Gladiator', file: 'BarbarianGlad.glb', anims: 19 },
+                    { name: 'Berserker', file: 'berserker.glb', anims: 17 },
+                    { name: 'Dwarf Enforcer', file: 'dwarf_enforcer.glb', anims: 17 },
+                    { name: 'Elf Ranger', file: 'ElfRanger.glb', anims: 18 },
+                    { name: 'Elf Enforcer', file: 'elf_enforcer.glb', anims: 17 },
+                    { name: 'Fabled Worker', file: 'fabledworker.glb', anims: 9 },
+                    { name: 'Graat Orc', file: 'graatorc.glb', anims: 20 },
+                    { name: 'Human Deathgiver', file: 'humandeathgiver.glb', anims: 14 },
+                    { name: 'Orc Peon', file: 'orcpeon.glb', anims: 15 },
+                    { name: 'Siegeman', file: 'siegeman.glb', anims: 19 },
+                    { name: 'Skullgoon', file: 'skullgoon.glb', anims: 15 },
+                    { name: 'Undead Worker', file: 'undeadworker.glb', anims: 14 },
+                  ]},
+                  { cat: 'Creatures', items: [
+                    { name: 'Wolf', file: 'Wolf.glb', anims: 24 },
+                    { name: 'Velociraptor', file: 'Velociraptor.glb', anims: 6 },
+                    { name: 'Dragon', file: 'Dragon.glb', anims: 5 },
+                    { name: 'Shark', file: 'Shark.glb', anims: 3 },
+                    { name: 'Slime', file: 'SlimeEnemy.glb', anims: 10 },
+                    { name: 'Goblin Crew', file: 'GoblinCr3w.glb', anims: 17 },
+                  ]},
+                ].map(cat => (
+                  <div key={cat.cat}>
+                    <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">{cat.cat}</div>
+                    <div className="space-y-1">
+                      {cat.items.map(item => (
+                        <div key={item.file} className="flex items-center gap-2 bg-black/20 rounded px-2 py-1.5 hover:bg-black/30">
+                          <span className="text-gray-300 text-xs flex-1">{item.name}</span>
+                          <span className="text-amber-400 text-[10px]">{item.anims} anims</span>
+                          <span className="text-gray-600 text-[9px]">{item.file}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {activeTab === "map_objects" && (
+              <div className="space-y-4">
+                <SectionHeader title="Spawners" />
+                <div className="space-y-1">
+                  {[{ id: 'minion', name: 'Minion Spawner', color: '#3b82f6' }, { id: 'boss', name: 'Boss Spawner', color: '#ef4444' }, { id: 'neutral', name: 'Neutral Spawner', color: '#a3a3a3' }, { id: 'event', name: 'Event Spawner', color: '#f59e0b' }].map(s => (
+                    <div key={s.id} className="flex items-center gap-2 bg-black/20 rounded px-2 py-1.5">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
+                      <span className="text-gray-300 text-xs">{s.name}</span>
+                    </div>
+                  ))}
+                </div>
+                <SectionHeader title="Events" />
+                <div className="space-y-1">
+                  {['ambush', 'quest_start', 'boss_spawn', 'loot_drop', 'trap', 'cutscene', 'portal', 'buff_zone'].map(a => (
+                    <div key={a} className="flex items-center gap-2 bg-black/20 rounded px-2 py-1.5">
+                      <span className="text-amber-400 text-xs">⚡</span>
+                      <span className="text-gray-300 text-xs capitalize">{a.replace('_', ' ')}</span>
+                    </div>
+                  ))}
+                </div>
+                <SectionHeader title="Vendors" />
+                <div className="space-y-1">
+                  {[{ id: 'shop', name: 'Shop', color: '#ffd700' }, { id: 'faction', name: 'Faction Vendor', color: '#a855f7' }, { id: 'crafting', name: 'Crafting Station', color: '#f97316' }].map(v => (
+                    <div key={v.id} className="flex items-center gap-2 bg-black/20 rounded px-2 py-1.5">
+                      <div className="w-3 h-3 rounded" style={{ backgroundColor: v.color }} />
+                      <span className="text-gray-300 text-xs">{v.name}</span>
+                    </div>
+                  ))}
+                </div>
+                <SectionHeader title="Harvestables" />
+                <div className="space-y-1">
+                  {[{ id: 'ore', name: 'Ore Vein', color: '#78716c', icon: '⛏️' }, { id: 'herb', name: 'Herb', color: '#4ade80', icon: '🌿' }, { id: 'wood', name: 'Wood', color: '#a16207', icon: '🪵' }, { id: 'fish', name: 'Fishing Spot', color: '#38bdf8', icon: '🐟' }, { id: 'gem', name: 'Gem Deposit', color: '#c084fc', icon: '💎' }].map(r => (
+                    <div key={r.id} className="flex items-center gap-2 bg-black/20 rounded px-2 py-1.5">
+                      <span>{r.icon}</span>
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: r.color }} />
+                      <span className="text-gray-300 text-xs">{r.name}</span>
+                    </div>
+                  ))}
+                </div>
+                <SectionHeader title="Camp Types" />
+                <div className="space-y-1">
+                  {[{ id: 'small', name: 'Small Camp', color: '#65a30d', mobs: 3 }, { id: 'medium', name: 'Medium Camp', color: '#3b82f6', mobs: 2 }, { id: 'buff', name: 'Buff Camp', color: '#a855f7', mobs: 1 }, { id: 'boss', name: 'Boss Pit', color: '#ef4444', mobs: 1 }].map(c => (
+                    <div key={c.id} className="flex items-center gap-2 bg-black/20 rounded px-2 py-1.5">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }} />
+                      <span className="text-gray-300 text-xs flex-1">{c.name}</span>
+                      <span className="text-gray-500 text-[10px]">{c.mobs} mobs</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-gray-600 text-[10px]">Place these on the map at /mapadmin</p>
+              </div>
+            )}
+            {activeTab === "tiles" && (
+              <div className="space-y-4">
+                <SectionHeader title="Terrain Types" />
+                <div className="grid grid-cols-2 gap-1">
+                  {[
+                    { id: 0, name: 'Grass', color: '#2a5c1a' }, { id: 1, name: 'Dirt', color: '#6b4423' },
+                    { id: 2, name: 'Stone', color: '#5a5a6a' }, { id: 3, name: 'Water', color: '#1a4a8a' },
+                    { id: 4, name: 'Lane', color: '#4a4030' }, { id: 5, name: 'Jungle', color: '#1a3a12' },
+                    { id: 6, name: 'Base Blue', color: '#1a2a5a' }, { id: 7, name: 'Base Red', color: '#5a1a1a' },
+                    { id: 8, name: 'River', color: '#1a5a7a' }, { id: 9, name: 'Jungle Path', color: '#3a3020' },
+                    { id: 10, name: 'Dense Woods', color: '#0f2e0a' }, { id: 11, name: 'Stone Wall', color: '#3a3a4a' },
+                  ].map(t => (
+                    <div key={t.id} className="flex items-center gap-2 bg-black/20 rounded px-2 py-1.5">
+                      <div className="w-5 h-5 rounded" style={{ backgroundColor: t.color }} />
+                      <span className="text-gray-300 text-[10px]">{t.name}</span>
+                      <span className="text-gray-600 text-[9px] ml-auto">id:{t.id}</span>
+                    </div>
+                  ))}
+                </div>
+                <SectionHeader title="Height Rules" />
+                <div className="bg-black/20 rounded p-3 text-xs space-y-1">
+                  <div className="flex justify-between"><span className="text-gray-500">Height 0</span><span className="text-blue-400">→ Water (auto)</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Height 1</span><span className="text-green-400">→ Ground (walkable)</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Height 2</span><span className="text-amber-400">→ Hill (walkable)</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Height 3+</span><span className="text-red-400">→ Cliff (impassable)</span></div>
+                </div>
+                <SectionHeader title="Decoration Types" />
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {[
+                    { cat: 'Trees', items: ['Common Tree', 'Pine Tree', 'Birch Tree', 'Dead Tree', 'Large Tree', 'Lava Tree', 'Tree House', 'Twisted Tree'] },
+                    { cat: 'Rocks', items: ['Rock', 'Large Rock', 'Mountain Rock 1-5', 'Pebble'] },
+                    { cat: 'Volcano', items: ['Volcano 1-3', 'Boulder 1-3', 'Lava Pool'] },
+                    { cat: 'Nature', items: ['Bush', 'Flower Bush', 'Fern', 'Mushroom', 'Flower', 'Tall Grass', 'Short Grass', 'Clover', 'Plant'] },
+                    { cat: 'Buildings', items: ['Coliseum', 'Barracks', 'Forge', 'Crypt', 'Arch', 'Cabin', 'Tower'] },
+                    { cat: 'Effects', items: ['Camp Fire', 'Fountain Fire', 'Spike Trap', 'Rune Trap'] },
+                  ].map(group => (
+                    <div key={group.cat}>
+                      <div className="text-[9px] text-gray-500 uppercase font-bold mt-2">{group.cat}</div>
+                      {group.items.map(item => (
+                        <div key={item} className="text-gray-400 text-[10px] pl-2">{item}</div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-gray-600 text-[10px]">Paint terrain and place decorations at /mapadmin</p>
+              </div>
             )}
           </div>
         </div>
