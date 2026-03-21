@@ -253,23 +253,27 @@ interface PCSpriteDef {
   frameH: number;
 }
 
-const PC_BASE = '/assets/packs/pixel-crawler/Pixel Crawler - Free Pack';
+// Pixel Crawler assets: served from ObjectStore CDN for deployment.
+// Local fallback: /assets/packs/pixel-crawler/Pixel Crawler - Free Pack
+// CDN: https://molochdagod.github.io/ObjectStore/sprites/pixel-crawler
+const OS_CDN = 'https://molochdagod.github.io/ObjectStore';
+const PC_BASE = `${OS_CDN}/sprites/pixel-crawler`;
 
 const PC_SPRITE_DEFS: PCSpriteDef[] = [
-  // Orc Crew
-  { id: 'pc-orc',         name: 'Orc Grunt',      basePath: `${PC_BASE}/Entities/Mobs/Orc Crew/Orc`,            filePrefix: '', enemyType: 'Orc Grunt',     drawScale: 0.65, frameW: 32, frameH: 32 },
-  { id: 'pc-orc-rogue',   name: 'Orc Rogue',       basePath: `${PC_BASE}/Entities/Mobs/Orc Crew/Orc - Rogue`,   filePrefix: '', enemyType: 'Bandit',        drawScale: 0.65, frameW: 32, frameH: 32 },
-  { id: 'pc-orc-shaman',  name: 'Orc Shaman',      basePath: `${PC_BASE}/Entities/Mobs/Orc Crew/Orc - Shaman`,  filePrefix: '', enemyType: 'Goblin Shaman', drawScale: 0.65, frameW: 32, frameH: 32 },
-  { id: 'pc-orc-warrior', name: 'Orc Warrior',     basePath: `${PC_BASE}/Entities/Mobs/Orc Crew/Orc - Warrior`, filePrefix: '', enemyType: 'Piglin Brute',  drawScale: 0.65, frameW: 32, frameH: 32 },
+  // Orc Crew — URL-safe paths for ObjectStore CDN
+  { id: 'pc-orc',         name: 'Orc Grunt',       basePath: `${PC_BASE}/mobs/orc`,            filePrefix: '', enemyType: 'Orc Grunt',        drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-orc-rogue',   name: 'Orc Rogue',       basePath: `${PC_BASE}/mobs/orc-rogue`,      filePrefix: '', enemyType: 'Bandit',           drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-orc-shaman',  name: 'Orc Shaman',      basePath: `${PC_BASE}/mobs/orc-shaman`,     filePrefix: '', enemyType: 'Goblin Shaman',    drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-orc-warrior', name: 'Orc Warrior',     basePath: `${PC_BASE}/mobs/orc-warrior`,    filePrefix: '', enemyType: 'Piglin Brute',     drawScale: 0.65, frameW: 32, frameH: 32 },
   // Skeleton Crew
-  { id: 'pc-skeleton',       name: 'Skeleton Base',   basePath: `${PC_BASE}/Entities/Mobs/Skeleton Crew/Skeleton - Base`,    filePrefix: '', enemyType: 'Skeleton',      drawScale: 0.65, frameW: 32, frameH: 32 },
-  { id: 'pc-skeleton-mage',  name: 'Skeleton Mage',   basePath: `${PC_BASE}/Entities/Mobs/Skeleton Crew/Skeleton - Mage`,    filePrefix: '', enemyType: 'Dark Mage',     drawScale: 0.65, frameW: 32, frameH: 32 },
-  { id: 'pc-skeleton-rogue', name: 'Skeleton Rogue',  basePath: `${PC_BASE}/Entities/Mobs/Skeleton Crew/Skeleton - Rogue`,   filePrefix: '', enemyType: 'Dark Archer',   drawScale: 0.65, frameW: 32, frameH: 32 },
-  { id: 'pc-skeleton-war',   name: 'Skeleton Warrior',basePath: `${PC_BASE}/Entities/Mobs/Skeleton Crew/Skeleton - Warrior`, filePrefix: '', enemyType: 'Corrupted Knight', drawScale: 0.65, frameW: 32, frameH: 32 },
-  // NPCs (used for friendly/faction NPCs or alternative enemy skins)
-  { id: 'pc-knight', name: 'Knight',  basePath: `${PC_BASE}/Entities/Npc's/Knight`, filePrefix: '', enemyType: 'Iron Sentinel',    drawScale: 0.7, frameW: 32, frameH: 32 },
-  { id: 'pc-rogue',  name: 'Rogue',   basePath: `${PC_BASE}/Entities/Npc's/Rogue`,  filePrefix: '', enemyType: 'Bandit Chief',     drawScale: 0.7, frameW: 32, frameH: 32 },
-  { id: 'pc-wizard', name: 'Wizard',  basePath: `${PC_BASE}/Entities/Npc's/Wizzard`,filePrefix: '', enemyType: 'Necromancer',      drawScale: 0.7, frameW: 32, frameH: 32 },
+  { id: 'pc-skeleton',       name: 'Skeleton Base',   basePath: `${PC_BASE}/mobs/skeleton-base`,    filePrefix: '', enemyType: 'Skeleton',         drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-skeleton-mage',  name: 'Skeleton Mage',   basePath: `${PC_BASE}/mobs/skeleton-mage`,    filePrefix: '', enemyType: 'Dark Mage',        drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-skeleton-rogue', name: 'Skeleton Rogue',  basePath: `${PC_BASE}/mobs/skeleton-rogue`,   filePrefix: '', enemyType: 'Dark Archer',      drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-skeleton-war',   name: 'Skeleton Warrior',basePath: `${PC_BASE}/mobs/skeleton-warrior`, filePrefix: '', enemyType: 'Corrupted Knight', drawScale: 0.65, frameW: 32, frameH: 32 },
+  // NPCs (faction NPCs / alternative enemy skins)
+  { id: 'pc-knight', name: 'Knight',  basePath: `${PC_BASE}/npcs/knight`,  filePrefix: '', enemyType: 'Iron Sentinel',    drawScale: 0.7, frameW: 32, frameH: 32 },
+  { id: 'pc-rogue',  name: 'Rogue',   basePath: `${PC_BASE}/npcs/rogue`,   filePrefix: '', enemyType: 'Bandit Chief',     drawScale: 0.7, frameW: 32, frameH: 32 },
+  { id: 'pc-wizard', name: 'Wizard',  basePath: `${PC_BASE}/npcs/wizzard`, filePrefix: '', enemyType: 'Necromancer',      drawScale: 0.7, frameW: 32, frameH: 32 },
 ];
 
 // Pixel Crawler sheets use: {basePath}/{Anim}/{Anim}-Sheet.png

@@ -11,7 +11,18 @@ import {
   computeDerivedStats, saveAttributes, STARTING_POINTS,
 } from '@/game/attributes';
 import { createNewCharacter, playerCharacterToHeroData, startSync } from '@/game/player-account';
-import { getGrudgeUser } from '../../src/utils/grudge-auth.js';
+
+// Inline Grudge auth helper (from src/utils/grudge-auth.js — outside vite root)
+function getGrudgeUser() {
+  const token = localStorage.getItem('grudge_auth_token');
+  if (!token) return null;
+  return {
+    token,
+    userId: localStorage.getItem('grudge_user_id') || null,
+    grudgeId: localStorage.getItem('grudge_id') || null,
+    username: localStorage.getItem('grudge_username') || 'Player',
+  };
+}
 
 /* ── Constants ── */
 
