@@ -373,22 +373,41 @@ export async function loadAnimationFromLibrary(
 
 async function loadClipFromSource(entry: AnimEntry): Promise<THREE.AnimationClip | null> {
   const path = `/assets/models/${entry.source}`;
-  try {
-    const model = await loadGLB(path);
-    const clip = model.animations.find(a => a.name === entry.clipName);
-    if (clip) return clip;
-    // Fallback: try partial name match
+  const isFBX = path.toLowerCase().endsWith('.fbx');
+  const isGLTF = path.toLowerCase().endsWith('.gltf');
+
+  // Load based on file extension — avoids unnecessary failed attempts
+  const loadModel = async (p: string): Promise<LoadedModel> => {
+    if (p.toLowerCase().endsWith('.fbx')) return loadFBX(p);
+    return loadGLB(p);
+  };
+
+  const findClip = (model: LoadedModel): THREE.AnimationClip | null => {
+    // Exact match
+    const exact = model.animations.find(a => a.name === entry.clipName);
+    if (exact) return exact;
+    // Partial match
     const partial = model.animations.find(a =>
       a.name.includes(entry.clipName) || entry.clipName.includes(a.name)
     );
-    return partial ?? model.animations[0] ?? null;
+    if (partial) return partial;
+    // For FBX animation-only files, the clip is usually the only one
+    return model.animations[0] ?? null;
+  };
+
+  try {
+    const model = await loadModel(path);
+    return findClip(model);
   } catch {
-    // Try FBX fallback
+    // Cross-format fallback: try the other format
     try {
-      const fbxPath = path.replace('.glb', '.fbx');
-      const model = await loadFBX(fbxPath);
-      return model.animations.find(a => a.name === entry.clipName) ?? model.animations[0] ?? null;
+      const altPath = isFBX
+        ? path.replace(/\.fbx$/i, '.glb')
+        : path.replace(/\.(glb|gltf)$/i, '.fbx');
+      const model = await loadModel(altPath);
+      return findClip(model);
     } catch {
+      console.warn(`[anim-lib] Failed to load: ${path}`);
       return null;
     }
   }

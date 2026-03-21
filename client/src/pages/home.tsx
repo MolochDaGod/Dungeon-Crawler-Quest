@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Sword, Shield, Skull, Crown, Settings, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree } from 'lucide-react';
+import { Sword, Shield, Skull, Crown, Settings, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree, Rocket } from 'lucide-react';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld'>('arena');
+  const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld' | 'spaceconquest'>('arena');
   const [titlePulse, setTitlePulse] = useState(false);
 
   useEffect(() => {
@@ -82,7 +82,9 @@ export default function Home() {
 
   const handlePlay = () => {
     localStorage.setItem('grudge_mode', selectedMode);
-    if (selectedMode === 'openworld') {
+    if (selectedMode === 'spaceconquest') {
+      setLocation('/space-conquest');
+    } else if (selectedMode === 'openworld') {
       setLocation('/character-select');
     } else {
       setLocation('/character-select');
@@ -166,6 +168,22 @@ export default function Home() {
               Explore a vast island. Enter dungeon events, earn reputation, and defeat world bosses.
             </p>
           </button>
+          <button
+            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
+              selectedMode === 'spaceconquest'
+                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
+                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
+            }`}
+            onClick={() => setSelectedMode('spaceconquest')}
+            data-testid="button-mode-spaceconquest"
+          >
+            <Rocket className="w-12 h-12" />
+            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>SPACE CONQUEST</span>
+            <span className="text-xs text-gray-400">RTS &bull; 8 Planets &bull; Fleets &bull; AI Neutrals</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
+              Conquer planets, build fleets, harvest resources. Defeat neutrals to claim each world.
+            </p>
+          </button>
         </div>
 
         <div className="flex flex-col gap-3 items-center mb-8">
@@ -176,7 +194,7 @@ export default function Home() {
             onClick={handlePlay}
             data-testid="button-play"
           >
-            {selectedMode === 'arena' ? 'ENTER THE ARENA' : 'EXPLORE THE WORLD'}
+            {selectedMode === 'arena' ? 'ENTER THE ARENA' : selectedMode === 'spaceconquest' ? 'LAUNCH CONQUEST' : 'EXPLORE THE WORLD'}
           </Button>
 
           <div className="flex gap-4 mt-2">

@@ -231,3 +231,194 @@ export function mapOWAnimState(owAnimState: string): SpriteAnimState {
       return 'idle';
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Pixel Crawler Sprite System
+// Format: horizontal strip per direction (Down-Sheet, Side-Sheet, Up-Sheet)
+// Single row, variable frame count (auto-detected from sheet width).
+// Anims: Idle, Run, Death (no attack/hurt — fallback to idle with tint).
+// ═══════════════════════════════════════════════════════════════
+
+type PCDirection = 'Down' | 'Side' | 'Up';
+type PCAnimType = 'Idle' | 'Run' | 'Death';
+
+interface PCSpriteDef {
+  id: string;
+  name: string;
+  basePath: string;       // folder containing Down/Side/Up sheet PNGs
+  filePrefix: string;     // e.g. 'Idle', 'Run', 'Death'
+  enemyType: string;      // maps to ENEMY_TEMPLATES
+  drawScale: number;
+  frameW: number;
+  frameH: number;
+}
+
+const PC_BASE = '/assets/packs/pixel-crawler/Pixel Crawler - Free Pack';
+
+const PC_SPRITE_DEFS: PCSpriteDef[] = [
+  // Orc Crew
+  { id: 'pc-orc',         name: 'Orc Grunt',      basePath: `${PC_BASE}/Entities/Mobs/Orc Crew/Orc`,            filePrefix: '', enemyType: 'Orc Grunt',     drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-orc-rogue',   name: 'Orc Rogue',       basePath: `${PC_BASE}/Entities/Mobs/Orc Crew/Orc - Rogue`,   filePrefix: '', enemyType: 'Bandit',        drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-orc-shaman',  name: 'Orc Shaman',      basePath: `${PC_BASE}/Entities/Mobs/Orc Crew/Orc - Shaman`,  filePrefix: '', enemyType: 'Goblin Shaman', drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-orc-warrior', name: 'Orc Warrior',     basePath: `${PC_BASE}/Entities/Mobs/Orc Crew/Orc - Warrior`, filePrefix: '', enemyType: 'Piglin Brute',  drawScale: 0.65, frameW: 32, frameH: 32 },
+  // Skeleton Crew
+  { id: 'pc-skeleton',       name: 'Skeleton Base',   basePath: `${PC_BASE}/Entities/Mobs/Skeleton Crew/Skeleton - Base`,    filePrefix: '', enemyType: 'Skeleton',      drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-skeleton-mage',  name: 'Skeleton Mage',   basePath: `${PC_BASE}/Entities/Mobs/Skeleton Crew/Skeleton - Mage`,    filePrefix: '', enemyType: 'Dark Mage',     drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-skeleton-rogue', name: 'Skeleton Rogue',  basePath: `${PC_BASE}/Entities/Mobs/Skeleton Crew/Skeleton - Rogue`,   filePrefix: '', enemyType: 'Dark Archer',   drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'pc-skeleton-war',   name: 'Skeleton Warrior',basePath: `${PC_BASE}/Entities/Mobs/Skeleton Crew/Skeleton - Warrior`, filePrefix: '', enemyType: 'Corrupted Knight', drawScale: 0.65, frameW: 32, frameH: 32 },
+  // NPCs (used for friendly/faction NPCs or alternative enemy skins)
+  { id: 'pc-knight', name: 'Knight',  basePath: `${PC_BASE}/Entities/Npc's/Knight`, filePrefix: '', enemyType: 'Iron Sentinel',    drawScale: 0.7, frameW: 32, frameH: 32 },
+  { id: 'pc-rogue',  name: 'Rogue',   basePath: `${PC_BASE}/Entities/Npc's/Rogue`,  filePrefix: '', enemyType: 'Bandit Chief',     drawScale: 0.7, frameW: 32, frameH: 32 },
+  { id: 'pc-wizard', name: 'Wizard',  basePath: `${PC_BASE}/Entities/Npc's/Wizzard`,filePrefix: '', enemyType: 'Necromancer',      drawScale: 0.7, frameW: 32, frameH: 32 },
+];
+
+// Pixel Crawler sheets use: {basePath}/{Anim}/{Anim}-Sheet.png
+// (e.g. .../Orc/Idle/Idle-Sheet.png, .../Orc/Run/Run-Sheet.png, .../Orc/Death/Death-Sheet.png)
+
+function pcSheetPath(def: PCSpriteDef, anim: PCAnimType): string {
+  return `${def.basePath}/${anim}/${anim}-Sheet.png`;
+}
+
+// Map SpriteAnimState to Pixel Crawler anim type
+function mapToPCAnim(anim: SpriteAnimState): PCAnimType {
+  switch (anim) {
+    case 'walk': return 'Run';
+    case 'death': return 'Death';
+    case 'attack':
+    case 'hurt':
+    default: return 'Idle'; // No attack/hurt sheets — use Idle with tint
+  }
+}
+
+// Direction from facing angle for Pixel Crawler (only 3 directions: Down, Side, Up)
+// Side sheet is mirrored for left facing
+function pcFacingDir(facing: number): { dir: PCDirection; flip: boolean } {
+  const a = ((facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  if (a >= Math.PI * 0.25 && a < Math.PI * 0.75) return { dir: 'Down', flip: false };
+  if (a >= Math.PI * 0.75 && a < Math.PI * 1.25) return { dir: 'Side', flip: true };  // left = flip
+  if (a >= Math.PI * 1.25 && a < Math.PI * 1.75) return { dir: 'Up', flip: false };
+  return { dir: 'Side', flip: false }; // right = no flip
+}
+
+// PC sheet path with direction suffix: {basePath}/{Anim}/{Anim}_{Dir}-Sheet.png
+// For mobs it's just {basePath}/{Anim}/{Anim}-Sheet.png (single direction, no dir suffix)
+// So we try the direction-specific path first, then fallback to the generic one
+function pcDirSheetPath(def: PCSpriteDef, anim: PCAnimType, dir: PCDirection): string {
+  // Character sheets use direction suffix, mob sheets don't
+  return `${def.basePath}/${anim}/${anim}-Sheet.png`;
+}
+
+function getPCSheet(def: PCSpriteDef, anim: PCAnimType): HTMLImageElement | null {
+  const path = pcSheetPath(def, anim);
+  let img = _sheetCache.get(path);
+  if (img) return img.complete ? img : null;
+  img = new Image();
+  img.src = path;
+  _sheetCache.set(path, img);
+  return null;
+}
+
+// Register PC sprites into the main lookup map
+for (const def of PC_SPRITE_DEFS) {
+  if (!_enemyTypeToSprite.has(def.enemyType)) {
+    // Create a compat SpriteEnemyDef wrapper so the main system recognizes it
+    const compatDef: SpriteEnemyDef = {
+      id: def.id,
+      name: def.name,
+      basePath: def.basePath,
+      prefix: '',
+      enemyType: def.enemyType,
+      drawScale: def.drawScale,
+    };
+    _enemyTypeToSprite.set(def.enemyType, compatDef);
+    SPRITE_ENEMY_DEFS.push(compatDef);
+  }
+}
+
+/** Check if an enemy should use the Pixel Crawler renderer */
+function isPCSprite(enemyType: string): PCSpriteDef | null {
+  return PC_SPRITE_DEFS.find(d => d.enemyType === enemyType) ?? null;
+}
+
+/**
+ * Draw a Pixel Crawler sprite (horizontal strip, auto-detect frame count).
+ * Falls back to the main drawSpriteEnemy for Ent-pack types.
+ */
+export function drawPCSprite(
+  ctx: CanvasRenderingContext2D,
+  enemyType: string,
+  wx: number, wy: number,
+  facing: number,
+  animState: SpriteAnimState,
+  animTime: number,
+  tint?: string,
+): boolean {
+  const pcDef = isPCSprite(enemyType);
+  if (!pcDef) return false;
+
+  const pcAnim = mapToPCAnim(animState);
+  const sheet = getPCSheet(pcDef, pcAnim);
+  const { dir, flip } = pcFacingDir(facing);
+  const fps = animState === 'death' ? 8 : animState === 'walk' ? 10 : 6;
+  const fw = pcDef.frameW;
+  const fh = pcDef.frameH;
+
+  // Auto-detect frames from sheet width
+  const totalFrames = sheet?.complete ? Math.max(1, Math.floor(sheet.width / fw)) : 4;
+  const frameIndex = animState === 'death'
+    ? Math.min(Math.floor(animTime * fps), totalFrames - 1)
+    : Math.floor(animTime * fps) % totalFrames;
+
+  const sx = frameIndex * fw;
+  const drawW = fw * pcDef.drawScale;
+  const drawH = fh * pcDef.drawScale;
+  const screenX = wx - drawW / 2;
+  const screenY = wy - drawH / 2;
+
+  if (sheet?.complete) {
+    ctx.save();
+    if (flip) {
+      ctx.translate(wx, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(sheet, sx, 0, fw, fh, -drawW / 2, screenY, drawW, drawH);
+    } else {
+      ctx.drawImage(sheet, sx, 0, fw, fh, screenX, screenY, drawW, drawH);
+    }
+
+    // Tint for attack/hurt states (no dedicated sheets)
+    if (tint || animState === 'attack' || animState === 'hurt') {
+      const tintColor = tint || (animState === 'attack' ? '#ff440044' : '#ff000044');
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.globalAlpha = animState === 'hurt' ? 0.5 : 0.25;
+      ctx.fillStyle = tintColor;
+      if (flip) {
+        ctx.fillRect(-drawW / 2, screenY, drawW, drawH);
+      } else {
+        ctx.fillRect(screenX, screenY, drawW, drawH);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  } else {
+    // Fallback circle
+    ctx.fillStyle = '#8b4513';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.arc(wx, wy, drawW / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  return true;
+}
+
+/** Preload all Pixel Crawler sheets */
+export function preloadPCSprites(): void {
+  const anims: PCAnimType[] = ['Idle', 'Run', 'Death'];
+  for (const def of PC_SPRITE_DEFS) {
+    for (const anim of anims) {
+      getPCSheet(def, anim);
+    }
+  }
+}

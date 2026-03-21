@@ -23,6 +23,8 @@ export enum TerrainLayer {
   CLIFF         = 3,
   BRIDGE        = 4,
   ROAD          = 5,
+  /** Low obstacle (stumps, fences, small ledges) — blocked on foot, clearable by jump/double-jump */
+  LOW_OBSTACLE  = 6,
 }
 
 // ── Height Cell ────────────────────────────────────────────────
@@ -50,6 +52,10 @@ function elevationToLayer(elevation: number, zoneTerrain: string): { terrain: Te
       return { terrain: TerrainLayer.SHALLOW_WATER, waterDepth: 0.5 };
     }
     return { terrain: TerrainLayer.GROUND, waterDepth: 0 };
+  }
+  // Elevation 2 = low obstacles (stumps, small fences, ledges) — jumpable
+  if (elevation === 2) {
+    return { terrain: TerrainLayer.LOW_OBSTACLE, waterDepth: 0 };
   }
   if (elevation >= 3) {
     return { terrain: TerrainLayer.CLIFF, waterDepth: 0 };
@@ -241,6 +247,24 @@ export class WorldHeightmap {
     return false;
   }
 
+  /**
+   * Can the player jump/vault over this cell?
+   * Low obstacles (elevation 2, stumps, fences, small ledges) are clearable
+   * during jump or double-jump. Cliffs and deep water remain impassable.
+   */
+  isJumpable(worldX: number, worldY: number): boolean {
+    if (worldX < 0 || worldY < 0 || worldX >= OPEN_WORLD_SIZE || worldY >= OPEN_WORLD_SIZE) return false;
+    const cell = this.getCell(worldX, worldY);
+    if (!cell) return false;
+    // Already walkable = always jumpable
+    if (cell.walkable) return true;
+    // Low obstacles (elevation 2) can be jumped over
+    if (cell.terrain === TerrainLayer.LOW_OBSTACLE) return true;
+    // Shallow water can be jumped through
+    if (cell.terrain === TerrainLayer.SHALLOW_WATER) return true;
+    return false;
+  }
+
   /** Is this deep water requiring a boat? */
   isDeepWater(worldX: number, worldY: number): boolean {
     const cell = this.getCell(worldX, worldY);
@@ -283,6 +307,7 @@ export class WorldHeightmap {
       case TerrainLayer.SHALLOW_WATER: return hasBoat ? 1.5 : 0.5; // wade slow, boat ok
       case TerrainLayer.DEEP_WATER: return hasBoat ? 2.0 : 0;      // boat only, fast
       case TerrainLayer.CLIFF: return 0;
+      case TerrainLayer.LOW_OBSTACLE: return 0;  // blocked on foot, must jump
       default: return 1.0;
     }
   }
@@ -311,6 +336,7 @@ export class WorldHeightmap {
       case TerrainLayer.SHALLOW_WATER: return hasBoat ? 0.7 : 2.0;
       case TerrainLayer.DEEP_WATER: return hasBoat ? 0.5 : Infinity;
       case TerrainLayer.CLIFF: return Infinity;
+      case TerrainLayer.LOW_OBSTACLE: return 3.0; // AI pathfinding: treat as expensive but not impassable
       default: return 1.0;
     }
   }

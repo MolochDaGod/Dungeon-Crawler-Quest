@@ -531,14 +531,21 @@ function angleBetween(a: { x: number; y: number }, b: { x: number; y: number }):
 // Also checks world collision (walls, water, decorations) from the new collision system
 let _activeHeightmap: WorldHeightmap | null = null;
 let _activeBoatMounted = false;
+let _activeJumping = false;
 function isWalkableOW(x: number, y: number): boolean {
   // Bounds check
   if (x < 10 || y < 10 || x >= OPEN_WORLD_SIZE - 10 || y >= OPEN_WORLD_SIZE - 10) return false;
-  // Heightmap check (terrain elevation)
-  if (_activeHeightmap && !_activeHeightmap.isWalkable(x, y, _activeBoatMounted)) return false;
-  // New collision checks: stone walls + deep water
+  // Heightmap check — when jumping, use isJumpable to clear low obstacles
+  if (_activeHeightmap) {
+    if (_activeJumping) {
+      if (!_activeHeightmap.isJumpable(x, y)) return false;
+    } else {
+      if (!_activeHeightmap.isWalkable(x, y, _activeBoatMounted)) return false;
+    }
+  }
+  // New collision checks: stone walls + deep water (walls always block, even jumping)
   if (collidesWithWall(x, y, 10)) return false;
-  if (isDeepWater(x, y)) return false;
+  if (!_activeJumping && isDeepWater(x, y)) return false;
   return true;
 }
 
@@ -1157,6 +1164,9 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   // Sync heightmap for isWalkableOW delegate
   _activeHeightmap = state.heightmap;
   _activeBoatMounted = state.boatState?.mounted ?? false;
+  // Track if player is currently airborne (jump/double-jump) for obstacle clearing
+  // Detected via dodge animation state (jump/double-jump use 'dodge' animState)
+  _activeJumping = p.animState === 'dodge' || p.dodgeTimer > 0;
 
   // Boat mount/dismount logic
   if (shouldMount(p.x, p.y, state.boatState, state.heightmap)) {
@@ -1315,6 +1325,9 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
 
     const nx = p.x + p.vx * dt;
     const ny = p.y + p.vy * dt;
+
+    // Per-axis sliding with heightmap + wall collision
+    // When jumping, low obstacles (elevation 2) are clearable
     if (isWalkableOW(nx, p.y)) p.x = nx;
     if (isWalkableOW(p.x, ny)) p.y = ny;
   }

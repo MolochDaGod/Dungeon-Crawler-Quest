@@ -46,6 +46,7 @@ export type SkeletonConvention =
   | 'human_armature'      // "Human Armature" prefix
   | 'animal_armature'     // "AnimalArmature" prefix
   | 'monster_armature'    // "MonsterArmature" prefix
+  | 'blender_lr'          // Blender .L/.R suffix (KayKit, etc.)
   | 'custom'              // bare bone names, no prefix
   | 'unknown';
 
@@ -58,6 +59,8 @@ export function detectConvention(boneNames: string[]): SkeletonConvention {
     if (name.includes('AnimalArmature')) return 'animal_armature';
     if (name.includes('MonsterArmature')) return 'monster_armature';
   }
+  // Check for Blender .L/.R suffix convention (Shoulder.L, UpperArm.R, etc.)
+  if (boneNames.some(n => /\.(L|R)$/.test(n) && (n.includes('Arm') || n.includes('Leg') || n.includes('Shoulder')))) return 'blender_lr';
   // Check if bare canonical names exist
   if (boneNames.some(n => n === 'Hips' || n === 'Spine' || n === 'Head')) return 'custom';
   return 'unknown';
@@ -72,7 +75,7 @@ export function detectSkeletonConvention(skeleton: THREE.Skeleton): SkeletonConv
 // Extract the canonical part from a fully-qualified bone name.
 
 const BONE_ALIASES: Record<string, CanonicalBone> = {
-  // Mixamo aliases
+  // Mixamo aliases (lowercase, no separators)
   'hips': 'Hips',
   'spine': 'Spine', 'spine1': 'Spine1', 'spine2': 'Spine2',
   'neck': 'Neck', 'head': 'Head',
@@ -90,7 +93,7 @@ const BONE_ALIASES: Record<string, CanonicalBone> = {
   'righthandmiddle1': 'RightHandMiddle1', 'righthandmiddle2': 'RightHandMiddle2', 'righthandmiddle3': 'RightHandMiddle3',
   'righthandring1': 'RightHandRing1', 'righthandring2': 'RightHandRing2', 'righthandring3': 'RightHandRing3',
   'righthandpinky1': 'RightHandPinky1', 'righthandpinky2': 'RightHandPinky2', 'righthandpinky3': 'RightHandPinky3',
-  // Common alternatives
+  // Common underscore alternatives
   'left_shoulder': 'LeftShoulder', 'right_shoulder': 'RightShoulder',
   'left_arm': 'LeftArm', 'right_arm': 'RightArm',
   'left_forearm': 'LeftForeArm', 'right_forearm': 'RightForeArm',
@@ -101,6 +104,53 @@ const BONE_ALIASES: Record<string, CanonicalBone> = {
   'upper_leg_l': 'LeftUpLeg', 'upper_leg_r': 'RightUpLeg',
   'lower_leg_l': 'LeftLeg', 'lower_leg_r': 'RightLeg',
   'foot_l': 'LeftFoot', 'foot_r': 'RightFoot',
+};
+
+/**
+ * Blender / KayKit .L/.R suffix convention mapping.
+ * These models use "Shoulder.L", "UpperArm.R" etc.
+ * Must be checked BEFORE stripping dots since ".L"/".R" is meaningful.
+ */
+const BLENDER_LR_ALIASES: Record<string, CanonicalBone> = {
+  // Spine chain
+  'Abdomen': 'Spine1',
+  'Torso': 'Spine2',
+  'Chest': 'Spine2',
+  'Body': 'Spine',
+  // Left side
+  'Shoulder.L': 'LeftShoulder',
+  'UpperArm.L': 'LeftArm',
+  'LowerArm.L': 'LeftForeArm',
+  'Fist.L': 'LeftHand',
+  'Wrist.L': 'LeftHand',
+  'Hand.L': 'LeftHand',
+  'UpperLeg.L': 'LeftUpLeg',
+  'LowerLeg.L': 'LeftLeg',
+  'Foot.L': 'LeftFoot',
+  'Toe.L': 'LeftToeBase',
+  'Thumb1.L': 'LeftHandThumb1', 'Thumb2.L': 'LeftHandThumb2', 'Thumb3.L': 'LeftHandThumb3',
+  'Index1.L': 'LeftHandIndex1', 'Index2.L': 'LeftHandIndex2', 'Index3.L': 'LeftHandIndex3',
+  'Middle1.L': 'LeftHandMiddle1', 'Middle2.L': 'LeftHandMiddle2', 'Middle3.L': 'LeftHandMiddle3',
+  'Ring1.L': 'LeftHandRing1', 'Ring2.L': 'LeftHandRing2', 'Ring3.L': 'LeftHandRing3',
+  'Pinky1.L': 'LeftHandPinky1', 'Pinky2.L': 'LeftHandPinky2', 'Pinky3.L': 'LeftHandPinky3',
+  'Fist1.L': 'LeftHandIndex1', 'Fist2.L': 'LeftHandMiddle1',
+  // Right side
+  'Shoulder.R': 'RightShoulder',
+  'UpperArm.R': 'RightArm',
+  'LowerArm.R': 'RightForeArm',
+  'Fist.R': 'RightHand',
+  'Wrist.R': 'RightHand',
+  'Hand.R': 'RightHand',
+  'UpperLeg.R': 'RightUpLeg',
+  'LowerLeg.R': 'RightLeg',
+  'Foot.R': 'RightFoot',
+  'Toe.R': 'RightToeBase',
+  'Thumb1.R': 'RightHandThumb1', 'Thumb2.R': 'RightHandThumb2', 'Thumb3.R': 'RightHandThumb3',
+  'Index1.R': 'RightHandIndex1', 'Index2.R': 'RightHandIndex2', 'Index3.R': 'RightHandIndex3',
+  'Middle1.R': 'RightHandMiddle1', 'Middle2.R': 'RightHandMiddle2', 'Middle3.R': 'RightHandMiddle3',
+  'Ring1.R': 'RightHandRing1', 'Ring2.R': 'RightHandRing2', 'Ring3.R': 'RightHandRing3',
+  'Pinky1.R': 'RightHandPinky1', 'Pinky2.R': 'RightHandPinky2', 'Pinky3.R': 'RightHandPinky3',
+  'Fist1.R': 'RightHandIndex1', 'Fist2.R': 'RightHandMiddle1',
 };
 
 /**
@@ -128,13 +178,17 @@ export function extractCanonicalBone(boneName: string): CanonicalBone | null {
     clean = clean.split('|').pop()!;
   }
 
-  // Remove ".xxx" suffix: "Hips.001" → "Hips"
+  // Check Blender .L/.R convention BEFORE stripping dot suffixes
+  // These use meaningful suffixes like "Shoulder.L", "UpperArm.R"
+  if (BLENDER_LR_ALIASES[clean]) return BLENDER_LR_ALIASES[clean];
+
+  // Remove numeric ".xxx" suffix: "Hips.001" → "Hips" (but NOT ".L"/".R")
   clean = clean.replace(/\.\d+$/, '');
 
-  // Exact match first
+  // Exact match to canonical names
   if (CANONICAL_BONES.includes(clean as CanonicalBone)) return clean as CanonicalBone;
 
-  // Case-insensitive alias lookup
+  // Case-insensitive alias lookup (strips spaces, underscores, hyphens)
   const lower = clean.toLowerCase().replace(/[\s_-]/g, '');
   return BONE_ALIASES[lower] || null;
 }

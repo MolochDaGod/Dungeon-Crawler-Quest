@@ -57,6 +57,8 @@ export interface PlayerCharacterState {
   faction: string;
   /** Level */
   level: number;
+  /** Starting weapon type (e.g. 'swords', 'bow', 'fireStaves') */
+  weaponType: string;
   /** Equipment appearance snapshot */
   appearance: EquipmentAppearance;
   /** Bear sprite variant for Worg class (brown/white) */
@@ -160,6 +162,7 @@ export function createPlayerCharacterState(
   race: string,
   heroClass: string,
   customName: string,
+  weaponType?: string,
 ): PlayerCharacterState {
   const def = getCharacterDef(modelIndex);
   return {
@@ -172,6 +175,7 @@ export function createPlayerCharacterState(
     heroClass,
     faction: RACE_FACTIONS[race] || 'Crusade',
     level: 1,
+    weaponType: weaponType || '',
     appearance: {},
     bearSpriteVariant: RACE_BEAR_VARIANT[race] || 'brown',
     createdAt: new Date().toISOString(),

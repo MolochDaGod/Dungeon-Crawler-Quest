@@ -164,6 +164,118 @@ export async function registerRoutes(
     }
   });
 
+  // ── Player Characters API ──────────────────────────────────────
+
+  const CHARACTERS_PATH = join(MAP_DATA_DIR, "characters.json");
+
+  function loadCharacters(): any[] {
+    try {
+      if (existsSync(CHARACTERS_PATH)) return JSON.parse(readFileSync(CHARACTERS_PATH, "utf-8"));
+    } catch {}
+    return [];
+  }
+
+  function saveCharacters(chars: any[]): void {
+    if (!existsSync(MAP_DATA_DIR)) mkdirSync(MAP_DATA_DIR, { recursive: true });
+    writeFileSync(CHARACTERS_PATH, JSON.stringify(chars, null, 2), "utf-8");
+  }
+
+  // List characters (optionally filter by accountId)
+  app.get("/api/characters", (req, res) => {
+    try {
+      const chars = loadCharacters();
+      const accountId = req.query.accountId as string | undefined;
+      if (accountId) {
+        res.json(chars.filter((c: any) => c.accountId === accountId));
+      } else {
+        res.json(chars);
+      }
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Get single character by grudgeId
+  app.get("/api/characters/:id", (req, res) => {
+    try {
+      const chars = loadCharacters();
+      const char = chars.find((c: any) => c.grudgeId === req.params.id);
+      if (!char) return res.status(404).json({ error: "Character not found" });
+      res.json(char);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Create new character
+  app.post("/api/characters", (req, res) => {
+    try {
+      const body = req.body;
+      if (!body || !body.customName || !body.race || !body.heroClass) {
+        return res.status(400).json({ error: "customName, race, and heroClass are required" });
+      }
+
+      const chars = loadCharacters();
+
+      // Assign a server grudgeId if not provided
+      if (!body.grudgeId || body.grudgeId.startsWith('CHAR-')) {
+        body.grudgeId = `CHAR-${Date.now()}-${randomUUID().slice(0, 8).toUpperCase()}`;
+      }
+
+      // Prevent duplicate names per account
+      const accountId = body.accountId || 'local';
+      body.accountId = accountId;
+      const duplicate = chars.find((c: any) => c.accountId === accountId && c.customName.toLowerCase() === body.customName.toLowerCase());
+      if (duplicate) {
+        return res.status(409).json({ error: "You already have a character with that name" });
+      }
+
+      body.createdAt = body.createdAt || new Date().toISOString();
+      body.lastLogin = new Date().toISOString();
+
+      chars.push(body);
+      saveCharacters(chars);
+
+      res.status(201).json(body);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Update character
+  app.put("/api/characters/:id", (req, res) => {
+    try {
+      const chars = loadCharacters();
+      const idx = chars.findIndex((c: any) => c.grudgeId === req.params.id);
+      if (idx < 0) return res.status(404).json({ error: "Character not found" });
+
+      // Merge updates (preserve grudgeId, accountId)
+      const existing = chars[idx];
+      const updated = { ...existing, ...req.body, grudgeId: existing.grudgeId, accountId: existing.accountId };
+      updated.lastLogin = new Date().toISOString();
+      chars[idx] = updated;
+      saveCharacters(chars);
+
+      res.json(updated);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Delete character
+  app.delete("/api/characters/:id", (req, res) => {
+    try {
+      let chars = loadCharacters();
+      const before = chars.length;
+      chars = chars.filter((c: any) => c.grudgeId !== req.params.id);
+      if (chars.length === before) return res.status(404).json({ error: "Character not found" });
+      saveCharacters(chars);
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ── Map Admin API ─────────────────────────────────────────────
 
   app.get("/api/map", (_req, res) => {

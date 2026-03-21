@@ -4,11 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   HEROES, HeroData, RACE_COLORS, CLASS_COLORS, FACTION_COLORS, CLASS_ABILITIES,
+  HERO_WEAPONS, WeaponType, getHeroWeapon,
 } from '@/game/types';
 import {
   ATTRIBUTES, AttributeId, ATTR_IDS, createPlayerAttributes, allocatePoint, deallocatePoint,
   computeDerivedStats, saveAttributes, STARTING_POINTS,
 } from '@/game/attributes';
+import { createNewCharacter, playerCharacterToHeroData, startSync } from '@/game/player-account';
+import { getGrudgeUser } from '../../src/utils/grudge-auth.js';
 
 /* ── Constants ── */
 
@@ -51,7 +54,41 @@ const CLASS_BASE_STATS: Record<string, { hp: number; atk: number; def: number; s
   Worg:    { hp: 210, atk: 23, def: 14, spd: 65, rng: 1.5, mp: 95 },
 };
 
-type Step = 'race' | 'class' | 'name' | 'attributes' | 'avatar' | 'confirm';
+// Class → allowed weapon categories (from game design rules)
+const CLASS_ALLOWED_WEAPONS: Record<string, { type: string; label: string; emoji: string }[]> = {
+  Warrior: [
+    { type: 'swords', label: 'Sword & Shield', emoji: '⚔️' },
+    { type: 'greatsword', label: 'Greatsword', emoji: '🗡️' },
+    { type: 'greataxes', label: 'Great Axe', emoji: '🪓' },
+    { type: 'hammers', label: 'War Hammer', emoji: '🔨' },
+    { type: 'axes1h', label: 'Axe & Shield', emoji: '🛡️' },
+    { type: 'spear', label: 'Spear', emoji: '🔱' },
+  ],
+  Mage: [
+    { type: 'arcaneStaves', label: 'Arcane Staff', emoji: '🔮' },
+    { type: 'fireStaves', label: 'Fire Staff', emoji: '🔥' },
+    { type: 'frostStaves', label: 'Frost Staff', emoji: '❄️' },
+    { type: 'lightningStaves', label: 'Lightning Staff', emoji: '⚡' },
+    { type: 'natureStaves', label: 'Nature Staff', emoji: '🌿' },
+    { type: 'holyStaves', label: 'Holy Staff', emoji: '✨' },
+  ],
+  Ranger: [
+    { type: 'bow', label: 'Longbow', emoji: '🏹' },
+    { type: 'crossbows', label: 'Crossbow', emoji: '🎯' },
+    { type: 'guns', label: 'Firearm', emoji: '🔫' },
+    { type: 'daggers', label: 'Daggers', emoji: '🗡️' },
+    { type: 'spear', label: 'Spear', emoji: '🔱' },
+  ],
+  Worg: [
+    { type: 'daggers', label: 'Claws / Daggers', emoji: '🐾' },
+    { type: 'scythes', label: 'Scythe', emoji: '⚰️' },
+    { type: 'axes1h', label: 'Hatchets', emoji: '🪓' },
+    { type: 'spear', label: 'Spear', emoji: '🔱' },
+    { type: 'hammers', label: 'Mace', emoji: '🔨' },
+  ],
+};
+
+type Step = 'race' | 'class' | 'weapon' | 'name' | 'attributes' | 'avatar' | 'confirm';
 
 /* ── Component ── */
 
@@ -60,11 +97,13 @@ export default function CreateCharacter() {
   const [step, setStep] = useState<Step>('race');
   const [race, setRace] = useState<string | null>(null);
   const [heroClass, setHeroClass] = useState<string | null>(null);
+  const [weapon, setWeapon] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [attrs, setAttrs] = useState(() => createPlayerAttributes('Warrior'));
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Recompute attributes when class changes
   const resetAttrs = (cls: string) => setAttrs(createPlayerAttributes(cls));
@@ -132,73 +171,72 @@ export default function CreateCharacter() {
 
   /* ── Save & Start ── */
   const createCharacter = async () => {
-    if (!race || !heroClass || !name.trim() || !finalStats) return;
+    if (!race || !heroClass || !name.trim() || !finalStats || !weapon) return;
     setIsCreating(true);
+    setCreateError(null);
     try {
       const faction = RACE_FACTIONS[race] || 'Crusade';
 
-      // Create a new hero entry with a unique ID
-      const newId = 100 + Math.floor(Math.random() * 9000);
-      const newHero: HeroData = {
-        id: newId,
-        name: name.trim(),
-        title: `The ${heroClass}`,
+      // Get account info from Grudge auth
+      const grudgeUser = getGrudgeUser();
+      const accountId = grudgeUser?.grudgeId || grudgeUser?.userId || localStorage.getItem('grudge_id') || 'local';
+
+      // Use the player-account system to create on backend
+      const character = await createNewCharacter(
+        accountId,
+        1,   // default model index
         race,
         heroClass,
-        faction,
-        rarity: 'Rare',
-        hp: finalStats.hp,
-        atk: finalStats.atk,
-        def: finalStats.def,
-        spd: finalStats.spd,
-        rng: finalStats.rng,
-        mp: finalStats.mp,
-        quote: `A new ${race} ${heroClass} joins the fight.`,
-      };
+        name.trim(),
+      );
+      // Set weapon on the character
+      character.weaponType = weapon;
 
-      // Save to localStorage (matches existing loadCharacterData flow)
-      localStorage.setItem('grudge_hero_id', String(newId));
+      // Convert to HeroData for the game engine
+      const newHero = playerCharacterToHeroData(character);
+      newHero.equippedWeaponId = weapon;
+
+      // Save to localStorage
+      localStorage.setItem('grudge_hero_id', String(newHero.id));
+      localStorage.setItem('grudge_team', '0');
       localStorage.setItem('grudge_custom_hero', JSON.stringify(newHero));
       localStorage.setItem('grudge_avatar_url', avatarUrl || '');
+      localStorage.setItem('grudge_character_weapon', weapon);
       saveAttributes(attrs);
 
-      // Also push into the HEROES array at runtime so other code can find it
-      if (!HEROES.find(h => h.id === newId)) {
+      // Register in runtime HEROES array
+      if (!HEROES.find(h => h.id === newHero.id)) {
         HEROES.push(newHero);
       }
 
-      // Try to save to Grudge backend
-      try {
-        const userData = JSON.parse(localStorage.getItem('grudge_current_user') || '{}');
-        await fetch('/api/characters', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: name.trim(),
-            raceId: race.toLowerCase(),
-            classId: heroClass.toLowerCase(),
-            attributes: attrs.base,
-            avatarUrl: avatarUrl && !avatarUrl.startsWith('data:') ? avatarUrl : null,
-            accountId: userData.accountId || userData.id,
-            grudgeId: userData.grudgeId,
-          }),
-        });
-      } catch { /* offline fallback — character saved locally */ }
+      // Start background sync
+      startSync();
 
-      setLocation('/game');
-    } catch (err) {
+      // Route to the correct game mode
+      const mode = localStorage.getItem('grudge_mode') || 'arena';
+      if (mode === 'openworld') {
+        setLocation('/open-world-play');
+      } else if (mode === 'spaceconquest') {
+        setLocation('/space-conquest');
+      } else {
+        setLocation('/game');
+      }
+    } catch (err: any) {
       console.error('[CreateChar] Error:', err);
+      setCreateError(err?.message || 'Failed to create character');
     }
     setIsCreating(false);
   };
 
   /* ── UI Helpers ── */
-  const stepIndex = ['race', 'class', 'name', 'attributes', 'avatar', 'confirm'].indexOf(step);
-  const stepLabels = ['Race', 'Class', 'Name', 'Stats', 'Avatar', 'Confirm'];
+  const allSteps: Step[] = ['race', 'class', 'weapon', 'name', 'attributes', 'avatar', 'confirm'];
+  const stepIndex = allSteps.indexOf(step);
+  const stepLabels = ['Race', 'Class', 'Weapon', 'Name', 'Stats', 'Avatar', 'Confirm'];
 
   const canNext = () => {
     if (step === 'race') return !!race;
     if (step === 'class') return !!heroClass;
+    if (step === 'weapon') return !!weapon;
     if (step === 'name') return name.trim().length >= 2;
     if (step === 'attributes') return true;
     if (step === 'avatar') return true;
@@ -206,14 +244,12 @@ export default function CreateCharacter() {
   };
 
   const goNext = () => {
-    const steps: Step[] = ['race', 'class', 'name', 'attributes', 'avatar', 'confirm'];
-    const i = steps.indexOf(step);
-    if (i < steps.length - 1) setStep(steps[i + 1]);
+    const i = allSteps.indexOf(step);
+    if (i < allSteps.length - 1) setStep(allSteps[i + 1]);
   };
   const goBack = () => {
-    const steps: Step[] = ['race', 'class', 'name', 'attributes', 'avatar', 'confirm'];
-    const i = steps.indexOf(step);
-    if (i > 0) setStep(steps[i - 1]);
+    const i = allSteps.indexOf(step);
+    if (i > 0) setStep(allSteps[i - 1]);
     else setLocation('/');
   };
 
@@ -293,6 +329,31 @@ export default function CreateCharacter() {
                         </span>
                       ))}
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* STEP: Weapon */}
+        {step === 'weapon' && heroClass && (
+          <div>
+            <h2 style={{ fontSize: 20, marginBottom: 16, color: '#fbbf24' }}>Choose Your Weapon</h2>
+            <p style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>This determines your starting weapon skills and combat style.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              {(CLASS_ALLOWED_WEAPONS[heroClass] || []).map(w => {
+                const isDefault = race && getHeroWeapon(race, heroClass) === w.type;
+                return (
+                  <div key={w.type} onClick={() => setWeapon(w.type)} style={{
+                    padding: 16, borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center',
+                    background: weapon === w.type ? `${CLASS_COLORS[heroClass]}20` : 'rgba(255,255,255,0.03)',
+                    border: `2px solid ${weapon === w.type ? CLASS_COLORS[heroClass] : 'rgba(255,255,255,0.08)'}`,
+                    boxShadow: weapon === w.type ? `0 0 20px ${CLASS_COLORS[heroClass]}30` : 'none',
+                  }}>
+                    <div style={{ fontSize: 28, marginBottom: 4 }}>{w.emoji}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: weapon === w.type ? CLASS_COLORS[heroClass] : '#ddd' }}>{w.label}</div>
+                    {isDefault && <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', marginTop: 4, display: 'inline-block' }}>RACIAL DEFAULT</span>}
                   </div>
                 );
               })}
@@ -388,7 +449,9 @@ export default function CreateCharacter() {
               <span style={{ color: RACE_COLORS[race!] }}>{race}</span>{' '}
               <span style={{ color: CLASS_COLORS[heroClass!] }}>{heroClass}</span>{' — '}
               <span style={{ color: FACTION_COLORS[RACE_FACTIONS[race!]] }}>{RACE_FACTIONS[race!]}</span>
+              {weapon && <span style={{ color: '#c5a059' }}> — {(CLASS_ALLOWED_WEAPONS[heroClass!] || []).find(w => w.type === weapon)?.label || weapon}</span>}
             </p>
+            {createError && <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 8 }}>{createError}</p>}
             {avatarUrl && <img src={avatarUrl} alt="" style={{ width: 128, height: 128, borderRadius: 12, border: `2px solid ${RACE_COLORS[race!]}`, objectFit: 'cover', margin: '0 auto 16px' }} />}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxWidth: 400, margin: '0 auto 24px' }}>
               {[
