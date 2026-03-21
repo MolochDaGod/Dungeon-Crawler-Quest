@@ -247,16 +247,18 @@ export default function Home() {
               <Palmtree className="w-4 h-4" />
               <span>Island Camp</span>
             </button>
-            <button
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#ef4444] transition-colors cursor-pointer"
-              onClick={() => setShowAdminLogin(true)}
-              data-testid="button-admin-login"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Admin</span>
-            </button>
           </div>
         </div>
+
+        {/* Admin button — bottom right corner */}
+        <button
+          className="absolute bottom-6 right-6 flex items-center gap-1.5 text-xs text-gray-700 hover:text-[#ef4444] transition-colors cursor-pointer opacity-50 hover:opacity-100"
+          onClick={() => setShowAdminLogin(true)}
+          data-testid="button-admin-login"
+        >
+          <Lock className="w-3 h-3" />
+          <span>Admin</span>
+        </button>
 
         <div className="w-full max-w-lg mx-auto bg-black/20 rounded-lg px-6 py-4 border border-gray-800/50 overflow-y-auto" style={{ maxHeight: '40vh' }} data-testid="section-how-to-play">
           <h3 className="text-xs uppercase tracking-[0.2em] text-center mb-3" style={{ fontFamily: "'Oxanium', sans-serif", color: '#c5a059' }}>
