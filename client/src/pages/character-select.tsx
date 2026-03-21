@@ -280,6 +280,14 @@ export default function CharacterSelect() {
   const previewRef = useRef<HTMLCanvasElement>(null);
   const voxelRef = useRef<VoxelRenderer | null>(null);
 
+  // Admin-only guard: redirect non-admins to create-character
+  useEffect(() => {
+    const isAdmin = localStorage.getItem('grudge_admin') === 'true';
+    if (!isAdmin) {
+      setLocation('/create-character');
+    }
+  }, [setLocation]);
+
   const filteredHeroes = HEROES.filter(h => {
     if (raceFilter !== 'All' && h.race !== raceFilter) return false;
     if (classFilter !== 'All' && h.heroClass !== classFilter) return false;
@@ -350,10 +358,10 @@ export default function CharacterSelect() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1
             className="text-2xl font-black tracking-wider"
-            style={{ fontFamily: "'Oxanium', sans-serif", color: '#c5a059' }}
+            style={{ fontFamily: "'Oxanium', sans-serif", color: '#ef4444' }}
             data-testid="text-page-title"
           >
-            HERO SELECT
+            ADMIN — HERO SELECT
           </h1>
           <div className="flex items-center gap-4">
             <span className="text-gray-500 text-sm">{filteredHeroes.length} heroes</span>

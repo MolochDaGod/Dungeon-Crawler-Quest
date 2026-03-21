@@ -196,6 +196,7 @@ export default function Home() {
         </div>
 
         <div className="flex flex-col gap-3 items-center mb-8">
+          {/* Main play button */}
           <Button
             size="lg"
             className="text-xl px-20 min-h-16 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white font-bold tracking-wider shadow-lg shadow-red-900/50 transition-all duration-300"
@@ -203,25 +204,32 @@ export default function Home() {
             onClick={handlePlay}
             data-testid="button-play"
           >
-            {selectedMode === 'arena' ? 'ENTER THE ARENA' : 'EXPLORE THE WORLD'}
+            {localStorage.getItem('grudge_custom_hero')
+              ? (selectedMode === 'arena' ? 'ENTER THE ARENA' : selectedMode === 'spaceconquest' ? 'LAUNCH CONQUEST' : 'EXPLORE THE WORLD')
+              : 'CREATE CHARACTER'
+            }
           </Button>
 
-          <div className="flex gap-4 mt-2">
+          {/* Secondary: New Character button (always visible) */}
+          {localStorage.getItem('grudge_custom_hero') && (
+            <button
+              className="text-sm text-[#c5a059] hover:text-[#fbbf24] transition-colors cursor-pointer mt-1"
+              onClick={handleNewCharacter}
+              style={{ fontFamily: "'Oxanium', sans-serif" }}
+              data-testid="button-new-character"
+            >
+              + New Character
+            </button>
+          )}
+
+          <div className="flex gap-4 mt-2 flex-wrap justify-center">
             <button
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"
               onClick={() => setLocation('/settings')}
               data-testid="button-settings"
             >
               <Settings className="w-4 h-4" />
-              <span>Keybindings &amp; Settings</span>
-            </button>
-            <button
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"
-              onClick={() => setLocation('/editor')}
-              data-testid="button-editor"
-            >
-              <Sword className="w-4 h-4" />
-              <span>Entity Editor</span>
+              <span>Settings</span>
             </button>
             <button
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"
@@ -240,12 +248,12 @@ export default function Home() {
               <span>Island Camp</span>
             </button>
             <button
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer"
-              onClick={() => setLocation('/worldadmin')}
-              data-testid="button-world-admin"
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#ef4444] transition-colors cursor-pointer"
+              onClick={() => setShowAdminLogin(true)}
+              data-testid="button-admin-login"
             >
-              <Globe className="w-4 h-4" />
-              <span>World Admin</span>
+              <Lock className="w-3.5 h-3.5" />
+              <span>Admin</span>
             </button>
           </div>
         </div>
@@ -323,6 +331,61 @@ export default function Home() {
           <p className="text-gray-700 text-xs">&copy; 2026 Grudge Warlords &bull; Voxel engine powered by IsoVoxel &amp; PixVoxelAssets</p>
         </div>
       </div>
+
+      {/* Admin Login Modal */}
+      {showAdminLogin && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowAdminLogin(false)}
+        >
+          <div
+            className="bg-[#1a1a2e] border border-[#ef4444]/30 rounded-xl p-6 w-80"
+            onClick={e => e.stopPropagation()}
+            style={{ fontFamily: "'Oxanium', sans-serif" }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Lock className="w-5 h-5 text-[#ef4444]" />
+              <h3 className="text-lg font-bold text-[#ef4444]">Admin Access</h3>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">Hero Select, Entity Editor, World Admin</p>
+            <input
+              type="password"
+              placeholder="Password"
+              value={adminPass}
+              onChange={e => setAdminPass(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+              autoFocus
+              className="w-full px-3 py-2 rounded-lg bg-black/50 border border-gray-700 text-white text-sm mb-3"
+              style={{ outline: 'none' }}
+            />
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold"
+                onClick={handleAdminLogin}
+              >
+                Login
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowAdminLogin(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-800">
+              <button
+                className="flex-1 text-xs text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer py-1"
+                onClick={() => { setShowAdminLogin(false); setLocation('/editor'); }}
+              >Entity Editor</button>
+              <button
+                className="flex-1 text-xs text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer py-1"
+                onClick={() => { setShowAdminLogin(false); setLocation('/worldadmin'); }}
+              >World Admin</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
