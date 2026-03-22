@@ -23,12 +23,17 @@ import hudFramePath from '@assets/hud-frame.png';
 import MainPanel from '@/components/MainPanel';
 import NpcDialog from '@/components/NpcDialog';
 import { IntroSequence, shouldShowIntro } from '@/components/IntroSequence';
+// Dynamic import for 3D renderer (code-split — loads Rapier WASM only when 3D mode active)
+type OpenWorldThreeRendererType = import('@/game/ow-three-renderer').OpenWorldThreeRenderer;
+import { getAmbientBrightness } from '@/game/world-state';
 
 export default function OpenWorldPage() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<OpenWorldState | null>(null);
   const rendererRef = useRef<OpenWorldRenderer | null>(null);
+  const threeRendererRef = useRef<OpenWorldThreeRenderer | null>(null);
   const minimapRef = useRef<MinimapConfig>(createMinimapConfig());
   const keysRef = useRef<Set<string>>(new Set());
   const [hud, setHud] = useState<OWHudState | null>(null);
@@ -37,6 +42,9 @@ export default function OpenWorldPage() {
   const [showCharPanel, setShowCharPanel] = useState(false);
   const [showMissions, setShowMissions] = useState(false);
   const [showIntro, setShowIntro] = useState(() => shouldShowIntro());
+  const [renderMode, setRenderMode] = useState<'2d' | '3d'>(() =>
+    (localStorage.getItem('grudge_ow_render_mode') as '2d' | '3d') || '3d'
+  );
   const zoneBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uiBlocksInputRef = useRef(false);
 
@@ -54,8 +62,27 @@ export default function OpenWorldPage() {
 
     const state = createOpenWorldState(heroId);
     stateRef.current = state;
+
+    // 2D renderer (always created for minimap + fallback)
     const renderer = new OpenWorldRenderer(canvas);
     rendererRef.current = renderer;
+
+    // 3D renderer (WebGL via Three.js + Rapier) — loaded dynamically
+    let threeRenderer: OpenWorldThreeRendererType | null = null;
+    if (renderMode === '3d' && containerRef.current) {
+      const container = containerRef.current;
+      import('@/game/ow-three-renderer').then(mod => {
+        try {
+          threeRenderer = new mod.OpenWorldThreeRenderer(container);
+          threeRendererRef.current = threeRenderer;
+          const hd = HEROES[state.player.heroDataId];
+          if (hd) threeRenderer.loadPlayerModel(state.player.heroDataId, hd.heroClass, hd.race);
+        } catch (e) {
+          console.warn('[OW] WebGL init failed:', e);
+          threeRenderer = null;
+        }
+      }).catch(() => { threeRenderer = null; });
+    }
 
     // Initialize GLB effect sprites in background
     initGLBSprites('/effects/');
@@ -74,11 +101,22 @@ export default function OpenWorldPage() {
       // Block input when UI panel, NPC dialog, or NPC dialog from inside building is open
       const activeKeys = (uiBlocksInputRef.current || state.activeNPC) ? emptyKeys : keysRef.current;
       updateOpenWorld(state, dt, activeKeys, bindings);
-      renderer.render(state);
 
-      // Render minimap on top
+      // Render: 3D mode or 2D fallback
+      if (threeRenderer) {
+        const brightness = getAmbientBrightness(state.worldState);
+        threeRenderer.update(
+          state.player.x, state.player.y,
+          state.player.facing, state.player.animState,
+          state.gameTime, brightness,
+        );
+      } else {
+        renderer.render(state);
+      }
+
+      // Render minimap on top (always 2D canvas)
       const ctx = canvas.getContext('2d');
-      if (ctx) {
+      if (ctx && !threeRenderer) {
         renderMinimap(ctx, state, minimapRef.current, canvas.width, canvas.height);
       }
 
@@ -222,8 +260,9 @@ export default function OpenWorldPage() {
       canvas.removeEventListener('contextmenu', onContextMenu);
       canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('wheel', onWheel);
+      if (threeRenderer) threeRenderer.dispose();
     };
-  }, [heroId, setLocation]);
+  }, [heroId, setLocation, renderMode]);
 
   // Clean up old notifications
   useEffect(() => {
@@ -248,7 +287,10 @@ export default function OpenWorldPage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="open-world-page">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" data-testid="canvas-openworld" />
+      {/* 2D canvas (fallback + minimap) */}
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ display: renderMode === '3d' ? 'none' : 'block' }} data-testid="canvas-openworld" />
+      {/* 3D WebGL container */}
+      {renderMode === '3d' && <div ref={containerRef} className="absolute inset-0 w-full h-full" data-testid="three-container" />}
 
       {/* Intro sequence for new players */}
       {showIntro && heroData && (

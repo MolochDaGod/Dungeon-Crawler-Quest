@@ -12,6 +12,7 @@
     "sprite-fix": "node scripts/sprite-audit.mjs --fix"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.3",
     "@flatten-js/core": "^1.6.10",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
