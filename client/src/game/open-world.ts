@@ -3164,120 +3164,57 @@ export class OpenWorldRenderer {
   private renderTerrain(ctx: CanvasRenderingContext2D, state: OpenWorldState, cam: { x: number; y: number; zoom: number }, W: number, H: number, brightness: number): void {
     const viewW = W / cam.zoom;
     const viewH = H / cam.zoom;
-    const startX = Math.max(0, Math.floor((cam.x - viewW / 2) / TILE_SIZE) - 1);
-    const startY = Math.max(0, Math.floor((cam.y - viewH / 2) / TILE_SIZE) - 1);
-    const endX = Math.min(Math.ceil(OPEN_WORLD_SIZE / TILE_SIZE), Math.ceil((cam.x + viewW / 2) / TILE_SIZE) + 1);
-    const endY = Math.min(Math.ceil(OPEN_WORLD_SIZE / TILE_SIZE), Math.ceil((cam.y + viewH / 2) / TILE_SIZE) + 1);
+    const camLeft = cam.x - viewW / 2;
+    const camTop = cam.y - viewH / 2;
+
+    // ── Ocean water (tiles outside any zone) ──
+    const startX = Math.max(0, Math.floor(camLeft / TILE_SIZE) - 1);
+    const startY = Math.max(0, Math.floor(camTop / TILE_SIZE) - 1);
+    const endX = Math.min(Math.ceil(OPEN_WORLD_SIZE / TILE_SIZE), Math.ceil((camLeft + viewW) / TILE_SIZE) + 1);
+    const endY = Math.min(Math.ceil(OPEN_WORLD_SIZE / TILE_SIZE), Math.ceil((camTop + viewH) / TILE_SIZE) + 1);
+    const now = Date.now();
 
     for (let ty = startY; ty < endY; ty++) {
       for (let tx = startX; tx < endX; tx++) {
         const wx = tx * TILE_SIZE + TILE_SIZE / 2;
         const wy = ty * TILE_SIZE + TILE_SIZE / 2;
-        const zone = getZoneAtPosition(wx, wy);
+        if (getZoneAtPosition(wx, wy)) continue; // zone tiles handled below
 
         const x = tx * TILE_SIZE;
         const y = ty * TILE_SIZE;
         const seed = (tx * 17 + ty * 31) % 100;
 
-        if (!zone) {
-          // Ocean water — animated deep sea (NO black void)
-          const now = Date.now();
-          const wavePhase = Math.sin(now * 0.001 + tx * 0.7 + ty * 0.5);
-          const wavePhase2 = Math.cos(now * 0.0008 + tx * 0.3 - ty * 0.6);
-          const depthR = 12 + wavePhase * 4;
-          const depthG = 35 + wavePhase2 * 8;
-          const depthB = 70 + wavePhase * 10 + wavePhase2 * 5;
-          ctx.globalAlpha = Math.max(0.4, brightness);
-          ctx.fillStyle = `rgb(${Math.floor(depthR)},${Math.floor(depthG)},${Math.floor(depthB)})`;
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-          // Wave crest highlights (moving white lines)
-          const waveCrest = Math.sin(now * 0.002 + tx * 2.1 + ty * 1.3);
-          if (waveCrest > 0.6) {
-            ctx.fillStyle = `rgba(80,140,200,${(waveCrest - 0.6) * 0.3})`;
-            ctx.fillRect(x + 2, y + (seed % 8) * 4, TILE_SIZE - 4, 2);
-          }
-          // Deep wave trough shadows
-          const waveTrough = Math.sin(now * 0.0015 + tx * 1.5 - ty * 0.8);
-          if (waveTrough < -0.5) {
-            ctx.fillStyle = `rgba(5,15,40,${(-waveTrough - 0.5) * 0.15})`;
-            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-          }
-          // Foam near zone edges (shoreline effect)
-          const nearZone = isNearAnyZone(wx, wy, 120);
-          if (nearZone) {
-            const foamIntensity = Math.sin(now * 0.003 + tx * 1.5 + ty * 1.2) * 0.5 + 0.5;
-            ctx.fillStyle = `rgba(180,220,240,${foamIntensity * 0.3 * brightness})`;
-            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-            // Foam dots
-            if (seed > 70) {
-              ctx.fillStyle = `rgba(220,240,255,${foamIntensity * 0.4})`;
-              ctx.beginPath();
-              ctx.arc(x + (seed % 30) + 5, y + ((seed * 3) % 30) + 5, 1.5 + foamIntensity, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-          ctx.globalAlpha = 1;
-          continue;
-        }
-
-        const colors = ZONE_FLOOR_COLORS[zone.terrainType] || ZONE_FLOOR_COLORS.grass;
-        const baseColor = seed > 60 ? colors.accent : colors.base;
-
-        ctx.globalAlpha = Math.max(0.3, brightness);
-        ctx.fillStyle = baseColor;
+        // Animated ocean
+        const wavePhase = Math.sin(now * 0.001 + tx * 0.7 + ty * 0.5);
+        const wavePhase2 = Math.cos(now * 0.0008 + tx * 0.3 - ty * 0.6);
+        ctx.globalAlpha = Math.max(0.4, brightness);
+        ctx.fillStyle = `rgb(${Math.floor(12 + wavePhase * 4)},${Math.floor(35 + wavePhase2 * 8)},${Math.floor(70 + wavePhase * 10 + wavePhase2 * 5)})`;
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-
-        // Tile decoration details based on terrain type
-        const terrainType = zone.terrainType;
-        if (terrainType === 'grass' || terrainType === 'jungle') {
-          // Grass tufts
-          if (seed > 60) {
-            ctx.fillStyle = terrainType === 'jungle' ? 'rgba(0,100,20,0.3)' : 'rgba(60,150,40,0.25)';
-            const gx = x + (seed % 7) * 5 + 2;
-            const gy = y + ((seed * 3) % 7) * 5 + 2;
-            ctx.fillRect(gx, gy, 2, 5);
-            ctx.fillRect(gx + 4, gy + 1, 2, 4);
-          }
-          // Occasional flower
-          if (seed > 92) {
-            ctx.fillStyle = seed % 2 === 0 ? '#ff6b8a' : '#ffd700';
-            ctx.beginPath();
-            ctx.arc(x + 20 + (seed % 10), y + 20 + (seed % 8), 2, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        } else if (terrainType === 'stone') {
-          // Scattered rocks
-          if (seed > 65) {
-            ctx.fillStyle = 'rgba(100,100,120,0.3)';
-            ctx.fillRect(x + (seed % 12) * 3, y + ((seed * 7) % 12) * 3, 6, 4);
-          }
-          if (seed > 85) {
-            ctx.fillStyle = 'rgba(80,80,100,0.25)';
-            ctx.fillRect(x + 10 + (seed % 8) * 2, y + 5 + (seed % 6) * 4, 8, 5);
-          }
-        } else if (terrainType === 'water') {
-          // Water shimmer
-          if (seed > 50) {
-            const shimmer = 0.05 + Math.sin(Date.now() * 0.002 + tx * 3 + ty * 5) * 0.04;
-            ctx.fillStyle = `rgba(120,200,255,${shimmer})`;
-            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-          }
-        } else if (terrainType === 'dirt') {
-          // Dirt patches and pebbles
-          if (seed > 70) {
-            ctx.fillStyle = 'rgba(90,60,30,0.2)';
-            ctx.beginPath();
-            ctx.arc(x + 10 + (seed % 20), y + 10 + (seed % 18), 3, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        } else if (seed > 75) {
-          ctx.fillStyle = `rgba(255,255,255,0.03)`;
-          ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        const waveCrest = Math.sin(now * 0.002 + tx * 2.1 + ty * 1.3);
+        if (waveCrest > 0.6) {
+          ctx.fillStyle = `rgba(80,140,200,${(waveCrest - 0.6) * 0.3})`;
+          ctx.fillRect(x + 2, y + (seed % 8) * 4, TILE_SIZE - 4, 2);
         }
-
+        if (isNearAnyZone(wx, wy, 120)) {
+          const fi = Math.sin(now * 0.003 + tx * 1.5 + ty * 1.2) * 0.5 + 0.5;
+          ctx.fillStyle = `rgba(180,220,240,${fi * 0.3 * brightness})`;
+          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        }
         ctx.globalAlpha = 1;
       }
     }
+
+    // ── Zone terrain: use TileMapRenderer for ground + sprite details ──
+    ctx.globalAlpha = Math.max(0.3, brightness);
+    for (const zone of ISLAND_ZONES) {
+      const b = zone.bounds;
+      if (b.x + b.w < camLeft || b.x > camLeft + viewW || b.y + b.h < camTop || b.y > camTop + viewH) continue;
+      // Tileset ground fill + noise pattern
+      this.tileRenderer.renderZoneGround(ctx, zone, camLeft, camTop, viewW, viewH);
+      // Sprite-based details (trees, bushes, rocks from Ground_grass.png)
+      this.tileRenderer.renderZoneDetails(ctx, zone, camLeft, camTop, viewW, viewH);
+    }
+    ctx.globalAlpha = 1;
   }
 
   // ── New World Decoration + Animal helpers ──────────────────────
@@ -3369,40 +3306,84 @@ export class OpenWorldRenderer {
     ctx.restore();
   }
 
+  // Sprite image cache for buildings
+  private _buildingSpriteCache = new Map<string, HTMLImageElement>();
+  private _getBuildingSprite(src: string): HTMLImageElement | null {
+    let img = this._buildingSpriteCache.get(src);
+    if (img) return img.complete ? img : null;
+    img = new Image();
+    img.src = src;
+    this._buildingSpriteCache.set(src, img);
+    return null;
+  }
+
   private renderBuildings(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
     const p = state.player;
     ctx.save();
     ctx.globalAlpha = Math.max(0.3, brightness);
 
+    // Sprite sheets for building types
+    const housesImg = this._getBuildingSprite('/assets/sprites/farm-animals/PNG/Houses.png');
+    const guildImg = this._getBuildingSprite('/assets/sprites/blacksmith-house/PNG/House_exterior.png');
+
+    // Source rects in Houses.png (446x286 spritesheet with multiple building pieces)
+    // Row 0: small houses ~80x70 each
+    // Row 1: larger structures, walls, roofs
+    const HOUSE_SRC: Record<string, { sx: number; sy: number; sw: number; sh: number }> = {
+      fortress: { sx: 0, sy: 0, sw: 160, sh: 130 },
+      tower:    { sx: 160, sy: 0, sw: 70, sh: 100 },
+      house:    { sx: 230, sy: 0, sw: 80, sh: 70 },
+      shop:     { sx: 310, sy: 0, sw: 80, sh: 70 },
+      wall:     { sx: 0, sy: 200, sw: 80, sh: 30 },
+      dock:     { sx: 80, sy: 200, sw: 100, sh: 30 },
+      ruin:     { sx: 230, sy: 70, sw: 80, sh: 70 },
+      camp:     { sx: 310, sy: 70, sw: 60, sh: 60 },
+      gate:     { sx: 160, sy: 100, sw: 70, sh: 40 },
+      inn:      { sx: 0, sy: 130, sw: 100, sh: 70 },
+      well:     { sx: 100, sy: 130, sw: 40, sh: 40 },
+      mill:     { sx: 140, sy: 130, sw: 80, sh: 70 },
+    };
+
     for (const bld of ZONE_BUILDINGS) {
-      // Cull distant buildings
       if (Math.abs(p.x - bld.x) > 900 || Math.abs(p.y - bld.y) > 900) continue;
 
-      // Building body
-      ctx.fillStyle = bld.color;
-      ctx.fillRect(bld.x - bld.w / 2, bld.y - bld.h / 2, bld.w, bld.h);
+      const drawX = bld.x - bld.w / 2;
+      const drawY = bld.y - bld.h / 2;
+      const src = HOUSE_SRC[bld.type] || HOUSE_SRC.house;
 
-      // Roof
-      ctx.fillStyle = bld.roofColor;
-      ctx.beginPath();
-      ctx.moveTo(bld.x - bld.w / 2 - 4, bld.y - bld.h / 2);
-      ctx.lineTo(bld.x, bld.y - bld.h / 2 - 12);
-      ctx.lineTo(bld.x + bld.w / 2 + 4, bld.y - bld.h / 2);
-      ctx.closePath();
-      ctx.fill();
+      // Try sprite first
+      const img = bld.type === 'fortress' || bld.type === 'inn' ? guildImg : housesImg;
+      if (img?.complete) {
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.beginPath();
+        ctx.ellipse(bld.x, bld.y + bld.h / 2 + 4, bld.w / 2 + 5, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Sprite
+        ctx.drawImage(img, src.sx, src.sy, src.sw, src.sh, drawX, drawY, bld.w, bld.h);
+      } else {
+        // Fallback: colored rectangle with roof
+        ctx.fillStyle = bld.color;
+        ctx.fillRect(drawX, drawY, bld.w, bld.h);
+        ctx.fillStyle = bld.roofColor;
+        ctx.beginPath();
+        ctx.moveTo(drawX - 4, drawY);
+        ctx.lineTo(bld.x, drawY - 12);
+        ctx.lineTo(drawX + bld.w + 4, drawY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(40,20,10,0.7)';
+        ctx.fillRect(bld.x - 3, drawY + bld.h - 8, 6, 8);
+      }
 
-      // Door
-      ctx.fillStyle = 'rgba(40,20,10,0.7)';
-      ctx.fillRect(bld.x - 3, bld.y + bld.h / 2 - 8, 6, 8);
-
-      // Label (only when close)
+      // Label (close range only)
       const d = Math.abs(p.x - bld.x) + Math.abs(p.y - bld.y);
       if (d < 200) {
-        ctx.fillStyle = '#ddd';
-        ctx.font = '8px sans-serif';
+        ctx.fillStyle = '#e0d0a8';
+        ctx.font = 'bold 8px sans-serif';
         ctx.textAlign = 'center';
-        ctx.globalAlpha = 0.6;
-        ctx.fillText(bld.type, bld.x, bld.y - bld.h / 2 - 16);
+        ctx.globalAlpha = 0.7;
+        ctx.fillText(bld.type.charAt(0).toUpperCase() + bld.type.slice(1), bld.x, drawY - 6);
         ctx.globalAlpha = Math.max(0.3, brightness);
       }
     }
