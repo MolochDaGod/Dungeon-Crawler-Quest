@@ -108,6 +108,8 @@ export function loadCharacterData(): CharacterData {
       }
     } catch { /* ignore parse errors */ }
   }
+  // Always fall back to first hero so /character never shows a blank screen
+  if (!hero && HEROES.length > 0) hero = HEROES[0];
   const heroClass = hero?.heroClass ?? 'Warrior';
   const heroRace = hero?.race ?? 'Human';
 

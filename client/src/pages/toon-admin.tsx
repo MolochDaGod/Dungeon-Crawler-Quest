@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { VoxelRenderer } from "@/game/voxel";
 import { SpriteEffectSystem, SpriteEffectType } from "@/game/sprite-effects";
-import { HEROES } from "@/game/types";
+import { HEROES, RACE_COLORS, CLASS_COLORS } from "@/game/types";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -322,17 +322,22 @@ export default function ToonAdminPage() {
       ctx.translate(cx, cy);
       ctx.scale(SCALE, SCALE);
       const p = poseRef.current;
-      // Build FullPose from poseOffsets
-      const fullPose: any = { weaponGlow: p.weapon.scale > 1 ? 0.8 : 0 };
-      for (const part of BODY_PARTS) {
-        fullPose[part] = { ox: p[part].ox, oy: p[part].oy, oz: p[part].oz };
+      const heroName = HEROES.find(h => h.race === raceRef.current && h.heroClass === heroClassRef.current)?.name || "Hero";
+      // Check if any part has been offset from default
+      const hasOffsets = BODY_PARTS.some(part => p[part].ox !== 0 || p[part].oy !== 0 || p[part].oz !== 0 || p[part].rotation !== 0 || p[part].scale !== 1);
+      if (hasOffsets) {
+        // Pose-edit mode: static custom pose with user offsets applied
+        const fullPose: any = { weaponGlow: p.weapon.scale > 1 ? 0.8 : 0 };
+        for (const part of BODY_PARTS) {
+          fullPose[part] = { ox: p[part].ox, oy: p[part].oy, oz: p[part].oz };
+        }
+        vr.drawHeroVoxelCustomPose(ctx, 0, 0, raceRef.current, heroClassRef.current, facingRef.current, fullPose, heroName);
+      } else {
+        // Animation preview mode: full animation plays with selected state
+        const raceColor = RACE_COLORS[raceRef.current] || "#94a3b8";
+        const classColor = CLASS_COLORS[heroClassRef.current] || "#ef4444";
+        vr.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroClassRef.current, facingRef.current, animStateRef.current, t, raceRef.current, heroName);
       }
-      vr.drawHeroVoxelCustomPose(
-        ctx, 0, 0,
-        raceRef.current, heroClassRef.current,
-        facingRef.current, fullPose,
-        HEROES.find(h => h.race === raceRef.current && h.heroClass === heroClassRef.current)?.name || "Hero"
-      );
     } else if (tab === "minions") {
       const SCALE = 4.0;
       ctx.translate(cx, cy); ctx.scale(SCALE, SCALE);
