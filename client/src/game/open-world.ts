@@ -582,7 +582,18 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
   const hd = HEROES.find(h => h.id === heroId) || HEROES[0];
   const baseStats = heroStatsAtLevel(hd, 1);
   const playerAttrs = loadAttributes(hd.heroClass);
-  const stats = applyAttributeBonus(baseStats, playerAttrs, hd.heroClass);
+  const attrStats = applyAttributeBonus(baseStats, playerAttrs, hd.heroClass);
+
+  // Apply equipment stats on top of attribute-enhanced base stats
+  const equip = loadEquipment();
+  const eqStats = computeEquipmentStats(equip);
+  const stats = {
+    hp: attrStats.hp + eqStats.hp,
+    atk: attrStats.atk + eqStats.atk,
+    def: attrStats.def + eqStats.def,
+    spd: attrStats.spd + eqStats.spd,
+    mp: attrStats.mp + eqStats.mp,
+  };
 
   // Start in the Starting Village
   const startZone = ISLAND_ZONES[0];
@@ -2623,7 +2634,7 @@ function getNearbyInteractableLabel(state: OpenWorldState): string | null {
 
 export function getOWHudState(state: OpenWorldState): OWHudState {
   const p = state.player;
-  const hd = HEROES[p.heroDataId];
+  const hd = HEROES.find(h => h.id === p.heroDataId) || HEROES[0];
   const zone = getZoneAtPosition(p.x, p.y);
   const ws = state.worldState;
   const prog = state.playerProgress;
@@ -3394,41 +3405,64 @@ export class OpenWorldRenderer {
     this.renderTownBuildingExteriors(ctx, state, brightness);
   }
 
-  /** Draw all enterable town buildings with glowing doors and [E] Enter prompts */
+  // Sprite mapping for town building types → Houses.png source rects
+  private static TOWN_BLDG_SPRITES: Record<string, { sx: number; sy: number; sw: number; sh: number }> = {
+    inn:        { sx: 0,   sy: 130, sw: 100, sh: 70 },
+    blacksmith: { sx: 0,   sy: 0,   sw: 80,  sh: 70 },
+    shop:       { sx: 310, sy: 0,   sw: 80,  sh: 70 },
+    trainer:    { sx: 230, sy: 0,   sw: 80,  sh: 70 },
+    guild:      { sx: 0,   sy: 0,   sw: 160, sh: 130 },
+    barracks:   { sx: 160, sy: 0,   sw: 70,  sh: 100 },
+    armory:     { sx: 230, sy: 70,  sw: 80,  sh: 70 },
+  };
+
+  /** Draw all enterable town buildings with sprite exteriors, doors, and [E] prompts */
   private renderTownBuildingExteriors(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
     const p = state.player;
+    const housesImg = this._getBuildingSprite('/assets/sprites/farm-animals/PNG/Houses.png');
+    const guildImg = this._getBuildingSprite('/assets/sprites/blacksmith-house/PNG/House_exterior.png');
 
     for (const tb of ALL_TOWN_BUILDINGS) {
-      const dx = tb.wx + tb.ww / 2 - p.x;
-      const dy = tb.wy + tb.wh / 2 - p.y;
-      if (Math.abs(dx) > 800 || Math.abs(dy) > 800) continue;
+      const cx = tb.wx + tb.ww / 2;
+      const cy = tb.wy + tb.wh / 2;
+      if (Math.abs(cx - p.x) > 800 || Math.abs(cy - p.y) > 800) continue;
 
       ctx.save();
       ctx.globalAlpha = Math.max(0.5, brightness);
 
-      // Main body
-      ctx.fillStyle = tb.wallColor;
-      ctx.fillRect(tb.wx, tb.wy, tb.ww, tb.wh);
-
-      // Roof
-      ctx.fillStyle = shadeColor(tb.wallColor, 30);
+      // Ground shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
       ctx.beginPath();
-      ctx.moveTo(tb.wx - 4, tb.wy);
-      ctx.lineTo(tb.wx + tb.ww / 2, tb.wy - 14);
-      ctx.lineTo(tb.wx + tb.ww + 4, tb.wy);
-      ctx.closePath();
+      ctx.ellipse(cx, tb.wy + tb.wh + 4, tb.ww / 2 + 6, 8, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Windows (two)
-      ctx.fillStyle = 'rgba(200,220,255,0.3)';
-      ctx.fillRect(tb.wx + 8, tb.wy + 10, 12, 10);
-      ctx.fillRect(tb.wx + tb.ww - 20, tb.wy + 10, 12, 10);
-      ctx.strokeStyle = tb.floorColor;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(tb.wx + 8, tb.wy + 10, 12, 10);
-      ctx.strokeRect(tb.wx + tb.ww - 20, tb.wy + 10, 12, 10);
+      // Try sprite rendering first
+      const src = OpenWorldRenderer.TOWN_BLDG_SPRITES[tb.type];
+      const img = (tb.type === 'guild' || tb.type === 'inn') ? guildImg : housesImg;
+      if (img?.complete && src) {
+        ctx.drawImage(img, src.sx, src.sy, src.sw, src.sh, tb.wx, tb.wy, tb.ww, tb.wh);
+      } else {
+        // Fallback: colored rectangle with roof
+        ctx.fillStyle = tb.wallColor;
+        ctx.fillRect(tb.wx, tb.wy, tb.ww, tb.wh);
+        ctx.fillStyle = shadeColor(tb.wallColor, 30);
+        ctx.beginPath();
+        ctx.moveTo(tb.wx - 4, tb.wy);
+        ctx.lineTo(cx, tb.wy - 14);
+        ctx.lineTo(tb.wx + tb.ww + 4, tb.wy);
+        ctx.closePath();
+        ctx.fill();
+        // Windows
+        ctx.fillStyle = 'rgba(200,220,255,0.3)';
+        ctx.fillRect(tb.wx + 8, tb.wy + 10, 12, 10);
+        ctx.fillRect(tb.wx + tb.ww - 20, tb.wy + 10, 12, 10);
+        ctx.strokeStyle = tb.floorColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(tb.wx + 8, tb.wy + 10, 12, 10);
+        ctx.strokeRect(tb.wx + tb.ww - 20, tb.wy + 10, 12, 10);
+      }
 
-      // Door (at bottom-centre)
+      // Door overlay (at bottom-centre, always drawn)
       const doorX = tb.wx + tb.ww / 2 - 6;
       const doorY = tb.wy + tb.wh - 12;
       ctx.fillStyle = '#2a1408';
@@ -3436,18 +3470,22 @@ export class OpenWorldRenderer {
       ctx.strokeStyle = '#8b6914';
       ctx.lineWidth = 1;
       ctx.strokeRect(doorX, doorY, 12, 14);
-      // Door knob
       ctx.fillStyle = '#c5a059';
       ctx.beginPath();
       ctx.arc(doorX + 9, doorY + 7, 1.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Building name label
-      ctx.globalAlpha = 0.75;
+      ctx.globalAlpha = 0.8;
       ctx.fillStyle = '#e0d0a8';
       ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(tb.name, tb.wx + tb.ww / 2, tb.wy - 18);
+      ctx.fillText(tb.name, cx, tb.wy - 18);
+
+      // Building type icon
+      const typeIcons: Record<string, string> = { inn: '🏨', blacksmith: '⚒️', shop: '🛒', trainer: '⚔️', guild: '🏰', barracks: '🏛️', armory: '🛡️' };
+      ctx.font = '12px sans-serif';
+      ctx.fillText(typeIcons[tb.type] || '🏠', cx, tb.wy - 6);
 
       // [E] Enter prompt near door
       const doorDist = Math.sqrt((p.x - tb.doorX) ** 2 + (p.y - tb.doorY) ** 2);
@@ -3457,7 +3495,6 @@ export class OpenWorldRenderer {
         ctx.fillStyle = '#ffd700';
         ctx.font = 'bold 11px sans-serif';
         ctx.fillText('[E] Enter', tb.doorX, tb.doorY + 14);
-        // Door glow
         ctx.globalAlpha = pulse * 0.25;
         ctx.fillStyle = '#ffd700';
         ctx.fillRect(doorX - 2, doorY - 2, 16, 18);

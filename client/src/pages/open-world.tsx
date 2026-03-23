@@ -23,6 +23,7 @@ import hudFramePath from '@assets/hud-frame.png';
 import MainPanel from '@/components/MainPanel';
 import NpcDialog from '@/components/NpcDialog';
 import { IntroSequence, shouldShowIntro } from '@/components/IntroSequence';
+import { ensurePlayerHeroLoaded, getPlayerHeroSync } from '@/game/player-account';
 
 export default function OpenWorldPage() {
   const [, setLocation] = useLocation();
@@ -39,11 +40,21 @@ export default function OpenWorldPage() {
   const [showIntro, setShowIntro] = useState(() => shouldShowIntro());
   const zoneBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uiBlocksInputRef = useRef(false);
+  const [heroReady, setHeroReady] = useState(false);
+
+  // Ensure player character is loaded into HEROES[] before game boot
+  useEffect(() => {
+    ensurePlayerHeroLoaded().then(() => setHeroReady(true));
+  }, []);
 
   const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
 
   useEffect(() => {
+    if (!heroReady) return; // Wait for character to be loaded into HEROES[]
     if (heroId < 0) { setLocation('/'); return; }
+
+    // Sync-ensure the player hero is registered (may have been loaded async above)
+    getPlayerHeroSync();
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -225,7 +236,7 @@ export default function OpenWorldPage() {
       canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('wheel', onWheel);
     };
-  }, [heroId, setLocation]);
+  }, [heroId, heroReady, setLocation]);
 
   // Clean up old notifications
   useEffect(() => {

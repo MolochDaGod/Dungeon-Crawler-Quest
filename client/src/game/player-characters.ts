@@ -154,6 +154,38 @@ export function getBodyTypesForRace(race: string): BodyType[] {
   return RACE_BODY_COMPAT[race] || ['medium_male'];
 }
 
+// ── Class → Body Type Affinity ───────────────────────────────
+
+const CLASS_BODY_AFFINITY: Record<string, BodyType[]> = {
+  Warrior: ['heavy_male', 'heavy_female', 'medium_male', 'medium_female'],
+  Mage:    ['medium_male', 'medium_female', 'slim_male', 'slim_female'],
+  Ranger:  ['slim_male', 'slim_female', 'medium_male', 'medium_female'],
+  Worg:    ['medium_male', 'medium_female', 'slim_male', 'slim_female'],
+};
+
+/**
+ * Find the best DungeonCrawler model for a race+class combo.
+ * Matches by: 1) race compatibility, 2) class body-type affinity, 3) first available.
+ */
+export function findBestHeroModel(race: string, heroClass: string): number {
+  const affinityBodies = CLASS_BODY_AFFINITY[heroClass] || ['medium_male'];
+
+  // Priority 1: race-compatible + class body-type affinity match
+  for (const body of affinityBodies) {
+    const match = PLAYER_CHARACTER_DEFS.find(
+      d => d.bodyType === body && d.availableRaces.includes(race)
+    );
+    if (match) return match.modelIndex;
+  }
+
+  // Priority 2: any race-compatible model
+  const raceMatch = PLAYER_CHARACTER_DEFS.find(d => d.availableRaces.includes(race));
+  if (raceMatch) return raceMatch.modelIndex;
+
+  // Fallback: model 1 (medium_male Warrior — universal)
+  return 1;
+}
+
 /** Create initial character state for a new player */
 export function createPlayerCharacterState(
   accountId: string,

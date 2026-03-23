@@ -216,34 +216,80 @@ export class TileMapRenderer {
     this.roadSheet = loadImage(`/assets/sprites/roads/PNG_Tiled/${style}.png`);
   }
 
-  /** Render ground fill for a zone (biome-colored base) */
+  /** Render ground fill for a zone — uses tileset sprites with fallback to biome color */
   renderZoneGround(ctx: CanvasRenderingContext2D, zone: ZoneDef, camX: number, camY: number, viewW: number, viewH: number): void {
     const b = zone.bounds;
     // Skip zones entirely off-screen
     if (b.x + b.w < camX || b.x > camX + viewW || b.y + b.h < camY || b.y > camY + viewH) return;
 
-    // Base biome fill (gradient instead of flat color)
+    // Try to use tileset sprite for textured ground
+    const biomeTileset = BIOME_TILESETS[zone.terrainType];
+    const groundImg = biomeTileset ? loadImage(biomeTileset.ground.tilesheetPath) : null;
+
+    // Base biome fill (always drawn as fallback / base layer)
     const baseColor = BIOME_GROUND_COLORS[zone.terrainType] || '#3a5a2a';
     ctx.fillStyle = baseColor;
     ctx.fillRect(b.x - camX, b.y - camY, b.w, b.h);
 
-    // Subtle noise pattern overlay
-    ctx.globalAlpha = 0.08;
     const startTX = Math.max(0, Math.floor((camX - b.x) / RENDER_TILE));
     const startTY = Math.max(0, Math.floor((camY - b.y) / RENDER_TILE));
     const endTX = Math.min(Math.ceil(b.w / RENDER_TILE), Math.ceil((camX + viewW - b.x) / RENDER_TILE) + 1);
     const endTY = Math.min(Math.ceil(b.h / RENDER_TILE), Math.ceil((camY + viewH - b.y) / RENDER_TILE) + 1);
 
+    // Textured ground layer — tile the sprite sheet across the zone
+    if (groundImg?.complete) {
+      const tileSize = biomeTileset!.ground.tileSize;
+      const cols = biomeTileset!.ground.columns;
+      // Use different tile variants based on seeded position for natural look
+      ctx.globalAlpha = 0.85;
+      for (let ty = startTY; ty < endTY; ty++) {
+        for (let tx = startTX; tx < endTX; tx++) {
+          // Pick a tile variant from the sheet based on position seed
+          const tileVariant = Math.floor(seededRand(tx, ty, zone.id + 7) * Math.min(cols, 4));
+          // Use first few rows of the ground tile sheet
+          const tileRow = Math.floor(seededRand(tx + 50, ty + 50, zone.id + 13) * 3);
+          const srcX = tileVariant * tileSize;
+          const srcY = tileRow * tileSize;
+          ctx.drawImage(
+            groundImg, srcX, srcY, tileSize, tileSize,
+            b.x + tx * RENDER_TILE - camX, b.y + ty * RENDER_TILE - camY,
+            RENDER_TILE, RENDER_TILE
+          );
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Subtle noise overlay for depth
+    ctx.globalAlpha = 0.06;
     for (let ty = startTY; ty < endTY; ty++) {
       for (let tx = startTX; tx < endTX; tx++) {
         const noise = seededRand(tx, ty, zone.id) * 0.3;
-        if (noise > 0.15) {
+        if (noise > 0.12) {
           ctx.fillStyle = `rgba(0,0,0,${noise})`;
           ctx.fillRect(b.x + tx * RENDER_TILE - camX, b.y + ty * RENDER_TILE - camY, RENDER_TILE, RENDER_TILE);
         }
       }
     }
     ctx.globalAlpha = 1;
+
+    // Subtle grid lines for visual grounding
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 0.5;
+    for (let ty = startTY; ty <= endTY; ty++) {
+      const sy = b.y + ty * RENDER_TILE - camY;
+      ctx.beginPath();
+      ctx.moveTo(b.x + startTX * RENDER_TILE - camX, sy);
+      ctx.lineTo(b.x + endTX * RENDER_TILE - camX, sy);
+      ctx.stroke();
+    }
+    for (let tx = startTX; tx <= endTX; tx++) {
+      const sx = b.x + tx * RENDER_TILE - camX;
+      ctx.beginPath();
+      ctx.moveTo(sx, b.y + startTY * RENDER_TILE - camY);
+      ctx.lineTo(sx, b.y + endTY * RENDER_TILE - camY);
+      ctx.stroke();
+    }
   }
 
   /** Render road tiles */

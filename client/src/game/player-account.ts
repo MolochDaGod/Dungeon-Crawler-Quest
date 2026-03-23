@@ -6,9 +6,9 @@
  * Player data is NEVER localStorage-only in production.
  */
 
-import type { HeroData } from './types';
+import { HeroData, HEROES } from './types';
 import type { PlayerCharacterState } from './player-characters';
-import { createPlayerCharacterState, RACE_FACTIONS } from './player-characters';
+import { createPlayerCharacterState, RACE_FACTIONS, findBestHeroModel } from './player-characters';
 import { isPuterAvailable, kvSave, kvLoad } from './puter-cloud';
 
 // ── Constants ──────────────────────────────────────────────────
@@ -183,6 +183,86 @@ export function updateCharacter(updates: Partial<PlayerCharacterState>): void {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(_currentCharacter));
 }
 
+// ── Boot-Time Character Resolution ─────────────────────────────
+
+/**
+ * Ensure the player's custom character is loaded and registered in HEROES[].
+ * Call this at game boot BEFORE referencing HEROES by heroId.
+ * Returns the resolved HeroData or null if no character exists.
+ */
+export async function ensurePlayerHeroLoaded(): Promise<HeroData | null> {
+  // 1. Try loading from backend via grudge auth
+  const grudgeId = localStorage.getItem('grudge_id') || null;
+  let pc = await loadPlayerCharacter(grudgeId || undefined);
+
+  // 2. Fallback: recover from grudge_custom_hero localStorage
+  if (!pc) {
+    try {
+      const raw = localStorage.getItem('grudge_custom_hero');
+      if (raw) {
+        const parsed = JSON.parse(raw) as HeroData;
+        // This is already a HeroData — register directly
+        if (parsed.id != null && parsed.race && parsed.heroClass) {
+          if (!HEROES.find(h => h.id === parsed.id)) {
+            parsed.isAINpc = false;
+            HEROES.push(parsed);
+          }
+          localStorage.setItem('grudge_hero_id', String(parsed.id));
+          return parsed;
+        }
+      }
+    } catch { /* corrupt data */ }
+    return null;
+  }
+
+  // 3. Convert PlayerCharacterState → HeroData and register
+  const heroData = playerCharacterToHeroData(pc);
+  heroData.isAINpc = false;
+
+  // Remove any stale entry with same id, then register
+  const existingIdx = HEROES.findIndex(h => h.id === heroData.id);
+  if (existingIdx >= 0) {
+    HEROES[existingIdx] = heroData;
+  } else {
+    HEROES.push(heroData);
+  }
+
+  // Keep localStorage in sync
+  localStorage.setItem('grudge_hero_id', String(heroData.id));
+  localStorage.setItem('grudge_custom_hero', JSON.stringify(heroData));
+
+  return heroData;
+}
+
+/**
+ * Synchronous version — only reads from localStorage/HEROES[]. Use at render time
+ * when you can't await. Call ensurePlayerHeroLoaded() first at boot.
+ */
+export function getPlayerHeroSync(): HeroData | null {
+  const heroId = localStorage.getItem('grudge_hero_id');
+  if (!heroId) return null;
+
+  const numId = parseInt(heroId, 10);
+  let hero = HEROES.find(h => h.id === numId) ?? null;
+  if (hero && !hero.isAINpc) return hero;
+
+  // Fallback: try grudge_custom_hero
+  try {
+    const raw = localStorage.getItem('grudge_custom_hero');
+    if (raw) {
+      const parsed = JSON.parse(raw) as HeroData;
+      if (String(parsed.id) === heroId) {
+        parsed.isAINpc = false;
+        if (!HEROES.find(h => h.id === parsed.id)) {
+          HEROES.push(parsed);
+        }
+        return parsed;
+      }
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 // ── Convert to HeroData (backward compat) ──────────────────────
 
 /** Convert a PlayerCharacterState to a HeroData for use with existing game systems */
@@ -207,8 +287,11 @@ export function playerCharacterToHeroData(pc: PlayerCharacterState): HeroData {
   const base = CLASS_BASE[pc.heroClass] || CLASS_BASE.Warrior;
   const bonus = RACE_BONUS[pc.race] || {};
 
+  // Use the smart model matching if modelIndex wasn't specifically set
+  const resolvedModel = pc.modelIndex > 0 ? pc.modelIndex : findBestHeroModel(pc.race, pc.heroClass);
+
   return {
-    id: 100 + pc.modelIndex,
+    id: 100 + resolvedModel,
     name: pc.customName,
     title: `The ${pc.heroClass}`,
     race: pc.race,
@@ -222,6 +305,7 @@ export function playerCharacterToHeroData(pc: PlayerCharacterState): HeroData {
     rng: base.rng,
     mp: base.mp + (bonus.mp || 0),
     quote: `A ${pc.race} ${pc.heroClass} of the ${pc.faction} faction.`,
+    equippedWeaponId: pc.weaponType || undefined,
     isAINpc: false, // THIS IS A PLAYER CHARACTER
   };
 }

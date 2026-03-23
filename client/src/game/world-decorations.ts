@@ -488,6 +488,42 @@ export function generateZoneDecorations(zone: ZoneDef): ZoneDecorLayout {
     }
   }
 
+  // ── Wilderness Camp Structures ──
+  // Place camps at zone edges, crossroads, and near spawn points
+  if (!zone.isSafeZone) {
+    // Campfires near monster spawn clusters (1-3 per zone)
+    const campCount = Math.min(3, Math.ceil(zone.monsterSpawns.length / 4));
+    for (let i = 0; i < campCount; i++) {
+      const campX = b.x + b.w * 0.2 + seeded(i, 70, zone.id) * b.w * 0.6;
+      const campY = b.y + b.h * 0.2 + seeded(i, 71, zone.id) * b.h * 0.6;
+      // Campfire
+      decos.push(makeProp(`z${zone.id}-camp-fire-${i}`, 'campfire', campX, campY, zone.id));
+      // Surrounding barrels/crates
+      decos.push(makeProp(`z${zone.id}-camp-barrel-${i}a`, 'barrel', campX - 30, campY + 20, zone.id));
+      decos.push(makeProp(`z${zone.id}-camp-barrel-${i}b`, 'barrel', campX + 35, campY + 15, zone.id));
+      // Fence segments around camp
+      decos.push(makeProp(`z${zone.id}-camp-fence-${i}a`, 'fence', campX - 50, campY - 30, zone.id));
+      decos.push(makeProp(`z${zone.id}-camp-fence-${i}b`, 'fence', campX + 50, campY - 30, zone.id));
+    }
+
+    // Signposts at zone entrances
+    for (let i = 0; i < zone.connectedZoneIds.length && i < 3; i++) {
+      const edgeX = b.x + (i % 2 === 0 ? 60 : b.w - 60);
+      const edgeY = b.y + 60 + seeded(i, 72, zone.id) * (b.h - 120);
+      decos.push(makeProp(`z${zone.id}-sign-${i}`, 'signpost', edgeX, edgeY, zone.id));
+    }
+
+    // Ruined structures in higher-level zones
+    if (zone.requiredLevel >= 8) {
+      const ruinCount = zone.requiredLevel >= 12 ? 3 : 2;
+      for (let i = 0; i < ruinCount; i++) {
+        const rx = b.x + 120 + seeded(i, 73, zone.id) * (b.w - 240);
+        const ry = b.y + 120 + seeded(i, 74, zone.id) * (b.h - 240);
+        decos.push(makeBuilding(`z${zone.id}-ruin-${i}`, 'building', rx, ry, zone.id, 'Ruins'));
+      }
+    }
+  }
+
   // Chests in non-safe zones
   if (!zone.isSafeZone) {
     const chestCount = zone.requiredLevel >= 15 ? 3 : zone.requiredLevel >= 8 ? 2 : 1;

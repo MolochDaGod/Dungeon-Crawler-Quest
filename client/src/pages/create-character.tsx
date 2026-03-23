@@ -11,6 +11,7 @@ import {
   computeDerivedStats, saveAttributes, STARTING_POINTS,
 } from '@/game/attributes';
 import { createNewCharacter, playerCharacterToHeroData, startSync } from '@/game/player-account';
+import { findBestHeroModel } from '@/game/player-characters';
 
 // Inline Grudge auth helper (from src/utils/grudge-auth.js — outside vite root)
 function getGrudgeUser() {
@@ -195,10 +196,13 @@ export default function CreateCharacter() {
       const grudgeUser = getGrudgeUser();
       const accountId = grudgeUser?.grudgeId || grudgeUser?.userId || localStorage.getItem('grudge_id') || 'local';
 
+      // Find the best body model for race+class combo
+      const modelIndex = findBestHeroModel(race, heroClass);
+
       // Use the player-account system to create on backend
       const character = await createNewCharacter(
         accountId,
-        1,   // default model index
+        modelIndex,
         race,
         heroClass,
         name.trim(),

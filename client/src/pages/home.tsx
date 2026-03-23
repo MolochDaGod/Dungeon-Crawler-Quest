@@ -82,12 +82,15 @@ export default function Home() {
     };
   }, []);
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
     localStorage.setItem('grudge_mode', selectedMode);
-    // Check if player has a saved character — if so, go directly to game
+    // Check if player has a saved character — if so, load & go directly to game
     const savedHeroId = localStorage.getItem('grudge_hero_id');
     const savedHero = localStorage.getItem('grudge_custom_hero');
     if (savedHeroId && savedHero) {
+      // Ensure the character is loaded into HEROES[] before navigating
+      const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
+      await ensurePlayerHeroLoaded();
       // Existing character — go to game
       if (selectedMode === 'spaceconquest') setLocation('/space-conquest');
       else if (selectedMode === 'openworld') setLocation('/open-world-play');
