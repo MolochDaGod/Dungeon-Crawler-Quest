@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,6 +20,7 @@ import WorldEditorPage from "@/pages/world-editor";
 import CharacterPage from "@/pages/character";
 import IslandPage from "@/pages/island";
 import AIDebugPage from "@/pages/ai-debug";
+import ToonAdminPage from "@/pages/toon-admin";
 import { useEffect } from "react";
 
 function Router() {
@@ -41,9 +42,22 @@ function Router() {
       <Route path="/character" component={CharacterPage} />
       <Route path="/island" component={IslandPage} />
       <Route path="/ai-debug" component={AIDebugPage} />
+      <Route path="/toonadmin" component={ToonAdminPage} />
       <Route component={NotFound} />
     </Switch>
   );
+}
+
+function HashRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === "#toonadmin") {
+      window.history.replaceState({}, "", "/toonadmin");
+      setLocation("/toonadmin");
+    }
+  }, [setLocation]);
+  return null;
 }
 
 function App() {
@@ -55,6 +69,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
+        <HashRedirect />
         <Router />
       </TooltipProvider>
     </QueryClientProvider>
