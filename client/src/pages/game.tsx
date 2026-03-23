@@ -12,7 +12,6 @@ import {
   buyItem, handleDodge, handleDashAttack, handleBlock,
   spawnAreaDamageZone, handleRmbMelee, handleLevelUpAbility
 } from '@/game/engine';
-import { ThreeRenderer } from '@/game/three-renderer';
 import { VoxelRenderer } from '@/game/voxel';
 import shopPanelPath from '@assets/shop-panel.png';
 import scoreboardBgPath from '@assets/scoreboard-bg.png';
@@ -162,15 +161,10 @@ function TargetInfoPanel({ target }: { target: TargetInfo }) {
 export default function GamePage() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<MobaState | null>(null);
   const rendererRef = useRef<MobaRenderer | null>(null);
-  const threeRendererRef = useRef<ThreeRenderer | null>(null);
   const keysRef = useRef<Set<string>>(new Set());
   const [hud, setHud] = useState<HudState | null>(null);
-  const [renderMode, setRenderMode] = useState<'2d' | '3d'>(() =>
-    (localStorage.getItem('grudge_render_mode') as '2d' | '3d') || '3d'
-  );
   const portraitCanvasRef = useRef<HTMLCanvasElement>(null);
   const portraitVoxelRef = useRef<VoxelRenderer | null>(null);
   const panRef = useRef<{ active: boolean; startX: number; startY: number; camStartX: number; camStartY: number }>({
@@ -207,29 +201,16 @@ export default function GamePage() {
     const mouseTarget = mouseTargetRef.current;
 
     let renderer2d: MobaRenderer | null = null;
-    let renderer3d: ThreeRenderer | null = null;
-    let resizeHandler: (() => void) | null = null;
-
-    if (renderMode === '3d' && containerRef.current) {
-      try {
-        renderer3d = new ThreeRenderer(containerRef.current);
-        threeRendererRef.current = renderer3d;
-        renderer3d.loadModels(state);
-      } catch (e) {
-        console.warn('WebGL not available, falling back to 2D renderer:', e);
-        renderer3d = null;
-        threeRendererRef.current = null;
+    const resizeHandler = () => {
+      if (canvasRef.current) {
+        canvasRef.current.width = window.innerWidth;
+        canvasRef.current.height = window.innerHeight;
       }
-    }
-    if (!renderer3d && canvasRef.current) {
-      const canvas = canvasRef.current;
-      resizeHandler = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      };
+    };
+    if (canvasRef.current) {
       resizeHandler();
       window.addEventListener('resize', resizeHandler);
-      renderer2d = new MobaRenderer(canvas);
+      renderer2d = new MobaRenderer(canvasRef.current);
       rendererRef.current = renderer2d;
     }
 
@@ -343,9 +324,7 @@ export default function GamePage() {
         }
       }
 
-      if (renderer3d) {
-        renderer3d.render(state);
-      } else if (renderer2d) {
+      if (renderer2d) {
         renderer2d.render(state);
       }
 
@@ -451,12 +430,9 @@ export default function GamePage() {
       if (key === ' ') combatActor.send({ type: 'SPACE_UP' });
     };
 
-    const eventTarget = renderer3d ? renderer3d.getCanvas() : (canvasRef.current || document.body);
+    const eventTarget = canvasRef.current || document.body;
 
     const getWorldPos = (e: MouseEvent) => {
-      if (renderer3d) {
-        return renderer3d.screenToWorld(e.clientX, e.clientY);
-      }
       const canvas = canvasRef.current;
       if (!canvas) return { x: 0, y: 0 };
       const rect = canvas.getBoundingClientRect();
@@ -556,7 +532,7 @@ export default function GamePage() {
       state.mouseWorld.x = wp.x;
       state.mouseWorld.y = wp.y;
 
-      if (panRef.current.active && !renderer3d) {
+      if (panRef.current.active) {
         const dx = (e.clientX - panRef.current.startX) / state.camera.zoom;
         const dy = (e.clientY - panRef.current.startY) / state.camera.zoom;
         state.camera.x = panRef.current.camStartX - dx;
@@ -594,11 +570,10 @@ export default function GamePage() {
       eventTarget.removeEventListener('mousedown', onMouseDown);
       eventTarget.removeEventListener('mousemove', onMouseMove);
       eventTarget.removeEventListener('wheel', onWheel);
-      if (renderer3d) renderer3d.dispose();
       if (physics) physics.clear();
       combatActor.stop();
     };
-  }, [heroId, team, setLocation, renderMode]);
+  }, [heroId, team, setLocation]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -627,18 +602,9 @@ export default function GamePage() {
     );
   }, [hud?.heroRace, hud?.heroClass, hud?.heroName]);
 
-  const toggleRenderMode = () => {
-    const newMode = renderMode === '2d' ? '3d' : '2d';
-    localStorage.setItem('grudge_render_mode', newMode);
-    setRenderMode(newMode);
-  };
-
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="game-page">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'none', display: renderMode === '2d' || !threeRendererRef.current ? 'block' : 'none' }} data-testid="canvas-game" />
-      {renderMode === '3d' && (
-        <div ref={containerRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'crosshair' }} data-testid="three-container" />
-      )}
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'none' }} data-testid="canvas-game" />
 
       {hud && (
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 9999, fontFamily: "'Oxanium', sans-serif" }}>
@@ -671,19 +637,6 @@ export default function GamePage() {
               </span>
               <div className="w-5 h-5 rounded-full" style={{ background: 'linear-gradient(135deg, #ef4444, #b91c1c)', boxShadow: '0 0 8px rgba(239,68,68,0.5)' }} />
             </div>
-            <button
-              onClick={toggleRenderMode}
-              className="ml-2 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded"
-              style={{
-                background: renderMode === '3d' ? 'linear-gradient(135deg, #c5a059, #8b6914)' : 'rgba(197,160,89,0.2)',
-                border: '1px solid #c5a059',
-                color: '#c5a059',
-                cursor: 'pointer',
-              }}
-              data-testid="button-toggle-render"
-            >
-              {renderMode === '3d' ? '3D' : '2D'}
-            </button>
           </div>
 
           {hud.targetInfo && (

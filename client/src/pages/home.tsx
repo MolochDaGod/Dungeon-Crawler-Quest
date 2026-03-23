@@ -7,7 +7,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld' | 'spaceconquest'>('arena');
+  const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld' | 'spaceconquest'>('openworld');
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [titlePulse, setTitlePulse] = useState(false);
