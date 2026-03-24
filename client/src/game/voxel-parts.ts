@@ -1,24 +1,19 @@
 /**
- * voxel-parts.ts
+ * voxel-parts.ts  —  Part-based voxel rig system
  *
- * Part-based voxel rig system.
- * Each body section is a SEPARATE voxel model with its own pivot/joint.
- * Rendering applies ctx.rotate() per part → compatible with Mixamo bone angle data.
+ * T-POSE reference (matches MagicaVoxel biped style):
+ *   rotX=0 → arms extend HORIZONTAL (out to sides)
+ *   rotX>0 → swing FORWARD (elbow toward front of character)
+ *   rotX<0 → swing BACKWARD or UP (from T-pose)
  *
- * Hierarchy (for reference — Stage 1 uses fixed attach points, no full FK):
- *   torso → head
- *         → leftUpperArm → leftForearm
- *         → rightUpperArm → rightForearm
- *         → leftThigh → leftShin
- *         → rightThigh → rightShin
- *         → weapon
+ * Left-side arm parts use mirror=true → rendered with ctx.scale(-1,1)
+ * so the same model extends LEFT instead of right.
  */
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type PartId =
-  | 'torso'
-  | 'head'
+  | 'torso' | 'head'
   | 'leftUpperArm'  | 'leftForearm'
   | 'rightUpperArm' | 'rightForearm'
   | 'leftThigh'     | 'leftShin'
@@ -26,709 +21,430 @@ export type PartId =
   | 'weapon';
 
 export const ALL_PARTS: PartId[] = [
-  'torso', 'head',
-  'leftUpperArm', 'leftForearm',
-  'rightUpperArm', 'rightForearm',
-  'leftThigh', 'leftShin',
-  'rightThigh', 'rightShin',
+  'torso','head',
+  'leftUpperArm','leftForearm',
+  'rightUpperArm','rightForearm',
+  'leftThigh','leftShin',
+  'rightThigh','rightShin',
   'weapon',
 ];
 
-/** Per-part transform applied at render time */
 export interface PartTransform {
-  /** Primary rotation in degrees — limb swing (fwd/back).
-   *  Maps directly to Mixamo Arm/UpLeg/ForeArm bone rotations. */
-  rotX: number;
-  /** Secondary rotation — lateral lean */
-  rotY: number;
+  rotX:  number;   // degrees. 0 = T-pose. +ve = forward swing from T.
+  rotY:  number;
   scale: number;
 }
 
 export type HeroRigPose = Record<PartId, PartTransform>;
 
-/** Mixamo-compatible single animation frame (bone rotations in degrees) */
 export interface MixamoBoneFrame {
-  LeftArm?:      number;   // → leftUpperArm.rotX
-  LeftForeArm?:  number;   // → leftForearm.rotX
-  RightArm?:     number;   // → rightUpperArm.rotX
-  RightForeArm?: number;   // → rightForearm.rotX
-  LeftUpLeg?:    number;   // → leftThigh.rotX
-  LeftLeg?:      number;   // → leftShin.rotX
-  RightUpLeg?:   number;   // → rightThigh.rotX
-  RightLeg?:     number;   // → rightShin.rotX
-  Spine?:        number;   // → torso.rotX
-  Head?:         number;   // → head.rotX
+  LeftArm?:number; LeftForeArm?:number;
+  RightArm?:number; RightForeArm?:number;
+  LeftUpLeg?:number; LeftLeg?:number;
+  RightUpLeg?:number; RightLeg?:number;
+  Spine?:number; Head?:number;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── VM helpers ───────────────────────────────────────────────────────────────
 
-type VM = (string | null)[][][];
+type VM = (string|null)[][][];
 
-function emptyVM(w: number, d: number, h: number): VM {
-  return Array.from({ length: h }, () =>
-    Array.from({ length: d }, () => Array(w).fill(null) as (string | null)[])
-  );
+function emptyVM(w:number,d:number,h:number):VM {
+  return Array.from({length:h},()=>Array.from({length:d},()=>Array(w).fill(null) as (string|null)[]));
 }
-
-function sv(m: VM, z: number, y: number, x: number, c: string) {
-  if (z >= 0 && z < m.length &&
-      y >= 0 && y < (m[0]?.length ?? 0) &&
-      x >= 0 && x < (m[0]?.[0]?.length ?? 0)) {
-    m[z][y][x] = c;
-  }
+function sv(m:VM,z:number,y:number,x:number,c:string){
+  if(z>=0&&z<m.length&&y>=0&&y<(m[0]?.length??0)&&x>=0&&x<(m[0]?.[0]?.length??0)) m[z][y][x]=c;
 }
-
-function fill(m: VM, z0: number, z1: number, y0: number, y1: number, x0: number, x1: number, c: string) {
-  for (let z = z0; z <= z1; z++)
-    for (let y = y0; y <= y1; y++)
-      for (let x = x0; x <= x1; x++)
-        sv(m, z, y, x, c);
+function fill(m:VM,z0:number,z1:number,y0:number,y1:number,x0:number,x1:number,c:string){
+  for(let z=z0;z<=z1;z++) for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++) sv(m,z,y,x,c);
 }
-
-function shade(hex: string, f: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
-  return '#' + [r, g, b].map(v => clamp(v * f).toString(16).padStart(2, '0')).join('');
+function shade(hex:string,f:number):string{
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  const cl=(v:number)=>Math.max(0,Math.min(255,Math.round(v)));
+  return '#'+[r,g,b].map(v=>cl(v*f).toString(16).padStart(2,'0')).join('');
 }
-
-function blend(a: string, b: string, t: number): string {
-  const ra = parseInt(a.slice(1,3),16), ga = parseInt(a.slice(3,5),16), ba = parseInt(a.slice(5,7),16);
-  const rb = parseInt(b.slice(1,3),16), gb = parseInt(b.slice(3,5),16), bb = parseInt(b.slice(5,7),16);
-  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
-  return '#' + [
-    clamp(ra + (rb - ra) * t),
-    clamp(ga + (gb - ga) * t),
-    clamp(ba + (bb - ba) * t),
-  ].map(v => v.toString(16).padStart(2, '0')).join('');
+function blend(a:string,b:string,t:number):string{
+  const ra=parseInt(a.slice(1,3),16),ga=parseInt(a.slice(3,5),16),ba=parseInt(a.slice(5,7),16);
+  const rb=parseInt(b.slice(1,3),16),gb=parseInt(b.slice(3,5),16),bb=parseInt(b.slice(5,7),16);
+  const cl=(v:number)=>Math.max(0,Math.min(255,Math.round(v)));
+  return '#'+[cl(ra+(rb-ra)*t),cl(ga+(gb-ga)*t),cl(ba+(bb-ba)*t)].map(v=>v.toString(16).padStart(2,'0')).join('');
 }
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
 export interface RigColors {
-  skin: string;
-  armorPrimary: string;
-  armorSecondary: string;
-  hair: string;
-  eye: string;
-  weapon: string;
+  skin:string; armorPrimary:string; armorSecondary:string;
+  hair:string; eye:string; weapon:string; boot:string;
 }
-
-const RACE_SKIN: Record<string, string> = {
-  Human: '#c4956a', Barbarian: '#a57850', Dwarf: '#d4a574',
-  Elf: '#e8d5b8', Orc: '#5a8a3a', Undead: '#7a8a7a',
+const RSKIN:Record<string,string>={Human:'#c4956a',Barbarian:'#a57850',Dwarf:'#d4a574',Elf:'#e8d5b8',Orc:'#5a8a3a',Undead:'#7a8a7a'};
+const RHAIR:Record<string,string>={Human:'#3a2a1a',Barbarian:'#5a3a1a',Dwarf:'#a0522d',Elf:'#e8d090',Orc:'#1a1a1a',Undead:'#444444'};
+const REYE:Record<string,string>={Human:'#2244aa',Barbarian:'#993300',Dwarf:'#4a6a44',Elf:'#22d3ee',Orc:'#ffaa00',Undead:'#ff4444'};
+const CARM:Record<string,{p:string;s:string;w:string}>={
+  Warrior:{p:'#8b8b8b',s:'#c0c0c0',w:'#d4d4d4'},
+  Worg:   {p:'#6b4423',s:'#8b6914',w:'#a0522d'},
+  Mage:   {p:'#4a3080',s:'#6b46c1',w:'#9333ea'},
+  Ranger: {p:'#2d5016',s:'#4a7c23',w:'#854d0e'},
 };
-const RACE_HAIR: Record<string, string> = {
-  Human: '#3a2a1a', Barbarian: '#5a3a1a', Dwarf: '#a0522d',
-  Elf: '#e8d090', Orc: '#1a1a1a', Undead: '#444444',
-};
-const RACE_EYE: Record<string, string> = {
-  Human: '#2244aa', Barbarian: '#993300', Dwarf: '#4a6a44',
-  Elf: '#22d3ee', Orc: '#ffaa00', Undead: '#ff4444',
-};
-const CLASS_ARMOR: Record<string, { primary: string; secondary: string; weapon: string }> = {
-  Warrior: { primary: '#8b8b8b', secondary: '#c0c0c0', weapon: '#d4d4d4' },
-  Worg:    { primary: '#6b4423', secondary: '#8b6914', weapon: '#a0522d' },
-  Mage:    { primary: '#4a3080', secondary: '#6b46c1', weapon: '#9333ea' },
-  Ranger:  { primary: '#2d5016', secondary: '#4a7c23', weapon: '#854d0e' },
-};
-
-export function getRigColors(race: string, heroClass: string): RigColors {
-  const armor = CLASS_ARMOR[heroClass] || CLASS_ARMOR.Warrior;
-  return {
-    skin:           RACE_SKIN[race]  || '#c4956a',
-    armorPrimary:   armor.primary,
-    armorSecondary: armor.secondary,
-    hair:           RACE_HAIR[race]  || '#3a2a1a',
-    eye:            RACE_EYE[race]   || '#2244aa',
-    weapon:         armor.weapon,
-  };
+export function getRigColors(race:string,heroClass:string):RigColors{
+  const a=CARM[heroClass]||CARM.Warrior;
+  return{skin:RSKIN[race]||'#c4956a',armorPrimary:a.p,armorSecondary:a.s,hair:RHAIR[race]||'#3a2a1a',eye:REYE[race]||'#2244aa',weapon:a.w,boot:shade(a.p,0.60)};
 }
 
-// ─── Part Model Builders ──────────────────────────────────────────────────────
+// ─── Part builders ────────────────────────────────────────────────────────────
 
-/**
- * HEAD — W=6 D=4 H=8
- *  Z=7:    hair top
- *  Z=5-6:  skull / hair sides
- *  Z=2-4:  face (eyes, nose, mouth)
- *  Z=0-1:  chin / jaw
- */
-function buildHead(c: RigColors, race: string): VM {
-  const m = emptyVM(6, 4, 8);
-  const sk = c.skin;
-
-  // Skull main: 6 wide, 3 deep, Z=2-6
-  fill(m, 2, 6,  1, 3,  0, 5, sk);
-
-  // Forehead narrowing at top
-  fill(m, 6, 7,  1, 3,  1, 4, c.hair);
-  fill(m, 5, 5,  1, 3,  0, 5, sk);
-
-  // Eyes — front face (y=1), z=3-4
-  sv(m, 4, 1, 1, c.eye);  sv(m, 4, 1, 4, c.eye);
-  // Eye highlights
-  sv(m, 4, 1, 2, shade(c.eye, 1.4));  sv(m, 4, 1, 3, shade(c.eye, 1.4));
-
-  // Nose bridge — front face, z=2-3, x=2-3
-  sv(m, 3, 1, 2, shade(sk, 0.85));  sv(m, 3, 1, 3, shade(sk, 0.85));
-
-  // Mouth hint — z=2, y=1
-  sv(m, 2, 1, 2, shade(sk, 0.78));  sv(m, 2, 1, 3, shade(sk, 0.78));
-
-  // Chin / jaw
-  fill(m, 0, 1,  1, 3,  1, 4, shade(sk, 0.92));
-
-  // Hair top
-  fill(m, 6, 7,  1, 3,  1, 4, c.hair);
-  sv(m, 5, 1, 0, c.hair);  sv(m, 5, 1, 5, c.hair);  // sideburns
-
-  // Race features
-  if (race === 'Elf') {
-    // Pointed ears — stick out sides at z=4-5
-    sv(m, 5, 0, 0, sk);  sv(m, 5, 0, 5, sk);
-    sv(m, 4, 0, 0, sk);  sv(m, 4, 0, 5, sk);
-  }
-  if (race === 'Orc') {
-    // Broader jaw + tusks
-    fill(m, 0, 1,  1, 3,  0, 5, shade(sk, 0.9));
-    sv(m, 0, 1, 2, '#fffde8');  sv(m, 0, 1, 3, '#fffde8'); // tusks
-  }
-  if (race === 'Undead') {
-    // Hollow eyes
-    sv(m, 4, 1, 1, '#ff4444');  sv(m, 4, 1, 4, '#ff4444');
-    sv(m, 3, 1, 2, '#222222');  sv(m, 3, 1, 3, '#222222');
-  }
-  if (race === 'Dwarf') {
-    // Big beard
-    fill(m, 0, 2,  1, 2,  1, 4, shade(c.hair, 1.1));
-    sv(m, 0, 2, 0, c.hair);  sv(m, 0, 2, 5, c.hair);
-  }
-
+function buildHead(c:RigColors,race:string):VM{
+  const m=emptyVM(6,4,7); const sk=c.skin;
+  fill(m,1,5,1,3,0,5,sk);
+  fill(m,5,6,1,3,1,4,c.hair);
+  sv(m,5,1,0,c.hair); sv(m,5,1,5,c.hair);
+  sv(m,4,1,1,c.eye); sv(m,4,1,4,c.eye);
+  sv(m,4,1,2,shade(c.eye,1.4)); sv(m,4,1,3,shade(c.eye,1.4));
+  sv(m,3,1,2,shade(sk,0.84)); sv(m,3,1,3,shade(sk,0.84));
+  sv(m,2,1,2,shade(sk,0.76)); sv(m,2,1,3,shade(sk,0.76));
+  fill(m,0,1,1,3,1,4,shade(sk,0.9));
+  if(race==='Elf'){sv(m,5,0,0,sk);sv(m,5,0,5,sk);sv(m,4,0,0,sk);sv(m,4,0,5,sk);}
+  if(race==='Orc'){fill(m,0,1,1,3,0,5,shade(sk,0.88));sv(m,0,1,2,'#fffde8');sv(m,0,1,3,'#fffde8');}
+  if(race==='Undead'){sv(m,4,1,1,'#ff4444');sv(m,4,1,4,'#ff4444');sv(m,3,1,2,'#222');sv(m,3,1,3,'#222');}
+  if(race==='Dwarf'){fill(m,0,2,1,2,1,4,shade(c.hair,1.1));sv(m,0,2,0,c.hair);sv(m,0,2,5,c.hair);}
   return m;
 }
 
-/**
- * TORSO — W=7 D=4 H=12
- *  Z=10-11: shoulder ridge (widest)
- *  Z=7-9:   chest (6 wide, class armor detail)
- *  Z=5-6:   waist (5 wide, narrowest section)
- *  Z=2-4:   abdomen / belt area (5 wide)
- *  Z=0-1:   hips (6 wide, slightly flared)
- */
-function buildTorso(c: RigColors, heroClass: string): VM {
-  const m = emptyVM(7, 4, 12);
-  const p = c.armorPrimary;
-  const s = c.armorSecondary;
+function buildTorso(c:RigColors,heroClass:string):VM{
+  const m=emptyVM(8,4,9); const p=c.armorPrimary,s=c.armorSecondary;
+  fill(m,0,1,1,3,1,6,shade(p,0.8));   // hips
+  fill(m,2,3,1,3,1,6,p);              // abdomen
+  fill(m,2,2,1,3,1,6,shade(s,0.88));  // belt
+  fill(m,4,5,1,3,1,6,shade(s,0.92));  // waist
+  fill(m,6,8,1,3,0,7,p);              // chest
+  fill(m,7,8,1,2,2,5,shade(s,1.1));   // chest plate
+  fill(m,8,8,1,3,0,7,shade(s,1.18));  // shoulder ridge
+  if(heroClass==='Warrior'){sv(m,8,1,0,'#666');sv(m,8,3,0,'#555');sv(m,8,1,7,'#666');sv(m,8,3,7,'#555');fill(m,7,8,1,2,3,4,shade(s,1.3));}
+  if(heroClass==='Mage')   {fill(m,3,5,1,3,2,5,shade(s,1.2));fill(m,6,8,1,2,2,5,blend(p,'#9333ea',0.38));}
+  if(heroClass==='Ranger') {fill(m,8,8,1,2,1,6,shade(p,0.78));sv(m,8,1,0,'#5a3a1a');sv(m,8,1,7,'#5a3a1a');}
+  if(heroClass==='Worg')   {fill(m,7,8,1,3,0,7,blend(p,'#4a2a12',0.3));}
+  return m;
+}
 
-  // Hips — Z=0-1
-  fill(m, 0, 1,  1, 3,  0, 6, shade(p, 0.85));
-  // Abdomen — Z=2-4
-  fill(m, 2, 4,  1, 3,  1, 5, p);
-  // Belt — Z=2 accent
-  fill(m, 2, 2,  1, 3,  1, 5, shade(s, 0.9));
+// HORIZONTAL UPPER ARM — W=8(length) D=3 H=3
+// x=0 = shoulder (pivot), x=7 = elbow
+// Left arm: rendered with ctx.scale(-1,1)
+function buildUpperArm(c:RigColors,heroClass:string):VM{
+  const m=emptyVM(8,3,3); const s=c.armorSecondary;
+  fill(m,0,2,0,2,0,0,shade(s,1.18));   // shoulder cap
+  fill(m,0,2,0,2,1,6,s);               // arm body
+  fill(m,0,2,0,2,7,7,blend(s,c.skin,0.42)); // elbow end
+  if(heroClass==='Warrior'){fill(m,0,2,0,2,2,3,shade(s,0.78));}
+  if(heroClass==='Mage')   {fill(m,0,2,0,2,4,5,blend(s,'#9333ea',0.42));}
+  return m;
+}
 
-  // Waist (narrowest) — Z=5-6
-  fill(m, 5, 6,  1, 3,  1, 5, s);
+// HORIZONTAL FOREARM — W=7(length) D=2 H=2
+// x=0 = elbow (pivot), x=6 = hand
+function buildForearm(c:RigColors):VM{
+  const m=emptyVM(7,2,2); const s=c.armorSecondary,sk=c.skin;
+  fill(m,0,1,0,1,0,0,shade(s,0.88));
+  fill(m,0,1,0,1,1,4,s);
+  fill(m,0,1,0,1,5,5,blend(s,sk,0.45));
+  fill(m,0,1,0,1,6,6,sk);
+  return m;
+}
 
-  // Chest — Z=7-9
-  fill(m, 7, 9,  1, 3,  0, 6, p);
-  // Chest plate / detail
-  fill(m, 8, 9,  1, 2,  2, 4, s);
+// THIGH — W=3 D=3 H=7 — hangs DOWN, pivot at TOP (z=6)
+function buildThigh(c:RigColors):VM{
+  const m=emptyVM(3,3,7); const p=c.armorPrimary;
+  fill(m,5,6,0,2,0,2,shade(p,0.88));
+  fill(m,2,4,0,2,0,2,p);
+  fill(m,0,1,0,2,0,1,shade(p,0.95));
+  return m;
+}
 
-  // Shoulder ridge — Z=10-11
-  fill(m, 10, 11,  1, 3,  0, 6, shade(s, 1.1));
+// SHIN+BOOT — W=3 D=3 H=8 — pivot at TOP (z=7)
+function buildShin(c:RigColors):VM{
+  const m=emptyVM(3,3,8); const p=c.armorPrimary,b=c.boot;
+  fill(m,6,7,0,2,0,1,shade(p,0.85));   // knee cap
+  fill(m,3,5,0,2,0,1,p);               // shin
+  fill(m,2,2,0,2,0,2,shade(b,1.15));   // ankle
+  fill(m,0,1,0,2,0,2,b);               // boot
+  sv(m,1,0,2,shade(b,1.2)); sv(m,0,0,2,shade(b,1.1));
+  return m;
+}
 
-  // Class-specific details
-  if (heroClass === 'Warrior') {
-    // Pauldrons
-    sv(m, 11, 1, 0, '#666666');  sv(m, 11, 3, 0, shade('#666666', 0.8));
-    sv(m, 11, 1, 6, '#666666');  sv(m, 11, 3, 6, shade('#666666', 0.8));
-    // Breastplate stripe
-    fill(m, 7, 10,  1, 2,  3, 3, shade(s, 1.2));
+// ─── All Weapon Types ─────────────────────────────────────────────────────────
+
+export type WeaponType =
+  'sword'|'shield_sword'|'axe'|'greatsword'|'war_hammer'|'spear'|'dagger'|'dual_daggers'|
+  'staff'|'wand'|'tome'|
+  'bow'|'crossbow'|'gun'|
+  'claws';
+
+function buildWeapon(c:RigColors,type:WeaponType):VM{
+  const wc=c.weapon;
+  switch(type){
+    case 'sword':{
+      const m=emptyVM(2,2,13);
+      fill(m,0,1,0,1,0,1,shade(wc,0.65)); sv(m,2,0,0,'#888'); sv(m,2,1,0,'#888');
+      for(let z=3;z<=11;z++) sv(m,z,0,0,wc); sv(m,12,0,0,shade(wc,1.35)); return m;}
+    case 'shield_sword':{
+      const m=emptyVM(6,2,12);
+      fill(m,0,1,0,1,0,1,shade(wc,0.65));
+      for(let z=2;z<=10;z++) sv(m,z,0,0,wc); sv(m,11,0,0,shade(wc,1.35));
+      fill(m,3,9,0,1,3,5,shade(c.armorPrimary,0.9));
+      fill(m,4,8,0,1,4,4,shade(c.armorSecondary,1.2)); return m;}
+    case 'axe':{
+      const m=emptyVM(4,2,12);
+      for(let z=1;z<=8;z++) sv(m,z,0,1,'#6b4423');
+      fill(m,6,10,0,1,0,3,wc); fill(m,7,9,0,1,2,3,shade(wc,1.2)); return m;}
+    case 'greatsword':{
+      const m=emptyVM(2,2,16);
+      fill(m,0,2,0,1,0,1,shade(wc,0.6)); sv(m,3,0,0,'#888'); sv(m,3,1,1,'#888');
+      for(let z=4;z<=14;z++) sv(m,z,0,0,wc); sv(m,15,0,0,shade(wc,1.4)); return m;}
+    case 'war_hammer':{
+      const m=emptyVM(4,4,12);
+      for(let z=1;z<=7;z++) sv(m,z,1,1,'#6b4423');
+      fill(m,7,10,0,3,0,3,wc); fill(m,8,9,0,3,0,3,shade(wc,0.8)); return m;}
+    case 'spear':{
+      const m=emptyVM(2,2,16);
+      for(let z=1;z<=11;z++) sv(m,z,0,0,'#6b4423');
+      for(let z=12;z<=14;z++) sv(m,z,0,0,wc); sv(m,15,0,0,shade(wc,1.4)); return m;}
+    case 'dagger':{
+      const m=emptyVM(2,2,8);
+      fill(m,0,1,0,1,0,1,shade(wc,0.65)); sv(m,2,0,0,'#888');
+      for(let z=3;z<=7;z++) sv(m,z,0,0,wc); return m;}
+    case 'dual_daggers':{
+      const m=emptyVM(4,2,8);
+      for(let z=3;z<=7;z++){sv(m,z,0,0,wc);sv(m,z,0,3,wc);}
+      sv(m,2,0,0,'#888'); sv(m,2,0,3,'#888');
+      fill(m,0,1,0,1,0,1,shade(wc,0.65)); fill(m,0,1,0,1,2,3,shade(wc,0.65)); return m;}
+    case 'staff':{
+      const m=emptyVM(2,2,14);
+      for(let z=1;z<=10;z++) sv(m,z,0,0,'#553322');
+      fill(m,11,12,0,1,0,1,wc); sv(m,13,0,0,shade(wc,1.6)); return m;}
+    case 'wand':{
+      const m=emptyVM(2,2,10);
+      for(let z=1;z<=7;z++) sv(m,z,0,0,'#6b4423');
+      fill(m,8,9,0,1,0,1,wc); sv(m,9,0,0,shade(wc,1.9)); return m;}
+    case 'tome':{
+      const m=emptyVM(4,3,5);
+      fill(m,0,4,0,2,0,3,shade(wc,0.8)); fill(m,1,3,0,1,1,2,shade(wc,1.2));
+      sv(m,2,0,0,'#ffd700'); sv(m,2,0,1,'#ffd700'); return m;}
+    case 'bow':{
+      const m=emptyVM(2,2,13);
+      for(let z=1;z<=11;z++) sv(m,z,0,0,'#6b4423');
+      sv(m,0,0,0,'#555'); sv(m,12,0,0,'#555');
+      sv(m,6,1,0,'#aaa'); sv(m,5,1,0,'#999'); sv(m,7,1,0,'#999'); return m;}
+    case 'crossbow':{
+      const m=emptyVM(5,3,8);
+      for(let z=2;z<=6;z++) sv(m,z,1,2,'#6b4423');
+      fill(m,4,4,0,2,0,4,shade(c.armorPrimary,0.88));
+      fill(m,5,5,1,1,0,4,'#888'); return m;}
+    case 'gun':{
+      const m=emptyVM(4,2,8);
+      fill(m,1,3,0,1,0,1,shade(wc,0.7));
+      for(let z=4;z<=7;z++) sv(m,z,0,1,wc);
+      sv(m,3,0,1,'#888'); fill(m,2,3,0,1,2,3,'#6b4423'); return m;}
+    case 'claws':
+    default:{
+      const m=emptyVM(3,2,10);
+      fill(m,2,8,0,0,0,0,wc); sv(m,9,0,0,shade(wc,0.7)); sv(m,8,1,0,wc);
+      fill(m,2,8,0,0,2,2,shade(wc,0.85)); sv(m,9,0,2,shade(wc,0.6)); return m;}
   }
-  if (heroClass === 'Mage') {
-    // Robe panels
-    fill(m, 3, 6,  1, 3,  2, 4, shade(s, 1.15));
-    fill(m, 7, 10, 1, 2,  2, 4, blend(p, '#9333ea', 0.4));
-  }
-  if (heroClass === 'Ranger') {
-    // Hood trim
-    fill(m, 10, 11, 1, 2, 1, 5, shade(p, 0.8));
-    sv(m, 10, 1, 0, '#5a3a1a');  sv(m, 10, 1, 6, '#5a3a1a'); // quiver strap
-  }
-  if (heroClass === 'Worg') {
-    // Fur/leather trim
-    fill(m, 8, 11, 1, 3, 0, 6, blend(p, '#4a2a12', 0.3));
-  }
-
-  return m;
 }
 
-/**
- * UPPER ARM — W=3 D=2 H=7
- *  Z=6:    shoulder cap (3×2, rounded)
- *  Z=2-5:  upper arm cylinder (2×2)
- *  Z=0-1:  elbow end (2×2)
- */
-function buildUpperArm(c: RigColors): VM {
-  const m = emptyVM(3, 2, 7);
-  const p = c.armorSecondary;
+const CLASS_WEAPON:Record<string,WeaponType>={Warrior:'shield_sword',Mage:'staff',Ranger:'bow',Worg:'claws'};
 
-  // Shoulder cap
-  fill(m, 5, 6,  0, 1,  0, 2, shade(p, 1.1));
-  // Upper arm
-  fill(m, 1, 5,  0, 1,  0, 1, p);
-  // Elbow end (with skin hint)
-  fill(m, 0, 0,  0, 1,  0, 1, blend(p, c.skin, 0.4));
+// ─── Rig Part / Rig Definition ────────────────────────────────────────────────
 
-  return m;
-}
-
-/**
- * FOREARM — W=2 D=2 H=6
- *  Z=4-5:  upper forearm (armor)
- *  Z=1-3:  forearm (armor/skin blend)
- *  Z=0:    wrist / hand (skin)
- */
-function buildForearm(c: RigColors): VM {
-  const m = emptyVM(2, 2, 6);
-  const p = c.armorSecondary;
-  const sk = c.skin;
-
-  fill(m, 3, 5,  0, 1,  0, 1, shade(p, 0.95));
-  fill(m, 1, 2,  0, 1,  0, 1, blend(p, sk, 0.3));
-  // Hand
-  fill(m, 0, 0,  0, 1,  0, 1, sk);
-
-  return m;
-}
-
-/**
- * THIGH — W=3 D=2 H=8
- *  Z=6-7:  hip / upper thigh (3×2, widest)
- *  Z=3-5:  mid thigh (3×2)
- *  Z=0-2:  knee (2×2, tapered)
- */
-function buildThigh(c: RigColors): VM {
-  const m = emptyVM(3, 2, 8);
-  const p = c.armorPrimary;
-  const s = c.armorSecondary;
-
-  // Hip attachment
-  fill(m, 6, 7,  0, 1,  0, 2, shade(p, 0.85));
-  // Thigh
-  fill(m, 3, 5,  0, 1,  0, 2, p);
-  // Knee (narrower)
-  fill(m, 0, 2,  0, 1,  0, 1, shade(s, 0.9));
-
-  return m;
-}
-
-/**
- * SHIN + BOOT — W=3 D=3 H=8
- *  Z=5-7:  shin (2×2)
- *  Z=3-4:  lower shin / ankle (2×2)
- *  Z=0-2:  boot (3×3, foot extends forward in Y)
- */
-function buildShin(c: RigColors): VM {
-  const m = emptyVM(3, 3, 8);
-  const p = c.armorPrimary;
-  const boot = shade(p, 0.65);
-  const bootAccent = shade(p, 0.8);
-
-  // Shin
-  fill(m, 5, 7,  0, 1,  0, 1, shade(p, 0.9));
-  // Lower shin
-  fill(m, 3, 4,  0, 1,  0, 1, p);
-  // Ankle
-  fill(m, 2, 2,  0, 2,  0, 1, bootAccent);
-  // Boot (wider, extends forward)
-  fill(m, 0, 1,  0, 2,  0, 2, boot);
-  // Boot toe highlight
-  sv(m, 1, 0, 2, bootAccent);  sv(m, 0, 0, 2, shade(boot, 1.1));
-
-  return m;
-}
-
-/**
- * WEAPON — varies by class, ~W=2 D=2 H=10
- */
-function buildWeapon(c: RigColors, heroClass: string): VM {
-  const m = emptyVM(2, 2, 12);
-  const wc = c.weapon;
-
-  if (heroClass === 'Mage') {
-    // Staff
-    fill(m, 1, 9,  0, 0,  0, 0, '#553322');
-    fill(m, 10, 11, 0, 1,  0, 1, wc);
-    sv(m, 11, 0, 0, shade(wc, 1.5));
-  } else if (heroClass === 'Ranger') {
-    // Bow
-    for (let z = 1; z <= 10; z++) sv(m, z, 0, 0, '#6b4423');
-    sv(m, 0, 0, 0, '#555555');  sv(m, 11, 0, 0, '#555555');
-    sv(m, 5, 1, 0, '#aaaaaa');  sv(m, 6, 1, 0, '#aaaaaa');
-  } else if (heroClass === 'Worg') {
-    // Claws
-    for (let z = 2; z <= 8; z++) sv(m, z, 0, 0, wc);
-    sv(m, 9, 0, 0, shade(wc, 0.7));
-    sv(m, 8, 1, 0, wc);
-  } else {
-    // Sword (default Warrior)
-    fill(m, 0, 1,  0, 1,  0, 1, shade(wc, 0.7));  // grip
-    sv(m, 2, 0, 0, '#888888');  sv(m, 2, 1, 0, '#888888');  // guard
-    for (let z = 3; z <= 10; z++) sv(m, z, 0, 0, wc);          // blade
-    sv(m, 11, 0, 0, shade(wc, 1.3)); // tip
-  }
-
-  return m;
-}
-
-// ─── Rig Definition ───────────────────────────────────────────────────────────
-
-/** A single renderable part */
 export interface RigPart {
   id: PartId;
   model: VM;
-  /** Screen-space offset from character root (feet at cx,cy) at cubeSize=1
-   *  X=rightward, Y=upward (negative = higher on screen) */
-  attachX: number;
-  attachY: number;
-  /** Z-index within the model that is the joint pivot (the fixed end)
-   *  The model renders "hanging down" from this Z */
-  pivotZ: number;
-  /** Center X (voxel) of the pivot within the model */
+  attachX: number;   // screen offset rightward from root (cubeSize=1 units, Y=upward)
+  attachY: number;   // screen offset upward from root
+  pivotZ: number;    // Z-level in model that is the joint pivot
   pivotVX: number;
-  /** Center Y (voxel) of the pivot within the model */
   pivotVY: number;
+  mirror?: boolean;  // if true, ctx.scale(-1,1) for left-side parts
 }
 
 export type HeroRig = Record<PartId, RigPart>;
 
 /**
- * Build the full hero rig for a given race/class.
- * All attachment points are calibrated for cubeSize=1 with ctx.scale(2.0).
+ * Build the full hero rig.
+ *
+ * Coordinate calibration (cubeSize=1, ctx.scale(2.2) externally):
+ *   Y=0  → feet / ground
+ *   Y=8  → knee
+ *   Y=14 → hip/waist
+ *   Y=21 → shoulder
+ *   Y=24 → neck/head base
  */
-export function buildHeroRig(race: string, heroClass: string): HeroRig {
-  const colors = getRigColors(race, heroClass);
-
-  // Attach points — screen offset from character root (cx, groundY)
-  // Positive X = right, positive Y = upward on screen (i.e. negative screen Y)
-  // These are in voxel units (cubeSize=1), scale applied by caller
-  const A = {
-    torso:         [0,    0  ],
-    head:          [0.5, -12 ],
-    leftShoulder:  [-3.5, -9 ],
-    leftElbow:     [-4,  -15 ],
-    rightShoulder: [ 4.5, -9 ],
-    rightElbow:    [ 5,  -15 ],
-    leftHip:       [-2,    0 ],
-    leftKnee:      [-2,   -8 ],
-    rightHip:      [ 2,    0 ],
-    rightKnee:     [ 2,   -8 ],
-    weapon:        [-5,  -13 ],
-  };
-
-  const makePart = (
-    id: PartId, model: VM,
-    attachKey: keyof typeof A,
-    pivotZ: number, pivotVX: number, pivotVY: number
-  ): RigPart => ({
-    id, model,
-    attachX: A[attachKey][0],
-    attachY: A[attachKey][1],
-    pivotZ, pivotVX, pivotVY,
-  });
-
-  // Upper arm: pivot at TOP (z=6 = shoulder), model hangs DOWN
-  // Thigh:     pivot at TOP (z=7 = hip), model hangs DOWN
-  // Head:      pivot at BOTTOM (z=0 = neck), model goes UP
-  // Torso:     pivot at bottom center
-
+export function buildHeroRig(race:string,heroClass:string,weaponOverride?:WeaponType):HeroRig{
+  const c=getRigColors(race,heroClass);
+  const wt:WeaponType=weaponOverride||(CLASS_WEAPON[heroClass]||'sword');
+  const mk=(id:PartId,model:VM,ax:number,ay:number,pZ:number,pVX:number,pVY:number,mirror?:boolean):RigPart=>
+    ({id,model,attachX:ax,attachY:ay,pivotZ:pZ,pivotVX:pVX,pivotVY:pVY,mirror});
   return {
-    torso:         makePart('torso',         buildTorso(colors, heroClass),    'torso',         0, 3, 2),
-    head:          makePart('head',          buildHead(colors, race),          'head',          0, 3, 2),
-    leftUpperArm:  makePart('leftUpperArm',  buildUpperArm(colors),            'leftShoulder',  6, 1, 1),
-    leftForearm:   makePart('leftForearm',   buildForearm(colors),             'leftElbow',     5, 1, 1),
-    rightUpperArm: makePart('rightUpperArm', buildUpperArm(colors),            'rightShoulder', 6, 1, 1),
-    rightForearm:  makePart('rightForearm',  buildForearm(colors),             'rightElbow',    5, 1, 1),
-    leftThigh:     makePart('leftThigh',     buildThigh(colors),               'leftHip',       7, 1, 1),
-    leftShin:      makePart('leftShin',      buildShin(colors),                'leftKnee',      7, 1, 1),
-    rightThigh:    makePart('rightThigh',    buildThigh(colors),               'rightHip',      7, 1, 1),
-    rightShin:     makePart('rightShin',     buildShin(colors),                'rightKnee',     7, 1, 1),
-    weapon:        makePart('weapon',        buildWeapon(colors, heroClass),   'weapon',        10, 0, 0),
+    torso:        mk('torso',        buildTorso(c,heroClass),        0,  0,  0,4,2),
+    head:         mk('head',         buildHead(c,race),               0, 24,  0,3,2),
+    rightUpperArm:mk('rightUpperArm',buildUpperArm(c,heroClass),      5, 21,  1,0,1),
+    rightForearm: mk('rightForearm', buildForearm(c),                13, 18,  1,0,1),
+    leftUpperArm: mk('leftUpperArm', buildUpperArm(c,heroClass),     -5, 21,  1,0,1,true),
+    leftForearm:  mk('leftForearm',  buildForearm(c),               -13, 18,  1,0,1,true),
+    rightThigh:   mk('rightThigh',   buildThigh(c),                   2, 14,  6,1,1),
+    rightShin:    mk('rightShin',    buildShin(c),                    2,  8,  7,0,1),
+    leftThigh:    mk('leftThigh',    buildThigh(c),                  -2, 14,  6,1,1),
+    leftShin:     mk('leftShin',     buildShin(c),                   -2,  8,  7,0,1),
+    weapon:       mk('weapon',       buildWeapon(c,wt),              20, 15,  0,0,0),
   };
 }
 
-// ─── Default Pose ─────────────────────────────────────────────────────────────
+// ─── Poses ────────────────────────────────────────────────────────────────────
 
-export function defaultRigPose(): HeroRigPose {
-  const def = { rotX: 0, rotY: 0, scale: 1 };
-  return Object.fromEntries(ALL_PARTS.map(id => [id, { ...def }])) as HeroRigPose;
+export function defaultRigPose():HeroRigPose{
+  const d={rotX:0,rotY:0,scale:1};
+  return Object.fromEntries(ALL_PARTS.map(id=>[id,{...d}])) as HeroRigPose;
 }
 
-/** Natural idle pose — slight arm bend, feet apart */
-export function idleRigPose(): HeroRigPose {
-  const p = defaultRigPose();
-  p.leftUpperArm.rotX   = -8;
-  p.rightUpperArm.rotX  =  8;
-  p.leftForearm.rotX    = -5;
-  p.rightForearm.rotX   =  5;
-  p.leftThigh.rotX      = -3;
-  p.rightThigh.rotX     =  3;
+export function idleRigPose():HeroRigPose{
+  const p=defaultRigPose();
+  p.leftUpperArm.rotX=-12; p.rightUpperArm.rotX=-12;
+  p.leftForearm.rotX=8;    p.rightForearm.rotX=8;
+  p.leftThigh.rotX=-4;     p.rightThigh.rotX=4;
   return p;
 }
 
-/** Walk cycle frame at time t (0-1) */
-export function walkRigPose(t: number): HeroRigPose {
-  const p = defaultRigPose();
-  const swing = Math.sin(t * Math.PI * 2) * 30;
-  p.leftThigh.rotX      =  swing;
-  p.rightThigh.rotX     = -swing;
-  p.leftShin.rotX       =  Math.max(0, -swing) * 0.5;
-  p.rightShin.rotX      =  Math.max(0,  swing) * 0.5;
-  p.leftUpperArm.rotX   = -swing * 0.6;
-  p.rightUpperArm.rotX  =  swing * 0.6;
-  p.leftForearm.rotX    = -5 + Math.max(0, -swing) * 0.3;
-  p.rightForearm.rotX   = -5 + Math.max(0,  swing) * 0.3;
-  p.torso.rotY          = Math.sin(t * Math.PI * 2) * 4;
+export function walkRigPose(t:number):HeroRigPose{
+  const p=defaultRigPose();
+  const sw=Math.sin(t*Math.PI*2)*28,as=-sw*0.55;
+  p.leftThigh.rotX=sw;    p.rightThigh.rotX=-sw;
+  p.leftShin.rotX=Math.max(0,sw)*0.45;    p.rightShin.rotX=Math.max(0,-sw)*0.45;
+  p.leftUpperArm.rotX=-12+as;             p.rightUpperArm.rotX=-12-as;
+  p.leftForearm.rotX=8+Math.max(0,as)*0.3; p.rightForearm.rotX=8+Math.max(0,-as)*0.3;
+  p.torso.rotY=Math.sin(t*Math.PI*2)*3;
   return p;
 }
 
-/** Attack pose — weapon arm swings forward */
-export function attackRigPose(t: number): HeroRigPose {
-  const p = defaultRigPose();
-  const wind = Math.min(1, t * 4);
-  const swing = t >= 0.25 ? Math.sin((t - 0.25) / 0.75 * Math.PI) : 0;
-  p.rightUpperArm.rotX = -40 * wind + 60 * swing;
-  p.rightForearm.rotX  = -20 * wind + 30 * swing;
-  p.leftUpperArm.rotX  = 10;
-  p.torso.rotX         = -10 * wind + 8 * swing;
+export function attackRigPose(t:number):HeroRigPose{
+  const p=defaultRigPose();
+  const wind=Math.min(1,t*3.5),swing=t>=0.28?Math.sin((t-0.28)/0.72*Math.PI):0;
+  p.rightUpperArm.rotX=-30*wind+70*swing;
+  p.rightForearm.rotX=-15*wind+40*swing;
+  p.leftUpperArm.rotX=-12+20*wind-10*swing;
+  p.leftForearm.rotX=8;
+  p.torso.rotX=-10*wind+12*swing;
+  p.head.rotX=5*swing;
+  p.rightThigh.rotX=10*wind; p.leftThigh.rotX=-10*wind;
   return p;
 }
 
-// ─── Pose Interpolation ──────────────────────────────────────────────────────
-
-/** Smoothly interpolate between two rig poses */
-export function lerpRigPose(a: HeroRigPose, b: HeroRigPose, t: number): HeroRigPose {
-  const lerp = (x: number, y: number) => x + (y - x) * t;
-  return Object.fromEntries(
-    ALL_PARTS.map(id => [id, {
-      rotX:  lerp(a[id].rotX,  b[id].rotX),
-      rotY:  lerp(a[id].rotY,  b[id].rotY),
-      scale: lerp(a[id].scale, b[id].scale),
-    }])
-  ) as HeroRigPose;
-}
-
-// ─── More Pose States ─────────────────────────────────────────────────────────
-
-/** Dodge roll — body ducked, arms back, legs spread */
-export function dodgeRigPose(t: number): HeroRigPose {
-  const p = defaultRigPose();
-  const roll = Math.min(1, t * 6);
-  const lean = Math.sin(roll * Math.PI) * 40;
-  p.torso.rotX          = -lean * 0.5;
-  p.head.rotX           = lean * 0.3;
-  p.leftUpperArm.rotX   = lean * 0.8;
-  p.rightUpperArm.rotX  = lean * 0.8;
-  p.leftForearm.rotX    = 20;
-  p.rightForearm.rotX   = 20;
-  p.leftThigh.rotX      = -lean * 0.4;
-  p.rightThigh.rotX     =  lean * 0.6;
-  p.leftShin.rotX       =  Math.max(0, lean) * 0.4;
-  p.rightShin.rotX      =  Math.max(0, lean) * 0.3;
+export function comboRigPose(t:number):HeroRigPose{
+  const p=defaultRigPose();
+  const spin=Math.sin(t*Math.PI*2.5)*50,slam=Math.max(0,Math.sin(t*Math.PI*1.5-0.5))*70;
+  p.rightUpperArm.rotX=-20+slam+spin*0.45; p.rightForearm.rotX=10+slam*0.55;
+  p.leftUpperArm.rotX=-12+spin*0.3; p.torso.rotX=-12+slam*0.3; p.torso.rotY=spin*0.4;
+  p.leftThigh.rotX=spin*0.28; p.rightThigh.rotX=-spin*0.28;
   return p;
 }
 
-/** Defensive block — shield up, crouched */
-export function blockRigPose(): HeroRigPose {
-  const p = defaultRigPose();
-  p.torso.rotX          = -8;
-  p.head.rotX           =  5;
-  p.leftUpperArm.rotX   = -60;
-  p.leftForearm.rotX    = -40;
-  p.rightUpperArm.rotX  =  15;
-  p.rightForearm.rotX   =  10;
-  p.leftThigh.rotX      = -10;
-  p.rightThigh.rotX     =  10;
-  p.leftShin.rotX       =  8;
-  p.rightShin.rotX      =  5;
+export function lungeRigPose(t:number):HeroRigPose{
+  const p=defaultRigPose(),ext=Math.sin(Math.min(1,t*5)*Math.PI)*0.9+0.1;
+  p.torso.rotX=-20*ext; p.head.rotX=-8*ext;
+  p.rightUpperArm.rotX=-60*ext; p.rightForearm.rotX=-25*ext;
+  p.leftUpperArm.rotX=25*ext;   p.leftForearm.rotX=15*ext;
+  p.leftThigh.rotX=-35*ext; p.leftShin.rotX=18*ext;
+  p.rightThigh.rotX=22*ext; p.rightShin.rotX=-8*ext;
   return p;
 }
 
-/** Death fall — body toppling backward */
-export function deathRigPose(t: number): HeroRigPose {
-  const p = defaultRigPose();
-  const fall = Math.min(1, t * 2.5);
-  const ease = 1 - Math.pow(1 - fall, 3); // ease-in-cubic
-  p.torso.rotX          =  ease * 60;
-  p.head.rotX           = -ease * 20;
-  p.leftUpperArm.rotX   =  ease * 40;
-  p.rightUpperArm.rotX  =  ease * 30;
-  p.leftForearm.rotX    =  ease * 20;
-  p.rightForearm.rotX   = -ease * 15;
-  p.leftThigh.rotX      =  ease * 20;
-  p.rightThigh.rotX     =  ease * 15;
-  p.leftShin.rotX       = -ease * 10;
-  p.rightShin.rotX      = -ease * 8;
+export function dodgeRigPose(t:number):HeroRigPose{
+  const p=defaultRigPose(),lean=Math.sin(Math.min(1,t*6)*Math.PI)*38;
+  p.torso.rotX=-lean*0.45; p.head.rotX=lean*0.28;
+  p.leftUpperArm.rotX=-12+lean*0.7; p.rightUpperArm.rotX=-12+lean*0.7;
+  p.leftForearm.rotX=18; p.rightForearm.rotX=18;
+  p.leftThigh.rotX=-lean*0.38; p.rightThigh.rotX=lean*0.55;
+  p.leftShin.rotX=Math.max(0,lean)*0.38; p.rightShin.rotX=Math.max(0,lean)*0.28;
   return p;
 }
 
-/** Mage casting / ability — arms raised, channeling */
-export function castRigPose(t: number): HeroRigPose {
-  const p = defaultRigPose();
-  const channel = Math.min(1, t * 3);
-  const pulse = Math.sin(t * 8) * 0.15 + 0.85; // oscillate slightly
-  p.leftUpperArm.rotX   = -70 * channel;
-  p.leftForearm.rotX    = -40 * channel;
-  p.rightUpperArm.rotX  = -65 * channel;
-  p.rightForearm.rotX   = -35 * channel;
-  p.leftUpperArm.scale  = 0.95 + pulse * 0.1;
-  p.rightUpperArm.scale = 0.95 + pulse * 0.1;
-  p.head.rotX           = -15 * channel;
-  p.torso.rotX          = -8 * channel;
+export function blockRigPose():HeroRigPose{
+  const p=defaultRigPose();
+  p.torso.rotX=-6; p.head.rotX=4;
+  p.leftUpperArm.rotX=-50; p.leftForearm.rotX=-35;
+  p.rightUpperArm.rotX=6; p.rightForearm.rotX=12;
+  p.leftThigh.rotX=-8; p.rightThigh.rotX=8;
+  p.leftShin.rotX=6; p.rightShin.rotX=4;
   return p;
 }
 
-/** Combo finisher — spinning overhand slam */
-export function comboRigPose(t: number): HeroRigPose {
-  const p = defaultRigPose();
-  const spin = Math.sin(t * Math.PI * 2.5) * 45;
-  const slam = Math.max(0, Math.sin(t * Math.PI * 1.5 - 0.5)) * 60;
-  p.rightUpperArm.rotX  = -30 + slam + spin * 0.5;
-  p.rightForearm.rotX   = -20 + slam * 0.6;
-  p.leftUpperArm.rotX   =  20 + spin * 0.3;
-  p.leftForearm.rotX    =  10;
-  p.torso.rotX          = -15 + slam * 0.3;
-  p.torso.rotY          = spin * 0.4;
-  p.leftThigh.rotX      = spin * 0.3;
-  p.rightThigh.rotX     = -spin * 0.3;
+export function castRigPose(t:number):HeroRigPose{
+  const p=defaultRigPose(),ch=Math.min(1,t*2.8),pulse=Math.sin(t*8)*0.12+0.88;
+  p.leftUpperArm.rotX=-12-58*ch; p.leftForearm.rotX=8-30*ch;
+  p.rightUpperArm.rotX=-12-52*ch; p.rightForearm.rotX=8-26*ch;
+  p.leftUpperArm.scale=0.92+pulse*0.1; p.rightUpperArm.scale=0.92+pulse*0.1;
+  p.head.rotX=-12*ch; p.torso.rotX=-6*ch;
   return p;
 }
 
-/** Lunge / dash attack — body fully extended forward */
-export function lungeRigPose(t: number): HeroRigPose {
-  const p = defaultRigPose();
-  const ext = Math.sin(Math.min(1, t * 5) * Math.PI) * 0.9 + 0.1;
-  p.torso.rotX          = -25 * ext;
-  p.head.rotX           = -10 * ext;
-  p.rightUpperArm.rotX  = -80 * ext;
-  p.rightForearm.rotX   = -30 * ext;
-  p.leftUpperArm.rotX   =  30 * ext;
-  p.leftForearm.rotX    =  15 * ext;
-  p.leftThigh.rotX      = -40 * ext;
-  p.leftShin.rotX       =  20 * ext;
-  p.rightThigh.rotX     =  25 * ext;
-  p.rightShin.rotX      = -10 * ext;
+export function deathRigPose(t:number):HeroRigPose{
+  const p=defaultRigPose(),fall=Math.min(1,t*2.2),ease=1-Math.pow(1-fall,3);
+  p.torso.rotX=ease*65; p.head.rotX=-ease*18;
+  p.leftUpperArm.rotX=-12+ease*35; p.rightUpperArm.rotX=-12+ease*28;
+  p.leftForearm.rotX=8+ease*18; p.rightForearm.rotX=8-ease*14;
+  p.leftThigh.rotX=ease*18; p.rightThigh.rotX=ease*14;
+  p.leftShin.rotX=-ease*10; p.rightShin.rotX=-ease*8;
   return p;
 }
 
-/**
- * Master pose dispatcher — maps animState strings (same as the legacy system)
- * to rig poses driven by time t.
- * t is the raw animation timer (seconds, monotonic).
- */
-export function getRigPoseForState(animState: string, t: number): HeroRigPose {
-  // Normalize t to a 0-1 cycle for cyclic anims
-  const cycle = (period: number) => (t % period) / period;
+export function lerpRigPose(a:HeroRigPose,b:HeroRigPose,t:number):HeroRigPose{
+  const lr=(x:number,y:number)=>x+(y-x)*t;
+  return Object.fromEntries(ALL_PARTS.map(id=>[id,{rotX:lr(a[id].rotX,b[id].rotX),rotY:lr(a[id].rotY,b[id].rotY),scale:lr(a[id].scale,b[id].scale)}])) as HeroRigPose;
+}
 
-  switch (animState) {
-    case 'idle': {
-      // Idle breathing: very gentle body sway
-      const p = idleRigPose();
-      const breath = Math.sin(t * 1.4) * 4;
-      p.torso.rotX         = breath * 0.3;
-      p.head.rotX          = -breath * 0.2;
-      p.leftUpperArm.rotX  += breath * 0.5;
-      p.rightUpperArm.rotX -= breath * 0.5;
-      return p;
-    }
-    case 'walk':         return walkRigPose(cycle(0.7));
-    case 'attack':       return attackRigPose(cycle(0.6));
-    case 'combo_finisher': return comboRigPose(cycle(0.8));
-    case 'ability':      return castRigPose(Math.min(t, 1));
-    case 'dodge':        return dodgeRigPose(cycle(0.4));
-    case 'block':        return blockRigPose();
-    case 'death':        return deathRigPose(Math.min(t, 1));
-    case 'lunge_slash':  return lungeRigPose(cycle(0.5));
-    case 'dash_attack':  return lerpRigPose(lungeRigPose(0.7), attackRigPose(cycle(0.4)), 0.5);
-    default:             return idleRigPose();
+export function getRigPoseForState(animState:string,t:number):HeroRigPose{
+  const cy=(period:number)=>(t%period)/period;
+  switch(animState){
+    case 'idle':{
+      const p=idleRigPose(),br=Math.sin(t*1.4)*3.5;
+      p.torso.rotX+=br*0.25; p.head.rotX-=br*0.18;
+      p.leftUpperArm.rotX+=br*0.4; p.rightUpperArm.rotX+=br*0.4; return p;}
+    case 'walk':           return walkRigPose(cy(0.72));
+    case 'attack':         return attackRigPose(cy(0.58));
+    case 'combo_finisher': return comboRigPose(cy(0.78));
+    case 'ability':        return castRigPose(Math.min(t,1.5));
+    case 'dodge':          return dodgeRigPose(cy(0.42));
+    case 'block':          return blockRigPose();
+    case 'death':          return deathRigPose(Math.min(t,1.2));
+    case 'lunge_slash':    return lungeRigPose(cy(0.48));
+    case 'dash_attack':    return lerpRigPose(lungeRigPose(0.6),attackRigPose(cy(0.42)),0.5);
+    default:               return idleRigPose();
   }
 }
 
-// ─── Mixamo Mapping ───────────────────────────────────────────────────────────
-
-/**
- * Convert a Mixamo bone frame (from FBX animation data) to HeroRigPose.
- * Bone angle direction conventions are normalized — Mixamo uses Z-up, Y-forward.
- * We invert some axes for our screen-space Y-down convention.
- */
-export function mixamoToRigPose(frame: MixamoBoneFrame): HeroRigPose {
-  const pose = defaultRigPose();
-  // Arm rotations (Mixamo X-axis = our forward swing, inverted for right arm)
-  if (frame.LeftArm      !== undefined) pose.leftUpperArm.rotX   =  frame.LeftArm;
-  if (frame.LeftForeArm  !== undefined) pose.leftForearm.rotX    =  frame.LeftForeArm;
-  if (frame.RightArm     !== undefined) pose.rightUpperArm.rotX  = -frame.RightArm;
-  if (frame.RightForeArm !== undefined) pose.rightForearm.rotX   = -frame.RightForeArm;
-  // Leg rotations
-  if (frame.LeftUpLeg    !== undefined) pose.leftThigh.rotX      =  frame.LeftUpLeg;
-  if (frame.LeftLeg      !== undefined) pose.leftShin.rotX       =  frame.LeftLeg;
-  if (frame.RightUpLeg   !== undefined) pose.rightThigh.rotX     = -frame.RightUpLeg;
-  if (frame.RightLeg     !== undefined) pose.rightShin.rotX      = -frame.RightLeg;
-  // Spine / head
-  if (frame.Spine        !== undefined) pose.torso.rotX          =  frame.Spine;
-  if (frame.Head         !== undefined) pose.head.rotX           =  frame.Head;
+export function mixamoToRigPose(frame:MixamoBoneFrame):HeroRigPose{
+  const pose=defaultRigPose();
+  if(frame.LeftArm!==undefined)      pose.leftUpperArm.rotX=frame.LeftArm;
+  if(frame.LeftForeArm!==undefined)  pose.leftForearm.rotX=frame.LeftForeArm;
+  if(frame.RightArm!==undefined)     pose.rightUpperArm.rotX=-frame.RightArm;
+  if(frame.RightForeArm!==undefined) pose.rightForearm.rotX=-frame.RightForeArm;
+  if(frame.LeftUpLeg!==undefined)    pose.leftThigh.rotX=frame.LeftUpLeg;
+  if(frame.LeftLeg!==undefined)      pose.leftShin.rotX=frame.LeftLeg;
+  if(frame.RightUpLeg!==undefined)   pose.rightThigh.rotX=-frame.RightUpLeg;
+  if(frame.RightLeg!==undefined)     pose.rightShin.rotX=-frame.RightLeg;
+  if(frame.Spine!==undefined)        pose.torso.rotX=frame.Spine;
+  if(frame.Head!==undefined)         pose.head.rotX=frame.Head;
   return pose;
 }
 
-// ─── Render Helper (used by VoxelRenderer.drawHeroVoxelRig) ──────────────────
+// ─── Render Helpers ───────────────────────────────────────────────────────────
 
-/**
- * Compute the render offset so that the part's pivotZ voxel appears at (0,0)
- * in the translated+rotated context. The caller should:
- *   ctx.save()
- *   ctx.translate(attachX, attachY)
- *   ctx.rotate(rotX_rad)
- *   renderVoxelModel(ctx, renderOffX, renderOffY, part.model, cubeSize, facing)
- *   ctx.restore()
- */
-export function getPartRenderOffset(part: RigPart, cubeSize: number): [number, number] {
-  const cs = cubeSize;
-  const isoX = cs;
-  const isoY = cs * 0.5;
-  // Screen position of the pivot voxel relative to model origin
-  const pivotScreenX = (part.pivotVX - part.pivotVY) * isoX;
-  const pivotScreenY = (part.pivotVX + part.pivotVY) * isoY - part.pivotZ * cs;
-  // To make pivot appear at (0,0), shift model by negative pivot offset
-  return [-pivotScreenX, -pivotScreenY];
+export function getPartRenderOffset(part:RigPart,cubeSize:number):[number,number]{
+  const cs=cubeSize;
+  const px=(part.pivotVX-part.pivotVY)*cs;
+  const py=(part.pivotVX+part.pivotVY)*cs*0.5-part.pivotZ*cs;
+  return [-px,-py];
 }
 
-/** Depth sort order for RIG parts when rendering at a given direction */
-export function getRigPartRenderOrder(dir: number): PartId[] {
-  // dir 0 = front facing, dir 2 = back
-  if (dir === 0 || dir === 1) {
-    // Back-to-front: right arm/leg back, left arm/leg front
-    return [
-      'rightThigh', 'rightShin',
-      'rightUpperArm', 'rightForearm',
-      'torso',
-      'leftThigh', 'leftShin',
-      'weapon',
-      'head',
-      'leftUpperArm', 'leftForearm',
-    ];
-  } else {
-    // Facing away
-    return [
-      'leftThigh', 'leftShin',
-      'leftUpperArm', 'leftForearm',
-      'torso',
-      'rightThigh', 'rightShin',
-      'weapon',
-      'head',
-      'rightUpperArm', 'rightForearm',
-    ];
-  }
+export function getRigPartRenderOrder(dir:number):PartId[]{
+  if(dir===0||dir===1)
+    return ['rightThigh','rightShin','rightUpperArm','rightForearm','torso','weapon','leftThigh','leftShin','head','leftUpperArm','leftForearm'];
+  return ['leftThigh','leftShin','leftUpperArm','leftForearm','torso','weapon','rightThigh','rightShin','head','rightUpperArm','rightForearm'];
 }

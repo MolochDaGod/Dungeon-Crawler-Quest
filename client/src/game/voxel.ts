@@ -3829,6 +3829,8 @@ export class VoxelRenderer {
 
       ctx.save();
       ctx.translate(ax, ay);
+      // Mirror left-side arm parts so they extend LEFT instead of right
+      if (part.mirror) ctx.scale(-1, 1);
       if (Math.abs(rotRad) > 0.001) ctx.rotate(rotRad);
       if (sc !== 1) ctx.scale(sc, sc);
       this.renderVoxelModel(ctx, offX, offY, part.model, cubeSize, facing);

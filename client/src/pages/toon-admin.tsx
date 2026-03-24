@@ -5,8 +5,9 @@ import { SpriteEffectSystem, SpriteEffectType } from "@/game/sprite-effects";
 import { HEROES, RACE_COLORS, CLASS_COLORS } from "@/game/types";
 import {
   buildHeroRig, defaultRigPose, idleRigPose, walkRigPose, attackRigPose,
+  dodgeRigPose, blockRigPose, deathRigPose, castRigPose, comboRigPose, lungeRigPose,
   mixamoToRigPose, getRigPoseForState, lerpRigPose, ALL_PARTS,
-  type HeroRig, type HeroRigPose, type PartId,
+  type HeroRig, type HeroRigPose, type PartId, type WeaponType,
 } from "@/game/voxel-parts";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -120,17 +121,20 @@ export default function ToonAdminPage() {
 
   // ── Rig state
   const [rigMode,    setRigMode]    = useState(false);
-  const [rigLive,    setRigLive]    = useState(true);  // auto-drive pose from animState
+  const [rigLive,    setRigLive]    = useState(true);
+  const [rigWeapon,  setRigWeapon]  = useState<WeaponType | 'class'>('class');
   const [rigPose,    setRigPose]    = useState<HeroRigPose>(idleRigPose());
   const [mixamoJson, setMixamoJson] = useState('');
   const [mixamoErr,  setMixamoErr]  = useState('');
   const rigPoseRef  = useRef<HeroRigPose>(idleRigPose());
   const rigRef      = useRef<HeroRig | null>(null);
-  const rigModeRef  = useRef(false);
-  const rigLiveRef  = useRef(true);
-  useEffect(() => { rigModeRef.current  = rigMode;  }, [rigMode]);
-  useEffect(() => { rigLiveRef.current  = rigLive;  }, [rigLive]);
-  useEffect(() => { rigPoseRef.current  = rigPose;  }, [rigPose]);
+  const rigModeRef   = useRef(false);
+  const rigLiveRef   = useRef(true);
+  const rigWeaponRef = useRef<WeaponType | 'class'>('class');
+  useEffect(() => { rigModeRef.current   = rigMode;   }, [rigMode]);
+  useEffect(() => { rigLiveRef.current   = rigLive;   }, [rigLive]);
+  useEffect(() => { rigPoseRef.current   = rigPose;   }, [rigPose]);
+  useEffect(() => { rigWeaponRef.current = rigWeapon; rigRef.current = null; }, [rigWeapon]);
 
   // ── Gizmo state (held in refs for the render loop)
   const selectedPartRef = useRef<BodyPart | null>(null);
@@ -340,7 +344,9 @@ export default function ToonAdminPage() {
       if (rigModeRef.current) {
         // ── Rig mode: part-based rig with per-joint rotation
         if (!rigRef.current) {
-          rigRef.current = buildHeroRig(raceRef.current, heroClassRef.current);
+          // Use selected weapon override, or fall back to class default
+          const wt = rigWeaponRef.current !== 'class' ? rigWeaponRef.current : undefined;
+          rigRef.current = buildHeroRig(raceRef.current, heroClassRef.current, wt);
         }
         // Live animation: compute pose from animState each frame
         const activePose = rigLiveRef.current
@@ -750,18 +756,37 @@ export default function ToonAdminPage() {
                       </div>
                     )}
 
+                    <SectionHeader title="Weapon" />
+                    <div className="grid grid-cols-3 gap-1">
+                      {(['class','sword','shield_sword','axe','greatsword','war_hammer',
+                         'spear','dagger','staff','wand','bow','crossbow','gun','claws'] as const).map(w => (
+                        <Button key={w} size="sm"
+                          variant={rigWeapon === w ? "default" : "outline"}
+                          className={`text-[9px] h-6 capitalize px-1 ${rigWeapon === w ? "bg-amber-700 hover:bg-amber-600" : ""}`}
+                          onClick={() => { setRigWeapon(w); rigRef.current = null; }}>
+                          {w.replace(/_/g,' ')}
+                        </Button>
+                      ))}
+                    </div>
+
                     <SectionHeader title="Preset Poses" />
                     <div className="grid grid-cols-3 gap-1.5">
                       {([
-                        { label: "Idle",   fn: idleRigPose   },
-                        { label: "Walk 0", fn: () => walkRigPose(0)    },
-                        { label: "Walk ¼", fn: () => walkRigPose(0.25) },
-                        { label: "Walk ½", fn: () => walkRigPose(0.5)  },
-                        { label: "Attack", fn: () => attackRigPose(0.4)},
-                        { label: "Reset",  fn: defaultRigPose },
+                        { label: "Idle",   fn: idleRigPose                 },
+                        { label: "Walk",   fn: () => walkRigPose(0.25)     },
+                        { label: "Attack", fn: () => attackRigPose(0.4)    },
+                        { label: "Cast",   fn: () => castRigPose(0.8)      },
+                        { label: "Block",  fn: blockRigPose                },
+                        { label: "Dodge",  fn: () => dodgeRigPose(0.3)     },
+                        { label: "Lunge",  fn: () => lungeRigPose(0.5)     },
+                        { label: "Combo",  fn: () => comboRigPose(0.4)     },
+                        { label: "Death",  fn: () => deathRigPose(0.8)     },
+                        { label: "T-Pose", fn: defaultRigPose              },
+                        { label: "Walk ½", fn: () => walkRigPose(0.5)      },
+                        { label: "Reset",  fn: idleRigPose                 },
                       ] as { label: string; fn: () => HeroRigPose }[]).map(({ label, fn }) => (
                         <Button key={label} size="sm" variant="outline" className="text-[10px] h-7"
-                          onClick={() => { setRigPose(fn()); rigRef.current = null; }}>
+                          onClick={() => { setRigPose(fn()); setRigLive(false); }}>
                           {label}
                         </Button>
                       ))}
