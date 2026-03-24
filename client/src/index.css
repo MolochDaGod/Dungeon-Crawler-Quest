@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══ CRAFTPIX PIXEL GOTHIC FONT ═══ */
+@font-face {
+  font-family: 'PixelGothic';
+  src: url('/fonts/StraightPixelGothic.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);

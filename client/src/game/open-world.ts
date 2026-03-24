@@ -3000,7 +3000,7 @@ function drawTownNPCSprite(
   const nameW = Math.min(name.length * 5.5, 90);
   ctx.fillRect(-nameW / 2 - 2, y0 - 42, nameW + 4, 11);
   ctx.fillStyle = '#e0d0a8';
-  ctx.font = 'bold 8px sans-serif';
+  ctx.font = `bold 8px 'PixelGothic', 'Courier New', monospace`;
   ctx.textAlign = 'center';
   ctx.fillText(name.length > 16 ? name.slice(0, 16) + '.' : name, 0, y0 - 33);
 
@@ -3009,7 +3009,7 @@ function drawTownNPCSprite(
     const pulse = 0.55 + Math.sin(Date.now() * 0.005) * 0.35;
     ctx.globalAlpha = pulse;
     ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 9px sans-serif';
+    ctx.font = `bold 9px 'PixelGothic', 'Courier New', monospace`;
     ctx.fillText('[E] Talk', 0, y0 - 49);
   }
 
@@ -3088,7 +3088,7 @@ export class OpenWorldRenderer {
     }
 
     // Layer 3: Roads (tile-based)
-    this.tileRenderer.renderRoads(ctx, camLeft, camTop, viewW, viewH);
+    this.tileRenderer.renderRoads(ctx, ISLAND_ZONES, camLeft, camTop, viewW, viewH);
     this.renderRoads(ctx, state, brightness);
     this.renderGeneratedRoads(ctx, state, brightness);
 
@@ -4313,41 +4313,64 @@ export class OpenWorldRenderer {
   private renderFloatingText(ctx: CanvasRenderingContext2D, ft: OWFloatingText): void {
     const alpha = Math.min(1, ft.life * 2);
     const age = ft.maxLife - ft.life;
-    // Pop-in scale animation
-    const popScale = age < 0.1 ? 0.6 + (age / 0.1) * 0.6 : age < 0.2 ? 1.2 - (age - 0.1) / 0.1 * 0.2 : 1.0;
-    const isCrit = ft.text.includes('CRIT');
-    const isGold = ft.color === '#ffd700';
+    // Pop-in spring: small → overshoot → settle
+    const popScale = age < 0.08
+      ? 0.35 + (age / 0.08) * 0.85
+      : age < 0.16 ? 1.2 - ((age - 0.08) / 0.08) * 0.2
+      : 1.0;
+
+    const isCrit   = ft.text.includes('CRIT');
+    const isHeal   = ft.color === '#22c55e' || ft.color === '#6ec96e' || ft.color === '#86efac';
+    const isGold   = ft.color === '#ffd700';
+    const isXp     = ft.color === '#60a5fa';
+    const baseSize = isCrit ? Math.ceil(ft.size * 1.45) : ft.size;
 
     ctx.save();
     ctx.translate(ft.x, ft.y);
     ctx.scale(popScale, popScale);
     ctx.globalAlpha = alpha;
-
-    // Glow for crits and important text
-    if (isCrit || isGold || ft.size >= 16) {
-      ctx.shadowColor = ft.color;
-      ctx.shadowBlur = isCrit ? 12 : 6;
-    }
-
-    // Outline for readability
-    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-    ctx.lineWidth = 3;
-    ctx.font = `bold ${ft.size}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.strokeText(ft.text, 0, 0);
+    ctx.font = `bold ${baseSize}px 'PixelGothic', 'Courier New', monospace`;
 
+    // Glow for impactful events
+    if (isCrit) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 18; }
+    else if (isGold) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 8; }
+    else if (isHeal) { ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 7; }
+    else if (isXp)   { ctx.shadowColor = '#60a5fa'; ctx.shadowBlur = 6; }
+    else if (ft.size >= 14) { ctx.shadowColor = ft.color; ctx.shadowBlur = 5; }
+
+    // Thick black outline for readability
+    ctx.strokeStyle = isHeal ? 'rgba(0,40,0,0.85)' : 'rgba(0,0,0,0.85)';
+    ctx.lineWidth = isCrit ? 5 : 3;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(ft.text, 0, 0);
     ctx.fillStyle = ft.color;
     ctx.fillText(ft.text, 0, 0);
     ctx.shadowBlur = 0;
 
-    // Extra sparkle for crits
-    if (isCrit && age < 0.3) {
+    // Star burst on CRIT entry
+    if (isCrit && age < 0.25) {
+      const t = age / 0.25;
+      ctx.globalAlpha = alpha * (1 - t);
       ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = (0.3 - age) * 3;
-      for (let i = 0; i < 4; i++) {
-        const sa = (i / 4) * Math.PI * 2 + age * 10;
+      for (let i = 0; i < 6; i++) {
+        const sa = (i / 6) * Math.PI * 2 + age * 8;
+        const r  = 14 + t * 8;
         ctx.beginPath();
-        ctx.arc(Math.cos(sa) * 15, Math.sin(sa) * 10, 2, 0, Math.PI * 2);
+        ctx.arc(Math.cos(sa) * r, Math.sin(sa) * r * 0.7, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Heal shimmer (+HP text gets small green sparkles)
+    if (isHeal && age < 0.35) {
+      const t = age / 0.35;
+      ctx.globalAlpha = alpha * (1 - t) * 0.7;
+      ctx.fillStyle = '#86efac';
+      for (let i = 0; i < 3; i++) {
+        const sa = ((i / 3) * Math.PI * 2 + age * 6);
+        ctx.beginPath();
+        ctx.arc(Math.cos(sa) * 10, Math.sin(sa) * 8 - 4, 1.5, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -4398,18 +4421,21 @@ export class OpenWorldRenderer {
     ctx.scale(popScale, popScale);
     ctx.globalAlpha = alpha;
 
-    // Combo text
-    ctx.fillStyle = '#000';
-    ctx.font = 'bold 28px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-    ctx.lineWidth = 4;
-    ctx.strokeText(`${combo.count}`, 0, 0);
+    // Combo text — PixelGothic font
     const comboColor = combo.count >= 10 ? '#ffd700' : combo.count >= 5 ? '#f97316' : '#ef4444';
+    ctx.textAlign = 'center';
+    ctx.font = `bold 30px 'PixelGothic', 'Courier New', monospace`;
+    ctx.shadowColor = comboColor;
+    ctx.shadowBlur = 12;
+    ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+    ctx.lineWidth = 5;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(`${combo.count}`, 0, 0);
     ctx.fillStyle = comboColor;
     ctx.fillText(`${combo.count}`, 0, 0);
+    ctx.shadowBlur = 0;
 
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = `bold 11px 'PixelGothic', 'Courier New', monospace`;
     ctx.strokeStyle = 'rgba(0,0,0,0.8)';
     ctx.lineWidth = 3;
     ctx.strokeText('COMBO', 0, 18);

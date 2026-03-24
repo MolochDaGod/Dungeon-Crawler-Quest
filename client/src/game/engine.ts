@@ -5707,15 +5707,37 @@ export class MobaRenderer {
   }
 
   private renderFloatingText(ctx: CanvasRenderingContext2D, ft: FloatingText) {
-    ctx.globalAlpha = Math.min(1, ft.life * 2);
-    ctx.font = `bold ${ft.size}px sans-serif`;
+    const age = 1.5 - ft.life;
+    const alpha = Math.min(1, ft.life * 2);
+    // Pop-in: 0→0.1s spring up, then settle
+    const popScale = age < 0.1
+      ? 0.4 + (age / 0.1) * 0.8
+      : age < 0.18 ? 1.2 - ((age - 0.1) / 0.08) * 0.2
+      : 1.0;
+
+    const isCrit = ft.text.includes('CRIT');
+    const isHeal = ft.color === '#22c55e' || ft.color === '#6ec96e';
+
+    ctx.save();
+    ctx.translate(ft.x, ft.y);
+    ctx.scale(popScale, popScale);
+    ctx.globalAlpha = alpha;
     ctx.textAlign = 'center';
-    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-    ctx.lineWidth = 3;
+    ctx.font = `bold ${isCrit ? Math.ceil(ft.size * 1.35) : ft.size}px 'PixelGothic', 'Courier New', monospace`;
+
+    if (isCrit || ft.size >= 16) {
+      ctx.shadowColor = isCrit ? '#ffd700' : ft.color;
+      ctx.shadowBlur = isCrit ? 14 : 6;
+    }
+
+    ctx.strokeStyle = isHeal ? 'rgba(0,30,0,0.9)' : 'rgba(0,0,0,0.9)';
+    ctx.lineWidth = isCrit ? 4 : 3;
     ctx.lineJoin = 'round';
-    ctx.strokeText(ft.text, ft.x, ft.y);
+    ctx.strokeText(ft.text, 0, 0);
     ctx.fillStyle = ft.color;
-    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.fillText(ft.text, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.restore();
     ctx.globalAlpha = 1;
   }
 

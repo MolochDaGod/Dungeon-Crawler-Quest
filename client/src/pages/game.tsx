@@ -20,6 +20,7 @@ import {
   loadKeybindings, matchesKeyDown, KeybindAction, KeyBind
 } from '@/game/keybindings';
 import { createCombatActor, CombatVFX, COMBAT_ACTION_NAMES, COMBAT_HOTKEY_LEGEND } from '@/game/combat-machine';
+import { ensurePixelGothicLoaded, EVENT_BANNERS } from '@/game/combat-popups';
 import { initGLBSprites } from '@/game/glb-sprites';
 import { MouseTargetingManager } from '@/game/mouse-targeting';
 import { PhysicsWorld, createPhysicsWorld } from '@/game/physics';
@@ -176,6 +177,8 @@ export default function GamePage() {
   const [combatAction, setCombatAction] = useState('');
   const [showSkillTree, setShowSkillTree] = useState(false);
   const [skillLoadout, setSkillLoadout] = useState<MobaSkillLoadout | null>(null);
+  const [eventBanner, setEventBanner] = useState<string | null>(null);
+  const bannerDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
   const team = parseInt(localStorage.getItem('grudge_team') || '0');
@@ -188,6 +191,9 @@ export default function GamePage() {
 
     const state = createInitialState(heroId, team);
     stateRef.current = state;
+
+    // Load PixelGothic for canvas damage numbers + combo text
+    ensurePixelGothicLoaded();
 
     // Load GLB effect sprites in background
     initGLBSprites('/effects/');
@@ -331,7 +337,14 @@ export default function GamePage() {
       hudTimer += dt;
       if (hudTimer > 0.1) {
         hudTimer = 0;
-        setHud(getHudState(state));
+        const newHud = getHudState(state);
+        setHud(newHud);
+        // Fire event banner on game over
+        if (newHud.gameOver && !bannerDismissRef.current) {
+          const won = state.winner === state.heroes[state.playerHeroIndex]?.team;
+          setEventBanner(won ? EVENT_BANNERS.victory : EVENT_BANNERS.gameOver);
+          bannerDismissRef.current = setTimeout(() => setEventBanner(null), 4500);
+        }
         if (combatActor) {
           const snap = combatActor.getSnapshot();
           setCombatAction(snap.context.currentAction);
@@ -605,6 +618,28 @@ export default function GamePage() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="game-page">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ cursor: 'none' }} data-testid="canvas-game" />
+
+      {/* ═ Craftpix animated event banner overlay ═ */}
+      {eventBanner && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 10000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
+            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.5), rgba(0,0,0,0.85))',
+          }}
+        >
+          <img
+            src={eventBanner}
+            alt="game event"
+            style={{
+              maxWidth: '72vw', maxHeight: '55vh',
+              imageRendering: 'pixelated',
+              filter: 'drop-shadow(0 0 40px rgba(0,0,0,0.95))',
+            }}
+          />
+        </div>
+      )}
 
       {hud && (
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 9999, fontFamily: "'Oxanium', sans-serif" }}>

@@ -24,6 +24,7 @@ import MainPanel from '@/components/MainPanel';
 import NpcDialog from '@/components/NpcDialog';
 import { IntroSequence, shouldShowIntro } from '@/components/IntroSequence';
 import { ensurePlayerHeroLoaded, getPlayerHeroSync } from '@/game/player-account';
+import { ensurePixelGothicLoaded, EVENT_BANNERS } from '@/game/combat-popups';
 
 export default function OpenWorldPage() {
   const [, setLocation] = useLocation();
@@ -40,7 +41,9 @@ export default function OpenWorldPage() {
   const [showIntro, setShowIntro] = useState(() => shouldShowIntro());
   const zoneBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uiBlocksInputRef = useRef(false);
-  const [heroReady, setHeroReady] = useState(false);
+  const [heroReady, setHeroReady]       = useState(false);
+  const [eventBanner, setEventBanner]   = useState<string | null>(null);
+  const bannerDismissRef                = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Ensure player character is loaded into HEROES[] before game boot
   useEffect(() => {
@@ -68,6 +71,9 @@ export default function OpenWorldPage() {
 
     const renderer = new OpenWorldRenderer(canvas);
     rendererRef.current = renderer;
+
+    // Load PixelGothic font for canvas text (damage numbers, combo, etc.)
+    ensurePixelGothicLoaded();
 
     // Initialize GLB effect sprites in background
     initGLBSprites('/effects/');
@@ -107,6 +113,13 @@ export default function OpenWorldPage() {
           setZoneBanner(hudState.zoneName);
           if (zoneBannerTimer.current) clearTimeout(zoneBannerTimer.current);
           zoneBannerTimer.current = setTimeout(() => setZoneBanner(null), 3000);
+        }
+
+        // Event banners (game over, victory)
+        if (hudState.gameOver && eventBanner === null) {
+          setEventBanner(EVENT_BANNERS.youLose);
+          if (bannerDismissRef.current) clearTimeout(bannerDismissRef.current);
+          bannerDismissRef.current = setTimeout(() => setEventBanner(null), 4000);
         }
 
         // Progress events → notifications
@@ -262,6 +275,38 @@ export default function OpenWorldPage() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="open-world-page">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" data-testid="canvas-openworld" />
+
+      {/* ═ Event banner overlay (animated GIF from Craftpix) ═ */}
+      {eventBanner && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 10000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
+            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.55), rgba(0,0,0,0.85))',
+          }}
+        >
+          <img
+            src={eventBanner}
+            alt="game event"
+            style={{
+              maxWidth: '80vw', maxHeight: '60vh',
+              imageRendering: 'pixelated',
+              filter: 'drop-shadow(0 0 30px rgba(0,0,0,0.9))',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute', bottom: '20%',
+              fontSize: 13, color: 'rgba(255,255,255,0.45)',
+              fontFamily: "'PixelGothic', 'Courier New', monospace",
+              letterSpacing: 2,
+            }}
+          >
+            Press any key to continue
+          </div>
+        </div>
+      )}
 
       {/* Intro sequence for new players */}
       {showIntro && heroData && (
