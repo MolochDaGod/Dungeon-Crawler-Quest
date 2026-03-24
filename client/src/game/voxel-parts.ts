@@ -508,6 +508,156 @@ export function attackRigPose(t: number): HeroRigPose {
   return p;
 }
 
+// ─── Pose Interpolation ──────────────────────────────────────────────────────
+
+/** Smoothly interpolate between two rig poses */
+export function lerpRigPose(a: HeroRigPose, b: HeroRigPose, t: number): HeroRigPose {
+  const lerp = (x: number, y: number) => x + (y - x) * t;
+  return Object.fromEntries(
+    ALL_PARTS.map(id => [id, {
+      rotX:  lerp(a[id].rotX,  b[id].rotX),
+      rotY:  lerp(a[id].rotY,  b[id].rotY),
+      scale: lerp(a[id].scale, b[id].scale),
+    }])
+  ) as HeroRigPose;
+}
+
+// ─── More Pose States ─────────────────────────────────────────────────────────
+
+/** Dodge roll — body ducked, arms back, legs spread */
+export function dodgeRigPose(t: number): HeroRigPose {
+  const p = defaultRigPose();
+  const roll = Math.min(1, t * 6);
+  const lean = Math.sin(roll * Math.PI) * 40;
+  p.torso.rotX          = -lean * 0.5;
+  p.head.rotX           = lean * 0.3;
+  p.leftUpperArm.rotX   = lean * 0.8;
+  p.rightUpperArm.rotX  = lean * 0.8;
+  p.leftForearm.rotX    = 20;
+  p.rightForearm.rotX   = 20;
+  p.leftThigh.rotX      = -lean * 0.4;
+  p.rightThigh.rotX     =  lean * 0.6;
+  p.leftShin.rotX       =  Math.max(0, lean) * 0.4;
+  p.rightShin.rotX      =  Math.max(0, lean) * 0.3;
+  return p;
+}
+
+/** Defensive block — shield up, crouched */
+export function blockRigPose(): HeroRigPose {
+  const p = defaultRigPose();
+  p.torso.rotX          = -8;
+  p.head.rotX           =  5;
+  p.leftUpperArm.rotX   = -60;
+  p.leftForearm.rotX    = -40;
+  p.rightUpperArm.rotX  =  15;
+  p.rightForearm.rotX   =  10;
+  p.leftThigh.rotX      = -10;
+  p.rightThigh.rotX     =  10;
+  p.leftShin.rotX       =  8;
+  p.rightShin.rotX      =  5;
+  return p;
+}
+
+/** Death fall — body toppling backward */
+export function deathRigPose(t: number): HeroRigPose {
+  const p = defaultRigPose();
+  const fall = Math.min(1, t * 2.5);
+  const ease = 1 - Math.pow(1 - fall, 3); // ease-in-cubic
+  p.torso.rotX          =  ease * 60;
+  p.head.rotX           = -ease * 20;
+  p.leftUpperArm.rotX   =  ease * 40;
+  p.rightUpperArm.rotX  =  ease * 30;
+  p.leftForearm.rotX    =  ease * 20;
+  p.rightForearm.rotX   = -ease * 15;
+  p.leftThigh.rotX      =  ease * 20;
+  p.rightThigh.rotX     =  ease * 15;
+  p.leftShin.rotX       = -ease * 10;
+  p.rightShin.rotX      = -ease * 8;
+  return p;
+}
+
+/** Mage casting / ability — arms raised, channeling */
+export function castRigPose(t: number): HeroRigPose {
+  const p = defaultRigPose();
+  const channel = Math.min(1, t * 3);
+  const pulse = Math.sin(t * 8) * 0.15 + 0.85; // oscillate slightly
+  p.leftUpperArm.rotX   = -70 * channel;
+  p.leftForearm.rotX    = -40 * channel;
+  p.rightUpperArm.rotX  = -65 * channel;
+  p.rightForearm.rotX   = -35 * channel;
+  p.leftUpperArm.scale  = 0.95 + pulse * 0.1;
+  p.rightUpperArm.scale = 0.95 + pulse * 0.1;
+  p.head.rotX           = -15 * channel;
+  p.torso.rotX          = -8 * channel;
+  return p;
+}
+
+/** Combo finisher — spinning overhand slam */
+export function comboRigPose(t: number): HeroRigPose {
+  const p = defaultRigPose();
+  const spin = Math.sin(t * Math.PI * 2.5) * 45;
+  const slam = Math.max(0, Math.sin(t * Math.PI * 1.5 - 0.5)) * 60;
+  p.rightUpperArm.rotX  = -30 + slam + spin * 0.5;
+  p.rightForearm.rotX   = -20 + slam * 0.6;
+  p.leftUpperArm.rotX   =  20 + spin * 0.3;
+  p.leftForearm.rotX    =  10;
+  p.torso.rotX          = -15 + slam * 0.3;
+  p.torso.rotY          = spin * 0.4;
+  p.leftThigh.rotX      = spin * 0.3;
+  p.rightThigh.rotX     = -spin * 0.3;
+  return p;
+}
+
+/** Lunge / dash attack — body fully extended forward */
+export function lungeRigPose(t: number): HeroRigPose {
+  const p = defaultRigPose();
+  const ext = Math.sin(Math.min(1, t * 5) * Math.PI) * 0.9 + 0.1;
+  p.torso.rotX          = -25 * ext;
+  p.head.rotX           = -10 * ext;
+  p.rightUpperArm.rotX  = -80 * ext;
+  p.rightForearm.rotX   = -30 * ext;
+  p.leftUpperArm.rotX   =  30 * ext;
+  p.leftForearm.rotX    =  15 * ext;
+  p.leftThigh.rotX      = -40 * ext;
+  p.leftShin.rotX       =  20 * ext;
+  p.rightThigh.rotX     =  25 * ext;
+  p.rightShin.rotX      = -10 * ext;
+  return p;
+}
+
+/**
+ * Master pose dispatcher — maps animState strings (same as the legacy system)
+ * to rig poses driven by time t.
+ * t is the raw animation timer (seconds, monotonic).
+ */
+export function getRigPoseForState(animState: string, t: number): HeroRigPose {
+  // Normalize t to a 0-1 cycle for cyclic anims
+  const cycle = (period: number) => (t % period) / period;
+
+  switch (animState) {
+    case 'idle': {
+      // Idle breathing: very gentle body sway
+      const p = idleRigPose();
+      const breath = Math.sin(t * 1.4) * 4;
+      p.torso.rotX         = breath * 0.3;
+      p.head.rotX          = -breath * 0.2;
+      p.leftUpperArm.rotX  += breath * 0.5;
+      p.rightUpperArm.rotX -= breath * 0.5;
+      return p;
+    }
+    case 'walk':         return walkRigPose(cycle(0.7));
+    case 'attack':       return attackRigPose(cycle(0.6));
+    case 'combo_finisher': return comboRigPose(cycle(0.8));
+    case 'ability':      return castRigPose(Math.min(t, 1));
+    case 'dodge':        return dodgeRigPose(cycle(0.4));
+    case 'block':        return blockRigPose();
+    case 'death':        return deathRigPose(Math.min(t, 1));
+    case 'lunge_slash':  return lungeRigPose(cycle(0.5));
+    case 'dash_attack':  return lerpRigPose(lungeRigPose(0.7), attackRigPose(cycle(0.4)), 0.5);
+    default:             return idleRigPose();
+  }
+}
+
 // ─── Mixamo Mapping ───────────────────────────────────────────────────────────
 
 /**

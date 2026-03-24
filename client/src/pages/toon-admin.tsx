@@ -5,7 +5,7 @@ import { SpriteEffectSystem, SpriteEffectType } from "@/game/sprite-effects";
 import { HEROES, RACE_COLORS, CLASS_COLORS } from "@/game/types";
 import {
   buildHeroRig, defaultRigPose, idleRigPose, walkRigPose, attackRigPose,
-  mixamoToRigPose, ALL_PARTS,
+  mixamoToRigPose, getRigPoseForState, lerpRigPose, ALL_PARTS,
   type HeroRig, type HeroRigPose, type PartId,
 } from "@/game/voxel-parts";
 import { Button } from "@/components/ui/button";
@@ -120,11 +120,16 @@ export default function ToonAdminPage() {
 
   // ── Rig state
   const [rigMode,    setRigMode]    = useState(false);
+  const [rigLive,    setRigLive]    = useState(true);  // auto-drive pose from animState
   const [rigPose,    setRigPose]    = useState<HeroRigPose>(idleRigPose());
+  const [mixamoJson, setMixamoJson] = useState('');
+  const [mixamoErr,  setMixamoErr]  = useState('');
   const rigPoseRef  = useRef<HeroRigPose>(idleRigPose());
   const rigRef      = useRef<HeroRig | null>(null);
   const rigModeRef  = useRef(false);
+  const rigLiveRef  = useRef(true);
   useEffect(() => { rigModeRef.current  = rigMode;  }, [rigMode]);
+  useEffect(() => { rigLiveRef.current  = rigLive;  }, [rigLive]);
   useEffect(() => { rigPoseRef.current  = rigPose;  }, [rigPose]);
 
   // ── Gizmo state (held in refs for the render loop)
@@ -334,14 +339,17 @@ export default function ToonAdminPage() {
     if (tab === "heroes") {
       if (rigModeRef.current) {
         // ── Rig mode: part-based rig with per-joint rotation
-        if (!rigRef.current ||
-            rigRef.current.torso.id !== 'torso') { // rebuild when race/class changes
+        if (!rigRef.current) {
           rigRef.current = buildHeroRig(raceRef.current, heroClassRef.current);
         }
+        // Live animation: compute pose from animState each frame
+        const activePose = rigLiveRef.current
+          ? getRigPoseForState(animStateRef.current, t)
+          : rigPoseRef.current;
         const RIG_SCALE = 2.2;
         ctx.translate(cx, cy);
         ctx.scale(RIG_SCALE, RIG_SCALE);
-        vr.drawHeroVoxelRig(ctx, 0, 0, rigRef.current, rigPoseRef.current, facingRef.current, 1);
+        vr.drawHeroVoxelRig(ctx, 0, 0, rigRef.current, activePose, facingRef.current, 1);
       } else {
         // ── Legacy mode: monolithic voxel model
         const SCALE = 3.5;
@@ -716,6 +724,32 @@ export default function ToonAdminPage() {
                 {/* ── RIG MODE PANEL ── */}
                 {rigMode && (
                   <>
+                    {/* Live / Manual toggle */}
+                    <div className="flex items-center justify-between bg-black/20 rounded px-2 py-1.5 mb-1">
+                      <span className="text-[10px] text-gray-400">Animation drive</span>
+                      <div className="flex gap-1">
+                        <button
+                          className={`text-[10px] px-2 py-0.5 rounded border transition-all ${
+                            rigLive ? "bg-green-900/50 text-green-300 border-green-700" : "bg-black/40 text-gray-500 border-gray-700/50"}`}
+                          onClick={() => setRigLive(true)}>
+                          Live
+                        </button>
+                        <button
+                          className={`text-[10px] px-2 py-0.5 rounded border transition-all ${
+                            !rigLive ? "bg-amber-900/50 text-amber-300 border-amber-700" : "bg-black/40 text-gray-500 border-gray-700/50"}`}
+                          onClick={() => setRigLive(false)}>
+                          Manual
+                        </button>
+                      </div>
+                    </div>
+
+                    {rigLive && (
+                      <div className="bg-black/20 rounded px-2 py-1 text-[9px] text-gray-500 font-mono">
+                        Pose driven by anim state buttons above.
+                        Switch to <span className="text-amber-500">Manual</span> to use sliders.
+                      </div>
+                    )}
+
                     <SectionHeader title="Preset Poses" />
                     <div className="grid grid-cols-3 gap-1.5">
                       {([
@@ -772,6 +806,40 @@ export default function ToonAdminPage() {
                         <Copy className="w-3 h-3 mr-1" /> Export
                       </Button>
                     </div>
+
+                    {/* Mixamo JSON importer */}
+                    <SectionHeader title="Mixamo Import" />
+                    <div className="text-[9px] text-gray-500 mb-1">
+                      Paste a <span className="text-cyan-500">MixamoBoneFrame</span> JSON to preview:
+                    </div>
+                    <textarea
+                      rows={4}
+                      className="w-full bg-black/40 border border-gray-700 rounded p-1.5 text-[9px] font-mono text-gray-300 resize-none"
+                      placeholder='{"LeftArm": 45, "RightArm": -30, "LeftUpLeg": 20}'
+                      value={mixamoJson}
+                      onChange={e => setMixamoJson(e.target.value)}
+                    />
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" className="flex-1 text-[10px] h-7"
+                        onClick={() => {
+                          try {
+                            const frame = JSON.parse(mixamoJson);
+                            const pose = mixamoToRigPose(frame);
+                            setRigPose(pose);
+                            setRigLive(false);
+                            setMixamoErr('');
+                          } catch (e) {
+                            setMixamoErr('Invalid JSON');
+                          }
+                        }}>
+                        Apply
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-[10px] h-7 text-gray-500"
+                        onClick={() => { setMixamoJson(''); setMixamoErr(''); }}>
+                        Clear
+                      </Button>
+                    </div>
+                    {mixamoErr && <div className="text-[9px] text-red-400">{mixamoErr}</div>}
 
                     <div className="bg-black/30 rounded p-2 text-[9px] text-gray-600 font-mono space-y-0.5">
                       <div className="text-cyan-700 font-bold mb-1">Mixamo bone mapping:</div>
