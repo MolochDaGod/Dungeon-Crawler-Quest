@@ -1,4 +1,8 @@
 import { getHeroWeapon, getWeaponRenderType, type WeaponType } from './types';
+import {
+  buildHeroRig, defaultRigPose, getRigPartRenderOrder, getPartRenderOffset,
+  type HeroRig, type HeroRigPose, type PartId as RigPartId,
+} from './voxel-parts';
 import { type EquipmentAppearance, getEffectiveArmorColors, getEffectiveBootColor } from './voxel-equipment';
 import {
   drawCastingCircle, drawWeaponTrail, drawAuraEffect,
@@ -3783,6 +3787,53 @@ export class VoxelRenderer {
     ctx.fillRect(x + width - 1, y, 1, height);
     ctx.fillRect(x, y, width, 1);
     ctx.fillRect(x, y + height - 1, width, 1);
+  }
+
+  /**
+   * Render a hero using the part-based rig system.
+   * Each section (head, torso, arms, legs) is drawn separately with its own
+   * rotation applied via ctx.rotate() around the joint pivot.
+   *
+   * @param cx   Character center X (screen, within current transform)
+   * @param cy   Character ground Y (feet level)
+   * @param rig  Pre-built rig (from buildHeroRig) — reuse across frames
+   * @param pose Joint rotation angles (from defaultRigPose / walkRigPose etc)
+   * @param cubeSize Voxel cube size — default 1, scale via ctx.scale externally
+   */
+  drawHeroVoxelRig(
+    ctx: CanvasRenderingContext2D,
+    cx: number, cy: number,
+    rig: HeroRig,
+    pose: HeroRigPose,
+    facing: number,
+    cubeSize: number = 1
+  ) {
+    const dir8 = facingToDir(facing);
+    const dir  = dir8 < 4 ? dir8 : dirToCardinal(dir8);
+    const order = getRigPartRenderOrder(dir);
+
+    for (const partId of order) {
+      const part = rig[partId as RigPartId];
+      const transform = pose[partId as RigPartId];
+      if (!part || !transform) continue;
+
+      // Attachment point on screen (relative to character root)
+      const ax = cx + part.attachX * cubeSize;
+      const ay = cy - part.attachY * cubeSize; // attachY is upward
+
+      // Compute model render offset so pivot voxel is at (0,0) in local space
+      const [offX, offY] = getPartRenderOffset(part, cubeSize);
+
+      const rotRad = transform.rotX * Math.PI / 180;
+      const sc = transform.scale ?? 1;
+
+      ctx.save();
+      ctx.translate(ax, ay);
+      if (Math.abs(rotRad) > 0.001) ctx.rotate(rotRad);
+      if (sc !== 1) ctx.scale(sc, sc);
+      this.renderVoxelModel(ctx, offX, offY, part.model, cubeSize, facing);
+      ctx.restore();
+    }
   }
 
   drawHeroVoxelCustomPose(

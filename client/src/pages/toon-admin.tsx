@@ -3,6 +3,11 @@ import { useLocation } from "wouter";
 import { VoxelRenderer } from "@/game/voxel";
 import { SpriteEffectSystem, SpriteEffectType } from "@/game/sprite-effects";
 import { HEROES, RACE_COLORS, CLASS_COLORS } from "@/game/types";
+import {
+  buildHeroRig, defaultRigPose, idleRigPose, walkRigPose, attackRigPose,
+  mixamoToRigPose, ALL_PARTS,
+  type HeroRig, type HeroRigPose, type PartId,
+} from "@/game/voxel-parts";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -12,7 +17,7 @@ import {
   ArrowLeft, Move, RotateCw, Maximize2, Eye, EyeOff,
   Play, Pause, RotateCcw, SkipForward, SkipBack,
   Copy, User, Footprints, Bug, Castle, TreePine,
-  Bird, Sparkles, Crosshair,
+  Bird, Sparkles, Crosshair, Cpu,
 } from "lucide-react";
 
 // ─────────────── Constants ───────────────
@@ -113,6 +118,15 @@ export default function ToonAdminPage() {
   const playRef   = useRef(true);
   const speedRef  = useRef(1);
 
+  // ── Rig state
+  const [rigMode,    setRigMode]    = useState(false);
+  const [rigPose,    setRigPose]    = useState<HeroRigPose>(idleRigPose());
+  const rigPoseRef  = useRef<HeroRigPose>(idleRigPose());
+  const rigRef      = useRef<HeroRig | null>(null);
+  const rigModeRef  = useRef(false);
+  useEffect(() => { rigModeRef.current  = rigMode;  }, [rigMode]);
+  useEffect(() => { rigPoseRef.current  = rigPose;  }, [rigPose]);
+
   // ── Gizmo state (held in refs for the render loop)
   const selectedPartRef = useRef<BodyPart | null>(null);
   const gizmoModeRef    = useRef<GizmoMode>("move");
@@ -166,8 +180,8 @@ export default function ToonAdminPage() {
   useEffect(() => { poseRef.current    = pose;      }, [pose]);
   useEffect(() => { facingRef.current  = facing;    }, [facing]);
   useEffect(() => { animStateRef.current = animState;}, [animState]);
-  useEffect(() => { raceRef.current    = race;      }, [race]);
-  useEffect(() => { heroClassRef.current = heroClass;}, [heroClass]);
+  useEffect(() => { raceRef.current    = race;      rigRef.current = null; }, [race]);
+  useEffect(() => { heroClassRef.current = heroClass; rigRef.current = null; }, [heroClass]);
 
   const activeTabRef = useRef<TabId>("heroes");
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
@@ -318,25 +332,35 @@ export default function ToonAdminPage() {
     // ── Entity rendering
     ctx.save();
     if (tab === "heroes") {
-      const SCALE = 3.5;
-      ctx.translate(cx, cy);
-      ctx.scale(SCALE, SCALE);
-      const p = poseRef.current;
-      const heroName = HEROES.find(h => h.race === raceRef.current && h.heroClass === heroClassRef.current)?.name || "Hero";
-      // Check if any part has been offset from default
-      const hasOffsets = BODY_PARTS.some(part => p[part].ox !== 0 || p[part].oy !== 0 || p[part].oz !== 0 || p[part].rotation !== 0 || p[part].scale !== 1);
-      if (hasOffsets) {
-        // Pose-edit mode: static custom pose with user offsets applied
-        const fullPose: any = { weaponGlow: p.weapon.scale > 1 ? 0.8 : 0 };
-        for (const part of BODY_PARTS) {
-          fullPose[part] = { ox: p[part].ox, oy: p[part].oy, oz: p[part].oz };
+      if (rigModeRef.current) {
+        // ── Rig mode: part-based rig with per-joint rotation
+        if (!rigRef.current ||
+            rigRef.current.torso.id !== 'torso') { // rebuild when race/class changes
+          rigRef.current = buildHeroRig(raceRef.current, heroClassRef.current);
         }
-        vr.drawHeroVoxelCustomPose(ctx, 0, 0, raceRef.current, heroClassRef.current, facingRef.current, fullPose, heroName);
+        const RIG_SCALE = 2.2;
+        ctx.translate(cx, cy);
+        ctx.scale(RIG_SCALE, RIG_SCALE);
+        vr.drawHeroVoxelRig(ctx, 0, 0, rigRef.current, rigPoseRef.current, facingRef.current, 1);
       } else {
-        // Animation preview mode: full animation plays with selected state
-        const raceColor = RACE_COLORS[raceRef.current] || "#94a3b8";
-        const classColor = CLASS_COLORS[heroClassRef.current] || "#ef4444";
-        vr.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroClassRef.current, facingRef.current, animStateRef.current, t, raceRef.current, heroName);
+        // ── Legacy mode: monolithic voxel model
+        const SCALE = 3.5;
+        ctx.translate(cx, cy);
+        ctx.scale(SCALE, SCALE);
+        const p = poseRef.current;
+        const heroName = HEROES.find(h => h.race === raceRef.current && h.heroClass === heroClassRef.current)?.name || "Hero";
+        const hasOffsets = BODY_PARTS.some(part => p[part].ox !== 0 || p[part].oy !== 0 || p[part].oz !== 0 || p[part].rotation !== 0 || p[part].scale !== 1);
+        if (hasOffsets) {
+          const fullPose: any = { weaponGlow: p.weapon.scale > 1 ? 0.8 : 0 };
+          for (const part of BODY_PARTS) {
+            fullPose[part] = { ox: p[part].ox, oy: p[part].oy, oz: p[part].oz };
+          }
+          vr.drawHeroVoxelCustomPose(ctx, 0, 0, raceRef.current, heroClassRef.current, facingRef.current, fullPose, heroName);
+        } else {
+          const raceColor = RACE_COLORS[raceRef.current] || "#94a3b8";
+          const classColor = CLASS_COLORS[heroClassRef.current] || "#ef4444";
+          vr.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroClassRef.current, facingRef.current, animStateRef.current, t, raceRef.current, heroName);
+        }
       }
     } else if (tab === "minions") {
       const SCALE = 4.0;
@@ -571,6 +595,13 @@ export default function ToonAdminPage() {
                   onClick={resetPose}>
                   <Crosshair className="w-4 h-4" />
                 </button>
+                <div className="w-px bg-gray-700/50 mx-0.5" />
+                <button title="Rig Mode — part-based rig with joint rotations"
+                  className={`w-8 h-8 rounded flex items-center justify-center transition-all border
+                    ${rigMode ? "bg-cyan-900/60 text-cyan-400 border-cyan-600" : "bg-black/60 text-gray-500 border-gray-700/50 hover:text-gray-200"}`}
+                  onClick={() => { setRigMode(v => !v); rigRef.current = null; }}>
+                  <Cpu className="w-4 h-4" />
+                </button>
               </div>
             )}
 
@@ -667,6 +698,91 @@ export default function ToonAdminPage() {
                     </Button>
                   ))}
                 </div>
+
+                {/* ── Rig mode toggle in sidebar */}
+                <div className="flex items-center justify-between bg-black/30 rounded px-2 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="text-xs text-gray-300">Rig Mode</span>
+                  </div>
+                  <button
+                    className={`text-[10px] px-2 py-0.5 rounded border transition-all ${
+                      rigMode ? "bg-cyan-900/50 text-cyan-300 border-cyan-700" : "bg-black/40 text-gray-500 border-gray-700/50"}`}
+                    onClick={() => { setRigMode(v => !v); rigRef.current = null; }}>
+                    {rigMode ? "ON" : "OFF"}
+                  </button>
+                </div>
+
+                {/* ── RIG MODE PANEL ── */}
+                {rigMode && (
+                  <>
+                    <SectionHeader title="Preset Poses" />
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {([
+                        { label: "Idle",   fn: idleRigPose   },
+                        { label: "Walk 0", fn: () => walkRigPose(0)    },
+                        { label: "Walk ¼", fn: () => walkRigPose(0.25) },
+                        { label: "Walk ½", fn: () => walkRigPose(0.5)  },
+                        { label: "Attack", fn: () => attackRigPose(0.4)},
+                        { label: "Reset",  fn: defaultRigPose },
+                      ] as { label: string; fn: () => HeroRigPose }[]).map(({ label, fn }) => (
+                        <Button key={label} size="sm" variant="outline" className="text-[10px] h-7"
+                          onClick={() => { setRigPose(fn()); rigRef.current = null; }}>
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <SectionHeader title="Joint Rotations" />
+                    <div className="space-y-1">
+                      {([
+                        { id: 'torso',         label: 'Torso',       color: '#f59e0b' },
+                        { id: 'head',          label: 'Head',        color: '#ef4444' },
+                        { id: 'leftUpperArm',  label: 'L.Shoulder',  color: '#22c55e' },
+                        { id: 'leftForearm',   label: 'L.Elbow',     color: '#10b981' },
+                        { id: 'rightUpperArm', label: 'R.Shoulder',  color: '#3b82f6' },
+                        { id: 'rightForearm',  label: 'R.Elbow',     color: '#6366f1' },
+                        { id: 'leftThigh',     label: 'L.Hip',       color: '#a855f7' },
+                        { id: 'leftShin',      label: 'L.Knee',      color: '#8b5cf6' },
+                        { id: 'rightThigh',    label: 'R.Hip',       color: '#ec4899' },
+                        { id: 'rightShin',     label: 'R.Knee',      color: '#f43f5e' },
+                      ] as { id: PartId; label: string; color: string }[]).map(({ id, label, color }) => (
+                        <div key={id} className="space-y-0.5">
+                          <div className="flex justify-between text-[9px]">
+                            <span className="flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: color }} />
+                              {label}
+                            </span>
+                            <span className="text-amber-400 font-mono">{rigPose[id]?.rotX.toFixed(0)}°</span>
+                          </div>
+                          <Slider min={-180} max={180} step={1}
+                            value={[rigPose[id]?.rotX ?? 0]}
+                            onValueChange={([v]) => setRigPose(prev => ({ ...prev, [id]: { ...prev[id], rotX: v } }))} />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-1.5 pt-1">
+                      <Button variant="outline" size="sm" className="flex-1 text-[10px] h-7"
+                        onClick={() => { setRigPose(defaultRigPose()); rigRef.current = null; }}>
+                        <RotateCcw className="w-3 h-3 mr-1" /> Reset
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-1 text-[10px] h-7"
+                        onClick={() => navigator.clipboard.writeText(JSON.stringify(rigPose, null, 2))}>
+                        <Copy className="w-3 h-3 mr-1" /> Export
+                      </Button>
+                    </div>
+
+                    <div className="bg-black/30 rounded p-2 text-[9px] text-gray-600 font-mono space-y-0.5">
+                      <div className="text-cyan-700 font-bold mb-1">Mixamo bone mapping:</div>
+                      <div>LeftArm → L.Shoulder</div>
+                      <div>LeftForeArm → L.Elbow</div>
+                      <div>LeftUpLeg → L.Hip</div>
+                      <div>LeftLeg → L.Knee</div>
+                      <div>RightArm → R.Shoulder (inv)</div>
+                    </div>
+                  </>
+                )}
 
                 <SectionHeader title="Body Part Poses" />
                 <div className="space-y-1.5">
