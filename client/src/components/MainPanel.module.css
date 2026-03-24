@@ -511,6 +511,54 @@
 }
 .profFill { height: 100%; border-radius: 2px; transition: width .4s; }
 
+/* ═══ CONTEXT MENU ═══ */
+.ctxMenu {
+  position: fixed; z-index: 100000;
+  background: linear-gradient(170deg, #1a120c, #110c07);
+  border: 1px solid #c9950a; border-radius: 6px;
+  padding: 4px 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,.9), 0 0 12px rgba(201,149,10,.15);
+  min-width: 155px;
+  font-family: 'Crimson Text', Georgia, serif;
+}
+.ctxItemName {
+  padding: 6px 14px 4px;
+  font-family: 'Cinzel', serif; font-size: 11px;
+  color: #d4a400; letter-spacing: .5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;
+}
+.ctxItem {
+  padding: 7px 14px;
+  font-size: 12px; color: #f5e2c1;
+  cursor: pointer; display: flex; align-items: center; gap: 8px;
+  transition: .1s; white-space: nowrap;
+}
+.ctxItem:hover { background: rgba(212,164,0,.15); color: #ffd56a; }
+.ctxItemDanger { color: #d45050; }
+.ctxItemDanger:hover { background: rgba(200,40,40,.15) !important; color: #ff6060 !important; }
+.ctxSep { height: 1px; background: rgba(201,149,10,.2); margin: 3px 0; }
+
+/* Tooltip fixed overlay */
+.ttFixed {
+  position: fixed; z-index: 99998; pointer-events: none;
+}
+
+/* Inventory drag-over state */
+.invCellOver {
+  border-color: #d4a400 !important;
+  background: rgba(212,164,0,.08) !important;
+  box-shadow: 0 0 8px rgba(212,164,0,.2);
+}
+
+/* Inventory fill/test button */
+.invFillBtn {
+  font-size: 9px; font-family: 'Cinzel', serif; letter-spacing: .5px;
+  text-transform: uppercase; color: #9b7d52;
+  background: none; border: 1px solid #3a2a1a; border-radius: 3px;
+  padding: 2px 7px; cursor: pointer; transition: .15s;
+}
+.invFillBtn:hover { color: #d4a400; border-color: #c9950a; }
+
 /* ── Responsive ── */
 @media (max-width: 1100px) {
   .leftCol { display: none; }
