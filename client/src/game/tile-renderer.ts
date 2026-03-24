@@ -1,68 +1,40 @@
 /**
  * Tile Map Renderer — Top-Down 2D Tile Rendering
- * Renders terrain, roads, decorations, and water using sprite tilesets.
- * Uses camera culling and cached tile grids for performance.
+ * Renders terrain, roads, buildings, decorations, water, and shadows
+ * using tropical medieval city tilesets (256×256) + AI terrain placement.
  *
- * Road tilesets: public/assets/sprites/roads/PNG_Tiled/
- * Ground/biome:  public/assets/sprites/roads/PNG_Tiled/Ground_grass.png
- * Zone tilesets:  tilesets.ts (grassland, swamp, dungeon, ruins)
+ * Asset packs:
+ *   tropical-city  — land, road, buildings, decor (256px tiles)
+ *   house-constructor — pixel house tiles (32px)
+ *   castle-defense — field tiles (32px)
+ *   river-creatures — water zone enemies
+ *
+ * Uses camera culling and cached tile grids for performance.
  */
 
-import { ZONE_ROADS, RoadSegment, ISLAND_ZONES, ZoneDef, ZONE_BUILDINGS } from './zones';
-import { BIOME_TILESETS, BiomeTileset } from './tilesets';
+import { ISLAND_ZONES, ZoneDef } from './zones';
+import {
+  getZonePlacement, invalidatePlacementCache,
+  PlacedLandTile, PlacedRoadTile, PlacedBuilding, PlacedDecor,
+  PLACE_TILE, getOceanColor,
+} from './terrain-placer';
 
 // ── Constants ──────────────────────────────────────────────────
 
-const ROAD_TILE = 16;           // road tileset native tile size (px)
-const RENDER_TILE = 40;         // world-space tile size (matches TILE_SIZE in open-world.ts)
-const ROAD_WIDTH = 3;           // road width in tiles (3 tiles wide = 120px world)
-const ROAD_DRAW_SCALE = RENDER_TILE / ROAD_TILE;
+const RENDER_TILE = PLACE_TILE; // 40px world-space tiles
 
-// ── Road Tile Indices (from Road1_grass.png 240×416 = 15c×26r at 16px) ──
-// The tileset is organized as auto-tile pieces. Key tile positions:
-// Row 0: end-caps (circle variants)
-// Row 1-2: corner pieces
-// Row 3-5: straight pieces, T-junctions
-// Row 6-8: cross-roads, large pieces
-// We'll use simplified tile IDs mapped to source rects.
-
-interface TileRect {
-  sx: number; sy: number; sw: number; sh: number;
-}
-
-// Road tile atlas positions — mapped from visual inspection of Road1_grass.png (240×416)
-// The sheet has variable-sized pieces, not a uniform grid. Key usable regions:
-const ROAD_TILES = {
-  // Row 0: Circle end-caps (~48×48 each, 4 across)
-  dot:       { sx: 0,   sy: 0,   sw: 48, sh: 48 },
-  // Row 4-5: Straight horizontal road section (large piece at bottom-left)
-  hStraight: { sx: 0,   sy: 336, sw: 80, sh: 32 },
-  // Row 3-4: Straight vertical road section (left side)
-  vStraight: { sx: 0,   sy: 208, sw: 32, sh: 80 },
-  // Row 2: Corner pieces (4 variants, ~48×48)
-  cornerTL:  { sx: 0,   sy: 112, sw: 48, sh: 48 },
-  cornerTR:  { sx: 96,  sy: 112, sw: 48, sh: 48 },
-  cornerBL:  { sx: 0,   sy: 160, sw: 48, sh: 48 },
-  cornerBR:  { sx: 96,  sy: 160, sw: 48, sh: 48 },
-  // Row 3: T-junction and cross pieces
-  tDown:     { sx: 144, sy: 208, sw: 48, sh: 48 },
-  tUp:       { sx: 144, sy: 160, sw: 48, sh: 48 },
-  tLeft:     { sx: 96,  sy: 208, sw: 48, sh: 48 },
-  tRight:    { sx: 192, sy: 208, sw: 48, sh: 48 },
-  // Row 6: Cross-road (large center piece ~96×96)
-  cross:     { sx: 144, sy: 336, sw: 96, sh: 80 },
-  // Row 4: Large filled road section (center ~80×80)
-  fill:      { sx: 48,  sy: 256, sw: 80, sh: 80 },
-} as const;
-
-// Biome colors from Ground_grass.png (8 rows of tree/bush variants)
+// Biome fallback fill colors (used while tile images load)
 const BIOME_GROUND_COLORS: Record<string, string> = {
   grass:  '#3a6a2a',
   jungle: '#2a5a1a',
-  water:  '#1a3a4a',
+  water:  '#1a3a5a',
   stone:  '#4a4a5a',
   dirt:   '#5a4a3a',
 };
+
+// Ocean base gradient colors
+const OCEAN_SHALLOW = '#1a4a6a';
+const OCEAN_DEEP = '#0a2040';
 
 // ── Image Cache ────────────────────────────────────────────────
 
@@ -82,75 +54,12 @@ function loadImage(src: string): HTMLImageElement | null {
   return null;
 }
 
-// ── Road Path Rasterizer ───────────────────────────────────────
-// Converts ZONE_ROADS line segments into tile positions for rendering
-
-interface RoadTile {
-  wx: number;    // world x
-  wy: number;    // world y
-  tile: keyof typeof ROAD_TILES;
+/** Pre-load a batch of tile images for smoother initial render */
+function preloadTiles(paths: string[]): void {
+  for (const p of paths) loadImage(p);
 }
 
-function rasterizeRoadSegment(seg: RoadSegment): RoadTile[] {
-  const tiles: RoadTile[] = [];
-  const dx = seg.to.x - seg.from.x;
-  const dy = seg.to.y - seg.from.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const steps = Math.ceil(dist / RENDER_TILE);
-  const sx = dx / steps;
-  const sy = dy / steps;
-
-  for (let i = 0; i <= steps; i++) {
-    const wx = seg.from.x + sx * i;
-    const wy = seg.from.y + sy * i;
-    // Determine tile type based on direction
-    const isH = Math.abs(dx) > Math.abs(dy);
-    tiles.push({ wx, wy, tile: isH ? 'hStraight' : 'vStraight' });
-    // Add width tiles perpendicular to road direction
-    for (let w = 1; w <= Math.floor(ROAD_WIDTH / 2); w++) {
-      if (isH) {
-        tiles.push({ wx, wy: wy - RENDER_TILE * w, tile: 'hStraight' });
-        tiles.push({ wx, wy: wy + RENDER_TILE * w, tile: 'hStraight' });
-      } else {
-        tiles.push({ wx: wx - RENDER_TILE * w, wy, tile: 'vStraight' });
-        tiles.push({ wx: wx + RENDER_TILE * w, wy, tile: 'vStraight' });
-      }
-    }
-  }
-  return tiles;
-}
-
-// ── Cached Road Grid ───────────────────────────────────────────
-
-let _roadTilesCache: RoadTile[] | null = null;
-
-function getRoadTiles(): RoadTile[] {
-  if (_roadTilesCache) return _roadTilesCache;
-  const all: RoadTile[] = [];
-  for (const road of ZONE_ROADS) {
-    all.push(...rasterizeRoadSegment(road));
-  }
-  _roadTilesCache = all;
-  return all;
-}
-
-/** Call when zones change (e.g. after scaling) */
-export function invalidateRoadCache(): void {
-  _roadTilesCache = null;
-}
-
-// ── Ground Detail Placement ────────────────────────────────────
-// Seeded random decorations (trees, bushes, rocks) from Ground_grass.png
-
-interface GroundDetail {
-  wx: number;
-  wy: number;
-  srcCol: number;   // column in Ground_grass.png (0-3)
-  srcRow: number;   // row in Ground_grass.png (0-7, color variant)
-  size: number;     // draw size multiplier
-}
-
-const _zoneDetailsCache = new Map<number, GroundDetail[]>();
+// ── Seeded Random (for noise overlays) ─────────────────────────
 
 function seededRand(x: number, y: number, seed: number): number {
   let h = (x * 374761393 + y * 668265263 + seed * 1013904223) | 0;
@@ -158,110 +67,105 @@ function seededRand(x: number, y: number, seed: number): number {
   return ((h ^ (h >> 16)) >>> 0) / 4294967296;
 }
 
-function getZoneDetails(zone: ZoneDef): GroundDetail[] {
-  const cached = _zoneDetailsCache.get(zone.id);
-  if (cached) return cached;
-
-  const details: GroundDetail[] = [];
-  const b = zone.bounds;
-  const density = zone.terrainType === 'jungle' ? 0.08
-    : zone.terrainType === 'grass' ? 0.04
-    : zone.terrainType === 'water' ? 0.02
-    : 0.03;
-
-  // Biome → Ground_grass.png row mapping
-  const biomeRow: Record<string, number> = {
-    grass: 0, jungle: 1, water: 4, stone: 5, dirt: 6,
-  };
-  const row = biomeRow[zone.terrainType] ?? 0;
-
-  const gridW = Math.floor(b.w / RENDER_TILE);
-  const gridH = Math.floor(b.h / RENDER_TILE);
-
-  for (let gy = 0; gy < gridH; gy++) {
-    for (let gx = 0; gx < gridW; gx++) {
-      if (seededRand(gx, gy, zone.id) > density) continue;
-      const col = Math.floor(seededRand(gx + 100, gy + 200, zone.id) * 4); // 0-3: tree, bush, rock, flower
-      const size = 0.8 + seededRand(gx + 300, gy + 400, zone.id) * 0.6;
-      details.push({
-        wx: b.x + gx * RENDER_TILE + RENDER_TILE / 2,
-        wy: b.y + gy * RENDER_TILE + RENDER_TILE / 2,
-        srcCol: col,
-        srcRow: row,
-        size,
-      });
-    }
-  }
-
-  _zoneDetailsCache.set(zone.id, details);
-  return details;
+/** Call when zones change (e.g. after scaling) */
+export function invalidateRoadCache(): void {
+  invalidatePlacementCache();
 }
 
 // ── Main Renderer ──────────────────────────────────────────────
 
 export class TileMapRenderer {
-  private roadSheet: HTMLImageElement | null = null;
-  private groundSheet: HTMLImageElement | null = null;
-  private roadStyle: string = 'Road1_grass';
+  private _preloaded = false;
 
-  constructor() {
-    // Pre-load road and ground sheets
-    this.roadSheet = loadImage(`/assets/sprites/roads/PNG_Tiled/${this.roadStyle}.png`);
-    this.groundSheet = loadImage('/assets/sprites/roads/PNG_Tiled/Ground_grass.png');
+  constructor() {}
+
+  /** Pre-load first visible zone's tile images */
+  private ensurePreloaded(zone: ZoneDef): void {
+    if (this._preloaded) return;
+    this._preloaded = true;
+    const placement = getZonePlacement(zone);
+    // Preload a sample of land tiles
+    const landPaths = new Set<string>();
+    for (const t of placement.landTiles.slice(0, 50)) landPaths.add(t.tilePath);
+    for (const t of placement.roadTiles.slice(0, 20)) landPaths.add(t.tilePath);
+    for (const d of placement.decor.slice(0, 30)) landPaths.add(d.def.path);
+    for (const b of placement.buildings) {
+      for (const p of b.def.parts.slice(0, 3)) landPaths.add(p);
+    }
+    preloadTiles(Array.from(landPaths));
   }
 
-  /** Set which road style to use (Road1-5, with _grass/_ground suffix) */
-  setRoadStyle(style: string): void {
-    this.roadStyle = style;
-    this.roadSheet = loadImage(`/assets/sprites/roads/PNG_Tiled/${style}.png`);
-  }
+  // ── Ground Rendering ─────────────────────────────────────────
 
-  /** Render ground fill for a zone — uses tileset sprites with fallback to biome color */
+  /** Render ground fill for a zone using tropical land tiles */
   renderZoneGround(ctx: CanvasRenderingContext2D, zone: ZoneDef, camX: number, camY: number, viewW: number, viewH: number): void {
     const b = zone.bounds;
-    // Skip zones entirely off-screen
     if (b.x + b.w < camX || b.x > camX + viewW || b.y + b.h < camY || b.y > camY + viewH) return;
 
-    // Try to use tileset sprite for textured ground
-    const biomeTileset = BIOME_TILESETS[zone.terrainType];
-    const groundImg = biomeTileset ? loadImage(biomeTileset.ground.tilesheetPath) : null;
+    this.ensurePreloaded(zone);
 
-    // Base biome fill (always drawn as fallback / base layer)
+    // Base biome fill (fallback while tiles load)
     const baseColor = BIOME_GROUND_COLORS[zone.terrainType] || '#3a5a2a';
     ctx.fillStyle = baseColor;
     ctx.fillRect(b.x - camX, b.y - camY, b.w, b.h);
 
+    // Draw land tiles from AI placer
+    const placement = getZonePlacement(zone);
+    const margin = RENDER_TILE * 2;
+
+    for (const tile of placement.landTiles) {
+      // Camera cull
+      if (tile.wx + RENDER_TILE < camX - margin || tile.wx > camX + viewW + margin) continue;
+      if (tile.wy + RENDER_TILE < camY - margin || tile.wy > camY + viewH + margin) continue;
+
+      const img = loadImage(tile.tilePath);
+      const sx = tile.wx - camX;
+      const sy = tile.wy - camY;
+
+      if (img?.complete) {
+        ctx.globalAlpha = tile.alpha;
+        if (tile.rotation !== 0) {
+          ctx.save();
+          ctx.translate(sx + RENDER_TILE / 2, sy + RENDER_TILE / 2);
+          ctx.rotate((tile.rotation * Math.PI) / 180);
+          ctx.drawImage(img, -RENDER_TILE / 2, -RENDER_TILE / 2, RENDER_TILE, RENDER_TILE);
+          ctx.restore();
+        } else {
+          ctx.drawImage(img, sx, sy, RENDER_TILE, RENDER_TILE);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Water edge overlay
+    for (const wt of placement.waterEdgeTiles) {
+      if (wt.wx + RENDER_TILE < camX - margin || wt.wx > camX + viewW + margin) continue;
+      if (wt.wy + RENDER_TILE < camY - margin || wt.wy > camY + viewH + margin) continue;
+
+      const img = loadImage(wt.tilePath);
+      const sx = wt.wx - camX;
+      const sy = wt.wy - camY;
+
+      if (img?.complete) {
+        ctx.globalAlpha = wt.alpha;
+        ctx.drawImage(img, sx, sy, RENDER_TILE, RENDER_TILE);
+        ctx.globalAlpha = 1;
+      } else {
+        // Water fallback
+        ctx.globalAlpha = wt.alpha * 0.5;
+        ctx.fillStyle = '#1a4a6a';
+        ctx.fillRect(sx, sy, RENDER_TILE, RENDER_TILE);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Subtle noise overlay for depth
     const startTX = Math.max(0, Math.floor((camX - b.x) / RENDER_TILE));
     const startTY = Math.max(0, Math.floor((camY - b.y) / RENDER_TILE));
     const endTX = Math.min(Math.ceil(b.w / RENDER_TILE), Math.ceil((camX + viewW - b.x) / RENDER_TILE) + 1);
     const endTY = Math.min(Math.ceil(b.h / RENDER_TILE), Math.ceil((camY + viewH - b.y) / RENDER_TILE) + 1);
 
-    // Textured ground layer — tile the sprite sheet across the zone
-    if (groundImg?.complete) {
-      const tileSize = biomeTileset!.ground.tileSize;
-      const cols = biomeTileset!.ground.columns;
-      // Use different tile variants based on seeded position for natural look
-      ctx.globalAlpha = 0.85;
-      for (let ty = startTY; ty < endTY; ty++) {
-        for (let tx = startTX; tx < endTX; tx++) {
-          // Pick a tile variant from the sheet based on position seed
-          const tileVariant = Math.floor(seededRand(tx, ty, zone.id + 7) * Math.min(cols, 4));
-          // Use first few rows of the ground tile sheet
-          const tileRow = Math.floor(seededRand(tx + 50, ty + 50, zone.id + 13) * 3);
-          const srcX = tileVariant * tileSize;
-          const srcY = tileRow * tileSize;
-          ctx.drawImage(
-            groundImg, srcX, srcY, tileSize, tileSize,
-            b.x + tx * RENDER_TILE - camX, b.y + ty * RENDER_TILE - camY,
-            RENDER_TILE, RENDER_TILE
-          );
-        }
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    // Subtle noise overlay for depth
-    ctx.globalAlpha = 0.06;
+    ctx.globalAlpha = 0.05;
     for (let ty = startTY; ty < endTY; ty++) {
       for (let tx = startTX; tx < endTX; tx++) {
         const noise = seededRand(tx, ty, zone.id) * 0.3;
@@ -272,100 +176,179 @@ export class TileMapRenderer {
       }
     }
     ctx.globalAlpha = 1;
-
-    // Subtle grid lines for visual grounding
-    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-    ctx.lineWidth = 0.5;
-    for (let ty = startTY; ty <= endTY; ty++) {
-      const sy = b.y + ty * RENDER_TILE - camY;
-      ctx.beginPath();
-      ctx.moveTo(b.x + startTX * RENDER_TILE - camX, sy);
-      ctx.lineTo(b.x + endTX * RENDER_TILE - camX, sy);
-      ctx.stroke();
-    }
-    for (let tx = startTX; tx <= endTX; tx++) {
-      const sx = b.x + tx * RENDER_TILE - camX;
-      ctx.beginPath();
-      ctx.moveTo(sx, b.y + startTY * RENDER_TILE - camY);
-      ctx.lineTo(sx, b.y + endTY * RENDER_TILE - camY);
-      ctx.stroke();
-    }
   }
 
-  /** Render road tiles */
-  renderRoads(ctx: CanvasRenderingContext2D, camX: number, camY: number, viewW: number, viewH: number): void {
-    if (!this.roadSheet) {
-      this.roadSheet = loadImage(`/assets/sprites/roads/PNG_Tiled/${this.roadStyle}.png`);
-    }
-    const img = this.roadSheet;
+  // ── Road Rendering ───────────────────────────────────────────
 
-    const roadTiles = getRoadTiles();
+  /** Render road tiles using tropical road assets */
+  renderRoads(ctx: CanvasRenderingContext2D, zones: ZoneDef[], camX: number, camY: number, viewW: number, viewH: number): void {
     const margin = RENDER_TILE * 2;
 
-    for (const rt of roadTiles) {
-      // Cull off-screen
-      if (rt.wx + RENDER_TILE < camX - margin || rt.wx > camX + viewW + margin) continue;
-      if (rt.wy + RENDER_TILE < camY - margin || rt.wy > camY + viewH + margin) continue;
+    for (const zone of zones) {
+      const b = zone.bounds;
+      if (b.x + b.w < camX - margin * 3 || b.x > camX + viewW + margin * 3) continue;
+      if (b.y + b.h < camY - margin * 3 || b.y > camY + viewH + margin * 3) continue;
 
-      const screenX = rt.wx - camX - RENDER_TILE / 2;
-      const screenY = rt.wy - camY - RENDER_TILE / 2;
+      const placement = getZonePlacement(zone);
 
-      if (img?.complete) {
-        const src = ROAD_TILES[rt.tile];
-        ctx.drawImage(img, src.sx, src.sy, src.sw, src.sh,
-          screenX, screenY,
-          src.sw * ROAD_DRAW_SCALE, src.sh * ROAD_DRAW_SCALE);
-      } else {
-        // Fallback: brown road rectangle
-        ctx.fillStyle = '#8a7050';
-        ctx.fillRect(screenX, screenY, RENDER_TILE, RENDER_TILE);
+      for (const rt of placement.roadTiles) {
+        if (rt.wx + RENDER_TILE < camX - margin || rt.wx > camX + viewW + margin) continue;
+        if (rt.wy + RENDER_TILE < camY - margin || rt.wy > camY + viewH + margin) continue;
+
+        const img = loadImage(rt.tilePath);
+        const sx = rt.wx - camX;
+        const sy = rt.wy - camY;
+
+        if (img?.complete) {
+          if (rt.rotation !== 0) {
+            ctx.save();
+            ctx.translate(sx + RENDER_TILE / 2, sy + RENDER_TILE / 2);
+            ctx.rotate((rt.rotation * Math.PI) / 180);
+            ctx.drawImage(img, -RENDER_TILE / 2, -RENDER_TILE / 2, RENDER_TILE, RENDER_TILE);
+            ctx.restore();
+          } else {
+            ctx.drawImage(img, sx, sy, RENDER_TILE, RENDER_TILE);
+          }
+        } else {
+          // Fallback: brown road
+          ctx.fillStyle = '#8a7050';
+          ctx.fillRect(sx, sy, RENDER_TILE, RENDER_TILE);
+        }
       }
     }
   }
 
-  /** Render ground details (trees, bushes, rocks) for a zone */
+  // ── Building Rendering ───────────────────────────────────────
+
+  /** Render tropical buildings with shadow layer */
+  renderBuildings(ctx: CanvasRenderingContext2D, zone: ZoneDef, camX: number, camY: number, viewW: number, viewH: number): void {
+    const b = zone.bounds;
+    if (b.x + b.w < camX || b.x > camX + viewW || b.y + b.h < camY || b.y > camY + viewH) return;
+
+    const placement = getZonePlacement(zone);
+    const margin = RENDER_TILE * 6;
+
+    for (const bld of placement.buildings) {
+      if (bld.wx < camX - margin || bld.wx > camX + viewW + margin) continue;
+      if (bld.wy < camY - margin || bld.wy > camY + viewH + margin) continue;
+
+      const drawW = bld.def.footprint.w * RENDER_TILE * bld.scale;
+      const drawH = bld.def.footprint.h * RENDER_TILE * bld.scale;
+      const sx = bld.wx - camX;
+      const sy = bld.wy - camY;
+
+      // Shadow layer
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(sx + drawW / 2 + 4, sy + drawH - 2, drawW * 0.45, drawH * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Draw building parts (first part = base, last = roof)
+      // We draw just the main composite image (building_1.png) for performance
+      const mainImg = loadImage(bld.def.parts[0]);
+      if (mainImg?.complete) {
+        ctx.drawImage(mainImg, sx, sy - drawH * 0.3, drawW, drawH);
+      } else {
+        // Fallback: colored rectangle
+        ctx.fillStyle = '#7a5a3a';
+        ctx.fillRect(sx + 2, sy - drawH * 0.2, drawW - 4, drawH * 0.8);
+        ctx.fillStyle = '#5a3a2a';
+        ctx.fillRect(sx, sy - drawH * 0.3, drawW, drawH * 0.15); // roof
+      }
+    }
+  }
+
+  // ── Decor Rendering ──────────────────────────────────────────
+
+  /** Render trees, bushes, stones, props with shadows */
   renderZoneDetails(ctx: CanvasRenderingContext2D, zone: ZoneDef, camX: number, camY: number, viewW: number, viewH: number): void {
     const b = zone.bounds;
     if (b.x + b.w < camX || b.x > camX + viewW || b.y + b.h < camY || b.y > camY + viewH) return;
 
-    if (!this.groundSheet) {
-      this.groundSheet = loadImage('/assets/sprites/roads/PNG_Tiled/Ground_grass.png');
-    }
-    const img = this.groundSheet;
-    const details = getZoneDetails(zone);
-    const margin = RENDER_TILE * 2;
+    const placement = getZonePlacement(zone);
+    const margin = RENDER_TILE * 3;
 
-    for (const d of details) {
+    for (const d of placement.decor) {
       if (d.wx < camX - margin || d.wx > camX + viewW + margin) continue;
       if (d.wy < camY - margin || d.wy > camY + viewH + margin) continue;
 
-      const screenX = d.wx - camX;
-      const screenY = d.wy - camY;
-      const drawSize = RENDER_TILE * d.size;
+      const drawSize = RENDER_TILE * d.scale;
+      const sx = d.wx - camX;
+      const sy = d.wy - camY;
 
+      // Shadow
+      if (d.shadow.alpha > 0) {
+        ctx.globalAlpha = d.shadow.alpha;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(
+          sx + d.shadow.dx, sy + d.shadow.dy + drawSize * 0.3,
+          drawSize * 0.35, drawSize * 0.12,
+          0, 0, Math.PI * 2
+        );
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      const img = loadImage(d.def.path);
       if (img?.complete) {
-        // Ground_grass.png: 272×496 = 4 columns × 8 rows of biome-colored elements
-        // Col 0: round tree/bush, Col 1: square block, Col 2: dark variant, Col 3: small accent
-        // Rows 0-7: grass-green, olive, autumn-brown, teal, cream, deep-green, khaki, dark-green
-        const cellW = 68;  // 272 / 4 = 68px per column
-        const cellH = 62;  // 496 / 8 = 62px per row
-        const srcX = d.srcCol * cellW;
-        const srcY = d.srcRow * cellH;
-        ctx.drawImage(img, srcX, srcY, cellW, cellH,
-          screenX - drawSize / 2, screenY - drawSize / 2,
-          drawSize, drawSize * (cellH / cellW));
+        if (d.rotation !== 0) {
+          ctx.save();
+          ctx.translate(sx, sy);
+          ctx.rotate((d.rotation * Math.PI) / 180);
+          ctx.drawImage(img, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
+          ctx.restore();
+        } else {
+          ctx.drawImage(img, sx - drawSize / 2, sy - drawSize / 2, drawSize, drawSize);
+        }
       } else {
-        // Fallback: colored circles for trees/bushes
-        const colors = ['#2a5a1a', '#3a6a2a', '#5a5a6a', '#6a5a3a'];
-        ctx.fillStyle = colors[d.srcCol % colors.length];
+        // Fallback by category
+        const catColors: Record<string, string> = {
+          tree: '#2a5a1a', stone: '#5a5a6a', greenery: '#3a7a2a', decor: '#6a5a3a',
+        };
+        ctx.fillStyle = catColors[d.def.category] || '#4a4a4a';
         ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        ctx.arc(screenX, screenY, drawSize / 2, 0, Math.PI * 2);
+        ctx.arc(sx, sy, drawSize / 3, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
       }
     }
   }
+
+  // ── Water Rendering ──────────────────────────────────────────
+
+  /** Render animated water shimmer for water zones */
+  renderWater(ctx: CanvasRenderingContext2D, zone: ZoneDef, camX: number, camY: number, viewW: number, viewH: number, time: number): void {
+    if (zone.terrainType !== 'water') return;
+    const b = zone.bounds;
+    if (b.x + b.w < camX || b.x > camX + viewW || b.y + b.h < camY || b.y > camY + viewH) return;
+
+    const startTX = Math.max(0, Math.floor((camX - b.x) / RENDER_TILE));
+    const startTY = Math.max(0, Math.floor((camY - b.y) / RENDER_TILE));
+    const endTX = Math.min(Math.ceil(b.w / RENDER_TILE), Math.ceil((camX + viewW - b.x) / RENDER_TILE) + 1);
+    const endTY = Math.min(Math.ceil(b.h / RENDER_TILE), Math.ceil((camY + viewH - b.y) / RENDER_TILE) + 1);
+
+    // Animated water shimmer overlay
+    const phase = (time * 0.001) % (Math.PI * 2);
+    ctx.globalAlpha = 0.12;
+    for (let ty = startTY; ty < endTY; ty++) {
+      for (let tx = startTX; tx < endTX; tx++) {
+        const shimmer = Math.sin(phase + tx * 0.8 + ty * 0.6) * 0.5 + 0.5;
+        ctx.fillStyle = `rgba(100,180,255,${shimmer * 0.3})`;
+        ctx.fillRect(
+          b.x + tx * RENDER_TILE - camX,
+          b.y + ty * RENDER_TILE - camY,
+          RENDER_TILE, RENDER_TILE
+        );
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Zone Exits / Portals ─────────────────────────────────────
 
   /** Render zone exit/entrance markers */
   renderZoneExits(ctx: CanvasRenderingContext2D, zone: ZoneDef, camX: number, camY: number, viewW: number, viewH: number): void {
@@ -401,7 +384,7 @@ export class TileMapRenderer {
       ctx.globalAlpha = 1;
     }
 
-    // Draw zone connection roads with signposts at edges
+    // Draw zone connection signposts at edges
     const b = zone.bounds;
     const cx = b.x + b.w / 2;
     const cy = b.y + b.h / 2;
@@ -412,7 +395,6 @@ export class TileMapRenderer {
       const connCx = conn.bounds.x + conn.bounds.w / 2;
       const connCy = conn.bounds.y + conn.bounds.h / 2;
 
-      // Find edge point of this zone towards the connected zone
       const angle = Math.atan2(connCy - cy, connCx - cx);
       const edgeX = cx + Math.cos(angle) * Math.min(b.w, b.h) / 2;
       const edgeY = cy + Math.sin(angle) * Math.min(b.w, b.h) / 2;
@@ -433,22 +415,35 @@ export class TileMapRenderer {
     }
   }
 
-  /** Full render pass: ground → roads → details → exits */
-  render(ctx: CanvasRenderingContext2D, zones: ZoneDef[], camX: number, camY: number, viewW: number, viewH: number): void {
-    // Layer 1: Zone ground fills
+  // ── Full Render Pass ─────────────────────────────────────────
+
+  /** Full render pass: ground → water → roads → buildings → details → exits */
+  render(ctx: CanvasRenderingContext2D, zones: ZoneDef[], camX: number, camY: number, viewW: number, viewH: number, time?: number): void {
+    // Layer 1: Zone ground fills (land tiles)
     for (const zone of zones) {
       this.renderZoneGround(ctx, zone, camX, camY, viewW, viewH);
     }
 
-    // Layer 2: Roads
-    this.renderRoads(ctx, camX, camY, viewW, viewH);
+    // Layer 2: Water shimmer (animated)
+    const t = time ?? performance.now();
+    for (const zone of zones) {
+      this.renderWater(ctx, zone, camX, camY, viewW, viewH, t);
+    }
 
-    // Layer 3: Details (trees, bushes, rocks)
+    // Layer 3: Roads
+    this.renderRoads(ctx, zones, camX, camY, viewW, viewH);
+
+    // Layer 4: Buildings (with shadows)
+    for (const zone of zones) {
+      this.renderBuildings(ctx, zone, camX, camY, viewW, viewH);
+    }
+
+    // Layer 5: Details — trees, bushes, stones, decor (with shadows)
     for (const zone of zones) {
       this.renderZoneDetails(ctx, zone, camX, camY, viewW, viewH);
     }
 
-    // Layer 4: Zone exits and portals
+    // Layer 6: Zone exits and portals
     for (const zone of zones) {
       this.renderZoneExits(ctx, zone, camX, camY, viewW, viewH);
     }
