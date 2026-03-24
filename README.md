@@ -36,6 +36,7 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - NPC dialog system with Shop/Quests/Train/Craft tabs, tier-scaled vendor inventories
 - 5 new voxel monsters: Tentacle Horror, Timber Wolf, Cave Bear, Pit Demon, Sky Hawk
 - **46 voxel asset library** via ObjectStore: 11 trees, 7 rocks, 4 mountains, 6 terrain props, 8 structures, 5 animals, 5 enemies
+- **AI terrain placement** (`terrain-placer.ts`): deterministic seeded tile layout engine — biome-matched land tiles, 3-wide road generation, grid-based building placement with NPC collision avoidance, per-biome decor scatter with baked shadow offsets, water-edge auto-tiling
 
 #### Combat & Visual Polish
 - **Animation FSM** (`ow-anim-fsm.ts`): priority-based state machine for player animation with interruptibility windows, blend-out, and auto-return. Replaces scattered `animState` writes with `tryTransition()` calls.
@@ -51,6 +52,9 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - Screen shake on melee hits, heavy attacks, ability damage, and kills
 - Hit flash overlay on damaged enemies with aggro indicator
 - Combo counter system with timer bar and color-coded display
+- **PixelGothic font** (Craftpix): `StraightPixelGothic.otf` registered for both canvas and CSS; used for all damage numbers, combo counter, NPC nameplates
+- **Enhanced popups**: CRIT numbers 1.45× scale + gold `shadowBlur 18` + 6-star burst; heals get green glow + shimmer sparkles; pop-spring animation 35%→120%→100% over 160ms
+- **Event banners** (Craftpix pack): 9 animated GIFs (GameOver, Victory, StageCleared, StageFailed, GetReady, LetsGo, YouLose, Finish, CountDown) play as fullscreen overlays on match events
 - Styled floating damage numbers with pop-in animation, crit glow, and outline
 - Death burst VFX: radial particles, gold coin pops, XP orbs, impact ring
 - Ambient atmosphere: firefly and dust mote particle systems
@@ -104,27 +108,26 @@ All game data is sourced from the **Grudge ObjectStore API** (`https://molochdag
 - Material consumption from resource inventory, profession XP rewards
 
 ### Equipment (`equipment.ts`)
-- 9 equip slots: 7 armor + main hand + off-hand
-- Tier-scaled stats (1.0× to 3.3× multiplier)
+- **10 equip slots**: Helm, Shoulder, Chest, Hands, Feet, Ring, Necklace, Cape, Main Hand, Off-Hand
+- Tier-scaled stats (1.0× to 3.3× multiplier), tier colour-coded item borders (grey→green→blue→purple→gold)
 - Weapon equip triggers automatic skill loadout swap
 - Set bonuses at 2/4/6 piece thresholds
 - Equipment bag for unequipped items, full persistence
+- Backend sync: `PUT /api/characters/:grudgeId` on every equip/unequip
 
-### Character Panel (C key)
-Full-screen 3-column dark-fantasy UI with Cinzel/Crimson Text/JetBrains Mono fonts:
-- **Top Bar** — HP/MP/SP resource bars, player name and level, close button
-- **Left Column** (260px) — Character preview, core stats (ATK/DEF/SPD), derived stats, progress tracker (reputation, zones, kills, bosses)
-- **Center Column** — 8 tabbed panels:
-  - **Equipment** — 8 equip slots in grid layout, character silhouette, set bonus tracker
-  - **Attributes** — 8 primary stats with +/− allocation, 4 organized sections (Resources, Offense, Defense, Utility) showing all 37 derived stats with icons and formatted values
-  - **Class Skills** — Abilities grouped by slot tier, damage/CD/MP/effect chip badges
-  - **Weapon Skills** — Dynamic loadout based on equipped weapon type
-  - **Upgrades** — Placeholder for gear/ability upgrade system
-  - **Crafting** — Gathering & crafting profession bars with XP progress, crafting station grid
-  - **Quests** — Active quest cards with progress bars, claim reward buttons
-  - **Guild** — Guild crest, member list placeholder
-- **Right Column** (280px) — 6-column inventory grid (36 slots), gold display, trash zone
-- **Bottom Bar** — 10-slot hotbar with ability cooldown overlays and keybind labels
+### Character Panel (`/character`)
+Full-screen 3-column dark-fantasy UI with Cinzel/Crimson Text/JetBrains Mono fonts and **reactive derived stats** (ATK/DEF/HP/MP recompute live as gear changes):
+- **Top Bar** — HP/MP bars, player name and level, navigation buttons
+- **Left Column** (260px) — Animated voxel preview, core stats, 37 derived stats, progress tracker
+- **Center Column** — 8 tabbed panels: Equipment, Attributes (+/− allocation), Class Skills, Weapon Skills, Upgrades, Crafting, Quests, Guild
+  - **Equipment tab** — All 10 slots around animated hero preview; tier colour borders, icon display
+- **Right Column** (280px) — WoW-style 36-slot inventory:
+  - **Drag-and-drop**: bag ↔ equip slots (slot-type validated), reorder within bag, trash-zone destroy
+  - **Double-click**: equip from bag / unequip from slot
+  - **Right-click**: context menu with Equip, Unequip, Inspect, Destroy actions
+  - **Item tooltips**: tier-coloured stat block, passive, lore, hints on hover
+  - Tier badge overlay, ObjectStore `iconUrl` or emoji fallback per slot type
+  - `+ Loot` dev button generates random test items
 
 ### Controls (Open World)
 - **WASD** — Movement (W always moves away from camera)
@@ -165,6 +168,8 @@ See [docs/GRUDGE_BACKEND_INTEGRATION.md](docs/GRUDGE_BACKEND_INTEGRATION.md) for
 - **Animation:** GSAP, custom voxel-motion library
 - **Physics:** cannon-es
 - **State Machines:** XState
+- **Fonts:** Craftpix `StraightPixelGothic.otf` (canvas + CSS), Cinzel, Crimson Text, JetBrains Mono
+- **Asset packs:** Craftpix animated text GIFs (event banners), tropical city tileset (256px), castle defense tileset (32px), house constructor tileset (32px)
 - **Deployment:** Vercel
 
 ## Project Structure
@@ -199,15 +204,23 @@ client/src/
 │   ├── dungeon.ts             # Dungeon crawler engine
 │   ├── types.ts               # Shared types, 26 heroes, abilities
 │   ├── voxel.ts               # Voxel rendering, weapon animations, VFX
+│   ├── voxel-parts.ts         # Part-based voxel rig (15 weapon types, T-pose, full animations)
 │   ├── voxel-motion.ts        # Animation primitives
 │   ├── ow-anim-fsm.ts         # Open World animation FSM (priority/interruptibility)
-│   ├── effect-pool.ts          # Pre-allocated VFX pool with per-type visual curves
-│   └── glb-sprites.ts         # GLB/GLTF 3D model sprite loader
+│   ├── effect-pool.ts         # Pre-allocated VFX pool with per-type visual curves
+│   ├── glb-sprites.ts         # GLB/GLTF 3D model sprite loader
+│   ├── terrain-placer.ts      # AI terrain placement (land tiles, roads, buildings, decor, water edges)
+│   ├── tilesets.ts            # Tileset catalog: tropical (256px), castle/house (32px), biome mappings
+│   ├── tile-renderer.ts       # TileMapRenderer: camera-culled ground/road/building/decor rendering
+│   ├── combat-popups.ts       # PixelGothic font loader + EVENT_BANNERS GIF paths
+│   └── character-data.ts      # Unified character data layer (reactive stats from equipment)
 ├── pages/
-│   ├── open-world.tsx         # Open World UI, HUD, game loop
-│   ├── game.tsx               # MOBA UI
+│   ├── open-world.tsx         # Open World UI, HUD, game loop, event banner overlay
+│   ├── game.tsx               # MOBA UI, event banner overlay
 │   ├── dungeon-game.tsx       # Dungeon UI
+│   ├── character.tsx          # /character — WoW-style inventory, reactive equipment, backend sync
 │   ├── character-select.tsx   # Hero selection screen
+│   ├── toon-admin.tsx         # Sprite editor with always-on gizmo + rig mode
 │   ├── world-editor.tsx       # World editor for zone design
 │   ├── map-admin.tsx          # MOBA map admin editor
 │   ├── admin.tsx              # Admin editor suite
@@ -215,9 +228,14 @@ client/src/
 │   └── settings.tsx           # Keybindings and settings
 ├── components/
 │   ├── MainPanel.tsx          # Full-screen 3-column character panel (C key)
-│   ├── MainPanel.module.css   # Dark-fantasy CSS module for MainPanel
+│   ├── MainPanel.module.css   # Dark-fantasy CSS module: context menu, tooltips, inventory drag states
+│   ├── character-tabs/        # EquipmentTab (interactive drag/drop), AttributesTab, SkillsTabs, etc.
 │   ├── NpcDialog.tsx          # NPC interaction modal (Shop/Quests/Train/Craft tabs)
 │   └── NpcDialog.module.css   # Dark-fantasy CSS module for NPC dialog
+├── index.css                  # @font-face: PixelGothic (StraightPixelGothic.otf)
+public/
+│   ├── fonts/StraightPixelGothic.otf  # Craftpix pixel gothic font
+│   └── assets/animated-text/          # Craftpix event banner GIFs (9 animations)
 ```
 
 ## Development
