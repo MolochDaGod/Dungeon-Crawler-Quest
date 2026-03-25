@@ -92,8 +92,7 @@ export default function Home() {
       const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
       await ensurePlayerHeroLoaded();
       // Existing character — go to game
-      if (selectedMode === 'spaceconquest') setLocation('/space-conquest');
-      else if (selectedMode === 'openworld') setLocation('/open-world-play');
+      if (selectedMode === 'openworld') setLocation('/open-world-play');
       else setLocation('/game');
     } else {
       // No character — go to character creation (WoW-classic flow)

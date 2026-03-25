@@ -50,7 +50,7 @@ function initTowerPositions() {
   TOWER_POSITIONS.length = 0;
   for (let team = 0; team < 2; team++) {
     for (let lane = 0; lane < 3; lane++) {
-      const waypoints = LANE_WAYPOINTS[lane];
+      const waypoints = DOTA_LANES[lane] ?? LANE_WAYPOINTS[lane];
       const path = team === 0 ? waypoints : [...waypoints].reverse();
       for (let tier = 0; tier < 2; tier++) {
         const t = (tier + 1) / 4;
@@ -109,14 +109,15 @@ function isTileBlocked(state: MobaState, wx: number, wy: number): boolean {
   if (tx < 0 || ty < 0 || tx >= TILE_GRID || ty >= TILE_GRID) return true;
   // Check collision grid from map editor
   if ((state as any).collisionMap?.[ty]?.[tx]) return true;
-  // Water and dense-woods/stone-wall terrain block movement
+  // Water, dense woods, and stone wall terrain block movement
   const terrainIdx = state.terrainMap[ty]?.[tx] ?? 0;
-  if (terrainIdx === 3 || terrainIdx === 11) return true; // water, stone wall
+  if (terrainIdx === 3 || terrainIdx === 10 || terrainIdx === 11) return true;
   return false;
 }
 
 function isOnLaneStatic(x: number, y: number): boolean {
-  for (const lane of LANE_WAYPOINTS) {
+  const lanes = typeof DOTA_LANES !== 'undefined' ? DOTA_LANES : LANE_WAYPOINTS;
+  for (const lane of lanes) {
     for (let i = 1; i < lane.length; i++) {
       const a = lane[i - 1], b = lane[i];
       const dx = b.x - a.x, dy = b.y - a.y;
@@ -125,43 +126,177 @@ function isOnLaneStatic(x: number, y: number): boolean {
       const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / len2));
       const px = a.x + t * dx, py = a.y + t * dy;
       const d = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
-      if (d < 120) return true;
+      if (d < 250) return true;
     }
   }
   return false;
 }
 
 function isNearRiver(x: number, y: number): boolean {
-  const cx = MAP_SIZE / 2, cy = MAP_SIZE / 2;
-  const angle = Math.atan2(y - cy, x - cx);
-  const riverDist = Math.abs(Math.sin(angle * 2)) * 200 + 50;
-  const distCenter = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-  return Math.abs(distCenter - 1000) < riverDist * 0.15 && !isOnLaneStatic(x, y);
+  if (typeof RIVER_PATH !== 'undefined' && RIVER_PATH.length > 1) {
+    return distToPolyline(x, y, RIVER_PATH) < 120;
+  }
+  return false;
 }
+
+// ── Dota 2-style map terrain generator ──────────────────────────
+// Layout: Radiant (team 0) bottom-left, Dire (team 1) top-right
+// Diagonal river from NW to SE through center
+// 3 lanes: top (N→W), mid (diagonal), bot (E→S)
+// Dense tree walls form lane borders; cliffs along river
+
+function distToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return Math.sqrt((px - ax) ** 2 + (py - ay) ** 2);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+  const projX = ax + t * dx, projY = ay + t * dy;
+  return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
+}
+
+function distToPolyline(px: number, py: number, pts: Vec2[]): number {
+  let minD = Infinity;
+  for (let i = 1; i < pts.length; i++) {
+    const d = distToSegment(px, py, pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y);
+    if (d < minD) minD = d;
+  }
+  return minD;
+}
+
+// River path: diagonal NW → SE through center with curves
+const RIVER_PATH: Vec2[] = [
+  { x: 0, y: 1600 },
+  { x: 600, y: 1700 },
+  { x: 1200, y: 1850 },
+  { x: 1700, y: 2000 },   // center area
+  { x: 2000, y: 2000 },   // mid
+  { x: 2300, y: 2100 },
+  { x: 2800, y: 2250 },
+  { x: 3400, y: 2400 },
+  { x: 4000, y: 2600 },
+];
+
+// Lane paths (wider dirt strips)
+const TOP_LANE: Vec2[] = [
+  BASE_POSITIONS[0],
+  { x: 300, y: 2800 },
+  { x: 300, y: 1500 },
+  { x: 300, y: 500 },
+  { x: 800, y: 300 },
+  { x: 1800, y: 300 },
+  { x: 2800, y: 300 },
+  BASE_POSITIONS[1],
+];
+const MID_LANE: Vec2[] = [
+  BASE_POSITIONS[0],
+  { x: 700, y: 3300 },
+  { x: 1200, y: 2800 },
+  { x: 2000, y: 2000 },
+  { x: 2800, y: 1200 },
+  { x: 3300, y: 700 },
+  BASE_POSITIONS[1],
+];
+const BOT_LANE: Vec2[] = [
+  BASE_POSITIONS[0],
+  { x: 1200, y: 3700 },
+  { x: 2200, y: 3700 },
+  { x: 3200, y: 3700 },
+  { x: 3700, y: 3200 },
+  { x: 3700, y: 2200 },
+  { x: 3700, y: 1200 },
+  BASE_POSITIONS[1],
+];
+
+const DOTA_LANES = [TOP_LANE, MID_LANE, BOT_LANE];
 
 function generateTerrainMap(): number[][] {
   const grid: number[][] = [];
+  const S = MAP_SIZE;
+  const LANE_WIDTH = 250;      // lane path half-width in world px
+  const RIVER_WIDTH = 180;     // river half-width
+  const CLIFF_WIDTH = 80;      // cliff strip along river edge
+  const BASE_RADIUS = 280;
+  const TREE_BORDER = 120;     // dense tree strip between lanes
+
   for (let ty = 0; ty < TILE_GRID; ty++) {
     grid[ty] = [];
     for (let tx = 0; tx < TILE_GRID; tx++) {
       const wx = tx * 80 + 40;
       const wy = ty * 80 + 40;
-      const distToCenter = Math.sqrt((wx - MAP_SIZE / 2) ** 2 + (wy - MAP_SIZE / 2) ** 2);
 
       const distBase0 = Math.sqrt((wx - BASE_POSITIONS[0].x) ** 2 + (wy - BASE_POSITIONS[0].y) ** 2);
       const distBase1 = Math.sqrt((wx - BASE_POSITIONS[1].x) ** 2 + (wy - BASE_POSITIONS[1].y) ** 2);
 
-      if (distBase0 < 200) { grid[ty][tx] = 6; continue; }
-      if (distBase1 < 200) { grid[ty][tx] = 7; continue; }
+      // Base areas
+      if (distBase0 < BASE_RADIUS) { grid[ty][tx] = 6; continue; }
+      if (distBase1 < BASE_RADIUS) { grid[ty][tx] = 7; continue; }
 
-      if (isNearRiver(wx, wy)) { grid[ty][tx] = 8; continue; }
+      // River
+      const riverDist = distToPolyline(wx, wy, RIVER_PATH);
+      if (riverDist < RIVER_WIDTH * 0.5) {
+        grid[ty][tx] = 8; // river (walkable, slow)
+        continue;
+      }
+      if (riverDist < RIVER_WIDTH * 0.5 + 30) {
+        grid[ty][tx] = 3; // water edge (deep, impassable)
+        continue;
+      }
 
-      if (isOnLaneStatic(wx, wy)) { grid[ty][tx] = 4; continue; }
+      // Cliffs along river
+      if (riverDist >= RIVER_WIDTH * 0.5 + 30 && riverDist < RIVER_WIDTH * 0.5 + CLIFF_WIDTH) {
+        grid[ty][tx] = 11; // stone wall cliff
+        continue;
+      }
 
-      if (distToCenter > 400 && distToCenter < 1800) {
-        grid[ty][tx] = 5;
+      // Lanes
+      let onLane = false;
+      for (const lane of DOTA_LANES) {
+        if (distToPolyline(wx, wy, lane) < LANE_WIDTH) {
+          onLane = true;
+          break;
+        }
+      }
+      if (onLane) {
+        grid[ty][tx] = 4; // lane (dirt path)
+        continue;
+      }
+
+      // Map edges (outside the playable diamond) → impassable trees
+      const edgeMargin = 100;
+      if (wx < edgeMargin || wy < edgeMargin || wx > S - edgeMargin || wy > S - edgeMargin) {
+        grid[ty][tx] = 10; // dense woods (impassable)
+        continue;
+      }
+
+      // Jungle areas (between lanes) — mix of jungle grass and dense tree patches
+      // Dense tree borders: tiles very close to lane edges but not on lane
+      let nearLane = false;
+      for (const lane of DOTA_LANES) {
+        const d = distToPolyline(wx, wy, lane);
+        if (d >= LANE_WIDTH && d < LANE_WIDTH + TREE_BORDER) {
+          nearLane = true;
+          break;
+        }
+      }
+      if (nearLane) {
+        // Tree line forming lane walls — but with gaps every ~5 tiles for juke paths
+        const gapSeed = seededRandom(tx * 3, ty * 7);
+        if (gapSeed > 0.2) {
+          grid[ty][tx] = 10; // dense woods (impassable tree wall)
+        } else {
+          grid[ty][tx] = 9; // jungle path (passable gap)
+        }
+        continue;
+      }
+
+      // Remaining area = jungle
+      const jungleSeed = seededRandom(tx, ty);
+      if (jungleSeed > 0.88) {
+        grid[ty][tx] = 10; // scattered impassable trees in jungle
+      } else if (jungleSeed > 0.7) {
+        grid[ty][tx] = 5; // jungle ground
       } else {
-        grid[ty][tx] = seededRandom(tx, ty) > 0.85 ? 1 : 0;
+        grid[ty][tx] = 0; // grass (open jungle area)
       }
     }
   }
@@ -170,55 +305,101 @@ function generateTerrainMap(): number[][] {
 
 const TERRAIN_LOOKUP: TerrainType[] = ['grass', 'dirt', 'stone', 'water', 'lane', 'jungle', 'base_blue', 'base_red', 'river', 'jungle_path', 'jungle', 'stone'];
 
+// ── Dota 2-style decoration generator ───────────────────────────
 function generateDecorations(): { x: number; y: number; type: string; seed: number }[] {
   const decos: { x: number; y: number; type: string; seed: number }[] = [];
+  const S = MAP_SIZE;
 
-  decos.push({ x: MAP_SIZE / 2, y: MAP_SIZE / 2, type: 'coliseum', seed: 9000 });
-  decos.push({ x: BASE_POSITIONS[0].x + 120, y: BASE_POSITIONS[0].y - 80, type: 'barracks', seed: 9001 });
-  decos.push({ x: BASE_POSITIONS[0].x + 200, y: BASE_POSITIONS[0].y - 30, type: 'forge', seed: 9002 });
-  decos.push({ x: BASE_POSITIONS[1].x - 120, y: BASE_POSITIONS[1].y + 80, type: 'crypt', seed: 9003 });
-  decos.push({ x: BASE_POSITIONS[1].x - 200, y: BASE_POSITIONS[1].y + 30, type: 'necropolis_walls', seed: 9004 });
-  decos.push({ x: 600, y: 600, type: 'arch', seed: 9005 });
-  decos.push({ x: 3400, y: 3400, type: 'arch', seed: 9006 });
-  decos.push({ x: 1000, y: 3200, type: 'tree_house', seed: 9007 });
-  decos.push({ x: 3200, y: 1000, type: 'hellhouse', seed: 9008 });
-  decos.push({ x: 1600, y: 2400, type: 'cabin_shed', seed: 9009 });
-  decos.push({ x: 2400, y: 1600, type: 'storage_house', seed: 9010 });
-  decos.push({ x: MAP_SIZE / 2 - 300, y: MAP_SIZE / 2 + 300, type: 'camp_fire_glb', seed: 9011 });
-  decos.push({ x: MAP_SIZE / 2 + 300, y: MAP_SIZE / 2 - 300, type: 'camp_fire_glb', seed: 9012 });
+  // Base structures
+  decos.push({ x: BASE_POSITIONS[0].x + 100, y: BASE_POSITIONS[0].y - 100, type: 'barracks', seed: 9001 });
+  decos.push({ x: BASE_POSITIONS[0].x + 180, y: BASE_POSITIONS[0].y - 40, type: 'forge', seed: 9002 });
+  decos.push({ x: BASE_POSITIONS[0].x - 60, y: BASE_POSITIONS[0].y - 120, type: 'campfire', seed: 9020 });
+  decos.push({ x: BASE_POSITIONS[1].x - 100, y: BASE_POSITIONS[1].y + 100, type: 'crypt', seed: 9003 });
+  decos.push({ x: BASE_POSITIONS[1].x - 180, y: BASE_POSITIONS[1].y + 40, type: 'arch', seed: 9004 });
+  decos.push({ x: BASE_POSITIONS[1].x + 60, y: BASE_POSITIONS[1].y + 120, type: 'campfire', seed: 9021 });
 
-  const jungleStructureTypes = ['gravestone', 'tree_lava', 'camp_fire_glb'];
-  for (let i = 0; i < 12; i++) {
-    const angle = (i / 12) * Math.PI * 2;
-    const r = 800 + seededRandom(i * 41, i * 53) * 600;
-    const x = MAP_SIZE / 2 + Math.cos(angle) * r;
-    const y = MAP_SIZE / 2 + Math.sin(angle) * r;
-    if (isOnLaneStatic(x, y)) continue;
-    const structType = jungleStructureTypes[i % jungleStructureTypes.length];
-    decos.push({ x, y, type: structType, seed: 9100 + i });
-  }
+  // Roshan / Boss pit — top-left river area
+  decos.push({ x: 900, y: 1700, type: 'coliseum', seed: 9050 });
+  decos.push({ x: 850, y: 1750, type: 'camp_fire_glb', seed: 9051 });
 
-  for (let i = 0; i < 200; i++) {
-    const x = seededRandom(i * 7, i * 13) * MAP_SIZE;
-    const y = seededRandom(i * 11, i * 17) * MAP_SIZE;
-    const distBase0 = Math.sqrt((x - BASE_POSITIONS[0].x) ** 2 + (y - BASE_POSITIONS[0].y) ** 2);
-    const distBase1 = Math.sqrt((x - BASE_POSITIONS[1].x) ** 2 + (y - BASE_POSITIONS[1].y) ** 2);
-    if (distBase0 < 300 || distBase1 < 300) continue;
-    if (isOnLaneStatic(x, y)) continue;
-    const distCenter = Math.sqrt((x - MAP_SIZE / 2) ** 2 + (y - MAP_SIZE / 2) ** 2);
-    if (distCenter > 400 && distCenter < 1800) {
-      decos.push({ x, y, type: seededRandom(i, i + 100) > 0.3 ? 'tree' : 'rock', seed: i });
+  // River decoration: rocks along cliffs
+  for (let i = 0; i < RIVER_PATH.length - 1; i++) {
+    const a = RIVER_PATH[i], b = RIVER_PATH[i + 1];
+    const steps = 5;
+    for (let s = 0; s < steps; s++) {
+      const t = s / steps;
+      const rx = a.x + (b.x - a.x) * t;
+      const ry = a.y + (b.y - a.y) * t;
+      // Rocks on both sides of river
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const perpX = -dy / len * 130, perpY = dx / len * 130;
+      decos.push({ x: rx + perpX, y: ry + perpY, type: 'rock_large', seed: 9100 + i * 10 + s });
+      decos.push({ x: rx - perpX, y: ry - perpY, type: 'rock', seed: 9200 + i * 10 + s });
     }
   }
-  for (let i = 0; i < 80; i++) {
-    const x = seededRandom(i * 23 + 500, i * 29) * MAP_SIZE;
-    const y = seededRandom(i * 31, i * 37 + 500) * MAP_SIZE;
-    if (isOnLaneStatic(x, y)) continue;
-    const distBase0 = Math.sqrt((x - BASE_POSITIONS[0].x) ** 2 + (y - BASE_POSITIONS[0].y) ** 2);
-    const distBase1 = Math.sqrt((x - BASE_POSITIONS[1].x) ** 2 + (y - BASE_POSITIONS[1].y) ** 2);
-    if (distBase0 < 300 || distBase1 < 300) continue;
-    decos.push({ x, y, type: 'rock', seed: i + 300 });
+
+  // Dense jungle trees — scattered in jungle quadrants
+  // Radiant jungle (bottom-left quadrant, between top and mid lanes)
+  const jungleRegions = [
+    // Radiant primary jungle
+    { cx: 700, cy: 2600, r: 400 },
+    { cx: 1200, cy: 3100, r: 300 },
+    // Radiant secondary jungle
+    { cx: 1800, cy: 3200, r: 300 },
+    // Dire primary jungle
+    { cx: 3300, cy: 1400, r: 400 },
+    { cx: 2800, cy: 900, r: 300 },
+    // Dire secondary jungle
+    { cx: 2200, cy: 800, r: 300 },
+    // Mid jungle pockets
+    { cx: 1400, cy: 2300, r: 250 },
+    { cx: 2600, cy: 1700, r: 250 },
+  ];
+
+  let seedOff = 1000;
+  for (const reg of jungleRegions) {
+    const treeCount = 20 + Math.floor(seededRandom(reg.cx, reg.cy) * 15);
+    for (let t = 0; t < treeCount; t++) {
+      const angle = seededRandom(seedOff + t, seedOff + t * 3) * Math.PI * 2;
+      const r = seededRandom(seedOff + t * 7, seedOff + t * 11) * reg.r;
+      const tx = reg.cx + Math.cos(angle) * r;
+      const ty = reg.cy + Math.sin(angle) * r;
+      if (tx < 100 || ty < 100 || tx > S - 100 || ty > S - 100) continue;
+      const treeType = seededRandom(seedOff + t, t) > 0.6 ? 'pine_tree' : 'tree';
+      decos.push({ x: tx, y: ty, type: treeType, seed: seedOff + t });
+    }
+    seedOff += 100;
   }
+
+  // Bushes and ferns along lane edges (vision blockers)
+  for (const lane of DOTA_LANES) {
+    for (let i = 1; i < lane.length; i++) {
+      const a = lane[i - 1], b = lane[i];
+      const seg = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
+      const bushCount = Math.floor(seg / 200);
+      for (let j = 0; j < bushCount; j++) {
+        const t = (j + 0.5) / bushCount;
+        const lx = a.x + (b.x - a.x) * t;
+        const ly = a.y + (b.y - a.y) * t;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const side = (j % 2 === 0 ? 1 : -1) * (200 + seededRandom(j * 13, i * 17) * 80);
+        decos.push({ x: lx + (-dy / len) * side, y: ly + (dx / len) * side, type: 'bush', seed: 5000 + i * 100 + j });
+      }
+    }
+  }
+
+  // Scattered rocks in open areas
+  for (let i = 0; i < 60; i++) {
+    const x = 200 + seededRandom(i * 23 + 500, i * 29) * (S - 400);
+    const y = 200 + seededRandom(i * 31, i * 37 + 500) * (S - 400);
+    const dBase0 = Math.sqrt((x - BASE_POSITIONS[0].x) ** 2 + (y - BASE_POSITIONS[0].y) ** 2);
+    const dBase1 = Math.sqrt((x - BASE_POSITIONS[1].x) ** 2 + (y - BASE_POSITIONS[1].y) ** 2);
+    if (dBase0 < 350 || dBase1 < 350) continue;
+    decos.push({ x, y, type: seededRandom(i, i + 50) > 0.5 ? 'rock' : 'pebble', seed: 3000 + i });
+  }
+
   return decos;
 }
 
@@ -358,7 +539,7 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     level: 1, xp: 0, gold: 500,
     kills: 0, deaths: 0, assists: 0,
     items: [null, null, null, null, null, null],
-    abilityCooldowns: [0, 0, 0, 0],
+    abilityCooldowns: [0, 0, 0, 0, 0, 0],
     autoAttackTimer: 0,
     targetId: null, moveTarget: null,
     attackMoveTarget: null, isAttackMoving: false, stopCommand: false,
@@ -378,8 +559,8 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
     iFrames: 0,
     assignedLane: 1,
     abilityCharges: initAbilityCharges(hd.race, hd.heroClass),
-    abilityChargeTimers: [0, 0, 0, 0],
-    abilityLevels: [0, 0, 0, 0],
+    abilityChargeTimers: [0, 0, 0, 0, 0, 0],
+    abilityLevels: [0, 0, 0, 0, 0, 0],
     abilityPoints: 1,
     aiChatTimer: 5 + Math.random() * 20,
     killStreak: 0,
@@ -392,8 +573,10 @@ function createHero(state: MobaState, hd: HeroData, team: number, x: number, y: 
 
 function initAbilityCharges(race: string, heroClass: string): number[] {
   const abilities = getHeroAbilities(race, heroClass);
-  if (!abilities || abilities.length === 0) return [0, 0, 0, 0];
-  return abilities.map(ab => ab.maxCharges || 0);
+  if (!abilities || abilities.length === 0) return [0, 0, 0, 0, 0, 0];
+  const charges = abilities.map(ab => ab.maxCharges || 0);
+  while (charges.length < 6) charges.push(0);
+  return charges;
 }
 
 function createTower(state: MobaState, x: number, y: number, team: number, lane: number, tier: number): MobaTower {
@@ -409,16 +592,20 @@ function createTower(state: MobaState, x: number, y: number, team: number, lane:
   };
 }
 
+// Dota 2-style jungle camp positions — 3 camps per side + Roshan
 const JUNGLE_CAMP_POSITIONS: { x: number; y: number; type: 'small' | 'medium' | 'buff' }[] = [
-  { x: 1000, y: 1000, type: 'small' },
-  { x: 1500, y: 2500, type: 'medium' },
-  { x: 800, y: 2200, type: 'buff' },
-  { x: 1800, y: 1200, type: 'small' },
-  { x: 3000, y: 3000, type: 'small' },
-  { x: 2500, y: 1500, type: 'medium' },
-  { x: 3200, y: 1800, type: 'buff' },
-  { x: 2200, y: 2800, type: 'small' },
-  { x: 1200, y: 3200, type: 'small' },
+  // Radiant jungle (bottom-left quadrant)
+  { x: 650, y: 2700, type: 'small' },    // near top lane
+  { x: 1100, y: 3100, type: 'medium' },  // deep jungle
+  { x: 800, y: 3300, type: 'buff' },     // radiant buff
+  { x: 1800, y: 3200, type: 'small' },   // near bot lane
+  // Dire jungle (top-right quadrant)
+  { x: 3350, y: 1300, type: 'small' },   // near bot lane
+  { x: 2900, y: 900, type: 'medium' },   // deep jungle
+  { x: 3200, y: 700, type: 'buff' },     // dire buff
+  { x: 2200, y: 800, type: 'small' },    // near top lane
+  // Roshan boss pit (near NW river bend)
+  { x: 900, y: 1700, type: 'buff' },
   { x: 2800, y: 800, type: 'small' },
 ];
 
@@ -3721,7 +3908,7 @@ export function handleLevelUpAbility(state: MobaState, abilityIndex: number) {
   const player = state.heroes[state.playerHeroIndex];
   if (!player || player.dead) return;
   if (player.abilityPoints <= 0) return;
-  if (abilityIndex < 0 || abilityIndex > 3) return;
+  if (abilityIndex < 0 || abilityIndex > 5) return;
 
   const maxLevel = abilityIndex === 3 ? 3 : 4;
   if (player.abilityLevels[abilityIndex] >= maxLevel) return;
@@ -3903,7 +4090,7 @@ export function getHudState(state: MobaState): HudState {
     deaths: player?.deaths ?? 0,
     assists: player?.assists ?? 0,
     items: player?.items ?? [null, null, null, null, null, null],
-    abilityCooldowns: player?.abilityCooldowns ?? [0, 0, 0, 0],
+    abilityCooldowns: player?.abilityCooldowns ?? [0, 0, 0, 0, 0, 0],
     gameTime: state.gameTime,
     heroName: heroData?.name ?? '',
     heroTitle: heroData?.title ?? '',
@@ -3940,9 +4127,14 @@ export function getHudState(state: MobaState): HudState {
     blockActive: player?.blockActive ?? false,
     blockCooldown: player?.blockCooldown ?? 0,
     autoAttackEnabled: state.autoAttackEnabled,
-    abilityCharges: player?.abilityCharges ?? [0, 0, 0, 0],
-    abilityMaxCharges: heroData ? getHeroAbilities(heroData.race, heroData.heroClass).map(ab => ab.maxCharges || 0) : [0, 0, 0, 0],
-    abilityLevels: player?.abilityLevels ?? [0, 0, 0, 0],
+    abilityCharges: player?.abilityCharges ?? [0, 0, 0, 0, 0, 0],
+    abilityMaxCharges: (() => {
+      if (!heroData) return [0, 0, 0, 0, 0, 0];
+      const abs = getHeroAbilities(heroData.race, heroData.heroClass).map(ab => ab.maxCharges || 0);
+      while (abs.length < 6) abs.push(0);
+      return abs;
+    })(),
+    abilityLevels: player?.abilityLevels ?? [0, 0, 0, 0, 0, 0],
     abilityPoints: player?.abilityPoints ?? 0,
     minimapEntities: (() => {
       const pt = player?.team ?? 0;
