@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { HEROES, RACE_COLORS, CLASS_COLORS } from '@/game/types';
 import { VoxelRenderer } from '@/game/voxel';
+import { ensurePlayerHeroLoaded } from '@/game/player-account';
 import { GATHERING_PROFESSIONS, loadProfessions, createResourceInventory } from '@/game/professions-system';
 import {
   loadIslandState, tickIslandHarvest, deployHeroToIsland, recallHeroFromIsland,
@@ -64,10 +65,16 @@ export default function IslandPage() {
   const [selectedHeroId, setSelectedHeroId] = useState<number | null>(null);
   const [selectedProfId, setSelectedProfId] = useState<string>('');
   const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const [heroReady, setHeroReady] = useState(false);
   const [, forceUpdate] = useState(0);
 
+  // Ensure player's own character is loaded into HEROES[] before showing deploy list
+  useEffect(() => {
+    ensurePlayerHeroLoaded().then(() => setHeroReady(true));
+  }, []);
+
   const deployedIds = getDeployedHeroIds(islandState);
-  const availableHeroes = getAvailableHeroes(deployedIds);
+  const availableHeroes = heroReady ? getAvailableHeroes(deployedIds) : [];
 
   // Center camera on island spawn point
   useEffect(() => {

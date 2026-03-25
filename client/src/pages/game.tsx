@@ -24,6 +24,7 @@ import { ensurePixelGothicLoaded, EVENT_BANNERS } from '@/game/combat-popups';
 import { initGLBSprites } from '@/game/glb-sprites';
 import { MouseTargetingManager } from '@/game/mouse-targeting';
 import { PhysicsWorld, createPhysicsWorld } from '@/game/physics';
+import { ensurePlayerHeroLoaded, getPlayerHeroSync } from '@/game/player-account';
 import {
   SKILL_TREES, MobaSkillLoadout, createDefaultMobaLoadout,
   buildAbilitiesFromMobaLoadout, getHudOrderAbilities, hudIndexToAbilityIndex,
@@ -182,13 +183,21 @@ export default function GamePage() {
 
   const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
   const team = parseInt(localStorage.getItem('grudge_team') || '0');
+  const [heroReady, setHeroReady] = useState(false);
+
+  // Ensure custom character is registered in HEROES[] before game boots
+  useEffect(() => {
+    ensurePlayerHeroLoaded().then(() => setHeroReady(true));
+  }, []);
 
   useEffect(() => {
+    if (!heroReady) return;
     if (heroId < 0) {
       setLocation('/');
       return;
     }
 
+    getPlayerHeroSync();
     const state = createInitialState(heroId, team);
     stateRef.current = state;
 
@@ -586,7 +595,7 @@ export default function GamePage() {
       if (physics) physics.clear();
       combatActor.stop();
     };
-  }, [heroId, team, setLocation]);
+  }, [heroId, team, heroReady, setLocation]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);

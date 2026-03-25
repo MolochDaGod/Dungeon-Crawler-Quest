@@ -228,8 +228,12 @@ export function getEstimatedYieldPerHour(profLevel: number, zoneTier: number): n
   return Math.floor(60 * 1.5 * (1 + profLevel * 0.01) * harvestTier * 0.5);
 }
 
+/**
+ * Returns only the player's own characters (not pre-made admin/AI heroes).
+ * Player characters have isAINpc === false and isSecret is not set.
+ */
 export function getAvailableHeroes(deployedIds: Set<number>): HeroData[] {
-  return HEROES.filter(h => !deployedIds.has(h.id));
+  return HEROES.filter(h => !deployedIds.has(h.id) && h.isAINpc === false && !h.isSecret);
 }
 
 export function getDiscoveredZones(): ZoneDef[] {

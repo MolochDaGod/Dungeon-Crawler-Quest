@@ -114,6 +114,16 @@ import {
   type ModularVoxelConfig, defaultModularConfig,
 } from './voxel-modular';
 import { getCurrentCharacter } from './player-account';
+import {
+  ZoneClusterState, createZoneClusterState, getActiveZone,
+  checkPlayerZoneExit, beginZoneTransition, updateTransition,
+  completeZoneSwap, updateBanner, getTransitionOpacity,
+} from './zone-cluster';
+import { createZoneTilemap, getActiveZoneTilemap } from './tilemap-zone';
+import { generateBiomeMask } from './ai-world-planner';
+import { generateAllChunks } from './ai-chunk-generator';
+import { renderTilemap, renderOceanBackground, renderZoneExits } from './tilemap-renderer-v2';
+import { validateZone } from './ai-map-validator';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -741,6 +751,15 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
   state.voxelProjectiles = [];
   state.rangedAttackCooldown = 0;
 
+  // ── Zone Cluster: track which zone is loaded ──
+  (state as any).zoneCluster = createZoneClusterState(startZone.id);
+
+  // ── Generate tilemap for starting zone ──
+  const _startTilemap = createZoneTilemap(startZone.id);
+  const _startBiomeMask = generateBiomeMask(startZone, startZone.id * 12345);
+  generateAllChunks(_startTilemap, _startBiomeMask, startZone, startZone.id * 12345);
+  validateZone(_startTilemap, _startBiomeMask, startZone);
+
   // Initialize heightmap from generated world data
   state.heightmap = createWorldHeightmap(state.generatedWorld);
   // Build spawner defs from zone data + heightmap
@@ -812,7 +831,10 @@ const DEFAULT_NPC_LORE = {
 };
 
 function generateNPCs(state: OpenWorldState): void {
-  for (const zone of ISLAND_ZONES) {
+  // Only generate NPCs for the active zone (cluster system)
+  const cluster: ZoneClusterState | undefined = (state as any).zoneCluster;
+  const zones = cluster ? [getActiveZone(cluster)] : ISLAND_ZONES;
+  for (const zone of zones) {
     const typeOrder: OWNPC['type'][] = zone.isSafeZone
       ? ['merchant', 'trainer', 'quest', 'crafter']
       : ['quest'];
@@ -848,7 +870,9 @@ const ZONE_RESOURCE_MAP: Record<string, string[]> = {
 };
 
 function generateResourceNodes(state: OpenWorldState): void {
-  for (const zone of ISLAND_ZONES) {
+  const cluster: ZoneClusterState | undefined = (state as any).zoneCluster;
+  const zones = cluster ? [getActiveZone(cluster)] : ISLAND_ZONES;
+  for (const zone of zones) {
     if (zone.isSafeZone) continue;
     const profTypes = ZONE_RESOURCE_MAP[zone.terrainType] || ['mining'];
     const tier = Math.max(1, Math.min(8, Math.ceil(zone.requiredLevel / 3)));
@@ -1021,7 +1045,7 @@ function handleOWInteract(state: OpenWorldState): void {
   }
 
   // Try dungeon entrance first (closest priority)
-  const entrance = getDungeonEntranceNear(p.x, p.y, 80);
+  const entrance = getDungeonEntranceNear(ISLAND_ZONES[0], p.x, p.y, 80);
   if (entrance && distXY(p, entrance) < 60) {
     enterOWDungeon(state);
     return;
@@ -1132,8 +1156,10 @@ function updateResourceNodes(state: OpenWorldState, dt: number): void {
 function spawnEnemiesNearPlayer(state: OpenWorldState): void {
   const p = state.player;
 
-  for (const zone of ISLAND_ZONES) {
-    // Only process zones whose bounds overlap with spawn radius
+  // Only spawn enemies for the active zone (cluster system)
+  const _cluster: ZoneClusterState | undefined = (state as any).zoneCluster;
+  const _spawnZones = _cluster ? [getActiveZone(_cluster)] : ISLAND_ZONES;
+  for (const zone of _spawnZones) {
     const b = zone.bounds;
     if (p.x + SPAWN_RADIUS < b.x || p.x - SPAWN_RADIUS > b.x + b.w) continue;
     if (p.y + SPAWN_RADIUS < b.y || p.y - SPAWN_RADIUS > b.y + b.h) continue;
@@ -1219,7 +1245,51 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
   const progressEvents = updatePlayTime(state.playerProgress, dt);
   state.pendingProgressEvents.push(...progressEvents);
 
-  // Zone tracking
+  // ── Zone Cluster: exit detection + transition ──
+  const cluster: ZoneClusterState = (state as any).zoneCluster;
+  if (cluster) {
+    // Check if player walked into a zone exit
+    const exit = checkPlayerZoneExit(cluster, p.x, p.y);
+    if (exit) {
+      beginZoneTransition(cluster, exit);
+      state.killFeed.push({ text: `→ ${exit.label}`, color: '#60a5fa', time: state.gameTime });
+    }
+
+    // Update transition animation
+    const shouldSwap = updateTransition(cluster, dt);
+    if (shouldSwap) {
+      const result = completeZoneSwap(cluster);
+      // Reposition player in new zone
+      p.x = result.x;
+      p.y = result.y;
+      state.camera.x = result.x;
+      state.camera.y = result.y;
+      // Clear old zone entities
+      state.enemies = [];
+      state.npcs = [];
+      state.resourceNodes = [];
+      state.projectiles = [];
+      state.particles = [];
+      state.floatingTexts = [];
+      state.spellEffects = [];
+      state.ambientParticles = [];
+      // Regenerate tilemap + NPCs + resources for new zone
+      const _newTilemap = createZoneTilemap(result.zone.id);
+      const _newBiomeMask = generateBiomeMask(result.zone, result.zone.id * 12345);
+      generateAllChunks(_newTilemap, _newBiomeMask, result.zone, result.zone.id * 12345);
+      validateZone(_newTilemap, _newBiomeMask, result.zone);
+      generateNPCs(state);
+      generateResourceNodes(state);
+      state.killFeed.push({ text: `Entered: ${result.zone.name}`, color: '#22c55e', time: state.gameTime });
+    }
+
+    updateBanner(cluster, dt);
+
+    // Skip normal update during transition fade
+    if (cluster.transitioning) return;
+  }
+
+  // Zone tracking (sub-zone within current cluster)
   const newZone = updateZoneTracker(state.zoneTracker, p.x, p.y, dt);
   if (newZone) {
     const zEvents = onZoneDiscovered(state.playerProgress, newZone.id, newZone.name);
@@ -2456,7 +2526,7 @@ export function claimOWMission(state: OpenWorldState, missionId: string): Missio
 
 /** Enter a dungeon from the open world */
 export function enterOWDungeon(state: OpenWorldState): DungeonEntrance | null {
-  const entrance = getDungeonEntranceNear(state.player.x, state.player.y, 80);
+  const entrance = getDungeonEntranceNear(ISLAND_ZONES[0], state.player.x, state.player.y, 80);
   if (!entrance) return null;
   if (state.player.level < entrance.requiredLevel) {
     state.killFeed.push({ text: `Requires level ${entrance.requiredLevel}!`, color: '#ef4444', time: state.gameTime });
@@ -2657,7 +2727,7 @@ function getNearbyInteractableLabel(state: OpenWorldState): string | null {
     return `${nearbyPlayer.name} [${tag}] — Lv${nearbyPlayer.level} ${nearbyPlayer.heroClass}`;
   }
   // Dungeon entrance
-  const ent = getDungeonEntranceNear(p.x, p.y, 80);
+  const ent = getDungeonEntranceNear(ISLAND_ZONES[0], p.x, p.y, 80);
   if (ent && distXY(p, ent) < 60) return `Enter ${ent.name}`;
   // Town building door
   const bldg = getBuildingNear(p.x, p.y, 70);
@@ -2739,7 +2809,7 @@ export function getOWHudState(state: OpenWorldState): OWHudState {
       id: m.def.id, name: m.def.name, status: m.status,
       objectives: m.objectives.map(o => ({ type: o.type, target: o.target, current: o.current, required: o.required })),
     })),
-    nearbyDungeon: getDungeonEntranceNear(p.x, p.y, 80),
+    nearbyDungeon: getDungeonEntranceNear(ISLAND_ZONES[0], p.x, p.y, 80),
     // MMO controls
     stamina: p.stamina,
     maxStamina: p.maxStamina,
@@ -3213,76 +3283,59 @@ export class OpenWorldRenderer {
     if (state.activeBuilding) {
       this.renderBuildingInterior(ctx, state, W, H);
     }
+
+    // ── Zone Cluster: transition overlay + zone banner ──
+    const _zc: ZoneClusterState | undefined = (state as any).zoneCluster;
+    if (_zc) {
+      // Transition fade overlay
+      const tOpacity = getTransitionOpacity(_zc);
+      if (tOpacity > 0) {
+        ctx.fillStyle = `rgba(0,0,0,${tOpacity})`;
+        ctx.fillRect(0, 0, W, H);
+        // "Loading..." text at center
+        if (tOpacity > 0.5) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.globalAlpha = (tOpacity - 0.5) * 2;
+          ctx.fillText(_zc.bannerText || 'Loading...', W / 2, H / 2);
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // Zone name banner (fades after entering)
+      if (_zc.bannerTimer > 0 && !_zc.transitioning) {
+        const fade = Math.min(1, _zc.bannerTimer / 0.5); // fade out over last 0.5s
+        ctx.globalAlpha = fade * 0.9;
+        // Dark backdrop
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(W / 2 - 200, 60, 400, 50);
+        // Zone name
+        ctx.fillStyle = _zc.bannerColor;
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(_zc.bannerText, W / 2, 92);
+        ctx.globalAlpha = 1;
+      }
+    }
   }
 
   private renderTerrain(ctx: CanvasRenderingContext2D, state: OpenWorldState, cam: { x: number; y: number; zoom: number }, W: number, H: number, brightness: number): void {
     const viewW = W / cam.zoom;
     const viewH = H / cam.zoom;
-    const camLeft = cam.x - viewW / 2;
-    const camTop = cam.y - viewH / 2;
-    // ── Ocean water — smooth gradient fill instead of per-tile grid ──
-    const now = Date.now();
-    ctx.globalAlpha = Math.max(0.5, brightness);
 
-    // Base ocean gradient (deep centre → lighter near land)
-    const oceanGrad = ctx.createRadialGradient(
-      OPEN_WORLD_SIZE / 2, OPEN_WORLD_SIZE / 2, 800,
-      OPEN_WORLD_SIZE / 2, OPEN_WORLD_SIZE / 2, OPEN_WORLD_SIZE * 0.55,
-    );
-    oceanGrad.addColorStop(0, '#0e2a4a');
-    oceanGrad.addColorStop(0.4, '#0c2040');
-    oceanGrad.addColorStop(1, '#081830');
-    ctx.fillStyle = oceanGrad;
-    ctx.fillRect(camLeft, camTop, viewW, viewH);
+    // ── Layer 0: Ocean background (gradient + animated waves) ──
+    renderOceanBackground(ctx, cam.x, cam.y, viewW, viewH, Date.now());
 
-    // Animated wave shimmer pass (uses large tiles for perf)
-    const OCEAN_TILE = 160;
-    const oStartX = Math.max(0, Math.floor(camLeft / OCEAN_TILE) - 1);
-    const oStartY = Math.max(0, Math.floor(camTop / OCEAN_TILE) - 1);
-    const oEndX = Math.min(Math.ceil(OPEN_WORLD_SIZE / OCEAN_TILE), Math.ceil((camLeft + viewW) / OCEAN_TILE) + 1);
-    const oEndY = Math.min(Math.ceil(OPEN_WORLD_SIZE / OCEAN_TILE), Math.ceil((camTop + viewH) / OCEAN_TILE) + 1);
+    // ── Layer 1-6: 16px tilemap (terrain, roads, structures, props) ──
+    // Renders all 7 layers from the active ZoneTilemap
+    renderTilemap(ctx, cam.x, cam.y, viewW, viewH);
 
-    for (let ty = oStartY; ty < oEndY; ty++) {
-      for (let tx = oStartX; tx < oEndX; tx++) {
-        const owx = tx * OCEAN_TILE + OCEAN_TILE / 2;
-        const owy = ty * OCEAN_TILE + OCEAN_TILE / 2;
-        if (getZoneAtPosition(owx, owy)) continue;
-
-        const ox = tx * OCEAN_TILE;
-        const oy = ty * OCEAN_TILE;
-
-        // Subtle wave colour variation
-        const w1 = Math.sin(now * 0.0008 + tx * 0.4 + ty * 0.3) * 0.5 + 0.5;
-        const w2 = Math.cos(now * 0.0006 + tx * 0.2 - ty * 0.4) * 0.5 + 0.5;
-        ctx.fillStyle = `rgba(40,100,160,${0.06 + w1 * 0.08})`;
-        ctx.fillRect(ox, oy, OCEAN_TILE, OCEAN_TILE);
-
-        // Wave crest highlights
-        const crest = Math.sin(now * 0.0015 + tx * 1.2 + ty * 0.8);
-        if (crest > 0.5) {
-          ctx.fillStyle = `rgba(120,180,220,${(crest - 0.5) * 0.12})`;
-          ctx.fillRect(ox + 8, oy + w2 * OCEAN_TILE * 0.6, OCEAN_TILE - 16, 3);
-        }
-
-        // Shoreline foam near zones
-        if (isNearAnyZone(owx, owy, 200)) {
-          const foam = Math.sin(now * 0.002 + tx * 1.1 + ty * 0.9) * 0.5 + 0.5;
-          ctx.fillStyle = `rgba(200,230,245,${foam * 0.18 * brightness})`;
-          ctx.fillRect(ox, oy, OCEAN_TILE, OCEAN_TILE);
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    // ── Zone terrain: use TileMapRenderer for ground + sprite details ──
-    // Full brightness for terrain tiles — night/weather applied as overlay later
-    for (const zone of ISLAND_ZONES) {
-      const b = zone.bounds;
-      if (b.x + b.w < camLeft || b.x > camLeft + viewW || b.y + b.h < camTop || b.y > camTop + viewH) continue;
-      // Tileset ground fill
-      this.tileRenderer.renderZoneGround(ctx, zone, camLeft, camTop, viewW, viewH);
-      // Sprite-based details (trees, bushes, rocks)
-      this.tileRenderer.renderZoneDetails(ctx, zone, camLeft, camTop, viewW, viewH);
+    // ── Zone exits: glowing markers at zone edges ──
+    const _cluster: ZoneClusterState | undefined = (state as any).zoneCluster;
+    if (_cluster) {
+      const activeZone = getActiveZone(_cluster);
+      renderZoneExits(ctx, activeZone.exits, state.gameTime * 1000);
     }
   }
 

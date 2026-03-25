@@ -7,9 +7,14 @@
 
 import { RACE_FACTIONS } from './player-characters';
 import type { PlayerCharacterState } from './player-characters';
-import { getZoneById } from './zones';
+import { getZoneById, ISLAND_ZONES } from './zones';
 
 // ── Faction → Zone Mapping ─────────────────────────────────────
+// Zone IDs match the 3×3 grid layout in zones.ts:
+//   1 = Crusade Coast  (TOP,    col 1 row 0)
+//   2 = Fabled Shore   (LEFT,   col 0 row 1)
+//   3 = Legion Harbor  (RIGHT,  col 2 row 1)
+//   4 = Pirate Bay     (BOTTOM, col 1 row 2)
 
 export interface FactionDock {
   faction: string;
@@ -25,56 +30,61 @@ export interface FactionDock {
   motto: string;
 }
 
+// Derive dock positions from zone defs so they stay in sync with the grid
+function dockFromZone(zoneId: number): { x: number; y: number } {
+  const z = ISLAND_ZONES.find(z => z.id === zoneId);
+  if (z?.dockSpawn) return z.dockSpawn;
+  if (z) return { x: z.bounds.x + z.bounds.w / 2, y: z.bounds.y + z.bounds.h / 2 };
+  return { x: 8000, y: 8000 };
+}
+
+function npcAround(cx: number, cy: number): { x: number; y: number; role: string }[] {
+  return [
+    { x: cx - 200, y: cy + 100, role: 'commander' },
+    { x: cx + 200, y: cy + 100, role: 'supply_master' },
+    { x: cx, y: cy - 200, role: 'scout' },
+  ];
+}
+
+const _crusadeDock = dockFromZone(1);
+const _fabledDock  = dockFromZone(2);
+const _legionDock  = dockFromZone(3);
+const _pirateDock  = dockFromZone(4);
+
 export const FACTION_DOCKS: Record<string, FactionDock> = {
   Crusade: {
     faction: 'Crusade',
-    zoneId: 16,
+    zoneId: 1,
     zoneName: 'Crusade Coast',
-    dockSpawn: { x: 7500, y: 800 },
-    npcPositions: [
-      { x: 7300, y: 900, role: 'commander' },
-      { x: 7700, y: 900, role: 'supply_master' },
-      { x: 7500, y: 600, role: 'scout' },
-    ],
+    dockSpawn: _crusadeDock,
+    npcPositions: npcAround(_crusadeDock.x, _crusadeDock.y),
     color: '#c5a059',
     motto: 'For Honor and Light',
   },
   Fabled: {
     faction: 'Fabled',
-    zoneId: 17,
+    zoneId: 2,
     zoneName: 'Fabled Shore',
-    dockSpawn: { x: 1400, y: 7400 },
-    npcPositions: [
-      { x: 1200, y: 7500, role: 'commander' },
-      { x: 1600, y: 7500, role: 'supply_master' },
-      { x: 1400, y: 7200, role: 'scout' },
-    ],
+    dockSpawn: _fabledDock,
+    npcPositions: npcAround(_fabledDock.x, _fabledDock.y),
     color: '#22d3ee',
     motto: 'Wisdom Endures',
   },
   Legion: {
     faction: 'Legion',
-    zoneId: 18,
+    zoneId: 3,
     zoneName: 'Legion Harbor',
-    dockSpawn: { x: 14650, y: 7400 },
-    npcPositions: [
-      { x: 14450, y: 7500, role: 'commander' },
-      { x: 14850, y: 7500, role: 'supply_master' },
-      { x: 14650, y: 7200, role: 'scout' },
-    ],
+    dockSpawn: _legionDock,
+    npcPositions: npcAround(_legionDock.x, _legionDock.y),
     color: '#ef4444',
     motto: 'Strength Through Fury',
   },
   Pirates: {
     faction: 'Pirates',
-    zoneId: 19,
+    zoneId: 4,
     zoneName: 'Pirate Bay',
-    dockSpawn: { x: 7500, y: 13800 },
-    npcPositions: [
-      { x: 7300, y: 13900, role: 'commander' },
-      { x: 7700, y: 13900, role: 'supply_master' },
-      { x: 7500, y: 13600, role: 'scout' },
-    ],
+    dockSpawn: _pirateDock,
+    npcPositions: npcAround(_pirateDock.x, _pirateDock.y),
     color: '#f59e0b',
     motto: 'Take What Ye Can',
   },
