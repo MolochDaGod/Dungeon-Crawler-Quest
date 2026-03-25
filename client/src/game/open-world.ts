@@ -568,6 +568,13 @@ let _activeJumping = false;
 function isWalkableOW(x: number, y: number): boolean {
   // Bounds check
   if (x < 10 || y < 10 || x >= OPEN_WORLD_SIZE - 10 || y >= OPEN_WORLD_SIZE - 10) return false;
+
+  // Tilemap passability check (new system — authoritative when active)
+  const tm = getActiveZoneTilemap();
+  if (tm) {
+    if (!tm.isPassableAtPx(x, y)) return false;
+  }
+
   // Heightmap check — when jumping, use isJumpable to clear low obstacles
   if (_activeHeightmap) {
     if (_activeJumping) {
@@ -726,7 +733,7 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     effectPool: new EffectPool(128),
     missionLog: loadMissionLog(),
     terrainCache: new Map(),
-    generatedWorld: loadGeneratedWorld(),
+    generatedWorld: null as any, // tilemap engine replaces old ai-map-gen
     heightmap: null as any, // initialized below
     boatState: createBoatState(),
     boatDocks: BOAT_DOCKS,

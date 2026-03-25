@@ -782,6 +782,8 @@ function updateJungleCamps(state: MobaState, dt: number) {
 }
 
 function spawnMinionWave(state: MobaState) {
+  // Use Dota 2-style lanes for minion pathing
+  const lanes = typeof DOTA_LANES !== 'undefined' ? DOTA_LANES : LANE_WAYPOINTS;
   for (let team = 0; team < 2; team++) {
     for (let lane = 0; lane < 3; lane++) {
       const base = BASE_POSITIONS[team];
@@ -1675,7 +1677,8 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
       if (hero.abilityCooldowns[3] <= 0 && hero.abilityLevels[3] > 0) {
         const otherLanes = [0, 1, 2].filter(l => l !== hero.assignedLane);
         const gankLane = otherLanes[Math.floor(seededRandom(hero.id, Math.floor(state.gameTime / 30)) * otherLanes.length)];
-        const waypoints = hero.team === 0 ? LANE_WAYPOINTS[gankLane] : [...LANE_WAYPOINTS[gankLane]].reverse();
+        const gankLanePts = DOTA_LANES[gankLane] ?? LANE_WAYPOINTS[gankLane];
+        const waypoints = hero.team === 0 ? gankLanePts : [...gankLanePts].reverse();
         const midPoint = waypoints[Math.floor(waypoints.length / 2)];
         const angle = angleTo(hero, midPoint);
         hero.vx = Math.cos(angle) * hero.spd * 1.6;
@@ -1733,7 +1736,8 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
       hero.targetId = bestTarget.id;
     } else if (hero.vx === 0 && hero.vy === 0) {
       const lane = hero.assignedLane;
-      const waypoints = hero.team === 0 ? LANE_WAYPOINTS[lane] : [...LANE_WAYPOINTS[lane]].reverse();
+      const heroLanePts = DOTA_LANES[lane] ?? LANE_WAYPOINTS[lane];
+      const waypoints = hero.team === 0 ? heroLanePts : [...heroLanePts].reverse();
 
       let nearestWpIdx = 0;
       let minWpDist = Infinity;
@@ -2076,7 +2080,13 @@ function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, ta
 export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: number, target: any) {
   const heroData = getHeroById(hero.heroDataId);
   if (!heroData) return;
-  const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
+
+  // Try skill tree loadout abilities first (6 slots), fall back to base 4
+  const baseAbilities = getHeroAbilities(heroData.race, heroData.heroClass);
+  const loadoutAbilities: any[] | undefined = (hero as any)._loadoutAbilities;
+  const abilities = loadoutAbilities && loadoutAbilities[abilityIndex]
+    ? loadoutAbilities
+    : baseAbilities;
   if (!abilities || !abilities[abilityIndex]) return;
 
   const abRaw = abilities[abilityIndex];
@@ -3036,7 +3046,8 @@ function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
     return;
   }
 
-  const waypoints = minion.team === 0 ? LANE_WAYPOINTS[minion.lane] : [...LANE_WAYPOINTS[minion.lane]].reverse();
+  const minionLanePts = DOTA_LANES[minion.lane] ?? LANE_WAYPOINTS[minion.lane];
+  const waypoints = minion.team === 0 ? minionLanePts : [...minionLanePts].reverse();
   if (minion.waypointIndex < waypoints.length) {
     const wp = waypoints[minion.waypointIndex];
     const d = dist(minion, wp);
