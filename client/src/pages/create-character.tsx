@@ -12,6 +12,8 @@ import {
 } from '@/game/attributes';
 import { createNewCharacter, playerCharacterToHeroData, startSync } from '@/game/player-account';
 import { findBestHeroModel } from '@/game/player-characters';
+import { mintAndTrack, type MintResult } from '@/game/cnft-mint';
+import { addToCharacterList } from '@/game/shared-character-state';
 
 // Inline Grudge auth helper (from src/utils/grudge-auth.js — outside vite root)
 function getGrudgeUser() {
@@ -230,10 +232,40 @@ export default function CreateCharacter() {
         HEROES.push(newHero);
       }
 
+      // Add to character list for multi-character support
+      addToCharacterList({
+        grudgeId: character.grudgeId,
+        customName: name.trim(),
+        race,
+        heroClass,
+        faction,
+        level: 1,
+        imageUrl: avatarUrl || undefined,
+        createdAt: new Date().toISOString(),
+      });
+
       // Start background sync
       startSync();
 
-      // Route to the correct game mode
+      // Fire-and-forget cNFT mint (non-blocking — character is playable immediately)
+      mintAndTrack({
+        grudgeId: character.grudgeId,
+        characterName: name.trim(),
+        race,
+        heroClass,
+        faction,
+        level: 1,
+        imageUrl: avatarUrl,
+        recipientEmail: grudgeUser?.userId?.includes('@') ? grudgeUser.userId : undefined,
+      }, (mintResult: MintResult) => {
+        if (mintResult.success && mintResult.mintAddress) {
+          console.log(`[cNFT] Character minted: ${mintResult.mintAddress}`);
+        } else {
+          console.warn('[cNFT] Mint fallback — character playable without NFT');
+        }
+      });
+
+      // Route to the correct game mode (don't wait for mint)
       const mode = localStorage.getItem('grudge_mode') || 'arena';
       if (mode === 'openworld') {
         setLocation('/open-world-play');
