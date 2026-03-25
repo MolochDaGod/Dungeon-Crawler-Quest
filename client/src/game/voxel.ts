@@ -5,6 +5,9 @@ import {
 } from './voxel-parts';
 import { type EquipmentAppearance, getEffectiveArmorColors, getEffectiveBootColor } from './voxel-equipment';
 import {
+  type ModularVoxelConfig, getCachedModularHero, MODULAR_GRID,
+} from './voxel-modular';
+import {
   drawCastingCircle, drawWeaponTrail, drawAuraEffect,
   drawTransformVFX, drawHealingVFX, drawShieldVFX,
   drawSummonVFX, WeaponTrailSystem,
@@ -3836,6 +3839,49 @@ export class VoxelRenderer {
       this.renderVoxelModel(ctx, offX, offY, part.model, cubeSize, facing);
       ctx.restore();
     }
+  }
+
+  /**
+   * Render a V2 modular hero (12×12×24) with the same VFX pipeline.
+   * Uses smaller cubeSize (2) to keep screen size comparable to legacy 8×8×16.
+   */
+  drawModularHeroVoxel(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number,
+    config: ModularVoxelConfig,
+    facing: number,
+    animState: string,
+    animTimer: number,
+    entityId?: number,
+    gameTime?: number
+  ) {
+    const model = getCachedModularHero(config);
+    const modularCubeSize = 2; // smaller pixels, same screen size as legacy cs=3 on 8×8×16
+    const groundY = y + 6;
+    const time = gameTime ?? animTimer;
+
+    // Simple idle/walk/death rendering — combat VFX can be layered on top
+    if (animState === 'death') {
+      const eid = entityId ?? 0;
+      let debris = this.deathDebrisCache.get(eid);
+      if (!debris) {
+        debris = this.initDeathDebris(eid, model, time);
+      }
+      const elapsed = time - debris.startTime;
+      if (elapsed < debris.duration) {
+        this.renderDeathDebris(ctx, x, groundY - 18, debris, time, facing);
+      } else {
+        this.deathDebrisCache.delete(eid);
+      }
+      return;
+    }
+
+    // Apply idle breathing to the modular model rendering offset
+    const gt = gameTime ?? animTimer;
+    const idleBreath = animState === 'idle' ? Math.sin(gt * 1.5) * 0.5 : 0;
+    const walkBob = animState === 'walk' ? Math.sin(gt * 6) * 1.5 : 0;
+
+    this.renderVoxelModel(ctx, x, groundY - 18 - idleBreath - walkBob, model, modularCubeSize, facing);
   }
 
   drawHeroVoxelCustomPose(

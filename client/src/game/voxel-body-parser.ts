@@ -194,3 +194,61 @@ export const PART_SCREEN_OFFSETS: Record<BodyPartName, { dx: number; dy: number;
   hat:      { dx: 1, dy: 0, dz: 11 },
   weapon:   { dx: 0, dy: 0, dz: 2 },
 };
+
+// ── V2 Modular: 12×12×24 part regions ──────────────────────────
+
+const MODULAR_PART_REGIONS: Record<BodyPartName, PartRegion> = {
+  leftLeg:  { xMin: 2, xMax: 5,  yMin: 0, yMax: 11, zMin: 0,  zMax: 3,  pivotX: 3.5,  pivotY: 5, pivotZ: 2 },
+  rightLeg: { xMin: 6, xMax: 9,  yMin: 0, yMax: 11, zMin: 0,  zMax: 3,  pivotX: 7.5,  pivotY: 5, pivotZ: 2 },
+  chest:    { xMin: 2, xMax: 9,  yMin: 0, yMax: 11, zMin: 8,  zMax: 15, pivotX: 5.5,  pivotY: 5, pivotZ: 11 },
+  leftArm:  { xMin: 0, xMax: 2,  yMin: 0, yMax: 11, zMin: 8,  zMax: 15, pivotX: 2,    pivotY: 5, pivotZ: 11 },
+  rightArm: { xMin: 9, xMax: 11, yMin: 0, yMax: 11, zMin: 8,  zMax: 15, pivotX: 9,    pivotY: 5, pivotZ: 11 },
+  head:     { xMin: 3, xMax: 8,  yMin: 0, yMax: 11, zMin: 16, zMax: 21, pivotX: 5.5,  pivotY: 5, pivotZ: 18 },
+  hat:      { xMin: 2, xMax: 9,  yMin: 0, yMax: 11, zMin: 21, zMax: 23, pivotX: 5.5,  pivotY: 5, pivotZ: 22 },
+  weapon:   { xMin: 0, xMax: 2,  yMin: 0, yMax: 5,  zMin: 4,  zMax: 23, pivotX: 0,    pivotY: 2, pivotZ: 10 },
+};
+
+const modularParsedCache = new Map<string, ParsedBody>();
+
+/** Parse a V2 modular 12×12×24 model into body parts. */
+export function parseModularIntoParts(fullModel: VoxelModel): ParsedBody {
+  return {
+    leftLeg:  slicePart(fullModel, MODULAR_PART_REGIONS.leftLeg),
+    rightLeg: slicePart(fullModel, MODULAR_PART_REGIONS.rightLeg),
+    chest:    slicePart(fullModel, MODULAR_PART_REGIONS.chest),
+    leftArm:  slicePart(fullModel, MODULAR_PART_REGIONS.leftArm),
+    rightArm: slicePart(fullModel, MODULAR_PART_REGIONS.rightArm),
+    head:     slicePart(fullModel, MODULAR_PART_REGIONS.head),
+    hat:      slicePart(fullModel, MODULAR_PART_REGIONS.hat),
+    weapon:   slicePart(fullModel, MODULAR_PART_REGIONS.weapon),
+  };
+}
+
+/** Get or create a parsed modular body from cache. */
+export function getCachedModularParsedBody(
+  cacheKey: string,
+  model: VoxelModel,
+): ParsedBody {
+  let cached = modularParsedCache.get(cacheKey);
+  if (!cached) {
+    cached = parseModularIntoParts(model);
+    modularParsedCache.set(cacheKey, cached);
+    if (modularParsedCache.size > 50) {
+      const first = modularParsedCache.keys().next().value;
+      if (first) modularParsedCache.delete(first);
+    }
+  }
+  return cached;
+}
+
+/** Screen-space offsets for V2 modular parts */
+export const MODULAR_PART_SCREEN_OFFSETS: Record<BodyPartName, { dx: number; dy: number; dz: number }> = {
+  leftLeg:  { dx: 2,  dy: 0, dz: 0 },
+  rightLeg: { dx: 6,  dy: 0, dz: 0 },
+  chest:    { dx: 2,  dy: 0, dz: 8 },
+  leftArm:  { dx: 0,  dy: 0, dz: 8 },
+  rightArm: { dx: 9,  dy: 0, dz: 8 },
+  head:     { dx: 3,  dy: 0, dz: 16 },
+  hat:      { dx: 2,  dy: 0, dz: 21 },
+  weapon:   { dx: 0,  dy: 0, dz: 4 },
+};

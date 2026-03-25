@@ -101,7 +101,16 @@ export const EFFECT_MAPPINGS: Record<string, EffectMapping> = {
   },
   explosion: {
     effectType: 'explosion',
-    primary: { ...FLAME_EFFECT, id: 'fx-explosion', scale: 2.0 },
+    primary: {
+      id: 'fx-explosion-fire2',
+      name: 'Fire Explosion',
+      framesDir: '/assets/effects/explosions',
+      framePrefix: 'explosion_fire1',
+      frameCount: 16,
+      fps: 20,
+      loop: false,
+      scale: 2.0,
+    },
   },
   spikes: {
     effectType: 'spikes',

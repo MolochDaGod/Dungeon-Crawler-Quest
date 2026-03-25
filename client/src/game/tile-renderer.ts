@@ -21,7 +21,7 @@ import {
 
 // ── Constants ──────────────────────────────────────────────────
 
-const RENDER_TILE = PLACE_TILE; // 40px world-space tiles
+const RENDER_TILE = PLACE_TILE; // 120px world-space tiles — matches 256px source art
 
 // Biome fallback fill colors (used while tile images load)
 const BIOME_GROUND_COLORS: Record<string, string> = {
@@ -159,23 +159,15 @@ export class TileMapRenderer {
       }
     }
 
-    // Subtle noise overlay for depth
-    const startTX = Math.max(0, Math.floor((camX - b.x) / RENDER_TILE));
-    const startTY = Math.max(0, Math.floor((camY - b.y) / RENDER_TILE));
-    const endTX = Math.min(Math.ceil(b.w / RENDER_TILE), Math.ceil((camX + viewW - b.x) / RENDER_TILE) + 1);
-    const endTY = Math.min(Math.ceil(b.h / RENDER_TILE), Math.ceil((camY + viewH - b.y) / RENDER_TILE) + 1);
-
-    ctx.globalAlpha = 0.05;
-    for (let ty = startTY; ty < endTY; ty++) {
-      for (let tx = startTX; tx < endTX; tx++) {
-        const noise = seededRand(tx, ty, zone.id) * 0.3;
-        if (noise > 0.12) {
-          ctx.fillStyle = `rgba(0,0,0,${noise})`;
-          ctx.fillRect(b.x + tx * RENDER_TILE - camX, b.y + ty * RENDER_TILE - camY, RENDER_TILE, RENDER_TILE);
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
+    // Smooth radial vignette from zone centre — replaces per-tile noise grid
+    const zCx = b.x + b.w / 2 - camX;
+    const zCy = b.y + b.h / 2 - camY;
+    const maxR = Math.max(b.w, b.h) * 0.55;
+    const grad = ctx.createRadialGradient(zCx, zCy, maxR * 0.5, zCx, zCy, maxR);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.12)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(b.x - camX, b.y - camY, b.w, b.h);
   }
 
   // ── Road Rendering ───────────────────────────────────────────

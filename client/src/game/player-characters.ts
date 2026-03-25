@@ -12,6 +12,7 @@
  */
 
 import type { EquipmentAppearance } from './voxel-equipment';
+import type { ModularVoxelConfig } from './voxel-modular';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -63,6 +64,8 @@ export interface PlayerCharacterState {
   appearance: EquipmentAppearance;
   /** Bear sprite variant for Worg class (brown/white) */
   bearSpriteVariant: 'brown' | 'white';
+  /** V2 modular voxel customization (lower/chest/face/arm styles) */
+  modularConfig?: ModularVoxelConfig;
   /** ISO timestamp */
   createdAt: string;
   /** ISO timestamp */
@@ -210,6 +213,15 @@ export function createPlayerCharacterState(
     weaponType: weaponType || '',
     appearance: {},
     bearSpriteVariant: RACE_BEAR_VARIANT[race] || 'brown',
+    modularConfig: {
+      race,
+      heroClass,
+      skinColor: RACE_SKIN_COLORS[race] || '#c4956a',
+      lowerStyle: 0,
+      chestStyle: 0,
+      faceStyle: 0,
+      armStyle: 0,
+    },
     createdAt: new Date().toISOString(),
     lastLogin: new Date().toISOString(),
   };

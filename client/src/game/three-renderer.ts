@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { loadGLB, loadFBX, LoadedModel, createAnimatedEntity, playAnimation, AnimatedEntity, loadAnimationSet, applyAnimationsToEntity, ANIMATION_PATHS } from './model-loader';
 import { TOWER_PREFABS, HERO_PREFABS, ENV_PREFABS, CREATURE_PREFABS, MINION_PREFABS, getTowerPrefab, getHeroPrefabKey, getMinionPrefabKey, getJungleMobPrefab, getWeaponForClass, WEAPON_PREFABS } from './prefabs';
-import { MobaState, MobaHero, MobaMinion, MobaTower, MobaNexus, HEROES, MAP_SIZE, TEAM_COLORS, LANE_WAYPOINTS, CLASS_COLORS, Projectile, Particle, FloatingText, SpellEffect, SpellProjectile, AreaDamageZoneState, JungleCamp, JungleMob } from './types';
+import { MobaState, MobaHero, MobaMinion, MobaTower, MobaNexus, HEROES, MAP_SIZE, TEAM_COLORS, LANE_WAYPOINTS, CLASS_COLORS, Projectile, Particle, FloatingText, SpellEffect, SpellProjectile, AreaDamageZoneState, JungleCamp, JungleMob, getHeroById } from './types';
 
 interface Entity3D {
   group: THREE.Group;
@@ -495,7 +495,7 @@ export class ThreeRenderer {
     }
 
     for (const hero of state.heroes) {
-      const heroData = HEROES[hero.heroDataId];
+      const heroData = getHeroById(hero.heroDataId);
       if (!heroData) continue;
       const prefabKey = getHeroPrefabKey(heroData.race, heroData.heroClass, heroData.name);
       const prefab = HERO_PREFABS[prefabKey];
@@ -590,7 +590,7 @@ export class ThreeRenderer {
   private getOrCreateHero(hero: MobaHero): Entity3D | null {
     if (this.heroMeshes.has(hero.id)) return this.heroMeshes.get(hero.id)!;
 
-    const heroData = HEROES[hero.heroDataId];
+    const heroData = getHeroById(hero.heroDataId);
     if (!heroData) return null;
 
     const prefabKey = getHeroPrefabKey(heroData.race, heroData.heroClass, heroData.name);

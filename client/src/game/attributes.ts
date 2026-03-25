@@ -42,6 +42,7 @@ export interface PlayerAttributes {
 
 export const POINTS_PER_LEVEL = 7;
 export const STARTING_POINTS = 20;
+export const MAX_LEVEL = 20;
 
 const CLASS_STARTING_ATTRS: Record<string, Partial<Record<AttributeId, number>>> = {
   Warrior: { strength: 5, vitality: 4, endurance: 4, dexterity: 1, agility: 1 },

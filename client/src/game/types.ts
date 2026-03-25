@@ -465,6 +465,15 @@ for (const h of HEROES) {
 /** All 26 original heroes — now AI faction NPCs. Use this alias for clarity. */
 export const AI_HEROES = HEROES;
 
+/**
+ * Safe hero lookup by id. Player characters have id >= 100 and are
+ * appended to HEROES[], so array-index access (HEROES[id]) fails.
+ * Falls back to HEROES[0] to prevent crashes.
+ */
+export function getHeroById(id: number): HeroData {
+  return HEROES.find(h => h.id === id) ?? HEROES[0];
+}
+
 export const RACE_COLORS: Record<string, string> = {
   Human: '#94a3b8', Barbarian: '#f43f5e', Dwarf: '#f59e0b',
   Elf: '#22d3ee', Orc: '#65a30d', Undead: '#a78bfa'

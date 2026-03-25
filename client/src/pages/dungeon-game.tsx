@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import {
   HEROES, CLASS_ABILITIES, CLASS_COLORS, ITEMS, ItemDef, RACE_COLORS,
-  ABILITY_ICONS, getHeroAbilities
+  ABILITY_ICONS, getHeroAbilities, getHeroById
 } from '@/game/types';
 import {
   DungeonState, DungeonHudState,
@@ -68,7 +68,7 @@ export default function DungeonGamePage() {
     const bindings = loadKeybindings();
 
     const tryTargetOrCast = (abilityIndex: number) => {
-      const hd = HEROES[state.player.heroDataId];
+      const hd = getHeroById(state.player.heroDataId);
       const abs = getHeroAbilities(hd.race, hd.heroClass);
       const ab = abs[abilityIndex];
       if (ab && (ab.castType === 'ground_aoe' || ab.castType === 'skillshot' || ab.castType === 'cone' || ab.castType === 'line')) {

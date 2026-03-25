@@ -19,7 +19,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { ISLAND_ZONES, OPEN_WORLD_SIZE, getZoneAtPosition, type ZoneDef } from './zones';
 import { loadGLB, loadFBX, type LoadedModel, createAnimatedEntity, playAnimation, type AnimatedEntity, loadAnimSetForEntity } from './model-loader';
 import { HERO_PREFABS, getHeroPrefabKey } from './prefabs';
-import { HEROES, CLASS_COLORS, RACE_COLORS } from './types';
+import { HEROES, CLASS_COLORS, RACE_COLORS, getHeroById } from './types';
 import { getDefaultAnimSet } from './animation-library';
 
 // ── Types ──────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ export class OpenWorldThreeRenderer {
   async loadPlayerModel(heroDataId: number, heroClass: string, race: string): Promise<void> {
     if (this.playerModelLoaded) return;
 
-    const heroData = HEROES[heroDataId] || HEROES.find(h => h.heroClass === heroClass && h.race === race);
+    const heroData = getHeroById(heroDataId) || HEROES.find(h => h.heroClass === heroClass && h.race === race);
     if (!heroData) return;
 
     const prefabKey = getHeroPrefabKey(heroData.race, heroData.heroClass, heroData.name);

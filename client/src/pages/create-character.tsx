@@ -69,6 +69,9 @@ const CLASS_BASE_STATS: Record<string, { hp: number; atk: number; def: number; s
 // ObjectStore CDN icon base for weapon types
 const OS_ICON = 'https://molochdagod.github.io/ObjectStore/icons/weapons';
 
+// Fallback placeholder for missing weapon icons
+const WEAPON_ICON_FALLBACK = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect fill="%23222" width="48" height="48" rx="6"/><text x="24" y="30" text-anchor="middle" font-size="20" fill="%23666">⚔</text></svg>';
+
 // Class → allowed weapon categories with ObjectStore icon paths
 const CLASS_ALLOWED_WEAPONS: Record<string, { type: string; label: string; icon: string }[]> = {
   Warrior: [
@@ -367,7 +370,7 @@ export default function CreateCharacter() {
                     border: `2px solid ${weapon === w.type ? CLASS_COLORS[heroClass] : 'rgba(255,255,255,0.08)'}`,
                     boxShadow: weapon === w.type ? `0 0 20px ${CLASS_COLORS[heroClass]}30` : 'none',
                   }}>
-                    <img src={w.icon} alt={w.label} crossOrigin="anonymous" style={{ width: 36, height: 36, objectFit: 'contain', imageRendering: 'pixelated', margin: '0 auto 4px', display: 'block', filter: weapon === w.type ? `drop-shadow(0 0 4px ${CLASS_COLORS[heroClass]})` : 'none' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <img src={w.icon} alt={w.label} crossOrigin="anonymous" style={{ width: 36, height: 36, objectFit: 'contain', imageRendering: 'pixelated', margin: '0 auto 4px', display: 'block', filter: weapon === w.type ? `drop-shadow(0 0 4px ${CLASS_COLORS[heroClass]})` : 'none' }} onError={e => { (e.target as HTMLImageElement).src = WEAPON_ICON_FALLBACK; }} />
                     <div style={{ fontSize: 14, fontWeight: 700, color: weapon === w.type ? CLASS_COLORS[heroClass] : '#ddd' }}>{w.label}</div>
                     {isDefault && <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', marginTop: 4, display: 'inline-block' }}>RACIAL DEFAULT</span>}
                   </div>

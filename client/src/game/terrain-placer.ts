@@ -19,7 +19,7 @@ import {
 
 // ── Constants ──────────────────────────────────────────────────
 
-export const PLACE_TILE = 40;  // world-space tile size (matches TILE_SIZE in open-world.ts)
+export const PLACE_TILE = 120;  // world-space tile size — large enough for 256px tiles to look good
 
 // ── Seeded Random ──────────────────────────────────────────────
 
@@ -138,12 +138,14 @@ function generateLandTiles(zone: ZoneDef): PlacedLandTile[] {
       const tile = TROPICAL_LAND_TILES[tileIdx - 1]; // indices are 1-based
       if (!tile) continue;
 
-      // Add rotation variety (0, 90, 180, 270)
-      const rot = seededInt(gx + 100, gy + 200, zone.id * 17, 4) * 90;
+      // Only rotate 180° (not 90/270) — avoids visible seam lines with non-symmetric tiles
+      const rot = seededInt(gx + 100, gy + 200, zone.id * 17, 2) * 180;
 
-      // Edge tiles get slight alpha fade for natural blending between zones
-      const isEdge = gx === 0 || gx === gridW - 1 || gy === 0 || gy === gridH - 1;
-      const alpha = isEdge ? 0.85 : 1.0;
+      // Smooth edge fade: multi-tile gradient at zone borders for natural blending
+      const edgeDistX = Math.min(gx, gridW - 1 - gx);
+      const edgeDistY = Math.min(gy, gridH - 1 - gy);
+      const edgeDist = Math.min(edgeDistX, edgeDistY);
+      const alpha = edgeDist === 0 ? 0.7 : edgeDist === 1 ? 0.88 : 1.0;
 
       tiles.push({
         gx, gy,

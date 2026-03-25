@@ -8,7 +8,7 @@
  * States: idle_town → take_mission → travel → combat/harvest/explore/camp_destroy → return_home
  */
 
-import { HeroData, HEROES, Vec2 } from './types';
+import { HeroData, HEROES, Vec2, getHeroById } from './types';
 import { ISLAND_ZONES, ZoneDef } from './zones';
 import { WorldHeightmap, HM_CELL } from './terrain-heightmap';
 import { findPath, PathResult } from './pathfinding';
@@ -99,7 +99,7 @@ export interface AIHeroInstance {
 // ── Factory ────────────────────────────────────────────────────
 
 export function createAIHero(heroId: number): AIHeroInstance {
-  const hd = HEROES[heroId];
+  const hd = getHeroById(heroId);
   if (!hd) throw new Error(`No hero data for id ${heroId}`);
 
   const faction = hd.faction as Faction;

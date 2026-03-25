@@ -9,7 +9,7 @@ import {
   HeroData, HEROES, Vec2, AbilityDef, ItemDef, ITEMS,
   heroStatsAtLevel, RACE_COLORS, CLASS_COLORS,
   getHeroAbilities, getWeaponRenderType, getHeroWeapon,
-  WeaponType
+  WeaponType, getHeroById
 } from './types';
 import { VoxelRenderer, DungeonTileVoxelType } from './voxel';
 import { globalAnimDirector, drawAISlashVFX } from './voxel-motion';
@@ -45,7 +45,7 @@ import { HERO_WEAPONS } from './types';
 import {
   PlayerAttributes, loadAttributes, saveAttributes, grantLevelUpPoints,
   applyAttributeBonus, computeDerivedStats, allocatePoint, AttributeId,
-  getAttributeSummary, AttributeSummary
+  getAttributeSummary, AttributeSummary, MAX_LEVEL, POINTS_PER_LEVEL
 } from './attributes';
 import {
   PlayerProfessions, loadProfessions, saveProfessions,
@@ -102,6 +102,18 @@ import { checkAbilityCost, deductAbilityCost, getEffectiveCooldown, type Resourc
 import {
   TownBuilding, ALL_TOWN_BUILDINGS, getBuildingNear, InteriorNPCDef,
 } from './town-buildings';
+import {
+  getFactionSpawnPoint, getPlayerFactionDock, getAllFactionDocks,
+  generateDockStructures, type FactionDock, type DockStructure,
+} from './faction-spawn';
+import {
+  FACTION_HERO_NPCS, getFactionNPCs, getNPCQuests, getFactionQuest,
+  type FactionHeroNPC, type FactionQuestDef,
+} from './faction-quests';
+import {
+  type ModularVoxelConfig, defaultModularConfig,
+} from './voxel-modular';
+import { getCurrentCharacter } from './player-account';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -444,6 +456,13 @@ export interface OpenWorldState {
 
   /** Consumable hotbar — 3 slots for keys 6, 7, 8 */
   consumableSlots: [ConsumableHotbarItem | null, ConsumableHotbarItem | null, ConsumableHotbarItem | null];
+
+  /** V2: Modular voxel config for the player character */
+  modularConfig: ModularVoxelConfig | null;
+  /** V2: Faction hero NPCs at dock (rendered as voxel heroes) */
+  factionHeroNPCs: FactionHeroNPC[];
+  /** V2: Dock structures (piers, boats, flags) for all faction docks */
+  factionDockStructures: DockStructure[];
 }
 
 export interface OWHudState {
@@ -595,9 +614,27 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     mp: attrStats.mp + eqStats.mp,
   };
 
-  // Start in the Starting Village
-  const startZone = ISLAND_ZONES[0];
-  const spawn = startZone.playerSpawns[0];
+  // Resolve spawn from faction dock (if player character is loaded)
+  const currentChar = getCurrentCharacter();
+  let spawn: { x: number; y: number };
+  let startZone = ISLAND_ZONES[0];
+
+  if (currentChar?.faction) {
+    const factionSpawn = getFactionSpawnPoint(currentChar);
+    const factionZone = ISLAND_ZONES.find(z => z.id === factionSpawn.zoneId);
+    if (factionZone) {
+      startZone = factionZone;
+      spawn = { x: factionSpawn.x, y: factionSpawn.y };
+    } else {
+      spawn = startZone.playerSpawns[0];
+    }
+  } else {
+    spawn = startZone.playerSpawns[0];
+  }
+
+  // Build modular voxel config from character state (or defaults)
+  const modularConfig: ModularVoxelConfig = currentChar?.modularConfig
+    ?? defaultModularConfig(hd.race, hd.heroClass);
 
   const worldState = createWorldState();
   loadWorldStatePersisted(worldState);
@@ -692,6 +729,12 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     interactCooldown: 0,
     // Consumable hotbar
     consumableSlots: [null, null, null] as [ConsumableHotbarItem | null, ConsumableHotbarItem | null, ConsumableHotbarItem | null],
+    // V2: Modular character + faction systems
+    modularConfig,
+    factionHeroNPCs: currentChar?.faction
+      ? getFactionNPCs(currentChar.faction)
+      : getFactionNPCs('Crusade'),
+    factionDockStructures: getAllFactionDocks().flatMap(d => generateDockStructures(d)),
   } as unknown as OpenWorldState;
   // Assigned separately because TypeScript requires these to exist at runtime
   // but the interface uses them as non-optional for convenience
@@ -898,8 +941,8 @@ function handleOWInteract(state: OpenWorldState): void {
   // ── Player interaction (highest priority) ──
   if (!state.activeBuilding) {
     const aiHeroes = (state.aiHeroes || []).map(h => ({
-      id: h.heroDataId ?? 0, name: h.name ?? 'Hero',
-      race: h.race ?? 'Human', heroClass: h.heroClass ?? 'Warrior',
+      id: h.heroData?.id ?? 0, name: h.heroData?.name ?? 'Hero',
+      race: h.heroData?.race ?? 'Human', heroClass: h.heroData?.heroClass ?? 'Warrior',
       level: h.level ?? 1, x: h.x, y: h.y, dead: h.dead ?? false,
     }));
     const nearbyPlayer = getNearbyPlayer(p.x, p.y, aiHeroes);
@@ -1941,10 +1984,10 @@ function handleProjectileHit(state: OpenWorldState, proj: OWProjectile, target: 
 
 function checkLevelUp(state: OpenWorldState): void {
   const p = state.player;
-  while (p.level < 30 && p.xp >= xpForLevel(p.level)) {
+  while (p.level < MAX_LEVEL && p.xp >= xpForLevel(p.level)) {
     p.xp -= xpForLevel(p.level);
     p.level++;
-    const hd = HEROES[p.heroDataId];
+    const hd = getHeroById(p.heroDataId);
     const baseStats = heroStatsAtLevel(hd, p.level);
     const stats = applyAttributeBonus(baseStats, state.playerAttributes, hd.heroClass);
     const oldMaxHp = p.maxHp;
@@ -1962,7 +2005,7 @@ function checkLevelUp(state: OpenWorldState): void {
 
     addText(state, p.x, p.y - 40, `LEVEL ${p.level}!`, '#ffd700', 20);
     spawnParticles(state, p.x, p.y, '#ffd700', 20);
-    state.killFeed.push({ text: `Reached level ${p.level}! (+3 attribute points)`, color: '#ffd700', time: state.gameTime });
+    state.killFeed.push({ text: `Reached level ${p.level}! (+${POINTS_PER_LEVEL} attribute points)`, color: '#ffd700', time: state.gameTime });
 
     const progressEvents = onPlayerLevelUp(state.playerProgress, p.level);
     state.pendingProgressEvents.push(...progressEvents);
@@ -1985,7 +2028,7 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
   const p = state.player;
   if (p.dead || isStunned(p as any) || isSilenced(p as any)) return;
 
-  const hd = HEROES[p.heroDataId];
+  const hd = getHeroById(p.heroDataId);
   const abilities = getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass);
   if (!abilities || !abilities[abilityIndex]) return;
 
@@ -2236,7 +2279,7 @@ export function handleOWAttack(state: OpenWorldState): void {
   const p = state.player;
   if (p.dead || isStunned(p as any) || p.meleeAnimTimer > 0) return;
 
-  const hd = HEROES[p.heroDataId];
+  const hd = getHeroById(p.heroDataId);
   const abilityColor = CLASS_COLORS[hd.heroClass] || '#ef4444';
 
   // Auto-face nearest enemy if one is close
@@ -2291,7 +2334,7 @@ export function handleOWRangedAttack(state: OpenWorldState): void {
   const p = state.player;
   if (p.dead || isStunned(p as any) || state.rangedAttackCooldown > 0) return;
 
-  const hd = HEROES[p.heroDataId];
+  const hd = getHeroById(p.heroDataId);
   const cfg = getClassRangedConfig(hd.heroClass, state.weaponLoadout?.weaponType);
 
   // Face toward mouse
@@ -2347,7 +2390,7 @@ export function updateOWMouseWorld(state: OpenWorldState, screenX: number, scree
 export function startOWTargeting(state: OpenWorldState, abilityIndex: number): void {
   const p = state.player;
   if (p.dead) return;
-  const hd = HEROES[p.heroDataId];
+  const hd = getHeroById(p.heroDataId);
   const abilities = getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass);
   if (!abilities || !abilities[abilityIndex]) return;
   const ab = abilities[abilityIndex];
@@ -2429,7 +2472,7 @@ export function enterOWDungeon(state: OpenWorldState): DungeonEntrance | null {
 
 /** Swap weapon and rebuild skill loadout */
 export async function swapOWWeapon(state: OpenWorldState, newWeaponType: string, weaponId: string | null): Promise<void> {
-  const hd = HEROES[state.player.heroDataId];
+  const hd = getHeroById(state.player.heroDataId);
   const osKey = getOSWeaponTypeKey(newWeaponType);
   const loadout = await buildWeaponLoadout(osKey, weaponId, hd.race, hd.heroClass);
   if (loadout) {
@@ -2604,8 +2647,8 @@ function getNearbyInteractableLabel(state: OpenWorldState): string | null {
   }
   // Nearby player (highest priority in overworld)
   const aiHeroes = (state.aiHeroes || []).map(h => ({
-    id: h.heroDataId ?? 0, name: h.name ?? 'Hero',
-    race: h.race ?? 'Human', heroClass: h.heroClass ?? 'Warrior',
+    id: h.heroData?.id ?? 0, name: h.heroData?.name ?? 'Hero',
+    race: h.heroData?.race ?? 'Human', heroClass: h.heroData?.heroClass ?? 'Warrior',
     level: h.level ?? 1, x: h.x, y: h.y, dead: h.dead ?? false,
   }));
   const nearbyPlayer = getNearbyPlayer(p.x, p.y, aiHeroes);
@@ -2795,7 +2838,7 @@ export function equipBagItemOW(state: OpenWorldState, itemId: string): boolean {
   saveEquipmentBag(state.equipmentBag);
 
   // Recalculate player stats from base + attributes + equipment
-  const hd = HEROES[state.player.heroDataId];
+  const hd = getHeroById(state.player.heroDataId);
   const baseStats = heroStatsAtLevel(hd, state.player.level);
   const stats = applyAttributeBonus(baseStats, state.playerAttributes, hd.heroClass);
   const eqStats = computeEquipmentStats(state.playerEquipment);
@@ -2830,7 +2873,7 @@ export function allocateOWAttribute(state: OpenWorldState, attrId: AttributeId):
   const success = allocatePoint(state.playerAttributes, attrId);
   if (success) {
     // Recalc player stats with new attribute values
-    const hd = HEROES[state.player.heroDataId];
+    const hd = getHeroById(state.player.heroDataId);
     const baseStats = heroStatsAtLevel(hd, state.player.level);
     const stats = applyAttributeBonus(baseStats, state.playerAttributes, hd.heroClass);
     const p = state.player;
@@ -3177,55 +3220,70 @@ export class OpenWorldRenderer {
     const viewH = H / cam.zoom;
     const camLeft = cam.x - viewW / 2;
     const camTop = cam.y - viewH / 2;
-
-    // ── Ocean water (tiles outside any zone) ──
-    const startX = Math.max(0, Math.floor(camLeft / TILE_SIZE) - 1);
-    const startY = Math.max(0, Math.floor(camTop / TILE_SIZE) - 1);
-    const endX = Math.min(Math.ceil(OPEN_WORLD_SIZE / TILE_SIZE), Math.ceil((camLeft + viewW) / TILE_SIZE) + 1);
-    const endY = Math.min(Math.ceil(OPEN_WORLD_SIZE / TILE_SIZE), Math.ceil((camTop + viewH) / TILE_SIZE) + 1);
+    // ── Ocean water — smooth gradient fill instead of per-tile grid ──
     const now = Date.now();
+    ctx.globalAlpha = Math.max(0.5, brightness);
 
-    for (let ty = startY; ty < endY; ty++) {
-      for (let tx = startX; tx < endX; tx++) {
-        const wx = tx * TILE_SIZE + TILE_SIZE / 2;
-        const wy = ty * TILE_SIZE + TILE_SIZE / 2;
-        if (getZoneAtPosition(wx, wy)) continue; // zone tiles handled below
+    // Base ocean gradient (deep centre → lighter near land)
+    const oceanGrad = ctx.createRadialGradient(
+      OPEN_WORLD_SIZE / 2, OPEN_WORLD_SIZE / 2, 800,
+      OPEN_WORLD_SIZE / 2, OPEN_WORLD_SIZE / 2, OPEN_WORLD_SIZE * 0.55,
+    );
+    oceanGrad.addColorStop(0, '#0e2a4a');
+    oceanGrad.addColorStop(0.4, '#0c2040');
+    oceanGrad.addColorStop(1, '#081830');
+    ctx.fillStyle = oceanGrad;
+    ctx.fillRect(camLeft, camTop, viewW, viewH);
 
-        const x = tx * TILE_SIZE;
-        const y = ty * TILE_SIZE;
-        const seed = (tx * 17 + ty * 31) % 100;
+    // Animated wave shimmer pass (uses large tiles for perf)
+    const OCEAN_TILE = 160;
+    const oStartX = Math.max(0, Math.floor(camLeft / OCEAN_TILE) - 1);
+    const oStartY = Math.max(0, Math.floor(camTop / OCEAN_TILE) - 1);
+    const oEndX = Math.min(Math.ceil(OPEN_WORLD_SIZE / OCEAN_TILE), Math.ceil((camLeft + viewW) / OCEAN_TILE) + 1);
+    const oEndY = Math.min(Math.ceil(OPEN_WORLD_SIZE / OCEAN_TILE), Math.ceil((camTop + viewH) / OCEAN_TILE) + 1);
 
-        // Animated ocean
-        const wavePhase = Math.sin(now * 0.001 + tx * 0.7 + ty * 0.5);
-        const wavePhase2 = Math.cos(now * 0.0008 + tx * 0.3 - ty * 0.6);
-        ctx.globalAlpha = Math.max(0.4, brightness);
-        ctx.fillStyle = `rgb(${Math.floor(12 + wavePhase * 4)},${Math.floor(35 + wavePhase2 * 8)},${Math.floor(70 + wavePhase * 10 + wavePhase2 * 5)})`;
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        const waveCrest = Math.sin(now * 0.002 + tx * 2.1 + ty * 1.3);
-        if (waveCrest > 0.6) {
-          ctx.fillStyle = `rgba(80,140,200,${(waveCrest - 0.6) * 0.3})`;
-          ctx.fillRect(x + 2, y + (seed % 8) * 4, TILE_SIZE - 4, 2);
+    for (let ty = oStartY; ty < oEndY; ty++) {
+      for (let tx = oStartX; tx < oEndX; tx++) {
+        const owx = tx * OCEAN_TILE + OCEAN_TILE / 2;
+        const owy = ty * OCEAN_TILE + OCEAN_TILE / 2;
+        if (getZoneAtPosition(owx, owy)) continue;
+
+        const ox = tx * OCEAN_TILE;
+        const oy = ty * OCEAN_TILE;
+
+        // Subtle wave colour variation
+        const w1 = Math.sin(now * 0.0008 + tx * 0.4 + ty * 0.3) * 0.5 + 0.5;
+        const w2 = Math.cos(now * 0.0006 + tx * 0.2 - ty * 0.4) * 0.5 + 0.5;
+        ctx.fillStyle = `rgba(40,100,160,${0.06 + w1 * 0.08})`;
+        ctx.fillRect(ox, oy, OCEAN_TILE, OCEAN_TILE);
+
+        // Wave crest highlights
+        const crest = Math.sin(now * 0.0015 + tx * 1.2 + ty * 0.8);
+        if (crest > 0.5) {
+          ctx.fillStyle = `rgba(120,180,220,${(crest - 0.5) * 0.12})`;
+          ctx.fillRect(ox + 8, oy + w2 * OCEAN_TILE * 0.6, OCEAN_TILE - 16, 3);
         }
-        if (isNearAnyZone(wx, wy, 120)) {
-          const fi = Math.sin(now * 0.003 + tx * 1.5 + ty * 1.2) * 0.5 + 0.5;
-          ctx.fillStyle = `rgba(180,220,240,${fi * 0.3 * brightness})`;
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+
+        // Shoreline foam near zones
+        if (isNearAnyZone(owx, owy, 200)) {
+          const foam = Math.sin(now * 0.002 + tx * 1.1 + ty * 0.9) * 0.5 + 0.5;
+          ctx.fillStyle = `rgba(200,230,245,${foam * 0.18 * brightness})`;
+          ctx.fillRect(ox, oy, OCEAN_TILE, OCEAN_TILE);
         }
-        ctx.globalAlpha = 1;
       }
     }
+    ctx.globalAlpha = 1;
 
     // ── Zone terrain: use TileMapRenderer for ground + sprite details ──
-    ctx.globalAlpha = Math.max(0.3, brightness);
+    // Full brightness for terrain tiles — night/weather applied as overlay later
     for (const zone of ISLAND_ZONES) {
       const b = zone.bounds;
       if (b.x + b.w < camLeft || b.x > camLeft + viewW || b.y + b.h < camTop || b.y > camTop + viewH) continue;
-      // Tileset ground fill + noise pattern
+      // Tileset ground fill
       this.tileRenderer.renderZoneGround(ctx, zone, camLeft, camTop, viewW, viewH);
-      // Sprite-based details (trees, bushes, rocks from Ground_grass.png)
+      // Sprite-based details (trees, bushes, rocks)
       this.tileRenderer.renderZoneDetails(ctx, zone, camLeft, camTop, viewW, viewH);
     }
-    ctx.globalAlpha = 1;
   }
 
   // ── New World Decoration + Animal helpers ──────────────────────
@@ -3658,7 +3716,7 @@ export class OpenWorldRenderer {
     ctx.ellipse(0, 10, 8, 3, 0, 0, Math.PI * 2);
     ctx.fill();
     // Body — use same hero voxel renderer as world view
-    const ihd = HEROES[state.player.heroDataId];
+    const ihd = getHeroById(state.player.heroDataId);
     if (ihd) {
       this.voxel.drawHeroVoxel(ctx, 0, 0,
         RACE_COLORS[ihd.race] || '#888',
@@ -4115,6 +4173,226 @@ export class OpenWorldRenderer {
       if (d > 800) continue;
       drawTownNPCSprite(ctx, npc.x, npc.y, npc.type, npc.name, brightness, d, state.gameTime);
     }
+    // V2: Render faction hero NPCs at dock positions as voxel heroes
+    this.renderFactionHeroNPCs(ctx, state, brightness);
+    // V2: Render dock structures
+    this.renderDockStructures(ctx, state, brightness);
+  }
+
+  /** Render faction hero NPCs as full voxel heroes with quest indicators */
+  private renderFactionHeroNPCs(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
+    for (const npc of state.factionHeroNPCs) {
+      const d = distXY(state.player, npc);
+      if (d > 1000) continue;
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0.5, brightness);
+
+      // Render as voxel hero using their race/class
+      const raceColor = RACE_COLORS[npc.race] || '#888';
+      const classColor = CLASS_COLORS[npc.heroClass] || '#888';
+      const isDockVendor = npc.station === 'dock_vendor';
+      const isPatrol = npc.station === 'zone_patrol';
+      // Dock vendors face the player; patrol NPCs face their walk direction
+      const facing = isDockVendor ? angleBetween(npc, state.player) : state.gameTime * 0.3;
+      const animState = isPatrol ? 'walk' : 'idle';
+
+      this.voxel.drawHeroVoxel(
+        ctx, npc.x, npc.y, raceColor, classColor,
+        npc.heroClass, facing, animState, state.gameTime,
+        npc.race, npc.name,
+      );
+
+      // Quest exclamation mark (dock vendors only — they give quests)
+      if (isDockVendor) {
+        const bob = Math.sin(state.gameTime * 3) * 3;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffd700';
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 8;
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('!', npc.x, npc.y - 38 + bob);
+        ctx.shadowBlur = 0;
+      }
+
+      // Nameplate
+      ctx.fillStyle = 'rgba(10,8,5,0.85)';
+      ctx.strokeStyle = npc.role === 'commander' ? 'rgba(239,68,68,0.6)'
+        : npc.role === 'quartermaster' ? 'rgba(245,158,11,0.6)'
+        : npc.role === 'patrol' ? 'rgba(96,165,250,0.4)'
+        : 'rgba(34,197,94,0.6)';
+      ctx.lineWidth = 1;
+      const pw = 64, ph = 14;
+      ctx.beginPath();
+      ctx.roundRect(npc.x - pw / 2, npc.y - 52, pw, ph, 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#e0d0a8';
+      ctx.font = 'bold 7px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(npc.name.split(' ').pop() || npc.name, npc.x, npc.y - 43);
+
+      // Role tag
+      const roleLabel = npc.role === 'commander' ? '⚔ Commander'
+        : npc.role === 'quartermaster' ? '🛡 Quartermaster'
+        : npc.role === 'patrol' ? '🗡 Patrol'
+        : '📍 Scout';
+      ctx.fillStyle = ctx.strokeStyle as string;
+      ctx.font = '6px sans-serif';
+      ctx.fillText(roleLabel, npc.x, npc.y - 55);
+
+      // Faction badge
+      ctx.fillStyle = 'rgba(197,160,89,0.6)';
+      ctx.font = '5px sans-serif';
+      ctx.fillText(`[${npc.faction}]`, npc.x, npc.y - 60);
+
+      // Interact prompt when close (dock vendors only)
+      if (isDockVendor && d < 80) {
+        const pulse = 0.6 + Math.sin(state.gameTime * 4) * 0.3;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.fillText('[E] Talk', npc.x, npc.y + 20);
+      }
+      // Patrol heroes show a softer label when near
+      if (isPatrol && d < 120) {
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#aaa';
+        ctx.font = '7px sans-serif';
+        ctx.fillText('On Patrol', npc.x, npc.y + 18);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  /** Render dock structures (piers, boats, flags) from faction-spawn.ts */
+  private renderDockStructures(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
+    const { FACTION_DOCKS } = require('./faction-spawn') as typeof import('./faction-spawn');
+
+    for (const ds of state.factionDockStructures) {
+      const d = distXY(state.player, ds);
+      if (d > 1200) continue;
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0.5, brightness);
+      ctx.translate(ds.x, ds.y);
+      if (ds.rotation) ctx.rotate(ds.rotation);
+
+      const factionColor = FACTION_DOCKS[ds.faction]?.color || '#c5a059';
+
+      switch (ds.type) {
+        case 'pier':
+          ctx.fillStyle = '#6b4423';
+          ctx.fillRect(-20, -6, 40, 12);
+          ctx.strokeStyle = '#4a3010';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-20, -6, 40, 12);
+          // Planks
+          for (let px = -18; px <= 16; px += 8) {
+            ctx.fillStyle = '#5a3a18';
+            ctx.fillRect(px, -5, 6, 10);
+          }
+          break;
+        case 'boat_large':
+          ctx.fillStyle = '#5a3a1a';
+          ctx.beginPath();
+          ctx.moveTo(-24, 0); ctx.lineTo(-18, -12); ctx.lineTo(18, -12);
+          ctx.lineTo(24, 0); ctx.lineTo(18, 10); ctx.lineTo(-18, 10);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = '#3a2010';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          // Mast
+          ctx.fillStyle = '#4a3010';
+          ctx.fillRect(-1, -24, 2, 20);
+          // Sail
+          ctx.fillStyle = factionColor;
+          ctx.globalAlpha = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(0, -22); ctx.lineTo(10, -14); ctx.lineTo(0, -6);
+          ctx.closePath();
+          ctx.fill();
+          ctx.globalAlpha = brightness;
+          break;
+        case 'boat_small':
+          ctx.fillStyle = '#6b4a23';
+          ctx.beginPath();
+          ctx.moveTo(-14, 0); ctx.lineTo(-10, -8); ctx.lineTo(10, -8);
+          ctx.lineTo(14, 0); ctx.lineTo(10, 6); ctx.lineTo(-10, 6);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = '#4a3010';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          break;
+        case 'dock_house':
+          ctx.fillStyle = '#5a4030';
+          ctx.fillRect(-18, -16, 36, 28);
+          ctx.fillStyle = '#8a6a40';
+          ctx.fillRect(-18, -20, 36, 6);
+          ctx.strokeStyle = factionColor;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-18, -16, 36, 28);
+          // Door
+          ctx.fillStyle = '#3a2010';
+          ctx.fillRect(-4, 4, 8, 10);
+          break;
+        case 'barrel':
+          ctx.fillStyle = '#5a3a1a';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 6, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#3a2010';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          break;
+        case 'crate':
+          ctx.fillStyle = '#6b4a23';
+          ctx.fillRect(-6, -6, 12, 12);
+          ctx.strokeStyle = '#4a3010';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-6, -6, 12, 12);
+          break;
+        case 'anchor':
+          ctx.strokeStyle = '#555';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 4, 6, 0.3, Math.PI - 0.3);
+          ctx.stroke();
+          ctx.moveTo(0, -6); ctx.lineTo(0, 8);
+          ctx.stroke();
+          ctx.fillStyle = '#666';
+          ctx.fillRect(-4, -8, 8, 3);
+          break;
+        case 'lamp':
+          ctx.fillStyle = '#4a4a4a';
+          ctx.fillRect(-1, -12, 2, 12);
+          ctx.fillStyle = '#ffd700';
+          ctx.globalAlpha = 0.6 + Math.sin(state.gameTime * 3) * 0.2;
+          ctx.beginPath();
+          ctx.arc(0, -14, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = brightness;
+          break;
+        case 'flag':
+          ctx.fillStyle = '#5a5a5a';
+          ctx.fillRect(-1, -20, 2, 20);
+          ctx.fillStyle = factionColor;
+          ctx.fillRect(1, -20, 12, 8);
+          // Faction initial
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 6px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(ds.faction[0], 7, -14);
+          break;
+      }
+
+      ctx.restore();
+    }
   }
 
   private renderEnemy(ctx: CanvasRenderingContext2D, enemy: OWEnemy, state: OpenWorldState, brightness: number): void {
@@ -4202,7 +4480,7 @@ export class OpenWorldRenderer {
 
   private renderPlayer(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
     const p = state.player;
-    const hd = HEROES[p.heroDataId];
+    const hd = getHeroById(p.heroDataId);
     const raceColor = RACE_COLORS[hd.race] || '#888';
     const classColor = CLASS_COLORS[hd.heroClass] || '#888';
 
@@ -4217,7 +4495,12 @@ export class OpenWorldRenderer {
     ctx.fill();
 
     const buffNames = p.activeEffects.map(e => e.name || '');
-    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, hd.heroClass, p.facing, p.animState, p.animTimer, hd.race, hd.name, undefined, undefined, p.id, p.shieldHp > 0 ? p.shieldHp : undefined, buffNames.length > 0 ? buffNames : undefined, state.gameTime);
+    // V2: Use modular voxel renderer when config is available
+    if (state.modularConfig) {
+      this.voxel.drawModularHeroVoxel(ctx, 0, 0, state.modularConfig, p.facing, p.animState, p.animTimer, p.id, state.gameTime);
+    } else {
+      this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, hd.heroClass, p.facing, p.animState, p.animTimer, hd.race, hd.name, undefined, undefined, p.id, p.shieldHp > 0 ? p.shieldHp : undefined, buffNames.length > 0 ? buffNames : undefined, state.gameTime);
+    }
 
     // ── Styled nameplate ──
     ctx.globalAlpha = 1;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import {
-  HEROES, CLASS_COLORS, RACE_COLORS, ABILITY_ICONS, getHeroAbilities
+  HEROES, CLASS_COLORS, RACE_COLORS, ABILITY_ICONS, getHeroAbilities, getHeroById
 } from '@/game/types';
 import { getAbilitiesWithWeapon } from '@/game/weapon-skills';
 import {
@@ -141,7 +141,7 @@ export default function OpenWorldPage() {
     const bindings = loadKeybindings();
 
     const tryTargetOrCast = (abilityIndex: number) => {
-      const hd = HEROES[state.player.heroDataId];
+      const hd = getHeroById(state.player.heroDataId);
       const abs = getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass);
       const ab = abs[abilityIndex];
       if (ab && (ab.castType === 'ground_aoe' || ab.castType === 'skillshot' || ab.castType === 'cone' || ab.castType === 'line')) {
@@ -191,7 +191,7 @@ export default function OpenWorldPage() {
       if (matchesKeyDown(bindings[KeybindAction.ClassSkill], e)) { e.preventDefault(); tryTargetOrCast(0); }
       if (matchesKeyDown(bindings[KeybindAction.ClassDefensive], e)) {
         e.preventDefault();
-        const hd = HEROES[state.player.heroDataId];
+        const hd = getHeroById(state.player.heroDataId);
         const abs = getAbilitiesWithWeapon(state.weaponLoadout, hd.race, hd.heroClass);
         tryTargetOrCast(abs.length - 1);
       }

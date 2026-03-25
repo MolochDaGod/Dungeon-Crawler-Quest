@@ -6,7 +6,7 @@ import {
   SpellProjectile, AreaDamageZoneState, TargetInfo,
   xpForLevel, heroStatsAtLevel, calcDamage,
   RACE_COLORS, CLASS_COLORS, RARITY_COLORS,
-  JungleCamp, JungleMob, getHeroAbilities
+  JungleCamp, JungleMob, getHeroAbilities, getHeroById
 } from './types';
 import { VoxelRenderer, TerrainType } from './voxel';
 import { SpriteEffectSystem, SpriteEffectType, CLASS_SPELL_VFX, ABILITY_VFX, AUTO_ATTACK_VFX, HERO_SIGNATURE_VFX } from './sprite-effects';
@@ -22,7 +22,7 @@ import {
 import {
   PlayerAttributes, DerivedStats, createPlayerAttributes,
   computeDerivedStats, applyAttributeBonus, grantLevelUpPoints,
-  autoAllocatePoint, POINTS_PER_LEVEL, STARTING_POINTS
+  autoAllocatePoint, POINTS_PER_LEVEL, STARTING_POINTS, MAX_LEVEL
 } from './attributes';
 import {
   preloadTrails, updateTrailPoint, removeTrail,
@@ -787,7 +787,7 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
   if (hero.blockCooldown > 0) hero.blockCooldown -= dt;
   if (hero.iFrames > 0) hero.iFrames -= dt;
 
-  const heroData = HEROES[hero.heroDataId];
+  const heroData = getHeroById(hero.heroDataId);
   if (heroData) {
     const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
     if (abilities) {
@@ -837,7 +837,7 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
       if (dist(hero, e) < 60) {
         const dmg = hero.atk * 1.5;
         dealDamage(state, hero, e, dmg);
-        spawnSlashEffect(state, e.x, e.y, hero.facing, CLASS_COLORS[HEROES[hero.heroDataId]?.heroClass || 'Warrior'] || '#ef4444');
+        spawnSlashEffect(state, e.x, e.y, hero.facing, CLASS_COLORS[getHeroById(hero.heroDataId)?.heroClass || 'Warrior'] || '#ef4444');
         hero.dashAttackTimer = 0;
         hero.vx = 0;
         hero.vy = 0;
@@ -877,7 +877,7 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
             if (Math.abs(angleDiff) < Math.PI * 0.6) {
               const dmg = hero.atk * 1.8;
               dealDamage(state, hero, e, dmg);
-              spawnSlashEffect(state, e.x, e.y, hero.facing, CLASS_COLORS[HEROES[hero.heroDataId]?.heroClass || 'Warrior'] || '#ef4444');
+              spawnSlashEffect(state, e.x, e.y, hero.facing, CLASS_COLORS[getHeroById(hero.heroDataId)?.heroClass || 'Warrior'] || '#ef4444');
               hitAny = true;
             }
           }
@@ -961,13 +961,13 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
     hero.animState = 'attack';
 
     if (hero.attackWindup <= 0) {
-      const connectRange = isMeleeClass(HEROES[hero.heroDataId]?.heroClass || '') ? hero.rng + 60 : hero.rng + 80;
+      const connectRange = isMeleeClass(getHeroById(hero.heroDataId)?.heroClass || '') ? hero.rng + 60 : hero.rng + 80;
       if (target && !target.dead && dist(hero, target) < connectRange) {
         hero.comboCount = (hero.comboCount + 1);
         hero.comboTimer = 2.0;
         const comboMult = hero.comboCount >= 3 ? 1.5 : 1.0;
         performAutoAttack(state, hero, target, comboMult);
-        const heroData = HEROES[hero.heroDataId];
+        const heroData = getHeroById(hero.heroDataId);
         if (heroData) {
           const aaVfx = AUTO_ATTACK_VFX[heroData.heroClass];
           if (aaVfx) {
@@ -1045,7 +1045,7 @@ function updateHero(state: MobaState, hero: MobaHero, dt: number) {
       if (d <= hero.rng + 30) {
         hero.facing = angleTo(hero, target);
         if (hero.autoAttackTimer <= 0) {
-          const heroData = HEROES[hero.heroDataId];
+          const heroData = getHeroById(hero.heroDataId);
           const isMelee = heroData ? isMeleeClass(heroData.heroClass) : false;
           const windupTime = isMelee ? 0.28 : 0.20;
           hero.attackWindup = windupTime;
@@ -1252,7 +1252,7 @@ function aiLevelUpAbilities(state: MobaState, hero: MobaHero, heroData: HeroData
 }
 
 function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
-  const heroData = HEROES[hero.heroDataId];
+  const heroData = getHeroById(hero.heroDataId);
   if (!heroData) return;
 
   const hpPct = hero.hp / hero.maxHp;
@@ -1430,7 +1430,7 @@ function runHeroAI(state: MobaState, hero: MobaHero, dt: number) {
 
         if (h.hp < hero.atk * 2) score += 20;
 
-        const targetData = HEROES[h.heroDataId];
+        const targetData = getHeroById(h.heroDataId);
         if (targetData) {
           if (targetData.heroClass === 'Mage' || targetData.heroClass === 'Ranger') score += 5;
         }
@@ -1764,7 +1764,7 @@ function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, ta
 
   let isMelee = false;
   if ('heroDataId' in attacker) {
-    const heroData = HEROES[(attacker as MobaHero).heroDataId];
+    const heroData = getHeroById((attacker as MobaHero).heroDataId);
     isMelee = heroData ? isMeleeClass(heroData.heroClass) : false;
   } else if ('minionType' in attacker) {
     isMelee = (attacker as MobaMinion).minionType === 'melee';
@@ -1820,7 +1820,7 @@ function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, ta
     let trailColor = color;
     let projSpeed = 450;
     if ('heroDataId' in attacker) {
-      const hd = HEROES[(attacker as MobaHero).heroDataId];
+      const hd = getHeroById((attacker as MobaHero).heroDataId);
       if (hd) {
         if (hd.heroClass === 'Warrior') {
           projStyle = 'spinning_axe';
@@ -1862,13 +1862,13 @@ function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, ta
   }
 
   if (comboMult > 1 && 'heroDataId' in attacker) {
-    const heroData = HEROES[(attacker as MobaHero).heroDataId];
+    const heroData = getHeroById((attacker as MobaHero).heroDataId);
     const atkColor = CLASS_COLORS[heroData?.heroClass || 'Warrior'] || '#ef4444';
     spawnSlashEffect(state, attacker.x + Math.cos((attacker as MobaHero).facing) * 30, attacker.y + Math.sin((attacker as MobaHero).facing) * 30, (attacker as MobaHero).facing, atkColor);
   }
 
   if ('heroDataId' in attacker && isMelee) {
-    const heroData = HEROES[(attacker as MobaHero).heroDataId];
+    const heroData = getHeroById((attacker as MobaHero).heroDataId);
     const trailColor = CLASS_COLORS[heroData?.heroClass || 'Warrior'] || '#ef4444';
     const facing = (attacker as MobaHero).facing;
     for (let t = 0; t < 4; t++) {
@@ -1887,7 +1887,7 @@ function performAutoAttack(state: MobaState, attacker: MobaHero | MobaMinion, ta
 }
 
 export function executeAbility(state: MobaState, hero: MobaHero, abilityIndex: number, target: any) {
-  const heroData = HEROES[hero.heroDataId];
+  const heroData = getHeroById(hero.heroDataId);
   if (!heroData) return;
   const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
   if (!abilities || !abilities[abilityIndex]) return;
@@ -2574,7 +2574,7 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
   // Lifesteal from derived stats + Worg buff
   let totalDrain = result.drained;
   if ('heroDataId' in attacker && attacker.buffTimer > 0) {
-    const heroData = HEROES[(attacker as MobaHero).heroDataId];
+    const heroData = getHeroById((attacker as MobaHero).heroDataId);
     if (heroData && heroData.heroClass === 'Worg') {
       totalDrain += Math.floor(dmg * 0.15);
     }
@@ -2656,8 +2656,8 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
           }
         }
 
-        const killerData = HEROES[killer.heroDataId];
-        const targetData = HEROES[victim.heroDataId];
+        const killerData = getHeroById(killer.heroDataId);
+        const targetData = getHeroById(victim.heroDataId);
         if (killerData && targetData) {
           state.killFeed.push({
             text: `${killerData.name} killed ${targetData.name}`,
@@ -2719,7 +2719,7 @@ function respawnHero(state: MobaState, hero: MobaHero) {
   hero.x = base.x + (Math.random() - 0.5) * 60;
   hero.y = base.y + (Math.random() - 0.5) * 60;
   hero.dead = false;
-  const hd = HEROES[hero.heroDataId];
+  const hd = getHeroById(hero.heroDataId);
   const baseStats = heroStatsAtLevel(hd, hero.level);
   const stats = hero.attributes ? applyAttributeBonus(baseStats, hero.attributes, hd.heroClass) : baseStats;
   hero.hp = stats.hp;
@@ -2756,7 +2756,7 @@ function respawnHero(state: MobaState, hero: MobaHero) {
 }
 
 function checkLevelUp(state: MobaState, hero: MobaHero) {
-  while (hero.level < 18 && hero.xp >= xpForLevel(hero.level)) {
+  while (hero.level < MAX_LEVEL && hero.xp >= xpForLevel(hero.level)) {
     hero.xp -= xpForLevel(hero.level);
     hero.level++;
 
@@ -2765,14 +2765,14 @@ function checkLevelUp(state: MobaState, hero: MobaHero) {
       grantLevelUpPoints(hero.attributes);
       // AI heroes auto-allocate
       if (!hero.isPlayer) {
-        const hd = HEROES[hero.heroDataId];
+        const hd = getHeroById(hero.heroDataId);
         while (hero.attributes.unspentPoints > 0) autoAllocatePoint(hero.attributes, hd?.heroClass || 'Warrior');
       }
       // Recompute derived stats
       hero.derivedStats = computeDerivedStats(hero.attributes);
     }
 
-    const hd = HEROES[hero.heroDataId];
+    const hd = getHeroById(hero.heroDataId);
     const baseStats = heroStatsAtLevel(hd, hero.level);
     const stats = hero.attributes ? applyAttributeBonus(baseStats, hero.attributes, hd.heroClass) : baseStats;
     const hpDiff = stats.hp - (hero.maxHp - totalItemStat(hero, 'hp'));
@@ -3391,7 +3391,7 @@ function updateHeroAuras(state: MobaState, dt: number) {
 
   for (const hero of state.heroes) {
     if (hero.dead) continue;
-    const heroData = HEROES[hero.heroDataId];
+    const heroData = getHeroById(hero.heroDataId);
     if (!heroData) continue;
 
     // Auto-grant class aura at required level
@@ -3660,7 +3660,7 @@ export function handleRmbMelee(state: MobaState, worldX: number, worldY: number)
   player.isAttackMoving = false;
   player.attackMoveTarget = null;
 
-  const heroClass = HEROES[player.heroDataId]?.heroClass || 'Warrior';
+  const heroClass = getHeroById(player.heroDataId)?.heroClass || 'Warrior';
   const slashColor = CLASS_COLORS[heroClass] || '#ef4444';
 
   for (let i = 0; i < 4; i++) {
@@ -3736,7 +3736,7 @@ export function handleLevelUpAbility(state: MobaState, abilityIndex: number) {
   player.abilityLevels[abilityIndex]++;
   player.abilityPoints--;
 
-  const heroData = HEROES[player.heroDataId];
+  const heroData = getHeroById(player.heroDataId);
   const abilities = heroData ? getHeroAbilities(heroData.race, heroData.heroClass) : null;
   const abName = abilities?.[abilityIndex]?.name || `Ability ${abilityIndex + 1}`;
   addFloatingText(state, player.x, player.y - 40, `${abName} Leveled!`, '#ffd700', 14);
@@ -3888,7 +3888,7 @@ export function buyItem(state: MobaState, itemId: number) {
 
 export function getHudState(state: MobaState): HudState {
   const player = state.heroes[state.playerHeroIndex];
-  const heroData = player ? HEROES[player.heroDataId] : null;
+  const heroData = player ? getHeroById(player.heroDataId) : null;
 
   return {
     hp: player?.hp ?? 0,
@@ -3915,7 +3915,7 @@ export function getHudState(state: MobaState): HudState {
     showShop: state.showShop,
     showScoreboard: state.showScoreboard,
     allHeroes: state.heroes.map(h => {
-      const hd = HEROES[h.heroDataId];
+      const hd = getHeroById(h.heroDataId);
       return { name: hd?.name ?? '', kills: h.kills, deaths: h.deaths, assists: h.assists, level: h.level, team: h.team, hp: h.hp, maxHp: h.maxHp, heroRace: hd?.race ?? '', heroClass: hd?.heroClass ?? '', items: h.items ?? [null, null, null, null, null, null] };
     }),
     killFeed: state.killFeed,
@@ -4004,7 +4004,7 @@ function getTargetInfo(state: MobaState, player: MobaHero | undefined): TargetIn
 
   if ('heroDataId' in entity) {
     const hero = entity as MobaHero;
-    const hd = HEROES[hero.heroDataId];
+    const hd = getHeroById(hero.heroDataId);
     return {
       name: hd?.name ?? 'Hero',
       entityType: 'hero',
@@ -4295,7 +4295,7 @@ export class MobaRenderer {
 
     const player = state.heroes[state.playerHeroIndex];
     if (player && !player.dead && state.selectedAbility >= 0) {
-      const heroData = HEROES[player.heroDataId];
+      const heroData = getHeroById(player.heroDataId);
       const abilities = heroData ? getHeroAbilities(heroData.race, heroData.heroClass) : null;
       const ab = abilities ? abilities[state.selectedAbility] : null;
       if (ab) {
@@ -4597,7 +4597,7 @@ export class MobaRenderer {
 
     let entityName = '';
     if ('heroDataId' in entity) {
-      const hd = HEROES[(entity as MobaHero).heroDataId];
+      const hd = getHeroById((entity as MobaHero).heroDataId);
       entityName = hd?.name?.split(' ').pop() ?? 'Hero';
     } else if ('minionType' in entity) {
       entityName = (entity as MobaMinion).minionType + ' Minion';
@@ -5352,7 +5352,7 @@ export class MobaRenderer {
   }
 
   renderHero(ctx: CanvasRenderingContext2D, hero: MobaHero, _state: MobaState) {
-    const heroData = HEROES[hero.heroDataId];
+    const heroData = getHeroById(hero.heroDataId);
     if (!heroData) return;
 
     const raceColor = RACE_COLORS[heroData.race] || '#888';

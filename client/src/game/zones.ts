@@ -38,6 +38,10 @@ export interface ZoneDef {
   structureAssets?: string[];
   /** Island type for world map rendering */
   islandType?: 'town' | 'port' | 'dungeon' | 'wilderness' | 'boss-arena' | 'village';
+  /** Faction dock spawn point (for faction-spawn.ts) */
+  dockSpawn?: { x: number; y: number };
+  /** Faction that controls this zone */
+  faction?: string;
 }
 
 // Open world expanded to 16000x16000 for island-based MMO with boats
@@ -537,6 +541,8 @@ export const ISLAND_ZONES: ZoneDef[] = [
       'mv-inn', 'mv-blacksmith', 'mv-house-1', 'mv-market-1', 'mv-well',
     ],
     islandType: 'town',
+    dockSpawn: { x: 7500, y: 800 },
+    faction: 'Crusade',
   },
   {
     id: 17,
@@ -566,6 +572,8 @@ export const ISLAND_ZONES: ZoneDef[] = [
       'mv-inn', 'mv-mill', 'mv-house-2', 'mv-market-2', 'mv-gazebo',
     ],
     islandType: 'town',
+    dockSpawn: { x: 1400, y: 7400 },
+    faction: 'Fabled',
   },
   {
     id: 18,
@@ -595,6 +603,8 @@ export const ISLAND_ZONES: ZoneDef[] = [
       'of-tower-1', 'of-wall-1', 'os-tavern', 'os-smithy',
     ],
     islandType: 'town',
+    dockSpawn: { x: 14650, y: 7400 },
+    faction: 'Legion',
   },
   {
     id: 19,
@@ -625,6 +635,8 @@ export const ISLAND_ZONES: ZoneDef[] = [
       'pk-cliff-1', 'pk-palm-1', 'pk-palm-2',
     ],
     islandType: 'port',
+    dockSpawn: { x: 7500, y: 13800 },
+    faction: 'Pirates',
   },
 ];
 

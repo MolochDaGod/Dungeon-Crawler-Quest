@@ -1,8 +1,9 @@
 import {
   HeroData, HEROES, CLASS_ABILITIES, Vec2, AbilityDef,
   heroStatsAtLevel, calcDamage, RACE_COLORS, CLASS_COLORS, ItemDef, ITEMS,
-  getHeroAbilities, getWeaponRenderType, getHeroWeapon
+  getHeroAbilities, getWeaponRenderType, getHeroWeapon, getHeroById
 } from './types';
+import { MAX_LEVEL } from './attributes';
 import { VoxelRenderer, DungeonTileVoxelType } from './voxel';
 import { globalAnimDirector } from './voxel-motion';
 import { SpriteEffectSystem, CLASS_SPELL_VFX } from './sprite-effects';
@@ -455,7 +456,7 @@ function generateFloor(state: DungeonState) {
   }
 
   if (state.floor >= 2) {
-    const playerHd = HEROES[state.player.heroDataId];
+    const playerHd = getHeroById(state.player.heroDataId);
     const opposingPool = getOpposingHeroes(playerHd.race);
     if (opposingPool.length > 0) {
       const heroCount = state.floor <= 3 ? 1 : state.floor <= 6 ? 2 : 3;
@@ -1010,7 +1011,7 @@ function killDungeonEnemy(state: DungeonState, enemy: DungeonEnemy) {
 function killDungeonHeroEnemy(state: DungeonState, he: DungeonHeroEnemy) {
   he.dead = true;
   he.animTimer = 0;
-  const heroData = HEROES[he.heroDataId];
+  const heroData = getHeroById(he.heroDataId);
   state.player.xp += he.xpValue;
   state.player.gold += he.goldValue;
   state.player.kills++;
@@ -1112,7 +1113,7 @@ export function handleDungeonMeleeAttack(state: DungeonState) {
   spawnDungeonParticles(state, p.x + Math.cos(mouseAngle) * 35, p.y + Math.sin(mouseAngle) * 35, '#ff6622', 6);
 
   let hitCount = 0;
-  const hd = HEROES[p.heroDataId];
+  const hd = getHeroById(p.heroDataId);
 
   // Hit enemies in cone
   for (const enemy of state.enemies) {
@@ -1229,7 +1230,7 @@ function updateHeroEnemies(state: DungeonState, dt: number) {
     he.attackTimer -= dt;
 
     const d = distXY(he, p);
-    const heroData = HEROES[he.heroDataId];
+    const heroData = getHeroById(he.heroDataId);
     const abilities = getHeroAbilities(heroData.race, heroData.heroClass);
     const hpPct = he.hp / he.maxHp;
 
@@ -1381,7 +1382,7 @@ function heroEnemyUseAbility(state: DungeonState, he: DungeonHeroEnemy, abilityI
   he.animState = 'ability';
 
   const p = state.player;
-  const heroData = HEROES[he.heroDataId];
+  const heroData = getHeroById(he.heroDataId);
   const abilityColor = CLASS_COLORS[heroData.heroClass] || '#fff';
 
   switch (ab.type) {
@@ -1472,10 +1473,10 @@ function heroEnemyUseAbility(state: DungeonState, he: DungeonHeroEnemy, abilityI
 }
 
 function checkDungeonLevelUp(state: DungeonState, p: DungeonPlayer) {
-  while (p.level < 30 && p.xp >= xpForDungeonLevel(p.level)) {
+  while (p.level < MAX_LEVEL && p.xp >= xpForDungeonLevel(p.level)) {
     p.xp -= xpForDungeonLevel(p.level);
     p.level++;
-    const hd = HEROES[p.heroDataId];
+    const hd = getHeroById(p.heroDataId);
     const stats = heroStatsAtLevel(hd, p.level);
     const oldMaxHp = p.maxHp;
     p.maxHp = stats.hp + totalDungeonItemStat(p, 'hp');
@@ -1536,7 +1537,7 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number, 
   const p = state.player;
   if (p.dead || isStunned(p as any) || isSilenced(p as any)) return;
 
-  const hd = HEROES[p.heroDataId];
+  const hd = getHeroById(p.heroDataId);
   const abilities = getHeroAbilities(hd.race, hd.heroClass);
   if (!abilities || !abilities[abilityIndex]) return;
 
@@ -1548,7 +1549,7 @@ export function handleDungeonAbility(state: DungeonState, abilityIndex: number, 
   p.animState = 'ability';
 
   // Trigger sprite-sheet VFX for this ability
-  const hd2 = HEROES[p.heroDataId];
+  const hd2 = getHeroById(p.heroDataId);
   const classVfx = CLASS_SPELL_VFX[hd2.heroClass];
   if (classVfx && classVfx[abilityIndex] && (state as any)._spriteEffects) {
     ((state as any)._spriteEffects as SpriteEffectSystem).playEffect(classVfx[abilityIndex], p.x, p.y, 1.5, 800);
@@ -1720,7 +1721,7 @@ export function updateDungeonMouseWorld(state: DungeonState, screenX: number, sc
 export function startDungeonTargeting(state: DungeonState, abilityIndex: number) {
   const p = state.player;
   if (p.dead) return;
-  const hd = HEROES[p.heroDataId];
+  const hd = getHeroById(p.heroDataId);
   const abilities = getHeroAbilities(hd.race, hd.heroClass);
   if (!abilities || !abilities[abilityIndex]) return;
   const ab = abilities[abilityIndex];
@@ -1768,7 +1769,7 @@ export function handleDungeonAttack(state: DungeonState) {
       targetId: nearest.id,
       damage: p.atk,
       speed: 500,
-      color: CLASS_COLORS[HEROES[p.heroDataId].heroClass] || '#fff',
+      color: CLASS_COLORS[getHeroById(p.heroDataId).heroClass] || '#fff',
       size: 4,
       sourceIsPlayer: true,
     });
@@ -1793,14 +1794,14 @@ function findNearestDungeonEnemy(state: DungeonState, from: { x: number; y: numb
       nearestDist = d;
       nearest = {
         id: he.id, x: he.x, y: he.y,
-        type: HEROES[he.heroDataId].name,
+        type: getHeroById(he.heroDataId).name,
         hp: he.hp, maxHp: he.maxHp,
         atk: he.atk, def: he.def,
         spd: he.spd, rng: he.rng,
         facing: he.facing, dead: he.dead,
         animState: he.animState, animTimer: he.animTimer,
         attackTimer: he.attackTimer, targetId: null,
-        color: RACE_COLORS[HEROES[he.heroDataId].race] || '#fff',
+        color: RACE_COLORS[getHeroById(he.heroDataId).race] || '#fff',
         xpValue: he.xpValue, goldValue: he.goldValue,
         isBoss: false, size: 14,
         activeEffects: he.activeEffects,
@@ -1813,7 +1814,7 @@ function findNearestDungeonEnemy(state: DungeonState, from: { x: number; y: numb
 
 export function getDungeonHudState(state: DungeonState): DungeonHudState {
   const p = state.player;
-  const hd = HEROES[p.heroDataId];
+  const hd = getHeroById(p.heroDataId);
   return {
     hp: p.hp, maxHp: p.maxHp,
     mp: p.mp, maxMp: p.maxMp,
@@ -2141,7 +2142,7 @@ export class DungeonRenderer {
   }
 
   private renderHeroEnemy(ctx: CanvasRenderingContext2D, he: DungeonHeroEnemy, state: DungeonState) {
-    const heroData = HEROES[he.heroDataId];
+    const heroData = getHeroById(he.heroDataId);
     const raceColor = RACE_COLORS[heroData.race] || '#888';
     const classColor = CLASS_COLORS[heroData.heroClass] || '#888';
     const dx = he.x - state.player.x;
@@ -2200,7 +2201,7 @@ export class DungeonRenderer {
 
   private renderPlayer(ctx: CanvasRenderingContext2D, state: DungeonState) {
     const p = state.player;
-    const hd = HEROES[p.heroDataId];
+    const hd = getHeroById(p.heroDataId);
     const raceColor = RACE_COLORS[hd.race] || '#888';
     const classColor = CLASS_COLORS[hd.heroClass] || '#888';
 

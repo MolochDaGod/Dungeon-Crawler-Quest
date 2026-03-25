@@ -60,7 +60,11 @@ export type SpriteEffectType =
   | 'os_firebolt' | 'os_waterball' | 'os_waterblast' | 'os_waterblast_end'
   | 'os_fire_breath' | 'os_fire_breath_hit'
   // ObjectStore — Smoke / Dodge
-  | 'os_smoke_vfx1' | 'os_smoke_vfx3' | 'os_wind_hit' | 'os_star_burst';
+  | 'os_smoke_vfx1' | 'os_smoke_vfx3' | 'os_wind_hit' | 'os_star_burst'
+  // Fire Effect 2 — Explosion sprite sheets
+  | 'fire_explosion_grid' | 'fire_explosion_strip'
+  // Fires pack — Fireball projectiles
+  | 'fireball_strip' | 'small_fireball';
 
 // ── Spritesheet info ───────────────────────────────────────────
 interface SpritesheetInfo {
@@ -254,6 +258,14 @@ const EFFECT_FILE_MAP: Record<SpriteEffectType, EffectDef> = {
   os_smoke_vfx3:  { path: `${OS}/sprites/effects/pixel/smoke_vfx_3.png`, cols: 8, rows: 1, frameW: 48, frameH: 48, frames: 8 },
   os_wind_hit:    { path: `${OS}/sprites/effects/wind_hit.png`,          cols: 6, rows: 1, frameW: 32, frameH: 32, frames: 6 },
   os_star_burst:  { path: `${OS}/sprites/effects/star_burst.png`,        cols: 8, rows: 1, frameW: 48, frameH: 48, frames: 8 },
+
+  // ── Fire Effect 2 — Explosions (local assets) ──
+  fire_explosion_grid:  { path: '/assets/effects/explosions/explosion_fire1.png',  cols: 4, rows: 4, frameW: 64, frameH: 64, frames: 16 },
+  fire_explosion_strip: { path: '/assets/effects/explosions/explosion_fire2.png',  cols: 16, rows: 1, frameW: 48, frameH: 48, frames: 16 },
+
+  // ── Fires pack — Fireball projectiles (local assets) ──
+  fireball_strip:  { path: '/assets/effects/explosions/fireball_strip.png',  cols: 9, rows: 1, frameW: 68, frameH: 68, frames: 9 },
+  small_fireball:  { path: '/assets/effects/explosions/small_fireball.png',  cols: 10, rows: 1, frameW: 26, frameH: 26, frames: 10 },
 };
 
 // ── Legacy class VFX (kept for backward compat) ────────────────
@@ -287,7 +299,7 @@ export const ABILITY_VFX: Record<string, AbilityVfxDef> = {
   'Brutal Cleave':    { cast: 'os_demon_slash2', aoe: 'os_slash_red_lg' },
   'Whirlwind':        { aoe: 'os_demon_slash3', impact: 'os_hit_burst' },
   'Blade Storm':      { aoe: 'os_demon_slash3', impact: 'os_hit_burst' },
-  'Earthquake':       { aoe: 'os_earth_bump', impact: 'os_fire_explosion' },
+  'Earthquake':       { aoe: 'os_earth_bump', impact: 'fire_explosion_grid' },
   'Double Chop':      { cast: 'os_slash_red_md', impact: 'os_hit1' },
   'Impale':           { cast: 'os_slash_blue_lg', impact: 'os_hit_burst' },
   'Glaive Sweep':     { aoe: 'os_slash_green_lg', impact: 'os_hit2' },
@@ -302,7 +314,7 @@ export const ABILITY_VFX: Record<string, AbilityVfxDef> = {
   'Vault':            { cast: 'os_wind_breath' },
   // ── Warrior ultimates ──
   'Avatar':           { aoe: 'os_holy_light', cast: 'os_resurrect' },
-  'Blood Fury':       { cast: 'os_flamestrike', aoe: 'os_fire_explosion' },
+  'Blood Fury':       { cast: 'os_flamestrike', aoe: 'fire_explosion_grid' },
   "Titan's Wrath":    { cast: 'os_earth_bump', aoe: 'os_crit_slash' },
   'Ironclad':         { cast: 'os_earth_wall', aoe: 'os_holy_vfx' },
   "Death's Embrace":  { cast: 'os_arcane_mist', aoe: 'os_frozen_ice' },
@@ -327,10 +339,10 @@ export const ABILITY_VFX: Record<string, AbilityVfxDef> = {
   'Life Drain':       { cast: 'os_healing_wave', impact: 'os_hit3' },
   // ── Worg ultimates ──
   'Death Mark':       { cast: 'os_arcane_mist', impact: 'os_fire_explosion2' },
-  'Primal Fury':      { cast: 'os_worge_tornado', aoe: 'os_fire_explosion' },
+  'Primal Fury':      { cast: 'os_worge_tornado', aoe: 'fire_explosion_grid' },
   "Reaper's Call":    { cast: 'os_arcane_mist', aoe: 'os_flamestrike' },
-  'Blood Pact':       { cast: 'os_flamestrike', aoe: 'os_fire_explosion' },
-  'Berserker Rage':   { cast: 'os_fire_explosion', aoe: 'os_crit_slash' },
+  'Blood Pact':       { cast: 'os_flamestrike', aoe: 'fire_explosion_grid' },
+  'Berserker Rage':   { cast: 'fire_explosion_strip', aoe: 'os_crit_slash' },
   'Ghoul Frenzy':     { cast: 'os_arcane_mist', aoe: 'os_frozen_ice' },
 
   // ── Mage attacks ──
@@ -341,8 +353,8 @@ export const ABILITY_VFX: Record<string, AbilityVfxDef> = {
   'Frost Bolt':       { projectile: 'os_frostbolt', impact: 'os_ice_hit' },
   // ── Mage core ──
   'Arcane Barrage':   { aoe: 'os_arcane_bolt', impact: 'os_thunder_hit' },
-  'Fireball':         { projectile: 'os_flamestrike', impact: 'os_fire_explosion' },
-  'Flame Burst':      { aoe: 'os_fire_explosion', cast: 'os_flamestrike' },
+  'Fireball':         { projectile: 'fireball_strip', impact: 'fire_explosion_grid' },
+  'Flame Burst':      { aoe: 'fire_explosion_grid', cast: 'os_flamestrike' },
   'Chain Lightning':  { cast: 'os_arcane_lightning', impact: 'os_thunder_hit' },
   'Searing Beam':     { cast: 'os_beam_holy', impact: 'os_fire_explosion2' },
   'Frost Nova':       { cast: 'os_frostbolt', aoe: 'os_frozen_ice' },
@@ -358,9 +370,9 @@ export const ABILITY_VFX: Record<string, AbilityVfxDef> = {
   // ── Mage ultimates ──
   'Arcane Cataclysm': { aoe: 'os_arcane_bolt', impact: 'os_arcane_lightning' },
   'Wrath of Nature':  { aoe: 'os_healing_wave', impact: 'os_earth_bump' },
-  'Meteor':           { impact: 'os_fire_explosion', aoe: 'os_flamestrike' },
+  'Meteor':           { impact: 'fire_explosion_grid', aoe: 'os_flamestrike' },
   'Thunder Storm':    { aoe: 'os_arcane_lightning', impact: 'os_thunder_hit' },
-  'Inferno':          { aoe: 'os_flamestrike', impact: 'os_fire_explosion' },
+  'Inferno':          { aoe: 'os_flamestrike', impact: 'fire_explosion_grid' },
   'Blizzard':         { aoe: 'os_ice_vfx2', impact: 'os_frozen_ice' },
 
   // ── Ranger attacks ──
@@ -373,7 +385,7 @@ export const ABILITY_VFX: Record<string, AbilityVfxDef> = {
   'Multi Shot':       { projectile: 'os_wind_proj', impact: 'os_hit1' },
   'Snipe':            { projectile: 'os_thunder_proj2', impact: 'os_crit_slash' },
   'Bolt Volley':      { projectile: 'os_thunder_proj', impact: 'os_hit2' },
-  'Explosive Round':  { projectile: 'os_thunder_proj', impact: 'os_fire_explosion' },
+  'Explosive Round':  { projectile: 'os_thunder_proj', impact: 'fire_explosion_strip' },
   'Burst Fire':       { projectile: 'os_thunder_proj', impact: 'os_hit3' },
   // ── Ranger defensives ──
   'Evasive Roll':     { cast: 'os_wind_breath' },
@@ -386,7 +398,7 @@ export const ABILITY_VFX: Record<string, AbilityVfxDef> = {
   // ── Ranger ultimates ──
   'Storm of Arrows':    { aoe: 'os_wind_proj', impact: 'os_hit_burst' },
   'Moonfire Volley':    { aoe: 'os_holy_impact', impact: 'os_arcane_bolt' },
-  'Siege Barrage':      { aoe: 'os_fire_explosion', impact: 'os_thunder_hit' },
+  'Siege Barrage':      { aoe: 'fire_explosion_grid', impact: 'os_thunder_hit' },
   'Death Rain':         { aoe: 'os_arcane_mist', impact: 'os_hit_burst' },
   'Lead Storm':         { aoe: 'os_fire_explosion2', impact: 'os_thunder_hit' },
   'Phantom Barrage':    { aoe: 'os_arcane_mist', impact: 'os_thunder_proj2' },

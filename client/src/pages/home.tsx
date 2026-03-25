@@ -159,7 +159,7 @@ export default function Home() {
             Create your warrior. Choose your destiny. Enter the world.
           </p>
           <p className="text-gray-500 text-sm mb-6">
-            6 Races &bull; 4 Classes &bull; 17 Weapon Types &bull; Choose your mode
+            6 Races &bull; 4 Classes &bull; 17 Weapon Types &bull; 8 Attributes &bull; Level 1-20
           </p>
         </div>
 

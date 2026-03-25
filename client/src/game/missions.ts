@@ -6,7 +6,7 @@
 
 // ── Mission Definitions ────────────────────────────────────────
 
-export type MissionType = 'kill' | 'collect' | 'explore' | 'boss' | 'dungeon';
+export type MissionType = 'kill' | 'collect' | 'explore' | 'boss' | 'dungeon' | 'craft';
 export type MissionStatus = 'available' | 'active' | 'complete' | 'claimed';
 
 export interface MissionObjective {

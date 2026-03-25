@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import {
   MobaState, HudState, HEROES, ITEMS, CLASS_ABILITIES,
   TEAM_COLORS, TEAM_NAMES, CLASS_COLORS, RARITY_COLORS,
-  ItemDef, getPortraitPath, MAP_SIZE, TargetInfo, getHeroAbilities
+  ItemDef, getPortraitPath, MAP_SIZE, TargetInfo, getHeroAbilities, getHeroById
 } from '@/game/types';
 import {
   createInitialState, updateGame, getHudState,
@@ -364,7 +364,7 @@ export default function GamePage() {
       const tryAbility = (idx: number) => {
         const p = state.heroes[state.playerHeroIndex];
         if (!p) return;
-        const hd = HEROES[p.heroDataId];
+        const hd = getHeroById(p.heroDataId);
         const abilities = hd ? getHeroAbilities(hd.race, hd.heroClass) : null;
         const ab = abilities?.[idx] || (p as any)._loadoutAbilities?.[idx];
         if (ab && ab.castType === 'ground_aoe') {
@@ -487,7 +487,7 @@ export default function GamePage() {
           if (targetPos) {
             const p = state.heroes[state.playerHeroIndex];
             if (p) {
-              const hd = HEROES[p.heroDataId];
+              const hd = getHeroById(p.heroDataId);
               const abilities = hd ? CLASS_ABILITIES[hd.heroClass] : null;
               const abIdx = mouseTarget.aoeIndicator.abilityIndex >= 0 ? mouseTarget.aoeIndicator.abilityIndex : state.selectedAbility;
               const ab = abilities?.[abIdx];
