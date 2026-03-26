@@ -6,6 +6,7 @@ import { allocateOWAttribute, claimOWMission, equipBagItemOW } from '@/game/open
 import { AttributeId } from '@/game/attributes';
 import { HeroData, AbilityDef, CLASS_COLORS, ABILITY_ICONS, RACE_COLORS } from '@/game/types';
 import { VoxelRenderer } from '@/game/voxel';
+import { fetchGBuxBalance, formatGBuxShort, getWalletAddress } from '@/game/gbux';
 
 /* ── Emoji helpers for attributes ── */
 const ATTR_EMOJI: Record<string, string> = {
@@ -179,6 +180,14 @@ interface Props {
 
 export default function MainPanel({ hud, stateRef, heroData, abilities, abilityNames, abilityDescs, onClose }: Props) {
   const [tab, setTab] = useState<Tab>('equip');
+  const [gbuxBalance, setGbuxBalance] = useState<number | null>(null);
+
+  // Fetch gBux balance on mount and every 30s
+  useEffect(() => {
+    fetchGBuxBalance().then(setGbuxBalance);
+    const interval = setInterval(() => fetchGBuxBalance(true).then(setGbuxBalance), 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const hpPct = hud.maxHp > 0 ? (hud.hp / hud.maxHp) * 100 : 0;
   const mpPct = hud.maxMp > 0 ? (hud.mp / hud.maxMp) * 100 : 0;
@@ -215,6 +224,11 @@ export default function MainPanel({ hud, stateRef, heroData, abilities, abilityN
         <div className={css.playerInfo}>
           <span className={css.playerName}>{hud.heroName}</span>
           <span className={css.playerLevel}>Lv{hud.level} {hud.heroRace} {hud.heroClass}</span>
+          {gbuxBalance !== null && (
+            <span style={{ fontSize: 11, color: '#fbbf24', fontWeight: 700, marginTop: 2 }}>
+              💰 {formatGBuxShort(gbuxBalance)} gBux
+            </span>
+          )}
         </div>
 
         <button className={css.closeBtn} onClick={onClose}>✕</button>
