@@ -38,6 +38,7 @@ import {
   type ActiveAura, type AuraVisual, type AuraStatModifiers,
   CLASS_AURAS
 } from './aura-system';
+import { getTileMeta, queryTiles, pickTileSeeded, type TileMeta } from './tile-metadata';
 
 const BASE_POSITIONS: Vec2[] = [
   { x: 300, y: 3700 },
@@ -4917,6 +4918,30 @@ export class MobaRenderer {
     ctx.restore();
   }
 
+  // Sprite sheet image cache for tile-metadata sprites
+  private _sheetCache = new Map<string, HTMLImageElement>();
+  private _loadingSheets = new Set<string>();
+
+  private loadSheet(src: string): HTMLImageElement | null {
+    const cached = this._sheetCache.get(src);
+    if (cached?.complete) return cached;
+    if (this._loadingSheets.has(src)) return null;
+    this._loadingSheets.add(src);
+    const img = new Image();
+    img.src = src;
+    img.onload = () => { this._sheetCache.set(src, img); this._loadingSheets.delete(src); };
+    img.onerror = () => { this._loadingSheets.delete(src); };
+    this._sheetCache.set(src, img);
+    return null;
+  }
+
+  // Terrain type → tile-metadata biome mapping for sprite lookup
+  private static TERRAIN_TO_BIOME: Record<string, string> = {
+    grass: 'grass', dirt: 'dirt', stone: 'stone', water: 'water',
+    lane: 'city', jungle: 'forest', base_blue: 'city', base_red: 'city',
+    river: 'water', jungle_path: 'dirt', dense_woods: 'forest', stone_wall: 'mountain',
+  };
+
   private renderMap(ctx: CanvasRenderingContext2D, cam: Camera, W: number, H: number, state: MobaState) {
     const startTX = Math.max(0, Math.floor((cam.x - W / 2 / cam.zoom) / 80) - 1);
     const startTY = Math.max(0, Math.floor((cam.y - H / 2 / cam.zoom) / 80) - 1);
@@ -4938,7 +4963,21 @@ export class MobaRenderer {
         const terrain = TERRAIN_LOOKUP[terrainIdx] || 'grass';
         const x = tx * tileSize;
         const y = ty * tileSize;
-        this.voxel.drawTerrainTile(ctx, x, y, tileSize, terrain, tx, ty);
+
+        // Try sprite-based rendering first, fall back to voxel colored squares
+        const biomeKey = MobaRenderer.TERRAIN_TO_BIOME[terrain] || 'grass';
+        const tiles = queryTiles(biomeKey as any, 'terrain');
+        if (tiles.length > 0) {
+          const tileMeta = pickTileSeeded(tiles, tx * 31 + ty * 97);
+          const sheet = this.loadSheet(tileMeta.sheet);
+          if (sheet) {
+            ctx.drawImage(sheet, tileMeta.sx, tileMeta.sy, tileMeta.sw, tileMeta.sh, x, y, tileSize, tileSize);
+          } else {
+            this.voxel.drawTerrainTile(ctx, x, y, tileSize, terrain, tx, ty);
+          }
+        } else {
+          this.voxel.drawTerrainTile(ctx, x, y, tileSize, terrain, tx, ty);
+        }
 
         const seed = ((tx * 374761393 + ty * 668265263) >>> 0) % 1000;
         const seed2 = ((tx * 668265263 + ty * 374761393 + 12345) >>> 0) % 1000;
