@@ -16,8 +16,13 @@ import {
 import {
   ArrowLeft, Play, Pause, SkipForward, SkipBack, RotateCcw, Download,
   Swords, Wand2, Shield, Zap, Bot, Sparkles, User, Eye, EyeOff,
-  Copy, RefreshCw, Save, Repeat
+  Copy, RefreshCw, Save, Repeat, Box, Plus, Trash2, Upload
 } from "lucide-react";
+import {
+  ColliderDef, CharOverrides,
+  loadOverrides, saveOverrides, exportOverrides, importOverrides,
+  nextColliderId, buildDefaultColliders,
+} from "@/lib/charConfig";
 
 const RACES = ["Human", "Barbarian", "Dwarf", "Elf", "Orc", "Undead"];
 const CLASSES = ["Warrior", "Worg", "Mage", "Ranger"];
@@ -127,16 +132,217 @@ interface AIProfile {
   classSpdWeight: number;
 }
 
-type TabId = "characters" | "animations" | "effects" | "weapons" | "ai-config" | "ai-generator";
+type TabId = "characters" | "animations" | "effects" | "weapons" | "ai-config" | "ai-generator" | "colliders";
 
 const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: "characters", label: "Characters", icon: User },
   { id: "animations", label: "Animations", icon: Play },
   { id: "effects", label: "Effects", icon: Sparkles },
   { id: "weapons", label: "Weapons", icon: Swords },
+  { id: "colliders", label: "Colliders", icon: Box },
   { id: "ai-config", label: "AI Config", icon: Bot },
   { id: "ai-generator", label: "AI Generator", icon: Zap },
 ];
+
+// ── Collider rendering / hit-testing helpers ────────────────────
+
+const HANDLE_SIZE = 6;
+
+type DragMode = 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br' | null;
+
+function colliderScreenBounds(c: ColliderDef, cx: number, cy: number) {
+  const sx = cx + c.x;
+  const sy = cy + c.y;
+  return { sx, sy, sw: c.w, sh: c.h };
+}
+
+function hitTestCollider(c: ColliderDef, cx: number, cy: number, mx: number, my: number): DragMode {
+  const { sx, sy, sw, sh } = colliderScreenBounds(c, cx, cy);
+  const hs = HANDLE_SIZE;
+  // Corner handles (check first so they win over body)
+  if (Math.abs(mx - sx) <= hs && Math.abs(my - sy) <= hs) return 'resize-tl';
+  if (Math.abs(mx - (sx + sw)) <= hs && Math.abs(my - sy) <= hs) return 'resize-tr';
+  if (Math.abs(mx - sx) <= hs && Math.abs(my - (sy + sh)) <= hs) return 'resize-bl';
+  if (Math.abs(mx - (sx + sw)) <= hs && Math.abs(my - (sy + sh)) <= hs) return 'resize-br';
+  // Body hit
+  if (c.type === 'ellipse') {
+    const ecx = sx + sw / 2, ecy = sy + sh / 2;
+    const rx = sw / 2, ry = sh / 2;
+    if (rx > 0 && ry > 0 && ((mx - ecx) ** 2 / rx ** 2 + (my - ecy) ** 2 / ry ** 2) <= 1) return 'move';
+  } else {
+    if (mx >= sx && mx <= sx + sw && my >= sy && my <= sy + sh) return 'move';
+  }
+  return null;
+}
+
+function drawColliderOverlay(
+  ctx: CanvasRenderingContext2D,
+  c: ColliderDef,
+  cx: number, cy: number,
+  selected: boolean,
+) {
+  const { sx, sy, sw, sh } = colliderScreenBounds(c, cx, cy);
+  ctx.save();
+  ctx.globalAlpha = selected ? 0.55 : 0.35;
+  ctx.fillStyle = c.color;
+  if (c.type === 'ellipse') {
+    ctx.beginPath();
+    ctx.ellipse(sx + sw / 2, sy + sh / 2, sw / 2, sh / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = selected ? 1 : 0.6;
+    ctx.strokeStyle = c.color;
+    ctx.lineWidth = selected ? 2 : 1;
+    ctx.stroke();
+  } else {
+    ctx.fillRect(sx, sy, sw, sh);
+    ctx.globalAlpha = selected ? 1 : 0.6;
+    ctx.strokeStyle = c.color;
+    ctx.lineWidth = selected ? 2 : 1;
+    ctx.strokeRect(sx, sy, sw, sh);
+  }
+  // Handles when selected
+  if (selected) {
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff';
+    const hs = HANDLE_SIZE;
+    for (const [hx, hy] of [[sx, sy], [sx + sw, sy], [sx, sy + sh], [sx + sw, sy + sh]]) {
+      ctx.fillRect(hx - hs / 2, hy - hs / 2, hs, hs);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(hx - hs / 2, hy - hs / 2, hs, hs);
+    }
+  }
+  // Label
+  ctx.globalAlpha = selected ? 1 : 0.7;
+  ctx.fillStyle = '#fff';
+  ctx.font = '9px monospace';
+  ctx.fillText(c.label, sx + 2, sy - 3);
+  ctx.restore();
+}
+
+// ── CollidersTab component ─────────────────────────────────────
+
+function CollidersTab({ colliders, selectedId, onSelect, onUpdate, onAdd, onDelete, onReset, onExport, onImport }: {
+  colliders: ColliderDef[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+  onUpdate: (id: string, patch: Partial<ColliderDef>) => void;
+  onAdd: (type: 'rect' | 'ellipse') => void;
+  onDelete: (id: string) => void;
+  onReset: () => void;
+  onExport: () => void;
+  onImport: () => void;
+}) {
+  const sel = colliders.find(c => c.id === selectedId) || null;
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Collision Zones" />
+      <div className="space-y-1">
+        {colliders.map(c => (
+          <div
+            key={c.id}
+            className={`flex items-center justify-between text-xs rounded px-2 py-1.5 cursor-pointer transition-colors ${
+              c.id === selectedId ? 'bg-amber-900/40 border border-amber-700' : 'bg-black/20 hover:bg-black/30'
+            }`}
+            onClick={() => onSelect(c.id === selectedId ? null : c.id)}
+            data-testid={`collider-row-${c.id}`}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm" style={{ background: c.color }} />
+              <span className="text-gray-300">{c.label}</span>
+              <span className="text-gray-600 text-[10px]">{c.type}</span>
+            </div>
+            <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-gray-600 hover:text-red-400"
+              onClick={e => { e.stopPropagation(); onDelete(c.id); }}
+              data-testid={`btn-delete-collider-${c.id}`}>
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => onAdd('rect')} data-testid="btn-add-rect">
+          <Plus className="w-3 h-3 mr-1" /> Rect
+        </Button>
+        <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => onAdd('ellipse')} data-testid="btn-add-ellipse">
+          <Plus className="w-3 h-3 mr-1" /> Ellipse
+        </Button>
+      </div>
+
+      {sel && (
+        <>
+          <SectionHeader title="Properties" />
+          <div className="space-y-2">
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-0.5">Label</label>
+              <input type="text" value={sel.label} onChange={e => onUpdate(sel.id, { label: e.target.value })}
+                className="w-full bg-black/40 border border-gray-700 rounded px-2 py-1 text-xs text-white"
+                data-testid="input-collider-label" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">X</label>
+                <input type="number" value={sel.x} onChange={e => onUpdate(sel.id, { x: Number(e.target.value) })}
+                  className="w-full bg-black/40 border border-gray-700 rounded px-2 py-1 text-xs text-white font-mono"
+                  data-testid="input-collider-x" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">Y</label>
+                <input type="number" value={sel.y} onChange={e => onUpdate(sel.id, { y: Number(e.target.value) })}
+                  className="w-full bg-black/40 border border-gray-700 rounded px-2 py-1 text-xs text-white font-mono"
+                  data-testid="input-collider-y" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">Width</label>
+                <input type="number" value={sel.w} min={4} onChange={e => onUpdate(sel.id, { w: Math.max(4, Number(e.target.value)) })}
+                  className="w-full bg-black/40 border border-gray-700 rounded px-2 py-1 text-xs text-white font-mono"
+                  data-testid="input-collider-w" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">Height</label>
+                <input type="number" value={sel.h} min={4} onChange={e => onUpdate(sel.id, { h: Math.max(4, Number(e.target.value)) })}
+                  className="w-full bg-black/40 border border-gray-700 rounded px-2 py-1 text-xs text-white font-mono"
+                  data-testid="input-collider-h" />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] text-gray-500">Color</span>
+              <input type="color" value={sel.color.startsWith('rgba') ? '#3b82f6' : sel.color}
+                onChange={e => onUpdate(sel.id, { color: e.target.value + '80' })}
+                className="w-7 h-7 rounded cursor-pointer bg-transparent border border-gray-700"
+                data-testid="input-collider-color" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-0.5">Type</label>
+              <Select value={sel.type} onValueChange={v => onUpdate(sel.id, { type: v as 'rect' | 'ellipse' })}>
+                <SelectTrigger className="h-7 text-xs" data-testid="select-collider-type"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rect">Rect</SelectItem>
+                  <SelectItem value="ellipse">Ellipse</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </>
+      )}
+
+      <SectionHeader title="Actions" />
+      <div className="flex flex-col gap-2">
+        <Button size="sm" variant="outline" className="w-full text-xs" onClick={onReset} data-testid="btn-reset-colliders">
+          <RotateCcw className="w-3 h-3 mr-1" /> Reset to Defaults
+        </Button>
+        <Button size="sm" variant="outline" className="w-full text-xs" onClick={onExport} data-testid="btn-export-colliders">
+          <Copy className="w-3 h-3 mr-1" /> Export JSON
+        </Button>
+        <Button size="sm" variant="outline" className="w-full text-xs" onClick={onImport} data-testid="btn-import-colliders">
+          <Upload className="w-3 h-3 mr-1" /> Import JSON
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function getAnimPosesForPreview(heroClass: string, animState: string, t: number) {
   const idle = {
@@ -869,6 +1075,80 @@ export default function AdminPage() {
   const [facing, setFacing] = useState(0);
   const [showVFX, setShowVFX] = useState(true);
 
+  // ── Collider state ────────────────────────────────────────────
+  const [colliders, setColliders] = useState<ColliderDef[]>([]);
+  const [selectedColliderId, setSelectedColliderId] = useState<string | null>(null);
+  const collidersRef = useRef<ColliderDef[]>([]);
+  const selectedColliderIdRef = useRef<string | null>(null);
+  const dragRef = useRef<{ mode: DragMode; colId: string; startMx: number; startMy: number; origX: number; origY: number; origW: number; origH: number } | null>(null);
+  const showCollidersRef = useRef(false);
+
+  useEffect(() => { collidersRef.current = colliders; }, [colliders]);
+  useEffect(() => { selectedColliderIdRef.current = selectedColliderId; }, [selectedColliderId]);
+  useEffect(() => { showCollidersRef.current = activeTab === 'colliders'; }, [activeTab]);
+
+  // Load colliders when hero changes
+  useEffect(() => {
+    const ov = loadOverrides(selectedHeroId);
+    setColliders(ov.colliders);
+    setSelectedColliderId(null);
+  }, [selectedHeroId]);
+
+  // Auto-save colliders on change
+  const saveCollidersTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (saveCollidersTimeout.current) clearTimeout(saveCollidersTimeout.current);
+    saveCollidersTimeout.current = setTimeout(() => {
+      saveOverrides({ heroId: selectedHeroId, colliders });
+    }, 400);
+  }, [colliders, selectedHeroId]);
+
+  const updateCollider = useCallback((id: string, patch: Partial<ColliderDef>) => {
+    setColliders(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  }, []);
+
+  const addCollider = useCallback((type: 'rect' | 'ellipse') => {
+    const newC: ColliderDef = {
+      id: nextColliderId(),
+      label: type === 'rect' ? 'New Rect' : 'New Ellipse',
+      type,
+      x: -10,
+      y: -10,
+      w: 20,
+      h: 20,
+      color: type === 'rect' ? 'rgba(168,85,247,0.5)' : 'rgba(6,182,212,0.5)',
+    };
+    setColliders(prev => [...prev, newC]);
+    setSelectedColliderId(newC.id);
+  }, []);
+
+  const deleteCollider = useCallback((id: string) => {
+    setColliders(prev => prev.filter(c => c.id !== id));
+    setSelectedColliderId(prev => prev === id ? null : prev);
+  }, []);
+
+  const resetColliders = useCallback(() => {
+    const defs = buildDefaultColliders();
+    setColliders(defs);
+    setSelectedColliderId(null);
+  }, []);
+
+  const handleExportColliders = useCallback(() => {
+    // Save first, then export
+    saveOverrides({ heroId: selectedHeroId, colliders });
+    navigator.clipboard.writeText(exportOverrides(selectedHeroId));
+  }, [selectedHeroId, colliders]);
+
+  const handleImportColliders = useCallback(() => {
+    const json = prompt('Paste collider JSON:');
+    if (!json) return;
+    try {
+      const ov = importOverrides(json);
+      setColliders(ov.colliders);
+      setSelectedColliderId(null);
+    } catch { /* invalid JSON */ }
+  }, []);
+
   const animTimerRef = useRef(0);
   const playingRef = useRef(true);
   const speedRef = useRef(1);
@@ -989,6 +1269,15 @@ export default function AdminPage() {
     spriteEffectsRef.current.update(dt);
     spriteEffectsRef.current.render(ctx);
 
+    // ── Draw collider overlays when colliders tab is active ──
+    if (showCollidersRef.current) {
+      const cols = collidersRef.current;
+      const selId = selectedColliderIdRef.current;
+      for (const c of cols) {
+        drawColliderOverlay(ctx, c, cx, cy, c.id === selId);
+      }
+    }
+
     ctx.fillStyle = "rgba(255,255,255,0.4)";
     ctx.font = "10px monospace";
     ctx.fillText(`${animStateRef.current}  t:${animTimerRef.current.toFixed(3)}  ${speedRef.current.toFixed(1)}x`, 8, canvas.height - 8);
@@ -1046,7 +1335,49 @@ export default function AdminPage() {
           <div className="flex-1 flex items-center justify-center bg-[#08080f] relative">
             <canvas ref={canvasRef} width={560} height={480}
               className="rounded-lg border border-gray-800/30"
-              data-testid="preview-canvas" />
+              data-testid="preview-canvas"
+              onMouseDown={(e) => {
+                if (activeTab !== 'colliders') return;
+                const rect = canvasRef.current!.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                const cvsCx = 560 / 2;
+                const cvsCy = 480 / 2 + 20;
+                // Hit test in reverse order (top-most first)
+                for (let i = colliders.length - 1; i >= 0; i--) {
+                  const c = colliders[i];
+                  const mode = hitTestCollider(c, cvsCx, cvsCy, mx, my);
+                  if (mode) {
+                    setSelectedColliderId(c.id);
+                    dragRef.current = { mode, colId: c.id, startMx: mx, startMy: my, origX: c.x, origY: c.y, origW: c.w, origH: c.h };
+                    return;
+                  }
+                }
+                setSelectedColliderId(null);
+              }}
+              onMouseMove={(e) => {
+                if (!dragRef.current) return;
+                const rect = canvasRef.current!.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                const d = dragRef.current;
+                const dx = mx - d.startMx;
+                const dy = my - d.startMy;
+                if (d.mode === 'move') {
+                  updateCollider(d.colId, { x: d.origX + dx, y: d.origY + dy });
+                } else if (d.mode === 'resize-br') {
+                  updateCollider(d.colId, { w: Math.max(4, d.origW + dx), h: Math.max(4, d.origH + dy) });
+                } else if (d.mode === 'resize-tl') {
+                  updateCollider(d.colId, { x: d.origX + dx, y: d.origY + dy, w: Math.max(4, d.origW - dx), h: Math.max(4, d.origH - dy) });
+                } else if (d.mode === 'resize-tr') {
+                  updateCollider(d.colId, { y: d.origY + dy, w: Math.max(4, d.origW + dx), h: Math.max(4, d.origH - dy) });
+                } else if (d.mode === 'resize-bl') {
+                  updateCollider(d.colId, { x: d.origX + dx, w: Math.max(4, d.origW - dx), h: Math.max(4, d.origH + dy) });
+                }
+              }}
+              onMouseUp={() => { dragRef.current = null; }}
+              onMouseLeave={() => { dragRef.current = null; }}
+            />
             <div className="absolute bottom-3 left-3 flex gap-2">
               <div className="bg-black/60 backdrop-blur rounded px-2 py-1 text-[10px] text-gray-400">
                 {hero.race} {hero.heroClass}
@@ -1089,6 +1420,19 @@ export default function AdminPage() {
             )}
             {activeTab === "ai-generator" && (
               <AIGeneratorTab hero={hero} />
+            )}
+            {activeTab === "colliders" && (
+              <CollidersTab
+                colliders={colliders}
+                selectedId={selectedColliderId}
+                onSelect={setSelectedColliderId}
+                onUpdate={updateCollider}
+                onAdd={addCollider}
+                onDelete={deleteCollider}
+                onReset={resetColliders}
+                onExport={handleExportColliders}
+                onImport={handleImportColliders}
+              />
             )}
           </div>
         </div>

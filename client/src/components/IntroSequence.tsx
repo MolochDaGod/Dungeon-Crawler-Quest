@@ -10,9 +10,14 @@ import { HEROES, CLASS_COLORS } from '@/game/types';
 const STORAGE_KEY = 'grudge_intro_complete';
 const WEAPON_STORAGE_KEY = 'grudge_starting_weapons';
 
-/** Check if intro should be shown */
+/** Check if intro should be shown (skipped on admin/editor routes) */
 export function shouldShowIntro(): boolean {
-  return !localStorage.getItem(STORAGE_KEY);
+  if (localStorage.getItem(STORAGE_KEY)) return false;
+  // Skip for admin & editor routes so direct-linking doesn't trigger the intro
+  const path = window.location.pathname + window.location.hash;
+  if (/\/(admin|mapadmin|worldadmin|worldeditor|editor|animation-editor)/i.test(path)) return false;
+  if (/#(toonadmin|mapadmin)/i.test(path)) return false;
+  return true;
 }
 
 /** Mark intro as complete */
