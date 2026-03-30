@@ -53,6 +53,7 @@ import {
 import { HERO_PREFABS, getHeroPrefabKey } from "./babylon-prefabs";
 import { HEROES, CLASS_COLORS, getHeroById } from "./types";
 import { ISLAND_ZONES, OPEN_WORLD_SIZE, type ZoneDef } from "./zones";
+import { createOcean, applyOceanSceneSettings, type OceanSystem } from "./babylon-ocean";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ export class OpenWorldBabylonRenderer {
   // Terrain meshes per zone
   private terrainMeshes = new Map<number, Mesh>();
   private oceanMesh!: Mesh;
+  private oceanSystem: OceanSystem | null = null;
 
   // Player
   private playerEntity: OWEntity3D | null = null;
@@ -204,23 +206,36 @@ export class OpenWorldBabylonRenderer {
     fill.intensity = 0.3;
   }
 
-  // ── Ocean ────────────────────────────────────────────────────
+  // ── Ocean (stylized NodeMaterial shader) ─────────────────────
 
-  private _setupOcean(): void {
-    const size = OPEN_WORLD_SIZE * 2;
-    this.oceanMesh = MeshBuilder.CreateGround("ocean", {
-      width: size,
-      height: size,
-    }, this.scene);
-    this.oceanMesh.position.set(OPEN_WORLD_SIZE / 2, -0.5, OPEN_WORLD_SIZE / 2);
-    this.oceanMesh.receiveShadows = true;
+  private async _setupOcean(): Promise<void> {
+    // Apply ocean palette to scene (clear color + fog)
+    applyOceanSceneSettings(this.scene);
 
-    const mat = new PBRMaterial("oceanMat", this.scene);
-    mat.albedoColor = new Color3(0.102, 0.227, 0.353);
-    mat.roughness = 0.3;
-    mat.metallic = 0.1;
-    mat.alpha = 0.85;
-    this.oceanMesh.material = mat;
+    try {
+      this.oceanSystem = await createOcean(this.scene, this.camera, {
+        enablePostEffects: true,
+        baseY: -0.3,
+        subdivisions: 128,
+      });
+      this.oceanMesh = this.oceanSystem.mesh;
+    } catch {
+      // Hard fallback — simple PBR ground if ocean system fails entirely
+      const size = OPEN_WORLD_SIZE * 2;
+      this.oceanMesh = MeshBuilder.CreateGround("ocean", {
+        width: size,
+        height: size,
+      }, this.scene);
+      this.oceanMesh.position.set(OPEN_WORLD_SIZE / 2, -0.5, OPEN_WORLD_SIZE / 2);
+      this.oceanMesh.receiveShadows = true;
+
+      const mat = new PBRMaterial("oceanMat", this.scene);
+      mat.albedoColor = new Color3(0.102, 0.227, 0.353);
+      mat.roughness = 0.3;
+      mat.metallic = 0.1;
+      mat.alpha = 0.85;
+      this.oceanMesh.material = mat;
+    }
   }
 
   // ── GUI ──────────────────────────────────────────────────────
@@ -438,6 +453,11 @@ export class OpenWorldBabylonRenderer {
     this.sunTarget.position.set(targetX, 0, targetZ);
     this.sunLight.setDirectionToTarget(this.sunTarget.position);
 
+    // Ocean follows player (infinite ocean illusion)
+    if (this.oceanSystem) {
+      this.oceanSystem.update(targetX, targetZ, 0);
+    }
+
     // Day/night brightness
     this.hemiLight.intensity = 0.3 + brightness * 0.4;
     this.sunLight.intensity = 0.5 + brightness * 1.2;
@@ -460,6 +480,7 @@ export class OpenWorldBabylonRenderer {
   dispose(): void {
     this.disposed = true;
     window.removeEventListener("resize", this._onResize);
+    if (this.oceanSystem) this.oceanSystem.dispose();
     this.engine.stopRenderLoop();
     this.scene.dispose();
     this.engine.dispose();

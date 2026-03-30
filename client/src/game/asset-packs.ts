@@ -4,6 +4,19 @@
  * Pirate Kit uses glTF (preferred); towns, dungeon, village use FBX; furniture uses FBX.
  */
 
+import {
+  ELF_ASSET_PACKS,
+  ENCHANTED_FOREST_PACK,
+  ELF_WEAPON_PACK,
+  ELF_FORTRESS_PACK,
+  ELF_RUNES_PACK,
+  ELF_CHARACTER_PACK,
+  ELF_ENEMY_PACK,
+  GOLEM_ENEMY_PACK,
+  SG_ENVIRONMENT_PACK,
+  HIGHLAND_BUILDINGS_PACK,
+} from './elf-asset-packs';
+
 const P = '/assets/packs';
 
 // ── Types ──────────────────────────────────────────────────────
@@ -67,6 +80,62 @@ export const CRUSADETOWN_PACK: AssetPack = {
     fbx('ct-gates-1', 'Minor Gates 1', `${P}/crusadetown/FBX/FULL/_Minnor_gates_01.fbx`, 'structure', ['gate', 'crusade'], 0.02),
     fbx('ct-gates-2', 'Minor Gates 2', `${P}/crusadetown/FBX/FULL/_minnor_gates_02.fbx`, 'structure', ['gate', 'crusade'], 0.02),
     fbx('ct-sentry', 'Sentry Hut', `${P}/crusadetown/FBX/FULL/_SENTRY_HURT.fbx`, 'structure', ['sentry', 'crusade'], 0.02),
+  ],
+};
+
+// ── Grudge Character Packs ──────────────────────────────────────
+
+const GC = '/assets/packs/grudge-characters';
+
+export const GOLEM_CHARACTER_PACK: AssetPack = {
+  id: 'golem-characters',
+  name: 'Golem Free',
+  description: 'Enemy golem variants for camps, mines, and wild zones',
+  basePath: `${GC}/golems`,
+  texturePath: `${GC}/golems/Texture.png`,
+  assets: [
+    gltf('gc-earth-golem', 'Earth Golem', `${GC}/golems/Earth_Golem.glb`, 'character', ['enemy', 'golem', 'earth', 'camp'], 1),
+    gltf('gc-iron-golem', 'Iron Golem', `${GC}/golems/Iron_Golem.glb`, 'character', ['enemy', 'golem', 'iron', 'camp'], 1),
+    gltf('gc-rock-golem', 'Rock Golem', `${GC}/golems/Rock_Golem.glb`, 'character', ['enemy', 'golem', 'rock', 'camp'], 1),
+  ],
+};
+
+export const BANDIT_CHARACTER_PACK: AssetPack = {
+  id: 'bandit-characters',
+  name: 'Bandits Free',
+  description: 'Bandit enemies for zone 1 camps and roadside encounters',
+  basePath: `${GC}/bandits`,
+  texturePath: `${GC}/bandits/Texture.png`,
+  assets: [
+    fbx('gc-poacher', 'Poacher', `${GC}/bandits/Poacher.fbx`, 'character', ['enemy', 'bandit', 'poacher', 'camp'], 0.01),
+    fbx('gc-scavenger', 'Scavenger', `${GC}/bandits/Scavenger.fbx`, 'character', ['enemy', 'bandit', 'scavenger', 'camp'], 0.01),
+    fbx('gc-thug', 'Thug', `${GC}/bandits/Thug.fbx`, 'character', ['enemy', 'bandit', 'thug', 'camp'], 0.01),
+  ],
+};
+
+export const GOBLIN_CHARACTER_PACK: AssetPack = {
+  id: 'goblin-characters',
+  name: 'Goblin Pack Free',
+  description: 'Goblin enemies for early camp raids and wilderness ambushes',
+  basePath: `${GC}/goblins`,
+  texturePath: `${GC}/goblins/T_Goblin.png`,
+  assets: [
+    gltf('gc-basic-goblin', 'Basic Goblin', `${GC}/goblins/Basic_Goblin.glb`, 'character', ['enemy', 'goblin', 'camp'], 1),
+    gltf('gc-goblin-archer', 'Goblin Archer', `${GC}/goblins/Goblin_Archer.glb`, 'character', ['enemy', 'goblin', 'archer', 'camp'], 1),
+    gltf('gc-goblin-warrior', 'Goblin Warrior', `${GC}/goblins/Goblin_Warrior.glb`, 'character', ['enemy', 'goblin', 'warrior', 'camp'], 1),
+  ],
+};
+
+export const VILLAGER_CHARACTER_PACK: AssetPack = {
+  id: 'villager-characters',
+  name: 'Villager NPC Free',
+  description: 'Neutral town NPCs used for vendors and blacksmith roles',
+  basePath: `${GC}/villagers`,
+  texturePath: `${GC}/villagers/Villagers_Texture.png`,
+  assets: [
+    fbx('gc-villager-blacksmith', 'Blacksmith', `${GC}/villagers/Blacksmith.fbx`, 'character', ['npc', 'villager', 'vendor', 'blacksmith'], 0.01),
+    fbx('gc-villager-hunter', 'Hunter', `${GC}/villagers/Hunter.fbx`, 'character', ['npc', 'villager', 'vendor', 'hunter'], 0.01),
+    fbx('gc-villager-child', 'Child', `${GC}/villagers/Child.fbx`, 'character', ['npc', 'villager', 'vendor', 'child'], 0.01),
   ],
 };
 
@@ -561,6 +630,67 @@ export const CAMPFIRE_PACK: AssetPack = {
   assets: [],  // Contains non-model assets (scenes/prefabs) — referenced by path
 };
 
+// ── Camp Assets ──────────────────────────────────────────────
+// CampAssets.fbx — contains fireplace, tent, sleeping bag meshes (color-palette atlas)
+
+const CA = '/assets/props/camps';
+
+export const CAMP_ASSETS_PACK: AssetPack = {
+  id: 'camp-assets',
+  name: 'Camp Assets',
+  description: 'Campfire fireplace, tent, and sleeping bag for player camp crafting',
+  basePath: CA,
+  texturePath: `${CA}/colorPalette.png`,
+  assets: [
+    fbx('ca-fireplace',   'Fireplace',    `${CA}/CampAssets.fbx`, 'prop',      ['fire', 'camp', 'quickcraft', 'warmth'], 0.01),
+    fbx('ca-tent',        'Tent',         `${CA}/CampAssets.fbx`, 'structure', ['shelter', 'camp', 'quickcraft', 'rest'], 0.01),
+    fbx('ca-sleeping-bag','Sleeping Bag', `${CA}/CampAssets.fbx`, 'furniture', ['sleep', 'camp', 'quickcraft', 'rest'], 0.01),
+  ],
+};
+
+// ── Medieval Free Props ─────────────────────────────────────────
+// MedievalFreeProps — player base props with specific gameplay roles
+
+const MP = '/assets/props/medieval-props';
+
+export const MEDIEVAL_PROPS_PACK: AssetPack = {
+  id: 'medieval-props',
+  name: 'Medieval Free Props',
+  description: 'Survival and base-building props: bed, chests, bench, jug, barrel',
+  basePath: MP,
+  texturePath: `${MP}/BaseColor.png`,
+  assets: [
+    // Furniture / rest
+    fbx('mp-bed',           'Upgraded Bed',     `${MP}/BedSingleWithBedding.fbx`, 'furniture', ['bed', 'rest', 'respawn',  'base', 'quickcraft'], 0.01),
+    // Storage
+    fbx('mp-chest-storage', 'Storage Chest',    `${MP}/ChestClosed.fbx`,          'prop',      ['chest', 'storage', 'container', 'base', 'quickcraft'], 0.01),
+    fbx('mp-chest-locked',  'Locked Chest',     `${MP}/ChestClosed.fbx`,          'prop',      ['chest', 'locked', 'inventory', 'secure', 'quickcraft'], 0.01),
+    // Crafting
+    fbx('mp-bench',         'Crafting Bench',   `${MP}/SmallBench.fbx`,           'prop',      ['bench', 'crafting', 'workbench', 'base', 'quickcraft'], 0.01),
+    // Water / cooking
+    fbx('mp-water-jug',     'Water Jug',        `${MP}/SmallJar.fbx`,             'prop',      ['jug', 'water', 'cooking', 'survival', 'quickcraft'], 0.01),
+    fbx('mp-water-barrel',  'Water Barrel',     `${MP}/Barrel.fbx`,               'prop',      ['barrel', 'water', 'gathering', 'survival', 'quickcraft'], 0.01),
+    // Bonus props
+    fbx('mp-table',         'Small Table',      `${MP}/SmallTable.fbx`,           'furniture', ['table', 'base'], 0.01),
+    fbx('mp-crate',         'Storage Crate',    `${MP}/Crate2.fbx`,               'prop',      ['crate', 'container', 'base'], 0.01),
+    fbx('mp-candle',        'Candle Support',   `${MP}/CandleOnSupport.fbx`,      'prop',      ['candle', 'light', 'base'], 0.01),
+  ],
+};
+
+// ── Elf / Fabled Shore Packs (Zone 2) ──────────────────────────
+// (imported at top of file from './elf-asset-packs')
+export {
+  ENCHANTED_FOREST_PACK,
+  ELF_WEAPON_PACK,
+  ELF_FORTRESS_PACK,
+  ELF_RUNES_PACK,
+  ELF_CHARACTER_PACK,
+  ELF_ENEMY_PACK,
+  GOLEM_ENEMY_PACK,
+  SG_ENVIRONMENT_PACK,
+  HIGHLAND_BUILDINGS_PACK,
+};
+
 // ── All Packs ──────────────────────────────────────────────────
 
 export const ALL_ASSET_PACKS: AssetPack[] = [
@@ -581,6 +711,14 @@ export const ALL_ASSET_PACKS: AssetPack[] = [
   DEFENSE_TOWER_PACK,
   KAYKIT_DUNGEON_PACK,
   CAMPFIRE_PACK,
+  CAMP_ASSETS_PACK,
+  MEDIEVAL_PROPS_PACK,
+  GOLEM_CHARACTER_PACK,
+  BANDIT_CHARACTER_PACK,
+  GOBLIN_CHARACTER_PACK,
+  VILLAGER_CHARACTER_PACK,
+  // Elf / Fabled Shore (Zone 2) packs
+  ...ELF_ASSET_PACKS,
 ];
 
 /** Flat list of every asset for quick lookups */

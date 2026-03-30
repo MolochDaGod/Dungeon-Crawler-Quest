@@ -60,6 +60,15 @@ export interface CliffWall {
   thickness: number;
 }
 
+export interface TreasureSpot {
+  id: string; name: string;
+  x: number; y: number;
+  tier: number;
+  respawnMs: number;
+  lootTable: string;
+  icon: string;
+}
+
 export interface DungeonEntrance {
   id: string; name: string;
   x: number; y: number;
@@ -86,6 +95,7 @@ export interface ZoneDef {
   waterLanes: WaterLane[];
   cliffWalls: CliffWall[];
   dungeons: DungeonEntrance[];
+  treasureSpots?: TreasureSpot[];
   assetPack?: string;
   structureAssets?: string[];
   islandType?: 'town' | 'port' | 'dungeon' | 'wilderness' | 'boss-arena' | 'village';
@@ -155,14 +165,14 @@ export const ISLAND_ZONES: ZoneDef[] = [
     description: 'Northern fortress of the Crusade. Human & Barbarian heroes patrol.',
     playerSpawns: [{ x: H, y: H }, { x: H - 400, y: H + 400 }],
     monsterSpawns: [
-      { x: 2000, y: 2000, type: 'Slime', level: 1, respawnTime: 30, count: 4 },
-      { x: 5000, y: 3000, type: 'Skeleton', level: 3, respawnTime: 40, count: 3 },
-      { x: 10000, y: 4000, type: 'Bandit', level: 4, respawnTime: 35, count: 4 },
+      { x: 2000, y: 2000, type: 'Basic Goblin', level: 1, respawnTime: 30, count: 4 },
+      { x: 5000, y: 3000, type: 'Goblin Archer', level: 3, respawnTime: 40, count: 3 },
+      { x: 10000, y: 4000, type: 'Poacher', level: 4, respawnTime: 35, count: 4 },
       { x: 13000, y: 2000, type: 'Timber Wolf', level: 3, respawnTime: 35, count: 3 },
       { x: 3000, y: 12000, type: 'Spider', level: 2, respawnTime: 25, count: 4 },
-      { x: 8000, y: 10000, type: 'Skeleton', level: 5, respawnTime: 45, count: 3 },
+      { x: 8000, y: 10000, type: 'Thug', level: 5, respawnTime: 45, count: 3 },
       { x: 12000, y: 12000, type: 'Bandit Chief', level: 8, respawnTime: 90, count: 1 },
-      { x: 6000, y: 7000, type: 'Golem', level: 6, respawnTime: 60, count: 2 },
+      { x: 6000, y: 7000, type: 'Rock Golem', level: 6, respawnTime: 60, count: 2 },
     ],
     npcPositions: [
       { x: H - 400, y: H - 300 }, { x: H + 400, y: H - 300 }, { x: H, y: H - 600 },
@@ -194,89 +204,243 @@ export const ISLAND_ZONES: ZoneDef[] = [
     connectedZoneIds: [0, 5, 6], portalPositions: [],
   },
 
-  // 2: FABLED SHORE — Left, Elf & Dwarf ─────────────────────────
+  // 2: FABLED SHORE — Left, Elf & Dwarf (Expanded Elf Territory) ─
   { id: 2, name: 'Fabled Shore', bounds: FULL,
     requiredLevel: 1, isPvP: false, isSafeZone: true,
-    terrainType: 'grass', ambientColor: '#3a6a6a',
-    description: 'Western coast ruled by Elves & Dwarves. Ancient temples overlook the sea.',
-    playerSpawns: [{ x: H, y: H }],
+    terrainType: 'grass', ambientColor: '#2a5a5a',
+    description: 'Enchanted western forest ruled by Elves & Dwarves. 16 ancient towers guard the territory — capture them to control the Fabled Shore.',
+    playerSpawns: [{ x: H, y: H }, { x: H - 400, y: H + 400 }, { x: H + 400, y: H - 400 }],
     monsterSpawns: [
-      { x: 3000, y: 3000, type: 'Spider', level: 2, respawnTime: 30, count: 3 },
-      { x: 12000, y: 5000, type: 'Treant', level: 4, respawnTime: 50, count: 2 },
-      { x: 5000, y: 11000, type: 'Harpy', level: 3, respawnTime: 35, count: 3 },
-      { x: 10000, y: 8000, type: 'Golem', level: 5, respawnTime: 60, count: 2 },
-      { x: 2000, y: 8000, type: 'Spider', level: 4, respawnTime: 30, count: 4 },
-      { x: 13000, y: 13000, type: 'Treant', level: 6, respawnTime: 50, count: 2 },
+      // ── Northern forest (near outer towers) ──
+      { x: 1400, y: 1400, type: 'Spider',   level: 2, respawnTime: 25, count: 4 },
+      { x: 3500, y: 1800, type: 'Spider',   level: 3, respawnTime: 28, count: 3 },
+      { x: 5800, y: 1600, type: 'Treant',   level: 3, respawnTime: 45, count: 2 },
+      { x: 9800, y: 1200, type: 'Harpy',    level: 3, respawnTime: 35, count: 3 },
+      { x: 12500, y: 1400, type: 'Spider',  level: 3, respawnTime: 28, count: 3 },
+      { x: 14200, y: 2400, type: 'Treant',  level: 4, respawnTime: 45, count: 2 },
+      // ── Crystal Groves (NW) ──
+      { x: 2000, y: 3500, type: 'Golem',    level: 4, respawnTime: 55, count: 2 },
+      { x: 4000, y: 4200, type: 'Spider',   level: 4, respawnTime: 25, count: 4 },
+      // ── Inner forest (near inner towers) ──
+      { x: 2800, y: 5600, type: 'Treant',   level: 5, respawnTime: 45, count: 2 },
+      { x: 6000, y: 5200, type: 'Harpy',    level: 5, respawnTime: 35, count: 3 },
+      { x: 8200, y: 6200, type: 'Golem',    level: 5, respawnTime: 50, count: 2 },
+      { x: 11000, y: 5000, type: 'Treant',  level: 5, respawnTime: 45, count: 2 },
+      { x: 13600, y: 5800, type: 'Harpy',   level: 5, respawnTime: 35, count: 3 },
+      // ── Fortress perimeter (center) ──
+      { x: 6500, y: 7400, type: 'Golem',    level: 6, respawnTime: 55, count: 2 },
+      { x: 9500, y: 7800, type: 'Treant',   level: 6, respawnTime: 50, count: 2 },
+      { x: H, y: H + 1500, type: 'Harpy',   level: 6, respawnTime: 40, count: 3 },
+      // ── Deep south (near outer towers) ──
+      { x: 1800, y: 9200, type: 'Spider',   level: 4, respawnTime: 28, count: 4 },
+      { x: 5400, y: 9600, type: 'Golem',    level: 6, respawnTime: 55, count: 2 },
+      { x: 9800, y: 10200, type: 'Treant',  level: 7, respawnTime: 50, count: 2 },
+      { x: 14000, y: 9800, type: 'Harpy',   level: 5, respawnTime: 38, count: 3 },
+      // ── Waterfall Lake area ──
+      { x: 2500, y: 11000, type: 'Spider',  level: 5, respawnTime: 25, count: 5 },
+      { x: 4500, y: 12000, type: 'Treant',  level: 6, respawnTime: 48, count: 2 },
+      // ── Dwarven Mines area ──
+      { x: 11000, y: 11000, type: 'Golem',  level: 7, respawnTime: 55, count: 2 },
+      { x: 13000, y: 12000, type: 'Golem',  level: 6, respawnTime: 55, count: 2 },
+      // ── Southern edge ──
+      { x: 2400, y: 13800, type: 'Spider',  level: 4, respawnTime: 28, count: 3 },
+      { x: 6200, y: 13400, type: 'Treant',  level: 5, respawnTime: 48, count: 2 },
+      { x: 9400, y: 14000, type: 'Harpy',   level: 4, respawnTime: 35, count: 3 },
+      { x: 12600, y: 13600, type: 'Spider',  level: 3, respawnTime: 25, count: 4 },
+      // ── Rare / boss spawns ──
+      { x: H, y: H, type: 'Dragon', level: 10, respawnTime: 180, count: 1 },  // fortress dragon
+      { x: 3000, y: 3000, type: 'Treant',  level: 8, respawnTime: 90, count: 1 },  // ancient grove guardian
+      { x: 12000, y: 12000, type: 'Golem', level: 9, respawnTime: 120, count: 1 }, // mine boss
     ],
     npcPositions: [
-      { x: H, y: H - 400 }, { x: H - 500, y: H + 300 }, { x: H + 500, y: H + 300 },
-      { x: H - 300, y: H - 700 }, { x: H + 300, y: H + 700 },
+      // Fortress NPCs
+      { x: H - 400, y: H - 300 }, { x: H + 400, y: H - 300 }, { x: H, y: H - 600 },
+      { x: H - 200, y: H + 300 }, { x: H + 200, y: H + 300 },
+      // Crystal Market (NW trading post)
+      { x: 3000, y: 2200 }, { x: 3400, y: 2400 },
+      // Riverstone Bazaar (SE trading post)
+      { x: 11500, y: 11200 }, { x: 11900, y: 11400 },
+      // Tower outpost quest givers
+      { x: 5200, y: 2600 }, { x: 9200, y: 2000 },
     ],
     exits: [ exitE(0, 'To Travelers Town'), exitN(5, 'To NW Wilds'), exitS(7, 'To SW Wilds') ],
     subZones: [
-      { name: 'Fabled Citadel', bounds: { x: H - 600, y: H - 600, w: 1200, h: 1200 }, terrainType: 'grass', safe: true, description: 'Elven-dwarven citadel of wisdom.' },
-      { name: 'Crystal Groves', bounds: { x: 1000, y: 1000, w: 5000, h: 4000 }, terrainType: 'jungle', safe: false, description: 'Enchanted groves with crystals.' },
-      { name: 'Ancient Library', bounds: { x: 10000, y: 2000, w: 3000, h: 2500 }, terrainType: 'stone', safe: true, description: 'Arcane knowledge repository.' },
-      { name: 'Waterfall Lake', bounds: { x: 2000, y: 10000, w: 4000, h: 4000 }, terrainType: 'water', safe: false, description: 'Sacred lake with waterfalls.' },
-      { name: 'Dwarven Mines', bounds: { x: 10000, y: 10000, w: 5000, h: 4000 }, terrainType: 'stone', safe: false, description: 'Deep mines rich in ore.' },
+      // ── Main Fortress (center safe zone) ──
+      { name: 'Fabled Citadel', bounds: { x: H - 800, y: H - 800, w: 1600, h: 1600 }, terrainType: 'grass', safe: true, description: 'Grand elven-dwarven citadel of wisdom, surrounded by enchanted gardens and runestone wards.' },
+      // ── Trading Posts ──
+      { name: 'Crystal Market', bounds: { x: 2400, y: 1800, w: 1600, h: 1200 }, terrainType: 'grass', safe: true, description: 'Northern trading post where merchants sell enchanted wares among glowing crystal formations.' },
+      { name: 'Riverstone Bazaar', bounds: { x: 11000, y: 10800, w: 1600, h: 1200 }, terrainType: 'stone', safe: true, description: 'Southern trading post near the mines, dealing in ores, gems, and dwarven craftsmanship.' },
+      // ── Major terrain areas ──
+      { name: 'Crystal Groves', bounds: { x: 800, y: 800, w: 5000, h: 4000 }, terrainType: 'jungle', safe: false, description: 'Enchanted groves where mana crystals grow from ancient tree roots.' },
+      { name: 'Ancient Library', bounds: { x: 10000, y: 1500, w: 3500, h: 2500 }, terrainType: 'stone', safe: true, description: 'Arcane knowledge repository carved into a cliffside, guarded by rune wards.' },
+      { name: 'Whispering Glade', bounds: { x: 1000, y: 5000, w: 3000, h: 3000 }, terrainType: 'jungle', safe: false, description: 'Fog-shrouded glade where the trees whisper elven secrets.' },
+      { name: 'Heartwood Hollow', bounds: { x: 7000, y: 4500, w: 4000, h: 3000 }, terrainType: 'jungle', safe: false, description: 'The heart of the enchanted forest — giant trees with hollow trunks house hidden passages.' },
+      { name: 'Moonstone Ridge', bounds: { x: 11500, y: 4500, w: 3500, h: 3000 }, terrainType: 'stone', safe: false, description: 'Rocky ridge with moonstone deposits that glow silver at night.' },
+      { name: 'Waterfall Lake', bounds: { x: 1500, y: 10000, w: 4500, h: 4000 }, terrainType: 'water', safe: false, description: 'Sacred lake fed by cascading waterfalls, home to water spirits.' },
+      { name: 'Dwarven Mines', bounds: { x: 10000, y: 10000, w: 5000, h: 4000 }, terrainType: 'stone', safe: false, description: 'Deep mines rich in mithril and enchanted ores.' },
+      { name: 'Silverbloom Meadow', bounds: { x: 800, y: 8500, w: 3000, h: 2500 }, terrainType: 'grass', safe: false, description: 'Meadow of luminous silver flowers — a druid sanctuary.' },
+      { name: 'Sunfire Clearing', bounds: { x: 8500, y: 8500, w: 3000, h: 3000 }, terrainType: 'grass', safe: false, description: 'Open clearing where eternal sunlight breaks through the canopy.' },
+      { name: 'Bramblegate Pass', bounds: { x: 4500, y: 12000, w: 3000, h: 2500 }, terrainType: 'jungle', safe: false, description: 'Narrow briar-choked pass connecting the southern wetlands.' },
+      { name: 'Frostpetal Fen', bounds: { x: 11500, y: 12500, w: 3500, h: 2500 }, terrainType: 'grass', safe: false, description: 'Misty fenland where enchanted frost petals drift in the air.' },
     ],
     waterLanes: [
-      { type: 'river', points: [{ x: 6000, y: 0 }, { x: 5500, y: 4000 }, { x: 4000, y: 8000 }, { x: 3500, y: 12000 }, { x: 5000, y: S }] },
-      { type: 'lake', points: [{ x: 2500, y: 10500 }, { x: 5000, y: 10000 }, { x: 5500, y: 12500 }, { x: 3500, y: 13500 }, { x: 1500, y: 12000 }] },
+      // Main river flowing N→S through center-west
+      { type: 'river', points: [{ x: 6000, y: 0 }, { x: 5500, y: 3000 }, { x: 4500, y: 6000 }, { x: 4000, y: 9000 }, { x: 3500, y: 12000 }, { x: 5000, y: S }] },
+      // Eastern stream
+      { type: 'river', points: [{ x: 12000, y: 0 }, { x: 11500, y: 4000 }, { x: 11000, y: 8000 }, { x: 10500, y: 12000 }, { x: 11000, y: S }] },
+      // Waterfall Lake
+      { type: 'lake', points: [{ x: 2000, y: 10500 }, { x: 5000, y: 10000 }, { x: 5500, y: 12500 }, { x: 3500, y: 13500 }, { x: 1500, y: 12000 }] },
+      // Small crystal pond NW
+      { type: 'lake', points: [{ x: 1500, y: 3500 }, { x: 3000, y: 3200 }, { x: 3200, y: 4500 }, { x: 1800, y: 4800 }] },
     ],
     cliffWalls: [
-      { from: { x: 7000, y: 3000 }, to: { x: 7000, y: 7000 }, thickness: 150 },
-      { from: { x: 9000, y: 9000 }, to: { x: 14000, y: 8000 }, thickness: 200 },
+      // Ridge separating crystal groves from inner forest
+      { from: { x: 6500, y: 2500 }, to: { x: 6500, y: 5500 }, thickness: 150 },
+      // Moonstone Ridge cliff
+      { from: { x: 11000, y: 4500 }, to: { x: 14500, y: 4200 }, thickness: 180 },
+      // Southern cliff above waterfall lake
+      { from: { x: 900, y: 9500 }, to: { x: 5500, y: 9200 }, thickness: 160 },
+      // Mine entrance cliff
+      { from: { x: 9500, y: 9500 }, to: { x: 9500, y: 13000 }, thickness: 200 },
     ],
     dungeons: [
-      { id: 'elven-ruins', name: 'Elven Ruins', x: 3000, y: 3000, requiredLevel: 4, description: 'Collapsed elven temple with ancient magic.', difficulty: 'normal', icon: '🏛️', floors: 4 },
-      { id: 'arcane-depths', name: 'Arcane Depths', x: 11000, y: 3000, requiredLevel: 8, description: 'Reality-warping dungeon beneath the library.', difficulty: 'hard', icon: '🔮', floors: 6 },
+      { id: 'elven-ruins', name: 'Elven Ruins', x: 3000, y: 3000, requiredLevel: 4, description: 'Collapsed elven temple buried under crystal roots. Ancient magic still pulses within.', difficulty: 'normal', icon: '🏛️', floors: 4 },
+      { id: 'arcane-depths', name: 'Arcane Depths', x: 11000, y: 3000, requiredLevel: 8, description: 'Reality-warping dungeon beneath the Ancient Library. Wards have failed.', difficulty: 'hard', icon: '🔮', floors: 6 },
     ],
     assetPack: 'fabledtown',
-    structureAssets: ['ft-fortress','ft-tower-1','ft-tower-3','ft-tower-5','ft-wall-1','ft-bridge','ft-arsenal','ft-barracks','ft-brazier','mv-inn','mv-mill','mv-gazebo'],
+    structureAssets: [
+      // Elven fortress structures
+      'fe-fortress','fe-gate','fe-wall-1','fe-wall-2','fe-tower-1','fe-tower-2','fe-bridge','fe-banner','fe-pillar',
+      // Defense towers (capture towers)
+      'dt-archer-1','dt-archer-2','dt-archer-3','dt-frost-1','dt-frost-2','dt-frost-3',
+      'dt-wizard-1','dt-wizard-2','dt-wizard-3','dt-cannon-1','dt-cannon-2','dt-ballista-1','dt-ballista-2',
+      // Fabled town buildings
+      'ft-fortress','ft-tower-1','ft-tower-3','ft-tower-5','ft-wall-1','ft-bridge','ft-arsenal','ft-barracks','ft-brazier',
+      // Highland buildings (trading posts)
+      'hf-trading-post','hf-market-stall','hf-lodge','hf-well','hf-lamp-post',
+      // Enchanted forest props
+      'ef-shrine','ef-arch-ruin','ef-lantern','ef-crystal-1','ef-crystal-2',
+      // Elven runes & sculptures
+      'er-runestone-1','er-runestone-2','er-runestone-3','er-sculpture-1','er-totem','er-altar','er-waystone',
+      // Village essentials
+      'mv-inn','mv-mill','mv-gazebo',
+    ],
     islandType: 'town', dockSpawn: { x: H + 400, y: H }, faction: 'Fabled',
     connectedZoneIds: [0, 5, 7], portalPositions: [],
   },
 
-  // 3: LEGION HARBOR — Right, Orc & Undead ──────────────────────
-  { id: 3, name: 'Legion Harbor', bounds: FULL,
-    requiredLevel: 1, isPvP: false, isSafeZone: true,
-    terrainType: 'stone', ambientColor: '#4a3a5a',
-    description: 'Eastern dark harbor of the Legion. Orc & Undead heroes guard.',
-    playerSpawns: [{ x: H, y: H }],
+  // 3: SLOARSCORTH — Right, Frozen Crystal Highlands ─────────────
+  { id: 3, name: 'Sloarscorth', bounds: FULL,
+    requiredLevel: 1, isPvP: false, isSafeZone: false,
+    terrainType: 'snow', ambientColor: '#3a4a6a',
+    description: 'Frozen crystal highlands east of Travelers Town. Glowing blue crystals pierce through ancient stone ruins, and wolves prowl the snowdrifts. Two docks connect to frozen trade routes.',
+    playerSpawns: [{ x: H, y: H }, { x: H - 500, y: H + 400 }, { x: H + 500, y: H - 400 }],
     monsterSpawns: [
-      { x: 4000, y: 3000, type: 'Wraith', level: 3, respawnTime: 40, count: 2 },
-      { x: 12000, y: 5000, type: 'Dark Archer', level: 4, respawnTime: 45, count: 3 },
-      { x: 3000, y: 10000, type: 'Orc Grunt', level: 3, respawnTime: 35, count: 4 },
-      { x: 10000, y: 12000, type: 'Skeleton', level: 5, respawnTime: 30, count: 5 },
-      { x: 6000, y: 6000, type: 'Golem', level: 6, respawnTime: 60, count: 2 },
-      { x: 14000, y: 3000, type: 'Necromancer', level: 7, respawnTime: 50, count: 2 },
+      // ── Northern snowfields (low level) ──
+      { x: 2000, y: 1800, type: 'Frost Wolf', level: 2, respawnTime: 25, count: 4 },
+      { x: 5000, y: 2500, type: 'Ice Spider', level: 3, respawnTime: 28, count: 3 },
+      { x: 9000, y: 1500, type: 'Frost Wolf', level: 3, respawnTime: 30, count: 3 },
+      { x: 13000, y: 2000, type: 'Frozen Skeleton', level: 4, respawnTime: 35, count: 3 },
+      // ── Crystal Fields (mid level) ──
+      { x: 2500, y: 5500, type: 'Crystal Golem', level: 5, respawnTime: 50, count: 2 },
+      { x: 6000, y: 4500, type: 'Ice Wraith', level: 5, respawnTime: 40, count: 3 },
+      { x: 10000, y: 5000, type: 'Frost Wolf', level: 4, respawnTime: 28, count: 4 },
+      { x: 13500, y: 5500, type: 'Crystal Golem', level: 6, respawnTime: 55, count: 2 },
+      // ── Ruin corridors (mid-high) ──
+      { x: 3500, y: 8000, type: 'Frozen Skeleton', level: 6, respawnTime: 35, count: 4 },
+      { x: 7000, y: 7500, type: 'Ice Wraith', level: 6, respawnTime: 45, count: 2 },
+      { x: 11000, y: 8500, type: 'Stoneage Brute', level: 7, respawnTime: 50, count: 2 },
+      // ── Southern highlands (high level) ──
+      { x: 2000, y: 11000, type: 'Crystal Golem', level: 7, respawnTime: 55, count: 2 },
+      { x: 5000, y: 12500, type: 'Undead Warden', level: 8, respawnTime: 60, count: 2 },
+      { x: 9500, y: 11500, type: 'Ice Wraith', level: 7, respawnTime: 45, count: 3 },
+      { x: 12000, y: 13000, type: 'Stoneage Brute', level: 8, respawnTime: 50, count: 2 },
+      { x: 14000, y: 11000, type: 'Frozen Skeleton', level: 6, respawnTime: 30, count: 5 },
+      // ── Roaming bosses: KASA & SHOGUN ──
+      { x: 4000, y: 9500, type: 'KASA', level: 12, respawnTime: 300, count: 1 },
+      { x: 12000, y: 6000, type: 'SHOGUN', level: 12, respawnTime: 300, count: 1 },
     ],
     npcPositions: [
-      { x: H, y: H - 400 }, { x: H - 500, y: H + 300 }, { x: H + 500, y: H + 300 },
-      { x: H - 300, y: H - 700 }, { x: H + 300, y: H + 700 },
+      // Sloarscorth Settlement (center)
+      { x: H - 400, y: H - 300 }, { x: H + 400, y: H - 300 }, { x: H, y: H - 600 },
+      { x: H - 200, y: H + 300 }, { x: H + 200, y: H + 300 },
+      // North dock trading post
+      { x: 3500, y: 1200 }, { x: 4200, y: 1400 },
+      // East dock trading post
+      { x: E - 400, y: H + 200 }, { x: E - 600, y: H - 200 },
     ],
     exits: [ exitW(0, 'To Travelers Town'), exitN(6, 'To NE Wilds'), exitS(8, 'To SE Wilds') ],
     subZones: [
-      { name: 'Legion Fortress', bounds: { x: H - 700, y: H - 600, w: 1400, h: 1200 }, terrainType: 'stone', safe: true, description: 'The dark fortress.' },
-      { name: 'War Forge', bounds: { x: 10000, y: 2000, w: 4000, h: 3000 }, terrainType: 'stone', safe: false, description: 'Orcish weapons forged in lava.' },
-      { name: 'Undead Crypts', bounds: { x: 2000, y: 10000, w: 4000, h: 4000 }, terrainType: 'stone', safe: false, description: 'Where the dead rise.' },
-      { name: 'Bone Wastes', bounds: { x: 8000, y: 10000, w: 6000, h: 4000 }, terrainType: 'dirt', safe: false, description: 'Barren bone-littered fields.' },
-      { name: 'Dark Harbor', bounds: { x: 1000, y: 1000, w: 5000, h: 3000 }, terrainType: 'water', safe: true, description: 'Legion docks.' },
+      // ── Main settlement (center safe zone) ──
+      { name: 'Sloarscorth Settlement', bounds: { x: H - 800, y: H - 800, w: 1600, h: 1600 }, terrainType: 'snow', safe: true, description: 'Fortified winter settlement with watchtower, campfires, and medieval buildings amidst glowing crystal formations.' },
+      // ── 2 Docks ──
+      { name: 'Frostwind Dock', bounds: { x: 2500, y: 500, w: 3000, h: 1500 }, terrainType: 'water', safe: true, description: 'Northern frozen dock where trade ships brave the icy waters. Crates and supplies line the pier.' },
+      { name: 'Crystalshore Dock', bounds: { x: E - 2000, y: H - 800, w: 2000, h: 1600 }, terrainType: 'water', safe: true, description: 'Eastern dock built into the crystal cliffs. Blue light from mithril veins illuminates the harbor.' },
+      // ── 3 Camps ──
+      { name: 'Watchfire Camp', bounds: { x: 1000, y: 3500, w: 2000, h: 1500 }, terrainType: 'snow', safe: false, description: 'Frontier camp with tents, palisade walls, and a roaring campfire. Scouts watch the northern passes.' },
+      { name: 'Runekeeper Camp', bounds: { x: 10500, y: 9500, w: 2000, h: 1500 }, terrainType: 'stone', safe: false, description: 'Camp of rune researchers studying the crystal formations. Ancient tomes and wards scattered about.' },
+      { name: 'Ironhide Camp', bounds: { x: 5000, y: 13500, w: 2500, h: 1500 }, terrainType: 'snow', safe: false, description: 'Hunters\' camp near the southern highlands. Pelts, drying racks, and sharpened spears.' },
+      // ── Major terrain areas ──
+      { name: 'Glacial Ruins', bounds: { x: 6000, y: 1500, w: 4000, h: 3000 }, terrainType: 'stone', safe: false, description: 'Ancient stone archways and crumbling walls encrusted with blue crystals. Something stirs beneath.' },
+      { name: 'Crystal Caverns Entrance', bounds: { x: 1500, y: 6000, w: 3000, h: 2500 }, terrainType: 'stone', safe: false, description: 'Massive cave openings with glowing crystal deposits. Wolves den in the outer chambers.' },
+      { name: 'Shattered Spire', bounds: { x: 11000, y: 2000, w: 3500, h: 3000 }, terrainType: 'stone', safe: false, description: 'A collapsed wizard tower surrounded by volatile mana crystals and frozen undead.' },
+      { name: 'Frozen Bog', bounds: { x: 7000, y: 10000, w: 4000, h: 3000 }, terrainType: 'water', safe: false, description: 'Half-frozen marshland with treacherous thin ice and lurking ice wraiths beneath the surface.' },
+      { name: 'Stoneage Plateau', bounds: { x: 1000, y: 10000, w: 4000, h: 4000 }, terrainType: 'stone', safe: false, description: 'Elevated rocky plateau where primitive brutes carve weapons from frozen stone.' },
+      { name: 'Howling Pass', bounds: { x: 12000, y: 11000, w: 3000, h: 3500 }, terrainType: 'snow', safe: false, description: 'Wind-scoured mountain pass. The howling wind carries whispers of the ancients.' },
     ],
     waterLanes: [
-      { type: 'river', points: [{ x: 0, y: 5000 }, { x: 4000, y: 5500 }, { x: 8000, y: 4500 }, { x: 12000, y: 5000 }, { x: S, y: 4800 }] },
+      // Frozen river flowing W→E through center-north
+      { type: 'river', points: [{ x: 0, y: 4000 }, { x: 3000, y: 3500 }, { x: 6000, y: 4200 }, { x: 10000, y: 3800 }, { x: 14000, y: 4500 }, { x: S, y: 4200 }] },
+      // Southern frozen stream
+      { type: 'river', points: [{ x: 0, y: 10500 }, { x: 4000, y: 10000 }, { x: 7500, y: 11000 }, { x: 11000, y: 10500 }, { x: S, y: 11000 }] },
+      // Frozen lake near Crystal Caverns
+      { type: 'lake', points: [{ x: 7500, y: 10500 }, { x: 10500, y: 10000 }, { x: 11000, y: 12500 }, { x: 8500, y: 13000 }, { x: 7000, y: 11800 }] },
     ],
     cliffWalls: [
-      { from: { x: 2000, y: 7000 }, to: { x: 6000, y: 7500 }, thickness: 200 },
-      { from: { x: 8000, y: 8000 }, to: { x: 8000, y: 13000 }, thickness: 180 },
+      // Northern cliff ridge separating docks from crystal fields
+      { from: { x: 500, y: 5500 }, to: { x: 5500, y: 5200 }, thickness: 180 },
+      // Central cliff creating choke point
+      { from: { x: 10500, y: 6500 }, to: { x: 14500, y: 7000 }, thickness: 200 },
+      // Southern cliff above bog
+      { from: { x: 6500, y: 9500 }, to: { x: 6500, y: 13500 }, thickness: 160 },
+      // Stoneage plateau cliff
+      { from: { x: 900, y: 9500 }, to: { x: 4500, y: 9200 }, thickness: 200 },
     ],
     dungeons: [
-      { id: 'dark-forge', name: 'Dark Forge', x: 12000, y: 3000, requiredLevel: 5, description: 'Underground forge with lava channels.', difficulty: 'hard', icon: '🔥', floors: 5 },
-      { id: 'bone-pit', name: 'Bone Pit', x: 3000, y: 12000, requiredLevel: 8, description: 'Mass grave leading to an underground necropolis.', difficulty: 'hard', icon: '💀', floors: 6 },
+      { id: 'crystal-caverns', name: 'Crystal Caverns', x: 2500, y: 7000, requiredLevel: 3, description: 'Deep cave system lined with mithril crystals. Frost wolves and crystal golems guard the frozen depths.', difficulty: 'normal', icon: '💎', floors: 4 },
+      { id: 'frozen-crypt', name: 'Frozen Crypt', x: 7500, y: 2500, requiredLevel: 6, description: 'Ancient burial chamber beneath the glacial ruins. Undead wardens patrol frozen corridors.', difficulty: 'hard', icon: '🪦', floors: 5 },
+      { id: 'shattered-sanctum', name: 'Shattered Sanctum', x: 12500, y: 3000, requiredLevel: 8, description: 'Collapsed mage sanctum radiating unstable mana. Reality fractures between rooms.', difficulty: 'hard', icon: '🔮', floors: 6 },
+      { id: 'stoneage-depths', name: 'Stoneage Depths', x: 2500, y: 12000, requiredLevel: 10, description: 'Primordial caverns where stoneage brutes worship a frozen dragon skull.', difficulty: 'heroic', icon: '🗿', floors: 7 },
     ],
-    assetPack: 'legiontown',
-    structureAssets: ['lt-fortress','lt-tower-01','lt-tower-3','lt-tower-5','lt-wall-1','lt-bridge','lt-barracks','lt-arsenal','lt-drum','lt-brazier','os-tavern','os-smithy'],
+    treasureSpots: [
+      { id: 'z3-chest-01', name: 'Frostwind Supply Chest', x: 3200, y: 900, tier: 1, respawnMs: 120000, lootTable: 'common_winter', icon: '📦' },
+      { id: 'z3-chest-02', name: 'Crystal Cache', x: 1800, y: 5000, tier: 2, respawnMs: 180000, lootTable: 'crystal_loot', icon: '💎' },
+      { id: 'z3-chest-03', name: 'Ruin Stash', x: 7200, y: 2000, tier: 2, respawnMs: 180000, lootTable: 'ruin_loot', icon: '🏛️' },
+      { id: 'z3-chest-04', name: 'Frozen Coffer', x: 13200, y: 4000, tier: 3, respawnMs: 240000, lootTable: 'frozen_rare', icon: '❄️' },
+      { id: 'z3-chest-05', name: 'Camp Lockbox', x: 1500, y: 4200, tier: 1, respawnMs: 120000, lootTable: 'common_winter', icon: '📦' },
+      { id: 'z3-chest-06', name: 'Hidden Alcove Chest', x: 5500, y: 7000, tier: 3, respawnMs: 240000, lootTable: 'crystal_loot', icon: '💎' },
+      { id: 'z3-chest-07', name: 'Watchtower Stash', x: H, y: H - 600, tier: 2, respawnMs: 180000, lootTable: 'ruin_loot', icon: '🏰' },
+      { id: 'z3-chest-08', name: 'Howling Pass Trove', x: 13000, y: 12000, tier: 4, respawnMs: 300000, lootTable: 'frozen_rare', icon: '❄️' },
+      { id: 'z3-chest-09', name: 'Stoneage Offering', x: 2200, y: 11500, tier: 4, respawnMs: 300000, lootTable: 'boss_loot', icon: '🗿' },
+    ],
+    assetPack: 'sloarscorth',
+    structureAssets: [
+      // Winter environment (craftpix winter packs)
+      'wt-tree-snow-1','wt-tree-snow-2','wt-tree-snow-3','wt-bush-snow-1','wt-bush-snow-2','wt-bush-snow-3',
+      'wm-mountain-1','wm-mountain-2','wm-mountain-3','wm-cliff-1','wm-cliff-2',
+      // Medieval buildings
+      'mb-house-1','mb-house-2','mb-inn','mb-blacksmith','mb-watchtower','mb-palisade','mb-gate',
+      // SG environment
+      'sg-ruin-arch-1','sg-ruin-arch-2','sg-ruin-wall-1','sg-ruin-pillar-1','sg-crate-1','sg-crate-2','sg-barrel',
+      // Crystal props
+      'cr-blue-large','cr-blue-medium','cr-blue-small','cr-blue-cluster',
+      // Camp props
+      'camp-tent-1','camp-tent-2','camp-fire','camp-palisade','camp-banner',
+      // Dock props
+      'dk-pier-1','dk-pier-2','dk-crane','dk-crate-stack',
+      // Undead elements
+      'ud-tombstone-1','ud-tombstone-2','ud-bone-pile','ud-coffin',
+    ],
     islandType: 'town', dockSpawn: { x: H - 400, y: H }, faction: 'Legion',
     connectedZoneIds: [0, 6, 8], portalPositions: [],
   },

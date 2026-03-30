@@ -300,6 +300,9 @@ export function generateBiomeTerrain(scene: Scene, config: BiomeConfig): Generat
   groundMesh.material = groundMat;
 
   // ── Water plane ──────────────────────────────────────────────
+  // NOTE: The main animated ocean is handled by babylon-ocean.ts.
+  // This per-zone water plane provides river/lake fill for authored
+  // water lanes that sit above the global ocean level.
   const waterMesh = MeshBuilder.CreateGround(`water_${config.zoneId}`, {
     width: S + h.coastBuffer * 4,
     height: S + h.coastBuffer * 4,
@@ -310,10 +313,10 @@ export function generateBiomeTerrain(scene: Scene, config: BiomeConfig): Generat
   waterMesh.receiveShadows = true;
 
   const waterMat = new PBRMaterial(`waterMat_${config.zoneId}`, scene);
-  waterMat.albedoColor = new Color3(0.12, 0.28, 0.42);
-  waterMat.roughness = 0.2;
-  waterMat.metallic = 0.15;
-  waterMat.alpha = 0.75;
+  waterMat.albedoColor = new Color3(0.12, 0.30, 0.46);
+  waterMat.roughness = 0.22;
+  waterMat.metallic = 0.12;
+  waterMat.alpha = 0.7;
   waterMat.backFaceCulling = false;
   waterMesh.material = waterMat;
 

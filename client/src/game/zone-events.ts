@@ -150,6 +150,241 @@ export const ZONE_EVENTS: ZoneEventDef[] = [
     announceColor: '#b0b0d0',
     icon: '💀',
   },
+
+  // ═══════════════════════════════════════════════════════════════
+  // Zone 2 — Fabled Shore Tower Defense Events (16 towers)
+  // Each tower has enemies that siege it on a timer.  Players must
+  // defend captured towers or recapture lost ones.
+  // ═══════════════════════════════════════════════════════════════
+
+  // ── Row 1: Outer towers (north) — Lv3-4 enemies ──────────────
+  {
+    id: 'z2_tower_01', name: 'Siege of Moonveil Spire',
+    description: 'Corrupted treants assault the Moonveil Spire! Defend or recapture it!',
+    type: 'invasion', zoneIds: [2], duration: 180, cooldown: 360, trigger: 'timed',
+    rewards: { xp: 120, gold: 80, equipTier: 2 },
+    spawnOverrides: [
+      { id: 'evt-z2t01', zoneId: 2, x: 1800, y: 1800, type: 'camp', enemyTypes: [{ type: 'Treant', level: 4, count: 3, weight: 2 }, { type: 'Spider', level: 3, count: 4, weight: 3 }], respawnTime: 25, maxAlive: 6, aggroLink: true, eventId: 'z2_tower_01' },
+    ],
+    announceColor: '#22d3ee', icon: '🏰',
+  },
+  {
+    id: 'z2_tower_02', name: 'Siege of Starwood Beacon',
+    description: 'Harpies swarm the Starwood Beacon from above!',
+    type: 'invasion', zoneIds: [2], duration: 180, cooldown: 380, trigger: 'timed',
+    rewards: { xp: 120, gold: 80, equipTier: 2 },
+    spawnOverrides: [
+      { id: 'evt-z2t02', zoneId: 2, x: 5200, y: 2200, type: 'camp', enemyTypes: [{ type: 'Harpy', level: 3, count: 4, weight: 3 }, { type: 'Spider', level: 3, count: 3, weight: 2 }], respawnTime: 22, maxAlive: 6, aggroLink: true, eventId: 'z2_tower_02' },
+    ],
+    announceColor: '#22d3ee', icon: '🏰',
+  },
+  {
+    id: 'z2_tower_03', name: 'Siege of Crystalvein Watch',
+    description: 'Crystal golems march on the Crystalvein Watch!',
+    type: 'invasion', zoneIds: [2], duration: 180, cooldown: 400, trigger: 'timed',
+    rewards: { xp: 130, gold: 90, equipTier: 2 },
+    spawnOverrides: [
+      { id: 'evt-z2t03', zoneId: 2, x: 9200, y: 1600, type: 'camp', enemyTypes: [{ type: 'Golem', level: 4, count: 2, weight: 2 }, { type: 'Spider', level: 3, count: 4, weight: 3 }], respawnTime: 28, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_03' },
+    ],
+    announceColor: '#22d3ee', icon: '🏰',
+  },
+  {
+    id: 'z2_tower_04', name: 'Siege of Thornguard Tower',
+    description: 'Thorn-twisted treants besiege the eastern tower!',
+    type: 'invasion', zoneIds: [2], duration: 180, cooldown: 370, trigger: 'timed',
+    rewards: { xp: 120, gold: 80, equipTier: 2 },
+    spawnOverrides: [
+      { id: 'evt-z2t04', zoneId: 2, x: 13200, y: 2000, type: 'camp', enemyTypes: [{ type: 'Treant', level: 4, count: 3, weight: 2 }, { type: 'Harpy', level: 3, count: 3, weight: 2 }], respawnTime: 25, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_04' },
+    ],
+    announceColor: '#22d3ee', icon: '🏰',
+  },
+
+  // ── Row 2: Inner towers (north-center) — Lv5-6 enemies ────────
+  {
+    id: 'z2_tower_05', name: 'Siege of Whispering Arch',
+    description: 'Dark spirits assault the Whispering Arch!',
+    type: 'invasion', zoneIds: [2], duration: 210, cooldown: 420, trigger: 'timed',
+    rewards: { xp: 180, gold: 120, equipTier: 3 },
+    spawnOverrides: [
+      { id: 'evt-z2t05', zoneId: 2, x: 2200, y: 5200, type: 'camp', enemyTypes: [{ type: 'Treant', level: 6, count: 2, weight: 2 }, { type: 'Harpy', level: 5, count: 3, weight: 2 }, { type: 'Golem', level: 5, count: 1, weight: 1 }], respawnTime: 25, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_05' },
+    ],
+    announceColor: '#06b6d4', icon: '⚔️',
+  },
+  {
+    id: 'z2_tower_06', name: 'Siege of Runestone Tower',
+    description: 'Corrupted magic taints the rune stones — golems attack!',
+    type: 'invasion', zoneIds: [2], duration: 210, cooldown: 440, trigger: 'timed',
+    rewards: { xp: 180, gold: 120, equipTier: 3 },
+    spawnOverrides: [
+      { id: 'evt-z2t06', zoneId: 2, x: 5400, y: 5800, type: 'camp', enemyTypes: [{ type: 'Golem', level: 6, count: 2, weight: 2 }, { type: 'Spider', level: 5, count: 4, weight: 3 }], respawnTime: 25, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_06' },
+    ],
+    announceColor: '#06b6d4', icon: '⚔️',
+  },
+  {
+    id: 'z2_tower_07', name: 'Siege of Heartwood Bastion',
+    description: 'The heartwood is under attack by forest beasts!',
+    type: 'invasion', zoneIds: [2], duration: 210, cooldown: 430, trigger: 'timed',
+    rewards: { xp: 180, gold: 120, equipTier: 3 },
+    spawnOverrides: [
+      { id: 'evt-z2t07', zoneId: 2, x: 8800, y: 5600, type: 'camp', enemyTypes: [{ type: 'Treant', level: 6, count: 3, weight: 2 }, { type: 'Harpy', level: 5, count: 3, weight: 2 }], respawnTime: 22, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_07' },
+    ],
+    announceColor: '#06b6d4', icon: '⚔️',
+  },
+  {
+    id: 'z2_tower_08', name: 'Siege of Jadescale Watch',
+    description: 'River beasts swarm the Jadescale Watch!',
+    type: 'invasion', zoneIds: [2], duration: 210, cooldown: 450, trigger: 'timed',
+    rewards: { xp: 180, gold: 120, equipTier: 3 },
+    spawnOverrides: [
+      { id: 'evt-z2t08', zoneId: 2, x: 13000, y: 5400, type: 'camp', enemyTypes: [{ type: 'Harpy', level: 5, count: 3, weight: 2 }, { type: 'Golem', level: 5, count: 2, weight: 2 }], respawnTime: 25, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_08' },
+    ],
+    announceColor: '#06b6d4', icon: '⚔️',
+  },
+
+  // ── Row 3: Inner towers (south-center) — Lv6-8 enemies ────────
+  {
+    id: 'z2_tower_09', name: 'Siege of Silverbloom Tower',
+    description: 'Corrupted flora overruns the Silverbloom Tower!',
+    type: 'invasion', zoneIds: [2], duration: 210, cooldown: 420, trigger: 'timed',
+    rewards: { xp: 200, gold: 140, equipTier: 3 },
+    spawnOverrides: [
+      { id: 'evt-z2t09', zoneId: 2, x: 1600, y: 9600, type: 'camp', enemyTypes: [{ type: 'Treant', level: 6, count: 3, weight: 2 }, { type: 'Spider', level: 5, count: 3, weight: 2 }], respawnTime: 22, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_09' },
+    ],
+    announceColor: '#06b6d4', icon: '⚔️',
+  },
+  {
+    id: 'z2_tower_10', name: 'Siege of Gladekeeper Spire',
+    description: 'Elite corrupted forces target the sacred Gladekeeper Spire!',
+    type: 'invasion', zoneIds: [2], duration: 240, cooldown: 480, trigger: 'timed',
+    rewards: { xp: 280, gold: 200, equipTier: 4 },
+    spawnOverrides: [
+      { id: 'evt-z2t10', zoneId: 2, x: 5000, y: 9200, type: 'camp', enemyTypes: [{ type: 'Treant', level: 8, count: 2, weight: 2 }, { type: 'Golem', level: 7, count: 2, weight: 2 }, { type: 'Harpy', level: 6, count: 2, weight: 1 }], respawnTime: 28, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_10' },
+    ],
+    announceColor: '#0ea5e9', icon: '🛡️',
+  },
+  {
+    id: 'z2_tower_11', name: 'Siege of Sunfire Pinnacle',
+    description: 'The eternal flame flickers — a dragon leads the assault!',
+    type: 'invasion', zoneIds: [2], duration: 240, cooldown: 500, trigger: 'timed',
+    rewards: { xp: 300, gold: 220, equipTier: 4 },
+    spawnOverrides: [
+      { id: 'evt-z2t11a', zoneId: 2, x: 9400, y: 9800, type: 'camp', enemyTypes: [{ type: 'Treant', level: 8, count: 2, weight: 2 }, { type: 'Harpy', level: 6, count: 3, weight: 2 }], respawnTime: 25, maxAlive: 4, aggroLink: true, eventId: 'z2_tower_11' },
+      { id: 'evt-z2t11b', zoneId: 2, x: 9600, y: 10200, type: 'boss_encounter', enemyTypes: [{ type: 'Golem', level: 8, count: 2, weight: 1 }], respawnTime: 60, maxAlive: 2, aggroLink: true, eventId: 'z2_tower_11' },
+    ],
+    announceColor: '#0ea5e9', icon: '🛡️',
+  },
+  {
+    id: 'z2_tower_12', name: 'Siege of Mossheart Tower',
+    description: 'Moss golems emerge from the earth to claim the tower!',
+    type: 'invasion', zoneIds: [2], duration: 210, cooldown: 440, trigger: 'timed',
+    rewards: { xp: 200, gold: 140, equipTier: 3 },
+    spawnOverrides: [
+      { id: 'evt-z2t12', zoneId: 2, x: 13400, y: 9400, type: 'camp', enemyTypes: [{ type: 'Golem', level: 6, count: 2, weight: 2 }, { type: 'Treant', level: 5, count: 3, weight: 2 }], respawnTime: 25, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_12' },
+    ],
+    announceColor: '#06b6d4', icon: '⚔️',
+  },
+
+  // ── Row 4: Outer towers (south) — Lv3-5 enemies ──────────────
+  {
+    id: 'z2_tower_13', name: 'Siege of Duskfen Watch',
+    description: 'Swamp creatures crawl out of the fen toward the watchtower!',
+    type: 'invasion', zoneIds: [2], duration: 180, cooldown: 360, trigger: 'timed',
+    rewards: { xp: 130, gold: 85, equipTier: 2 },
+    spawnOverrides: [
+      { id: 'evt-z2t13', zoneId: 2, x: 2000, y: 13200, type: 'camp', enemyTypes: [{ type: 'Spider', level: 4, count: 4, weight: 3 }, { type: 'Treant', level: 4, count: 2, weight: 2 }], respawnTime: 22, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_13' },
+    ],
+    announceColor: '#22d3ee', icon: '🏰',
+  },
+  {
+    id: 'z2_tower_14', name: 'Siege of Bramblegate Tower',
+    description: 'Thorned beasts push through the brambles!',
+    type: 'invasion', zoneIds: [2], duration: 180, cooldown: 380, trigger: 'timed',
+    rewards: { xp: 130, gold: 85, equipTier: 2 },
+    spawnOverrides: [
+      { id: 'evt-z2t14', zoneId: 2, x: 5600, y: 13000, type: 'camp', enemyTypes: [{ type: 'Treant', level: 5, count: 3, weight: 2 }, { type: 'Harpy', level: 4, count: 3, weight: 2 }], respawnTime: 24, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_14' },
+    ],
+    announceColor: '#22d3ee', icon: '🏰',
+  },
+  {
+    id: 'z2_tower_15', name: 'Siege of Willowshade Spire',
+    description: 'Shadow creatures lurk beneath the willows and strike!',
+    type: 'invasion', zoneIds: [2], duration: 180, cooldown: 390, trigger: 'timed',
+    rewards: { xp: 130, gold: 85, equipTier: 2 },
+    spawnOverrides: [
+      { id: 'evt-z2t15', zoneId: 2, x: 9000, y: 13400, type: 'camp', enemyTypes: [{ type: 'Harpy', level: 4, count: 4, weight: 3 }, { type: 'Spider', level: 4, count: 3, weight: 2 }], respawnTime: 22, maxAlive: 6, aggroLink: true, eventId: 'z2_tower_15' },
+    ],
+    announceColor: '#22d3ee', icon: '🏰',
+  },
+  {
+    id: 'z2_tower_16', name: 'Siege of Frostpetal Lookout',
+    description: 'Frost-touched golems assault the southern lookout!',
+    type: 'invasion', zoneIds: [2], duration: 180, cooldown: 370, trigger: 'timed',
+    rewards: { xp: 140, gold: 90, equipTier: 2 },
+    spawnOverrides: [
+      { id: 'evt-z2t16', zoneId: 2, x: 13000, y: 13200, type: 'camp', enemyTypes: [{ type: 'Golem', level: 4, count: 2, weight: 2 }, { type: 'Spider', level: 3, count: 4, weight: 3 }], respawnTime: 25, maxAlive: 5, aggroLink: true, eventId: 'z2_tower_16' },
+    ],
+    announceColor: '#22d3ee', icon: '🏰',
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // Zone 3 — Sloarscorth Events (Frozen Crystal Highlands)
+  // 3 events: crystal storm, KASA roaming, SHOGUN awakening
+  // ═════════════════════════════════════════════════════════════════
+
+  {
+    id: 'z3_crystal_storm',
+    name: 'Crystal Storm',
+    description: 'A mana storm rages across Sloarscorth! Crystals shatter and empowered golems roam the highlands!',
+    type: 'storm',
+    zoneIds: [3],
+    duration: 240,
+    cooldown: 600,
+    trigger: 'timed',
+    rewards: { xp: 350, gold: 220, equipTier: 3 },
+    spawnOverrides: [
+      { id: 'evt-z3-storm-1', zoneId: 3, x: 3000, y: 6000, type: 'camp', enemyTypes: [{ type: 'Crystal Golem', level: 8, count: 3, weight: 2 }, { type: 'Ice Wraith', level: 7, count: 2, weight: 1 }], respawnTime: 20, maxAlive: 5, aggroLink: true, eventId: 'z3_crystal_storm' },
+      { id: 'evt-z3-storm-2', zoneId: 3, x: 10000, y: 5500, type: 'camp', enemyTypes: [{ type: 'Crystal Golem', level: 9, count: 2, weight: 2 }, { type: 'Frost Wolf', level: 6, count: 4, weight: 3 }], respawnTime: 18, maxAlive: 6, aggroLink: false, eventId: 'z3_crystal_storm' },
+      { id: 'evt-z3-storm-3', zoneId: 3, x: 7000, y: 8000, type: 'single', enemyTypes: [{ type: 'Ice Wraith', level: 8, count: 3, weight: 1 }], respawnTime: 15, maxAlive: 3, aggroLink: false, eventId: 'z3_crystal_storm' },
+    ],
+    announceColor: '#7dd3fc',
+    icon: '❄️',
+  },
+  {
+    id: 'z3_kasa_roams',
+    name: 'KASA Roams the Plateau',
+    description: 'The ancient beast KASA has emerged from the Stoneage Depths! Hunt it before it retreats!',
+    type: 'world_boss',
+    zoneIds: [3],
+    duration: 300,
+    cooldown: 900,
+    trigger: 'random',
+    rewards: { xp: 800, gold: 500, equipTier: 5 },
+    spawnOverrides: [
+      { id: 'evt-z3-kasa', zoneId: 3, x: 3000, y: 10500, type: 'boss_encounter', enemyTypes: [{ type: 'KASA', level: 14, count: 1, weight: 1 }], respawnTime: 999, maxAlive: 1, aggroLink: true, bossPhases: 2, eventId: 'z3_kasa_roams' },
+      { id: 'evt-z3-kasa-adds', zoneId: 3, x: 3500, y: 11000, type: 'camp', enemyTypes: [{ type: 'Stoneage Brute', level: 10, count: 3, weight: 2 }, { type: 'Crystal Golem', level: 9, count: 2, weight: 1 }], respawnTime: 30, maxAlive: 4, aggroLink: true, eventId: 'z3_kasa_roams' },
+    ],
+    announceColor: '#f97316',
+    icon: '🐲',
+  },
+  {
+    id: 'z3_shogun_awakens',
+    name: 'SHOGUN Awakens',
+    description: 'The SHOGUN stirs within the Shattered Spire! Dark energy pulses across the frozen ruins!',
+    type: 'world_boss',
+    zoneIds: [3],
+    duration: 360,
+    cooldown: 1200,
+    trigger: 'level_threshold',
+    triggerValue: 10,
+    rewards: { xp: 1000, gold: 650, equipTier: 5 },
+    spawnOverrides: [
+      { id: 'evt-z3-shogun', zoneId: 3, x: 12500, y: 4000, type: 'boss_encounter', enemyTypes: [{ type: 'SHOGUN', level: 15, count: 1, weight: 1 }], respawnTime: 999, maxAlive: 1, aggroLink: true, bossPhases: 3, eventId: 'z3_shogun_awakens' },
+      { id: 'evt-z3-shogun-guard-1', zoneId: 3, x: 12000, y: 3500, type: 'camp', enemyTypes: [{ type: 'Frozen Skeleton', level: 10, count: 4, weight: 3 }, { type: 'Undead Warden', level: 11, count: 2, weight: 1 }], respawnTime: 25, maxAlive: 5, aggroLink: true, eventId: 'z3_shogun_awakens' },
+      { id: 'evt-z3-shogun-guard-2', zoneId: 3, x: 13000, y: 4500, type: 'camp', enemyTypes: [{ type: 'Ice Wraith', level: 10, count: 3, weight: 2 }, { type: 'Crystal Golem', level: 11, count: 1, weight: 1 }], respawnTime: 28, maxAlive: 4, aggroLink: true, eventId: 'z3_shogun_awakens' },
+    ],
+    announceColor: '#dc2626',
+    icon: '⚔️',
+  },
 ];
 
 // ── Zone Event Manager ─────────────────────────────────────────
