@@ -68,9 +68,10 @@ interface OWEntity3D {
 // ── Constants ──────────────────────────────────────────────────
 
 const TERRAIN_SEGMENTS = 64;
-const VIEW_DISTANCE = 2000;
-const CAMERA_HEIGHT = 12;
-const CAMERA_DISTANCE = 16;
+const VIEW_DISTANCE = 150;         // fog far — tight souls-like visibility
+const RENDER_DISTANCE = 50;        // high-detail render radius (full LOD)
+const CAMERA_HEIGHT = 8;           // over-the-shoulder height
+const CAMERA_DISTANCE = 10;        // close 3rd-person follow
 const CAMERA_LERP = 0.08;
 
 const ZONE_COLORS: Record<string, Color3> = {
@@ -134,14 +135,14 @@ export class OpenWorldBabylonRenderer {
     this.scene.clearColor = new Color4(0.529, 0.808, 0.922, 1);
     this.scene.fogMode = Scene.FOGMODE_LINEAR;
     this.scene.fogColor = new Color3(0.529, 0.808, 0.922);
-    this.scene.fogStart = VIEW_DISTANCE * 0.6;
-    this.scene.fogEnd = VIEW_DISTANCE;
+    this.scene.fogStart = RENDER_DISTANCE;       // crisp up to 50
+    this.scene.fogEnd = VIEW_DISTANCE;             // fade to fog by 150
 
-    // Camera
+    // Camera — tight 3rd-person
     this.camera = new FreeCamera("owCam", new Vector3(0, CAMERA_HEIGHT, CAMERA_DISTANCE), this.scene);
     this.camera.setTarget(Vector3.Zero());
-    this.camera.minZ = 0.5;
-    this.camera.maxZ = VIEW_DISTANCE * 1.5;
+    this.camera.minZ = 0.1;
+    this.camera.maxZ = VIEW_DISTANCE + 50;
     // Don't attach controls — we drive camera manually
     this.camera.detachControl();
 
@@ -183,18 +184,20 @@ export class OpenWorldBabylonRenderer {
     this.hemiLight.diffuse = new Color3(0.529, 0.808, 0.922);
     this.hemiLight.groundColor = new Color3(0.227, 0.353, 0.165);
 
-    // Sun
+    // Sun — positioned close for tight shadow coverage
     this.sunLight = new DirectionalLight("sun", new Vector3(-0.4, -1, 0.3), this.scene);
-    this.sunLight.position = new Vector3(100, 150, 80);
+    this.sunLight.position = new Vector3(30, 60, 25);
     this.sunLight.intensity = 1.5;
+    this.sunLight.shadowMinZ = 0.1;
+    this.sunLight.shadowMaxZ = VIEW_DISTANCE;
 
     // Shadow target node (to follow player)
     this.sunTarget = new TransformNode("sunTarget", this.scene);
 
-    // Shadows
+    // Shadows — tight frustum for crisp shadows at close range
     this.shadowGenerator = new ShadowGenerator(2048, this.sunLight);
     this.shadowGenerator.useBlurExponentialShadowMap = true;
-    this.shadowGenerator.blurKernel = 32;
+    this.shadowGenerator.blurKernel = 16;
 
     // Fill light
     const fill = new DirectionalLight("fill", new Vector3(0.5, -0.5, -0.3), this.scene);
@@ -430,8 +433,8 @@ export class OpenWorldBabylonRenderer {
     this.camera.position.copyFrom(this.cameraPosition);
     this.camera.setTarget(this.cameraTarget);
 
-    // Sun follows player (shadow map coverage)
-    this.sunLight.position.set(targetX + 100, 150, targetZ + 80);
+    // Sun follows player — tight offset for close shadow coverage
+    this.sunLight.position.set(targetX + 30, 60, targetZ + 25);
     this.sunTarget.position.set(targetX, 0, targetZ);
     this.sunLight.setDirectionToTarget(this.sunTarget.position);
 

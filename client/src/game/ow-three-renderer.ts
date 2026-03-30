@@ -37,9 +37,10 @@ interface OWEntity3D {
 // ── Constants ──────────────────────────────────────────────────
 
 const TERRAIN_SEGMENTS = 64;       // vertices per zone terrain mesh side
-const VIEW_DISTANCE = 2000;        // fog far distance
-const CAMERA_HEIGHT = 12;          // camera Y offset above player
-const CAMERA_DISTANCE = 16;        // camera Z offset behind player
+const VIEW_DISTANCE = 150;         // fog far — tight souls-like visibility
+const RENDER_DISTANCE = 50;        // high-detail render radius (full LOD)
+const CAMERA_HEIGHT = 8;           // over-the-shoulder height
+const CAMERA_DISTANCE = 10;        // close 3rd-person follow
 const CAMERA_LERP = 0.08;         // camera smooth follow speed
 
 // Zone terrain colors (fallback when no texture)
@@ -131,14 +132,14 @@ export class OpenWorldThreeRenderer {
     // Scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87CEEB); // sky blue
-    this.scene.fog = new THREE.Fog(0x87CEEB, VIEW_DISTANCE * 0.6, VIEW_DISTANCE);
+    this.scene.fog = new THREE.Fog(0x87CEEB, RENDER_DISTANCE, VIEW_DISTANCE);
 
-    // Camera — isometric-style perspective
+    // Camera — tight 3rd-person perspective
     this.camera = new THREE.PerspectiveCamera(
-      40,
+      50,
       container.clientWidth / container.clientHeight,
-      0.5,
-      VIEW_DISTANCE * 1.5,
+      0.1,
+      VIEW_DISTANCE + 50,
     );
     this.camera.position.set(0, CAMERA_HEIGHT, CAMERA_DISTANCE);
     this.camera.lookAt(0, 0, 0);
@@ -173,15 +174,15 @@ export class OpenWorldThreeRenderer {
     this.scene.add(this.hemiLight);
 
     this.sunLight = new THREE.DirectionalLight(0xffeedd, 1.5);
-    this.sunLight.position.set(100, 150, 80);
+    this.sunLight.position.set(30, 60, 25);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.set(2048, 2048);
-    this.sunLight.shadow.camera.left = -60;
-    this.sunLight.shadow.camera.right = 60;
-    this.sunLight.shadow.camera.top = 60;
-    this.sunLight.shadow.camera.bottom = -60;
-    this.sunLight.shadow.camera.near = 1;
-    this.sunLight.shadow.camera.far = 300;
+    this.sunLight.shadow.camera.left = -30;
+    this.sunLight.shadow.camera.right = 30;
+    this.sunLight.shadow.camera.top = 30;
+    this.sunLight.shadow.camera.bottom = -30;
+    this.sunLight.shadow.camera.near = 0.1;
+    this.sunLight.shadow.camera.far = VIEW_DISTANCE;
     this.sunLight.shadow.bias = -0.001;
     this.scene.add(this.sunLight);
 
@@ -384,8 +385,8 @@ export class OpenWorldThreeRenderer {
     this.camera.position.copy(this.cameraPosition);
     this.camera.lookAt(this.cameraTarget);
 
-    // Sun follows player (shadow map coverage)
-    this.sunLight.position.set(targetX + 100, 150, targetZ + 80);
+    // Sun follows player — tight offset for close shadow coverage
+    this.sunLight.position.set(targetX + 30, 60, targetZ + 25);
     this.sunLight.target.position.set(targetX, 0, targetZ);
     this.sunLight.target.updateMatrixWorld();
 
