@@ -4020,6 +4020,7 @@ export class OpenWorldRenderer {
   private renderDungeonEntrances(ctx: CanvasRenderingContext2D, state: OpenWorldState): void {
     const p = state.player;
     const pulse = 0.5 + Math.sin(Date.now() * 0.003) * 0.3;
+    const spin = Date.now() * 0.0022;
 
     for (const entrance of DUNGEON_ENTRANCES) {
       const d = distXY(p, entrance);
@@ -4028,48 +4029,83 @@ export class OpenWorldRenderer {
       ctx.save();
       ctx.translate(entrance.x, entrance.y);
 
-      // Outer glow
-      ctx.globalAlpha = pulse * 0.2;
-      ctx.fillStyle = '#ef4444';
+      // Outer magical glow
+      ctx.globalAlpha = pulse * 0.18;
+      ctx.fillStyle = '#8b5cf6';
       ctx.beginPath();
-      ctx.arc(0, 0, 30, 0, Math.PI * 2);
+      ctx.arc(0, 0, 34, 0, Math.PI * 2);
       ctx.fill();
 
-      // Cave opening (dark arch)
+      // Stone plinth / frame base
       ctx.globalAlpha = 0.9;
-      ctx.fillStyle = '#1a1a2e';
+      ctx.fillStyle = '#3b2a1d';
       ctx.beginPath();
-      ctx.arc(0, 0, 18, Math.PI, 0);
-      ctx.lineTo(18, 10);
-      ctx.lineTo(-18, 10);
+      ctx.moveTo(-24, 16);
+      ctx.lineTo(-14, 8);
+      ctx.lineTo(14, 8);
+      ctx.lineTo(24, 16);
       ctx.closePath();
       ctx.fill();
-
-      // Cave border
-      ctx.strokeStyle = '#6b4226';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, 0, 18, Math.PI, 0);
-      ctx.lineTo(18, 10);
-      ctx.lineTo(-18, 10);
-      ctx.closePath();
+      ctx.strokeStyle = '#8b6b4a';
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Skull icon inside
-      ctx.fillStyle = '#ccc';
-      ctx.globalAlpha = 0.6 + pulse * 0.3;
-      ctx.font = '14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('💀', 0, 5);
+      // Portal frame
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.ellipse(0, -2, 18, 24, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#c084fc';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, -2, 22, 28, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner portal energy
+      const portalGrad = ctx.createRadialGradient(0, -2, 2, 0, -2, 20);
+      portalGrad.addColorStop(0, `rgba(255,255,255,${0.85 * pulse})`);
+      portalGrad.addColorStop(0.25, `rgba(168,85,247,${0.75 * pulse})`);
+      portalGrad.addColorStop(0.7, `rgba(59,130,246,${0.55 * pulse})`);
+      portalGrad.addColorStop(1, 'rgba(15,23,42,0.08)');
+      ctx.fillStyle = portalGrad;
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.ellipse(0, -2, 15, 21, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Swirl arcs
+      ctx.strokeStyle = '#f5d0fe';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.45 + pulse * 0.2;
+      ctx.beginPath();
+      ctx.arc(0, -2, 10, spin, spin + Math.PI * 1.2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, -2, 6, -spin * 1.25, -spin * 1.25 + Math.PI * 1.1);
+      ctx.stroke();
+
+      // Floating rune sparks
+      for (let i = 0; i < 4; i++) {
+        const a = spin + i * (Math.PI / 2);
+        const rx = Math.cos(a) * 12;
+        const ry = -2 + Math.sin(a) * 16;
+        ctx.fillStyle = '#f5d0fe';
+        ctx.globalAlpha = 0.55 + pulse * 0.2;
+        ctx.beginPath();
+        ctx.arc(rx, ry, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // Dungeon name
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = '#c084fc';
       ctx.globalAlpha = 0.8;
       ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
       ctx.fillText(entrance.name, 0, -28);
 
       // Level requirement
-      ctx.fillStyle = p.level >= entrance.requiredLevel ? '#aaa' : '#ef4444';
+      ctx.fillStyle = p.level >= entrance.requiredLevel ? '#cbd5e1' : '#ef4444';
       ctx.font = '8px sans-serif';
       ctx.fillText(`Lv${entrance.requiredLevel}+`, 0, -20);
 
