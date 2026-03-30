@@ -17,4 +17,9 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
   },
+  // Havok WASM + BabylonJS shader assets
+  optimizeDeps: {
+    exclude: ["@babylonjs/havok"],
+  },
+  assetsInclude: ["**/*.wasm"],
 });

@@ -17,8 +17,6 @@ export {
   type SkeletonConvention,
   detectConvention,
   extractCanonicalBone,
-  BONE_ALIASES,
-  BLENDER_LR_ALIASES,
 } from "./animation-retarget";
 
 import { extractCanonicalBone, CANONICAL_BONES, type CanonicalBone } from "./animation-retarget";

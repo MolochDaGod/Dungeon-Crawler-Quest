@@ -257,12 +257,12 @@ export function applyAnimationsToEntity(
   entity: AnimatedEntity,
   groups: Map<string, AnimationGroup>,
 ) {
-  for (const [name, group] of groups) {
+  groups.forEach((group, name) => {
     if (!entity.actions.has(name)) {
       // Retarget the animation group to the entity's skeleton
       entity.actions.set(name, group);
     }
-  }
+  });
 }
 
 // ── Path Constants (same as model-loader.ts) ─────────────────────────────────

@@ -71,7 +71,7 @@ import {
   GeneratedWorldData, GeneratedDecoration, GeneratedBuilding, GeneratedRoad,
   loadGeneratedWorld,
 } from './ai-map-gen';
-import { drawGLBProjectile, drawGLBSprite, CLASS_PROJECTILE_SPRITE } from './glb-sprites';
+import { drawGLBProjectile, drawGLBSprite, CLASS_PROJECTILE_SPRITE } from './babylon-glb-sprites';
 import { WorldHeightmap, createWorldHeightmap } from './terrain-heightmap';
 import {
   BoatState, createBoatState, BoatDock, BOAT_DOCKS,
