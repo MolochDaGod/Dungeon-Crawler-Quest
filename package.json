@@ -12,6 +12,14 @@
     "sprite-fix": "node scripts/sprite-audit.mjs --fix"
   },
   "dependencies": {
+    "@babylonjs/core": "^9.0.0",
+    "@babylonjs/gui": "^9.0.0",
+    "@babylonjs/havok": "^1.3.12",
+    "@babylonjs/inspector": "^9.0.0",
+    "@babylonjs/loaders": "^9.0.0",
+    "@babylonjs/materials": "^9.0.0",
+    "@babylonjs/post-processes": "^9.0.0",
+    "@babylonjs/serializers": "^9.0.0",
     "@flatten-js/core": "^1.6.10",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",

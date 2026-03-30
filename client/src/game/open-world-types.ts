@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+// Engine-agnostic: mesh refs typed as any to support both Three.js and BabylonJS renderers
 
 // ── Monster AI States ──
 export type MonsterAIState = 'idle' | 'patrol' | 'chase' | 'attack' | 'retreat' | 'dead';
@@ -49,7 +49,7 @@ export interface OpenWorldMonster {
   patrolAngle: number;
   patrolRadius: number;
   targetId: number | null;
-  mesh: THREE.Group | null;
+  mesh: any | null;
   deathTimer: number;
   hitFlash: number;
 }
@@ -63,7 +63,7 @@ export interface DungeonEntrance {
   dungeonLevel: number;
   minPlayerLevel: number;
   color: number;
-  portalMesh: THREE.Group | null;
+  portalMesh: any | null;
   bossGuardId?: string; // template id of boss guarding this entrance
 }
 
@@ -73,7 +73,7 @@ export interface SafeHouse {
   z: number;
   radius: number;
   healRate: number; // hp/sec when inside
-  mesh: THREE.Group | null;
+  mesh: any | null;
 }
 
 // ── Biome Zone ──
