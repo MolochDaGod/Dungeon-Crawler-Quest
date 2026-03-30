@@ -67,14 +67,14 @@ const SIZE_PX: Record<number, number> = { 1: 128, 2: 80, 3: 64, 4: 48, 5: 32 };
 // ── Zone → Enemy Types ─────────────────────────────────────────
 
 const ZONE_ENEMIES: Record<number, string[]> = {
-  1: ['Skeleton', 'Dark Mage'],
+  1: ['Poacher', 'Thug', 'Basic Goblin', 'Goblin Archer', 'Rock Golem'],
   2: ['Skeleton', 'Spider'],
-  3: ['Orc Grunt', 'Golem'],
+  3: ['Orc Grunt', 'Earth Golem', 'Scavenger'],
   4: ['Orc Grunt', 'Dark Mage'],
   5: ['Slime', 'Spider', 'Skeleton'],
   6: ['Skeleton', 'Orc Grunt'],
-  7: ['Dark Mage', 'Golem'],
-  8: ['Golem', 'Dark Mage'],
+  7: ['Dark Mage', 'Iron Golem'],
+  8: ['Earth Golem', 'Iron Golem', 'Dark Mage'],
   9: ['Spider', 'Orc Grunt'],
 };
 

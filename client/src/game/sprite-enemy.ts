@@ -260,6 +260,23 @@ const OS_CDN = 'https://molochdagod.github.io/ObjectStore';
 const PC_BASE = `${OS_CDN}/sprites/pixel-crawler`;
 
 const PC_SPRITE_DEFS: PCSpriteDef[] = [
+  // ── Sloarscorth (Zone 3) — Frozen Crystal Highlands asset packs ──
+  // Orc FBX Free — mapped to Stoneage Brute (primitive heavy melee)
+  { id: 'orc-fbx-brute',    name: 'Stoneage Brute',    basePath: `${PC_BASE}/mobs/orc-fbx`,          filePrefix: '', enemyType: 'Stoneage Brute',    drawScale: 0.75, frameW: 32, frameH: 32 },
+  // Bandits Free — mapped to Frost Wolf handlers / camp enemies
+  { id: 'bandit-frost',     name: 'Frost Bandit',      basePath: `${PC_BASE}/mobs/bandit-free`,       filePrefix: '', enemyType: 'Frost Wolf',        drawScale: 0.65, frameW: 32, frameH: 32 },
+  // Undead Free — mapped to Frozen Skeleton & Undead Warden
+  { id: 'undead-skeleton',  name: 'Frozen Skeleton',   basePath: `${PC_BASE}/mobs/undead-skeleton`,   filePrefix: '', enemyType: 'Frozen Skeleton',   drawScale: 0.65, frameW: 32, frameH: 32 },
+  { id: 'undead-warden',    name: 'Undead Warden',     basePath: `${PC_BASE}/mobs/undead-warden`,     filePrefix: '', enemyType: 'Undead Warden',     drawScale: 0.7,  frameW: 32, frameH: 32 },
+  { id: 'undead-wraith',    name: 'Ice Wraith',        basePath: `${PC_BASE}/mobs/undead-wraith`,     filePrefix: '', enemyType: 'Ice Wraith',        drawScale: 0.65, frameW: 32, frameH: 32 },
+  // Castle pack — Crystal Golem (stone guardian aesthetic)
+  { id: 'castle-golem',    name: 'Crystal Golem',     basePath: `${PC_BASE}/mobs/castle-golem`,      filePrefix: '', enemyType: 'Crystal Golem',     drawScale: 0.8,  frameW: 32, frameH: 32 },
+  // KASA & SHOGUN boss asset packs
+  { id: 'boss-kasa',       name: 'KASA',              basePath: `${PC_BASE}/bosses/kasa`,            filePrefix: '', enemyType: 'KASA',              drawScale: 1.2,  frameW: 64, frameH: 64 },
+  { id: 'boss-shogun',     name: 'SHOGUN',            basePath: `${PC_BASE}/bosses/shogun`,          filePrefix: '', enemyType: 'SHOGUN',            drawScale: 1.2,  frameW: 64, frameH: 64 },
+  // Ice Spider (recolored spider)
+  { id: 'ice-spider',      name: 'Ice Spider',        basePath: `${PC_BASE}/mobs/ice-spider`,        filePrefix: '', enemyType: 'Ice Spider',        drawScale: 0.6,  frameW: 32, frameH: 32 },
+
   // Orc Crew — URL-safe paths for ObjectStore CDN
   { id: 'pc-orc',         name: 'Orc Grunt',       basePath: `${PC_BASE}/mobs/orc`,            filePrefix: '', enemyType: 'Orc Grunt',        drawScale: 0.65, frameW: 32, frameH: 32 },
   { id: 'pc-orc-rogue',   name: 'Orc Rogue',       basePath: `${PC_BASE}/mobs/orc-rogue`,      filePrefix: '', enemyType: 'Bandit',           drawScale: 0.65, frameW: 32, frameH: 32 },

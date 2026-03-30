@@ -139,6 +139,9 @@ const AGGRO_MULTIPLIER: Record<string, number> = {
   Skeleton: 0.9, Bandit: 1.0, 'Orc Grunt': 1.0, 'Timber Wolf': 1.2,
   'Dark Archer': 1.3, 'Dark Mage': 1.1, Wraith: 1.1, Harpy: 1.2,
   Golem: 0.8, 'Iron Sentinel': 0.7, 'Cave Bear': 1.0, Treant: 0.6,
+  Poacher: 1.0, Scavenger: 0.95, Thug: 1.05,
+  'Basic Goblin': 0.9, 'Goblin Archer': 1.15, 'Goblin Warrior': 1.0,
+  'Rock Golem': 0.75, 'Earth Golem': 0.8, 'Iron Golem': 0.85,
   Dragon: 1.5, 'Fire Drake': 1.3, 'Frost Wyrm': 1.4, 'Shadow Dragon': 1.5,
   'Lich King': 1.5, 'Infernal Colossus': 1.6, 'Bandit Chief': 1.2,
 };
@@ -195,6 +198,9 @@ const ENEMY_TEMPLATES: Record<string, {
   // ── New Enemies ──
   'Bandit':           { hp: 120,  atk: 15, def: 6,  spd: 58,  rng: 55,  color: '#8b4513', xp: 30,  gold: 20,  isBoss: false, size: 10, attackStyle: 'melee' },
   'Bandit Chief':     { hp: 400,  atk: 25, def: 14, spd: 50,  rng: 65,  color: '#6b2e0a', xp: 120, gold: 80,  isBoss: true,  size: 14, attackStyle: 'melee' },
+  'Poacher':          { hp: 125,  atk: 16, def: 5,  spd: 60,  rng: 90,  color: '#7a4a1f', xp: 32,  gold: 18,  isBoss: false, size: 10, attackStyle: 'ranged' },
+  'Scavenger':        { hp: 105,  atk: 14, def: 4,  spd: 62,  rng: 55,  color: '#5a3820', xp: 28,  gold: 16,  isBoss: false, size: 9,  attackStyle: 'melee' },
+  'Thug':             { hp: 165,  atk: 20, def: 9,  spd: 48,  rng: 58,  color: '#4a2b16', xp: 40,  gold: 24,  isBoss: false, size: 12, attackStyle: 'melee' },
   'Sea Serpent':      { hp: 500,  atk: 30, def: 12, spd: 60,  rng: 120, color: '#0077be', xp: 150, gold: 90,  isBoss: true,  size: 22, attackStyle: 'ranged' },
   'Wraith':           { hp: 130,  atk: 20, def: 3,  spd: 50,  rng: 100, color: '#b0b0d0', xp: 40,  gold: 25,  isBoss: false, size: 12, attackStyle: 'ranged' },
   'Treant':           { hp: 250,  atk: 18, def: 18, spd: 25,  rng: 60,  color: '#2d5a1e', xp: 50,  gold: 15,  isBoss: false, size: 18, attackStyle: 'melee' },
@@ -202,7 +208,13 @@ const ENEMY_TEMPLATES: Record<string, {
   'Corrupted Knight': { hp: 280,  atk: 24, def: 20, spd: 40,  rng: 55,  color: '#4a0e2e', xp: 65,  gold: 45,  isBoss: false, size: 13, attackStyle: 'melee' },
   'Harpy':            { hp: 100,  atk: 18, def: 4,  spd: 65,  rng: 90,  color: '#9966cc', xp: 35,  gold: 18,  isBoss: false, size: 10, attackStyle: 'ranged' },
   'Imp':              { hp: 60,   atk: 14, def: 2,  spd: 70,  rng: 80,  color: '#ff4444', xp: 18,  gold: 10,  isBoss: false, size: 7,  attackStyle: 'ranged' },
+  'Basic Goblin':     { hp: 85,   atk: 11, def: 3,  spd: 62,  rng: 50,  color: '#5f8f2c', xp: 20,  gold: 10,  isBoss: false, size: 8,  attackStyle: 'melee' },
+  'Goblin Archer':    { hp: 90,   atk: 14, def: 3,  spd: 60,  rng: 140, color: '#6ea83a', xp: 24,  gold: 12,  isBoss: false, size: 8,  attackStyle: 'ranged' },
+  'Goblin Warrior':   { hp: 130,  atk: 18, def: 7,  spd: 55,  rng: 55,  color: '#4c7c20', xp: 30,  gold: 16,  isBoss: false, size: 10, attackStyle: 'melee' },
   'Goblin Shaman':    { hp: 140,  atk: 22, def: 5,  spd: 42,  rng: 150, color: '#44aa44', xp: 55,  gold: 30,  isBoss: false, size: 9,  attackStyle: 'aoe' },
+  'Rock Golem':       { hp: 280,  atk: 24, def: 18, spd: 28,  rng: 55,  color: '#8c6a42', xp: 55,  gold: 28,  isBoss: false, size: 16, attackStyle: 'melee' },
+  'Earth Golem':      { hp: 330,  atk: 27, def: 21, spd: 26,  rng: 58,  color: '#7b5e3b', xp: 65,  gold: 34,  isBoss: false, size: 17, attackStyle: 'melee' },
+  'Iron Golem':       { hp: 420,  atk: 32, def: 28, spd: 24,  rng: 60,  color: '#6e7278', xp: 85,  gold: 42,  isBoss: false, size: 18, attackStyle: 'melee' },
   // ── Phase 5: New Enemy Heroes ──
   'Berserker':          { hp: 280,  atk: 30, def: 8,  spd: 62,  rng: 55,  color: '#cc2222', xp: 70,  gold: 40,  isBoss: false, size: 13, attackStyle: 'melee' },
   'Dark Archer':        { hp: 150,  atk: 24, def: 6,  spd: 55,  rng: 220, color: '#2a4a2a', xp: 55,  gold: 30,  isBoss: false, size: 10, attackStyle: 'ranged' },
@@ -218,6 +230,17 @@ const ENEMY_TEMPLATES: Record<string, {
   'Cave Bear':          { hp: 400,  atk: 28, def: 16, spd: 38,  rng: 65,  color: '#5a3a1a', xp: 90,  gold: 55,  isBoss: false, size: 20, attackStyle: 'melee' },
   'Pit Demon':          { hp: 550,  atk: 35, def: 14, spd: 50,  rng: 100, color: '#aa1111', xp: 140, gold: 90,  isBoss: false, size: 22, attackStyle: 'aoe' },
   'Sky Hawk':           { hp: 120,  atk: 20, def: 4,  spd: 82,  rng: 110, color: '#8b6914', xp: 35,  gold: 20,  isBoss: false, size: 14, attackStyle: 'ranged' },
+  // ── Sloarscorth (Zone 3) — Frozen Crystal Highlands ──
+  'Frost Wolf':          { hp: 130,  atk: 16, def: 5,  spd: 75,  rng: 50,  color: '#a0c4e8', xp: 28,  gold: 14,  isBoss: false, size: 12, attackStyle: 'melee' },
+  'Ice Spider':          { hp: 90,   atk: 18, def: 4,  spd: 68,  rng: 50,  color: '#88ccee', xp: 24,  gold: 12,  isBoss: false, size: 10, attackStyle: 'melee' },
+  'Crystal Golem':       { hp: 380,  atk: 26, def: 24, spd: 22,  rng: 60,  color: '#4fc3f7', xp: 70,  gold: 40,  isBoss: false, size: 18, attackStyle: 'melee' },
+  'Ice Wraith':          { hp: 140,  atk: 22, def: 3,  spd: 48,  rng: 160, color: '#b3e5fc', xp: 45,  gold: 28,  isBoss: false, size: 12, attackStyle: 'ranged' },
+  'Frozen Skeleton':     { hp: 120,  atk: 14, def: 8,  spd: 52,  rng: 55,  color: '#cfd8dc', xp: 30,  gold: 16,  isBoss: false, size: 10, attackStyle: 'melee' },
+  'Stoneage Brute':      { hp: 350,  atk: 30, def: 14, spd: 32,  rng: 65,  color: '#8d6e63', xp: 75,  gold: 45,  isBoss: false, size: 16, attackStyle: 'melee' },
+  'Undead Warden':       { hp: 260,  atk: 22, def: 18, spd: 38,  rng: 60,  color: '#78909c', xp: 65,  gold: 38,  isBoss: false, size: 14, attackStyle: 'melee' },
+  // ── Sloarscorth Roaming Bosses ──
+  'KASA':                { hp: 1800, atk: 45, def: 22, spd: 40,  rng: 100, color: '#ff7043', xp: 500, gold: 350, isBoss: true,  size: 30, attackStyle: 'melee' },
+  'SHOGUN':              { hp: 2000, atk: 52, def: 26, spd: 36,  rng: 120, color: '#e53935', xp: 600, gold: 400, isBoss: true,  size: 32, attackStyle: 'aoe' },
 };
 
 // ── Interfaces ─────────────────────────────────────────────────
@@ -1583,6 +1606,8 @@ export function updateOpenWorld(state: OpenWorldState, dt: number, keys: Set<str
           addText(state, enemy.x, enemy.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, col, result.isCrit ? 16 : 12);
           triggerHitFlash(state, enemy.id);
           spawnParticles(state, enemy.x, enemy.y, vp.color, 6);
+          // Projectile impact force — pushes enemies away from hit point; caster excluded
+          applyCombatForce(state, enemy.x, enemy.y, p.id, 80, 55);
           if (enemy.hp <= 0) killEnemy(state, enemy);
           vp.dead = true;
           triggerScreenShake(state, 2, 0.08);
@@ -2039,6 +2064,8 @@ function handleProjectileHit(state: OpenWorldState, proj: OWProjectile, target: 
       const col = result.isCrit ? '#ffd700' : '#ffffff';
       addText(state, enemy.x, enemy.y - 15, `${result.isCrit ? 'CRIT ' : ''}-${result.finalDamage}`, col, result.isCrit ? 16 : 12);
       spawnParticles(state, enemy.x, enemy.y, '#ff6666', 3);
+      // Projectile impact force — pushes enemies from hit point; caster excluded
+      applyCombatForce(state, enemy.x, enemy.y, p.id, 70, 45);
       const ls = hasLifesteal(p as any as CombatEntity);
       if (ls > 0) { const heal = Math.floor(result.finalDamage * ls); p.hp = Math.min(p.maxHp, p.hp + heal); }
       if (enemy.hp <= 0) killEnemy(state, enemy);
@@ -2174,6 +2201,8 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
         spawnParticles(state, nearest.x, nearest.y, abilityColor, 10 + p.spellComboCount * 2);
         triggerScreenShake(state, 3 + p.spellComboCount, 0.12);
         triggerHitFlash(state, nearest.id);
+        // Impact force — pushes enemies near the target; never moves the caster
+        applyCombatForce(state, nearest.x, nearest.y, p.id, 90 + p.spellComboCount * 15, 50);
         const effects = getAbilityStatusEffects(ab.name, p.id, p.atk);
         for (const eff of effects) applyStatusEffect(nearest as any as CombatEntity, eff);
         if (nearest.hp <= 0) killEnemy(state, nearest);
@@ -2211,6 +2240,8 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
       }
       if (aoeHits > 0) triggerScreenShake(state, 4 + aoeHits, 0.15);
       spawnParticles(state, cx, cy, abilityColor, 20 + p.spellComboCount * 4);
+      // Radial blast force — pushes all enemies out from AoE centre; caster excluded
+      applyCombatForce(state, cx, cy, p.id, ab.radius * 1.15, 65 + p.spellComboCount * 10);
       break;
     }
     case 'buff': {
@@ -2233,6 +2264,8 @@ export function handleOWAbility(state: OpenWorldState, abilityIndex: number, tar
         }
       }
       spawnParticles(state, p.x, p.y, '#06b6d4', 12);
+      // Debuff shockwave — repels enemies away from player; caster excluded
+      applyCombatForce(state, p.x, p.y, p.id, ab.radius, 45);
       break;
     }
     case 'heal': {
@@ -2348,6 +2381,8 @@ function meleeArcDamage(state: OpenWorldState, coneAngle: number, range: number,
     // Hit-stop: freeze player + FSM on melee impact
     p.hitStopTimer = anyCrit ? 0.07 : 0.04;
     state.animFSM.freeze();
+    // Melee shockwave — supplemental radial push for nearby enemies (stacks with per-enemy knockback above)
+    applyCombatForce(state, p.x, p.y, p.id, range + 35, 28 + knockbackDist * 0.3);
   }
   return hits;
 }
@@ -2592,6 +2627,37 @@ function triggerScreenShake(state: OpenWorldState, intensity: number, duration: 
 
 function triggerHitFlash(state: OpenWorldState, entityId: number): void {
   state.hitFlash.set(entityId, 0.12);
+}
+
+// ── Combat Force (push / pull) ─────────────────────────────────
+/**
+ * Radial force burst originating from (cx, cy).
+ * Pushes (or pulls) all living enemies within `radius` by `magnitude` units
+ * with inverse-linear falloff.  The entity whose id === casterId is always
+ * skipped — guaranteeing the caster is never displaced by their own abilities.
+ */
+function applyCombatForce(
+  state: OpenWorldState,
+  cx: number, cy: number,
+  casterId: number,
+  radius: number,
+  magnitude: number,
+  forceType: 'push' | 'pull' = 'push',
+): void {
+  const dir = forceType === 'push' ? 1 : -1;
+  for (const enemy of state.enemies) {
+    if (enemy.dead || enemy.id === casterId) continue;
+    const dx = enemy.x - cx;
+    const dy = enemy.y - cy;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < 1 || d > radius) continue;
+    // Inverse-linear falloff: full force at centre, 30% at edge
+    const falloff = 1 - (d / radius) * 0.7;
+    const dist = magnitude * falloff;
+    const nx = enemy.x + (dx / d) * dir * dist;
+    const ny = enemy.y + (dy / d) * dir * dist;
+    if (isWalkableOW(nx, ny)) { enemy.x = nx; enemy.y = ny; }
+  }
 }
 
 // ── Combo Display ──────────────────────────────────────────────
@@ -2988,6 +3054,7 @@ function drawTownNPCSprite(
   wx: number, wy: number,
   role: string,
   name: string,
+  appearance: string | undefined,
   brightness: number,
   distToPlayer: number,
   gameTime: number,
@@ -3006,7 +3073,12 @@ function drawTownNPCSprite(
     quest:     { body: '#15803d', trim: '#22c55e', skin: '#f9c784', hat: '#14532d' },
     crafter:   { body: '#6b21a8', trim: '#a855f7', skin: '#f9c784', hat: '#3b0764' },
   };
-  const pal = palette[role] || palette.quest;
+  const appearancePalette: Record<string, { body: string; trim: string; skin: string; hat?: string }> = {
+    blacksmith: { body: '#5b3a24', trim: '#c97316', skin: '#f0c28f', hat: '#2f1b0c' },
+    hunter:     { body: '#556b2f', trim: '#d4a15a', skin: '#f0c28f', hat: '#3a4a1a' },
+    child:      { body: '#7c5cff', trim: '#ffd166', skin: '#f3c997', hat: '#4338ca' },
+  };
+  const pal = (appearance && appearancePalette[appearance]) || palette[role] || palette.quest;
 
   const y0 = bob;
 
@@ -3727,7 +3799,7 @@ export class OpenWorldRenderer {
       const npcDist = Math.sqrt(
         (state.interiorPlayer.x - inpc.ix) ** 2 + (state.interiorPlayer.y - inpc.iy) ** 2,
       );
-      drawTownNPCSprite(ctx, nx, ny, inpc.role, inpc.name, 1, npcDist * rH * 2.5, gameTime);
+      drawTownNPCSprite(ctx, nx, ny, inpc.role, inpc.name, inpc.appearance, 1, npcDist * rH * 2.5, gameTime);
     }
 
     // ── Active interior NPC dialog bubble ──
@@ -4231,7 +4303,7 @@ export class OpenWorldRenderer {
     for (const npc of state.npcs) {
       const d = distXY(state.player, npc);
       if (d > 800) continue;
-      drawTownNPCSprite(ctx, npc.x, npc.y, npc.type, npc.name, brightness, d, state.gameTime);
+      drawTownNPCSprite(ctx, npc.x, npc.y, npc.type, npc.name, undefined, brightness, d, state.gameTime);
     }
     // V2: Render faction hero NPCs at dock positions as voxel heroes
     this.renderFactionHeroNPCs(ctx, state, brightness);
