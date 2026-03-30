@@ -302,6 +302,13 @@ export const CREATURE_PREFABS: Record<string, PrefabConfig> = {
     offset: new THREE.Vector3(0, 0, 0),
     format: 'glb',
   },
+  // Owlbear — used for Worg bear form (tinted per race via owlbear-form.ts)
+  owlbear: {
+    modelPath: '/assets/models/creatures/owlbear/owlbear.glb',
+    scale: 0.012,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'glb',
+  },
   shark: {
     modelPath: '/assets/models/creatures/Shark.glb',
     scale: 0.006,
@@ -502,4 +509,13 @@ export function getWeaponForClass(heroClass: string): string {
     case 'ranger': return 'bow';
     default: return 'sword';
   }
+}
+
+/**
+ * Get the bear form prefab key for Worg shapeshifts.
+ * Always returns 'owlbear' — the per-race color tint is applied
+ * after loading via owlbear-form.ts applyBearTintThree/Babylon.
+ */
+export function getBearFormPrefab(): string {
+  return 'owlbear';
 }
