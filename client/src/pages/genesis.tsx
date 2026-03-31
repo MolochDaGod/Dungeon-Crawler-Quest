@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRoute } from 'wouter';
-import OpenWorldPage from './open-world';
+import { buildGenesisScene, type GenesisScene } from '@/game/genesis-scene-builder';
 
 /**
  * Genesis Island Page
@@ -108,7 +108,74 @@ export default function GenesisPage() {
     );
   }
 
-  // Genesis always uses 3D BabylonJS renderer
-  // The open-world game logic runs the same, but rendering is 3D
-  return <OpenWorldPage force3D={true} />;
+  // Genesis renders the 3D island scene directly
+  return <GenesisIslandView instanceId={instanceId} isLocal={isLocal} />;
+}
+
+// ── 3D Island View Component ───────────────────────────────────
+
+function GenesisIslandView({ instanceId, isLocal }: { instanceId: string; isLocal: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<GenesisScene | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    let disposed = false;
+
+    buildGenesisScene(containerRef.current).then(gs => {
+      if (disposed) { gs.dispose(); return; }
+      sceneRef.current = gs;
+      setLoading(false);
+    }).catch(err => {
+      console.error('[Genesis] Scene build failed:', err);
+      setLoading(false);
+    });
+
+    return () => {
+      disposed = true;
+      if (sceneRef.current) {
+        sceneRef.current.dispose();
+        sceneRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div style={{ width: '100vw', height: '100vh', background: '#0a0a1a', position: 'relative' }}>
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      {loading && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.8)', color: '#22d3ee',
+          fontFamily: 'monospace', fontSize: '18px',
+          zIndex: 10,
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⛵</div>
+            <div>Building Genesis Island...</div>
+            <div style={{ color: '#666', fontSize: '12px', marginTop: '8px' }}>
+              {isLocal ? 'Local Mode' : `Instance: ${instanceId}`}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* HUD overlay */}
+      <div style={{
+        position: 'absolute', top: 12, left: 12,
+        background: 'rgba(0,0,0,0.7)', borderRadius: 6,
+        padding: '8px 14px', color: '#c5a059',
+        fontFamily: "'Oxanium', monospace", fontSize: 13,
+        border: '1px solid #c5a05940',
+      }}>
+        <div style={{ fontWeight: 'bold' }}>Genesis Island</div>
+        <div style={{ color: '#888', fontSize: 11 }}>
+          {isLocal ? 'Admin / Local' : instanceId.slice(0, 8) + '...'}
+        </div>
+        <div style={{ color: '#666', fontSize: 10, marginTop: 4 }}>WASD to move · Mouse to look</div>
+      </div>
+    </div>
+  );
 }
