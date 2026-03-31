@@ -20,6 +20,8 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
+import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
+import "@babylonjs/loaders/glTF";
 
 // Shadow system — side-effect registers the component, ShadowGenerator exported from its own module
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
@@ -276,34 +278,64 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
     }
   }
 
-  // ── Batch trees as thin instances ───────────────────────
-  if (treePositions.length > 0) {
+  // ── Load GLB tree model and use thin instances ───────────
+  const loadAndInstance = async (glbPath: string, positions: Vector3[], baseScale: number, yOffset: number) => {
+    try {
+      const result = await SceneLoader.ImportMeshAsync("", glbPath, "", scene);
+      const root = result.meshes[0];
+      if (result.meshes.length > 1) {
+        // Use the first actual mesh as template
+        const template = result.meshes[1] as Mesh;
+        template.isVisible = true;
+        root.setEnabled(false);
+        // Add thin instances
+        const buf = new Float32Array(positions.length * 16);
+        for (let i = 0; i < positions.length; i++) {
+          const p = positions[i];
+          const s = baseScale * (0.8 + Math.random() * 0.4);
+          const rotY = Math.random() * Math.PI * 2;
+          Matrix.Compose(
+            new Vector3(s, s, s),
+            new Vector3(0, rotY, 0).toQuaternion(),
+            new Vector3(p.x, p.y + yOffset, p.z),
+          ).copyToArray(buf, i * 16);
+        }
+        template.thinInstanceSetBuffer("matrix", buf, 16);
+        template.receiveShadows = true;
+        shadowGen.addShadowCaster(template);
+        console.log(`[Genesis3D] Loaded ${glbPath}: ${positions.length} instances`);
+      }
+    } catch (err) {
+      console.warn(`[Genesis3D] Failed to load ${glbPath}, using fallback`, err);
+      // Fallback to primitive thin instances
+      fallbackThinInstances(positions, yOffset, baseScale);
+    }
+  };
+
+  // Fallback: primitive thin instances when GLB fails
+  function fallbackThinInstances(positions: Vector3[], yOffset: number, scale: number) {
     trunkTemplate.isVisible = true;
     canopyTemplate.isVisible = true;
-    const trunkBuf = new Float32Array(treePositions.length * 16);
-    const canopyBuf = new Float32Array(treePositions.length * 16);
-    for (let i = 0; i < treePositions.length; i++) {
-      const p = treePositions[i];
-      const h = 4 + Math.random() * 3;
-      const s = 0.8 + Math.random() * 0.4;
-      Matrix.ComposeToRef(
-        new Vector3(s, 1, s), // scale
-        Vector3.Zero().toQuaternion(), // no rotation
-        new Vector3(p.x, p.y + h / 2, p.z), // position
-        Matrix.Identity(),
-      );
-      Matrix.Translation(p.x, p.y + h / 2, p.z).copyToArray(trunkBuf, i * 16);
+    const trunkBuf = new Float32Array(positions.length * 16);
+    const canopyBuf = new Float32Array(positions.length * 16);
+    for (let i = 0; i < positions.length; i++) {
+      const p = positions[i];
+      const h = 5 * scale;
+      Matrix.Translation(p.x, p.y + h / 2 + yOffset, p.z).copyToArray(trunkBuf, i * 16);
       Matrix.Compose(
-        new Vector3(s, 0.7 * s, s),
+        new Vector3(scale, 0.7 * scale, scale),
         Vector3.Zero().toQuaternion(),
-        new Vector3(p.x, p.y + h + 1.5 * s, p.z),
+        new Vector3(p.x, p.y + h + 1.5 * scale + yOffset, p.z),
       ).copyToArray(canopyBuf, i * 16);
     }
     trunkTemplate.thinInstanceSetBuffer("matrix", trunkBuf, 16);
     canopyTemplate.thinInstanceSetBuffer("matrix", canopyBuf, 16);
   }
 
-  // ── Batch rocks as thin instances ───────────────────────
+  // Load real tree GLB and instance at all tree positions
+  loadAndInstance("/assets/grudge-legacy/environment/pine_tree.glb", treePositions, 0.015, 0);
+
+  // ── Batch rocks ────────────────────────────────────────
   if (rockPositions.length > 0) {
     rockTemplate.isVisible = true;
     const rockBuf = new Float32Array(rockPositions.length * 16);
@@ -319,27 +351,67 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
     rockTemplate.thinInstanceSetBuffer("matrix", rockBuf, 16);
   }
 
-  // ── Individual meshes for unique objects (few) ───────────
-  for (const p of wallPositions) {
-    const wall = MeshBuilder.CreateBox("wall", { width: 2, height: 3, depth: 0.5 }, scene);
-    wall.position.set(p.x, p.y + 1.5, p.z);
-    wall.material = mats.wall;
-    wall.receiveShadows = true;
-  }
+  // ── Load GLB buildings at unique positions ────────────────
+  const loadAtPositions = async (glbPath: string, positions: Vector3[], scale: number, fallbackMat: StandardMaterial) => {
+    try {
+      const result = await SceneLoader.ImportMeshAsync("", glbPath, "", scene);
+      const root = result.meshes[0];
+      root.scaling.setAll(scale);
+      root.position = positions[0] || Vector3.Zero();
+      root.receiveShadows = true;
+      result.meshes.forEach(m => { m.receiveShadows = true; shadowGen.addShadowCaster(m); });
+      // Clone for remaining positions
+      for (let i = 1; i < positions.length; i++) {
+        const clone = root.clone(`${root.name}_${i}`, null);
+        if (clone) {
+          clone.position = positions[i];
+          clone.rotation = new Vector3(0, Math.random() * Math.PI * 2, 0);
+        }
+      }
+    } catch {
+      // Fallback to boxes
+      for (const p of positions) {
+        const box = MeshBuilder.CreateBox("fb", { width: 4, height: 3, depth: 4 }, scene);
+        box.position.set(p.x, p.y + 1.5, p.z);
+        box.material = fallbackMat;
+        box.receiveShadows = true;
+      }
+    }
+  };
+
+  // Load walls
+  if (wallPositions.length > 0) loadAtPositions("/assets/grudge-legacy/building/wall.glb", wallPositions, 0.02, mats.wall);
+  // Load buildings
+  const bldPosOnly = buildingPositions.map(b => b.pos);
+  if (bldPosOnly.length > 0) loadAtPositions("/assets/grudge-legacy/building/wooden_house.glb", bldPosOnly, 0.02, mats.building);
+  // Load docks
   for (const p of dockPositions) {
     const dock = MeshBuilder.CreateBox("dock", { width: 6, height: 0.3, depth: 3 }, scene);
     dock.position.set(p.x, p.y + 0.15, p.z);
     dock.material = mats.dock;
   }
-  for (const { pos, name } of buildingPositions) {
-    const bld = MeshBuilder.CreateBox("bld", { width: 6, height: 4, depth: 5 }, scene);
-    bld.position.set(pos.x, pos.y + 2, pos.z);
-    bld.material = mats.building;
-    bld.receiveShadows = true;
-    shadowGen.addShadowCaster(bld);
-    const roof = MeshBuilder.CreateCylinder("roof", { height: 2, diameterTop: 0, diameterBottom: 7.2, tessellation: 4 }, scene);
-    roof.position.set(pos.x, pos.y + 5, pos.z);
-    roof.material = mats.roof;
+
+  // ── Load player character model ─────────────────────────
+  try {
+    const charResult = await SceneLoader.ImportMeshAsync("", "/assets/grudge-legacy/character/bambi.glb", "", scene);
+    const charRoot = charResult.meshes[0];
+    charRoot.scaling.setAll(0.02);
+    // Place at the island camp spawn point
+    const spawnPos = unityToWorld(-380.52, 27.13, -2862.59);
+    charRoot.position = spawnPos;
+    charRoot.position.y += 1;
+    charResult.meshes.forEach(m => { m.receiveShadows = true; shadowGen.addShadowCaster(m); });
+    console.log("[Genesis3D] Player character loaded");
+  } catch (e) {
+    console.warn("[Genesis3D] Character GLB failed, using capsule", e);
+    const capsule = MeshBuilder.CreateCapsule("player", { height: 1.8, radius: 0.4 }, scene);
+    const spawnPos = unityToWorld(-380.52, 27.13, -2862.59);
+    capsule.position = spawnPos;
+    capsule.position.y += 1;
+    const capMat = new StandardMaterial("playerMat", scene);
+    capMat.diffuseColor = new Color3(0.2, 0.6, 0.9);
+    capsule.material = capMat;
+    shadowGen.addShadowCaster(capsule);
   }
 
   // ── Enable octree for spatial culling ───────────────────
