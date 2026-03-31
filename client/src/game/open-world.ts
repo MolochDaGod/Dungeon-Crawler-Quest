@@ -104,7 +104,7 @@ import {
 } from './town-buildings';
 import {
   getFactionSpawnPoint, getPlayerFactionDock, getAllFactionDocks,
-  generateDockStructures, type FactionDock, type DockStructure,
+  generateDockStructures, FACTION_DOCKS, type FactionDock, type DockStructure,
 } from './faction-spawn';
 import {
   FACTION_HERO_NPCS, getFactionNPCs, getNPCQuests, getFactionQuest,
@@ -4438,7 +4438,6 @@ export class OpenWorldRenderer {
 
   /** Render dock structures (piers, boats, flags) from faction-spawn.ts */
   private renderDockStructures(ctx: CanvasRenderingContext2D, state: OpenWorldState, brightness: number): void {
-    const { FACTION_DOCKS } = require('./faction-spawn') as typeof import('./faction-spawn');
 
     for (const ds of state.factionDockStructures) {
       const d = distXY(state.player, ds);
