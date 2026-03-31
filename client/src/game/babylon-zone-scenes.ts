@@ -218,11 +218,11 @@ export class ZoneSceneManager {
   dispose(): void {
     this._disposed = true;
     window.removeEventListener("resize", this._onResize);
-    for (const [, data] of this._zones) {
+    Array.from(this._zones.values()).forEach(data => {
       data.ocean?.dispose();
       data.shores?.dispose();
       data.scene.dispose();
-    }
+    });
     this._zones.clear();
     this._guiScene.dispose();
   }
@@ -243,13 +243,13 @@ export class ZoneSceneManager {
     // Find the least-recently-used zone that isn't the active one
     let oldestId = -1;
     let oldestTime = Infinity;
-    for (const [id, data] of this._zones) {
-      if (id === this._activeZoneId) continue;
+    Array.from(this._zones.entries()).forEach(([id, data]) => {
+      if (id === this._activeZoneId) return;
       if (data.lastUsed < oldestTime) {
         oldestTime = data.lastUsed;
         oldestId = id;
       }
-    }
+    });
     if (oldestId >= 0) {
       const evict = this._zones.get(oldestId)!;
       evict.ocean?.dispose();
