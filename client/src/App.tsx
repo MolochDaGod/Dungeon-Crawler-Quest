@@ -44,7 +44,7 @@ consumeGrudgeAuth();
 export function requireGrudgeAuth() {
   if (localStorage.getItem('grudge_auth_token')) return true;
   const redirect = encodeURIComponent(window.location.href);
-  window.location.href = `${GRUDGE_AUTH_URL}?redirect=${redirect}&app=dungeon-crawler`;
+  window.location.href = `${GRUDGE_AUTH_URL}?redirect=${redirect}&app=grudge-2d-mmo`;
   return false;
 }
 

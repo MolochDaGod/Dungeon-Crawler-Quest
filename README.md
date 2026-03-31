@@ -1,8 +1,8 @@
-# GRUDGE Warlords
+# GRUDGE 2D MMO
 
-Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open World MMO modes. Built with React, Three.js, and the Grudge ObjectStore API.
+Browser-based dark fantasy MMO featuring Open World, 5v5 MOBA, Dungeon Crawler, and Genesis Island 3D modes. Built with React, BabylonJS 9, and the Grudge ObjectStore API. Created by Racalvin The Pirate King.
 
-**Live:** [dungeon-crawler-quest.vercel.app](https://dungeon-crawler-quest.vercel.app)
+**Live:** [grudgewarlords.com](https://grudgewarlords.com)
 
 **Backend:** [grudge-studio.com](https://grudge-studio.com) · **Dashboard:** [dash.grudge-studio.com](https://dash.grudge-studio.com) · **ObjectStore:** [molochdagod.github.io/ObjectStore](https://molochdagod.github.io/ObjectStore)
 
@@ -161,16 +161,21 @@ See [docs/GRUDGE_BACKEND_INTEGRATION.md](docs/GRUDGE_BACKEND_INTEGRATION.md) for
 
 ## Tech Stack
 
-- **Frontend:** React, TypeScript, Tailwind CSS, Shadcn UI
-- **3D Rendering:** Three.js with voxel art pipeline
-- **2D Rendering:** Custom HTML5 Canvas with fog of war, 29 new voxel model builders
+- **Frontend:** React 18, TypeScript, Tailwind CSS, Shadcn UI
+- **3D Engine:** BabylonJS 9 (WebGL2, IBL, DefaultRenderingPipeline, PBR, thin instances, animation retargeting)
+- **3D Assets:** 45 GLB models from Unity FRESH GRUDGE (characters, monsters, buildings, weapons, animations)
+- **2D Rendering:** Custom HTML5 Canvas with fog of war, voxel model builders
+- **Game Bridge:** genesis-game-bridge.ts connects all RPG systems to 3D scene
+- **Combat:** XState finite state machine (combo, block, dash, jump, whirlwind, etc.)
 - **Routing:** Wouter
 - **Animation:** GSAP, custom voxel-motion library
-- **Physics:** cannon-es
-- **State Machines:** XState
-- **Fonts:** Craftpix `StraightPixelGothic.otf` (canvas + CSS), Cinzel, Crimson Text, JetBrains Mono
-- **Asset packs:** Craftpix animated text GIFs (event banners), tropical city tileset (256px), castle defense tileset (32px), house constructor tileset (32px)
-- **Deployment:** Vercel
+- **Physics:** cannon-es, Havok (BabylonJS)
+- **AI Backend:** Grudge Studio ai-agent service (Anthropic → OpenAI → DeepSeek → Gemini → Ollama fallback chain)
+- **Multiplayer:** Colyseus.js + Socket.IO
+- **Auth:** Grudge ID (id.grudge-studio.com)
+- **Object Storage:** Grudge ObjectStore API
+- **Fonts:** Craftpix `StraightPixelGothic.otf`, Cinzel, Crimson Text, Oxanium, JetBrains Mono
+- **Deployment:** Vercel (frontend), Grudge Studio VPS (backend)
 
 ## Project Structure
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
-import type { GenesisScene } from '@/game/babylon-genesis-scene';
+import type { GenesisScene } from '@/game/genesis-scene-builder';
 
 export default function GenesisPlayPage() {
   const [, setLocation] = useLocation();
@@ -15,9 +15,9 @@ export default function GenesisPlayPage() {
 
     (async () => {
       try {
-        const { createGenesisScene } = await import('@/game/babylon-genesis-scene');
+        const { buildGenesisScene } = await import('@/game/genesis-scene-builder');
         if (disposed) return;
-        const genesis = await createGenesisScene(containerRef.current!);
+        const genesis = await buildGenesisScene(containerRef.current!);
         if (disposed) { genesis.dispose(); return; }
         sceneRef.current = genesis;
         setLoading(false);

@@ -1,5 +1,5 @@
 {
-  "name": "dungeon-crawler-quest",
+  "name": "grudge-2d-mmo",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
@@ -101,6 +101,14 @@
     "xstate": "^5.19.2",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0"
+  },
+  "overrides": {
+    "undici": ">=6.24.0",
+    "path-to-regexp": ">=6.3.0",
+    "minimatch": ">=10.2.3",
+    "ajv": ">=8.18.0",
+    "smol-toml": ">=1.6.1",
+    "got": ">=11.8.5"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.3.0",
