@@ -14,6 +14,7 @@
 import type { MissionDef, MissionObjective, MissionReward, MissionType } from './missions';
 import { FACTION_DOCKS, type FactionDock } from './faction-spawn';
 import { HEROES, type HeroData } from './types';
+import { getZoneById } from './zones';
 
 // ── NPC Definitions ────────────────────────────────────────────
 
@@ -533,8 +534,7 @@ export function calculateCampPosition(
   seed: number,
 ): { x: number; y: number } {
   // Use zone center as base, then offset
-  const zones = require('./zones');
-  const zone = zones.getZoneById(zoneId);
+  const zone = getZoneById(zoneId);
   if (!zone) return { x: 0, y: 0 };
 
   const cx = zone.bounds.x + zone.bounds.w / 2;
@@ -556,8 +556,7 @@ export function calculateBossPosition(
   zoneId: number,
   seed: number,
 ): { x: number; y: number } {
-  const zones = require('./zones');
-  const zone = zones.getZoneById(zoneId);
+  const zone = getZoneById(zoneId);
   if (!zone) return { x: 0, y: 0 };
 
   // Place boss slightly off-center in a dramatic location

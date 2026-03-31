@@ -4,6 +4,7 @@ import { OWHudState } from '@/game/open-world';
 import { OpenWorldState } from '@/game/open-world';
 import { QUICK_CRAFT_ITEMS, QuickCraftItem } from '@/game/crafting';
 import { allocateOWAttribute, claimOWMission, equipBagItemOW } from '@/game/open-world';
+import { removeFromBag, saveEquipmentBag } from '@/game/equipment';
 import { AttributeId } from '@/game/attributes';
 import { HeroData, AbilityDef, CLASS_COLORS, ABILITY_ICONS, RACE_COLORS } from '@/game/types';
 import { VoxelRenderer } from '@/game/voxel';
@@ -456,9 +457,8 @@ function InventoryPanel({ hud, stateRef, rerender }: { hud: OWHudState; stateRef
         onDrop={e => {
           const id = e.dataTransfer.getData('itemId');
           if (id && stateRef.current) {
-            const { removeFromBag: removeFn, saveEquipmentBag: saveBag } = require('@/game/equipment');
-            removeFn(stateRef.current.equipmentBag, id);
-            saveBag(stateRef.current.equipmentBag);
+            removeFromBag(stateRef.current.equipmentBag, id);
+            saveEquipmentBag(stateRef.current.equipmentBag);
             refresh();
           }
         }}
