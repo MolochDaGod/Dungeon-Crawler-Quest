@@ -43,6 +43,7 @@ import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator"
 import { GenesisGameBridge } from "./genesis-game-bridge";
 import { GenesisPlayerController } from "./genesis-player-controller";
 import { GenesisHUD } from "./genesis-hud";
+import { buildCharacterSelectScene, type CharacterSelectResult } from "./genesis-character-select";
 
 // ── Constants ──────────────────────────────────────────────────
 const SCALE_XZ = 2.5;
@@ -117,7 +118,7 @@ async function loadGLB(
   }
 }
 
-// ── Main builder ───────────────────────────────────────────────
+// ── Main builder ─────────────────────────────────────────────────
 export async function buildGenesisScene(container: HTMLElement): Promise<GenesisScene> {
   const canvas = document.createElement("canvas");
   canvas.style.width = "100%";
@@ -134,6 +135,16 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   engine.setHardwareScalingLevel(1 / dpr);
   console.log("[Genesis] Engine created:", engine.description);
+
+  // ── Character Select Screen (runs first) ─────────────────
+  const charSelect = await buildCharacterSelectScene(canvas, engine);
+  engine.runRenderLoop(() => charSelect.scene.render());
+  console.log("[Genesis] Character select screen active");
+
+  // Wait for player to pick race + class and click Enter World
+  const selection = await charSelect.waitForSelection();
+  engine.stopRenderLoop();
+  console.log(`[Genesis] Selected: ${selection.race} ${selection.heroClass}`);
 
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0.55, 0.78, 0.95, 1);
@@ -176,24 +187,7 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
   shadowGen.useBlurExponentialShadowMap = true;
   shadowGen.blurKernel = 16;
 
-  // ── DefaultRenderingPipeline ──────────────────────────────
-  const pipeline = new DefaultRenderingPipeline("pipeline", true, scene, [camera]);
-  pipeline.bloomEnabled = true;
-  pipeline.bloomThreshold = 0.8;
-  pipeline.bloomWeight = 0.3;
-  pipeline.bloomKernel = 64;
-  pipeline.fxaaEnabled = true;
-  pipeline.imageProcessingEnabled = true;
-  if (pipeline.imageProcessing) {
-    pipeline.imageProcessing.toneMappingEnabled = true;
-    pipeline.imageProcessing.toneMappingType = 1; // ACES
-    pipeline.imageProcessing.exposure = 1.1;
-    pipeline.imageProcessing.contrast = 1.15;
-    pipeline.imageProcessing.vignetteEnabled = true;
-    pipeline.imageProcessing.vignetteWeight = 1.2;
-    pipeline.imageProcessing.vignetteCameraFov = 0.6;
-    pipeline.imageProcessing.vignetteColor = new Color4(0, 0, 0, 0.4);
-  }
+  // DefaultRenderingPipeline created AFTER player controller (needs final camera)
 
   // ── Fog ───────────────────────────────────────────────────
   scene.fogMode = Scene.FOGMODE_EXP2;
@@ -580,6 +574,26 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
   if (playerMesh) {
     controller = new GenesisPlayerController(scene, bridge, playerMesh as TransformNode, camera, canvas);
     console.log("[Genesis] 3rd-person controller active");
+  }
+
+  // ── DefaultRenderingPipeline (must use the FINAL active camera) ──
+  const activeCamera = controller ? controller.getCamera() : camera;
+  const pipeline = new DefaultRenderingPipeline("pipeline", true, scene, [activeCamera]);
+  pipeline.bloomEnabled = true;
+  pipeline.bloomThreshold = 0.8;
+  pipeline.bloomWeight = 0.3;
+  pipeline.bloomKernel = 64;
+  pipeline.fxaaEnabled = true;
+  pipeline.imageProcessingEnabled = true;
+  if (pipeline.imageProcessing) {
+    pipeline.imageProcessing.toneMappingEnabled = true;
+    pipeline.imageProcessing.toneMappingType = 1; // ACES
+    pipeline.imageProcessing.exposure = 1.1;
+    pipeline.imageProcessing.contrast = 1.15;
+    pipeline.imageProcessing.vignetteEnabled = true;
+    pipeline.imageProcessing.vignetteWeight = 1.2;
+    pipeline.imageProcessing.vignetteCameraFov = 0.6;
+    pipeline.imageProcessing.vignetteColor = new Color4(0, 0, 0, 0.4);
   }
 
   // ── HUD ────────────────────────────────────────────────────
