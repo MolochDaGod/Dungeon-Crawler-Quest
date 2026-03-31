@@ -22,7 +22,10 @@ import IslandPage from "@/pages/island";
 import AIDebugPage from "@/pages/ai-debug";
 import ToonAdminPage from "@/pages/toon-admin";
 import GenesisPage from "@/pages/genesis";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
+
+// Lazy-load the standalone 3D scene (heavy BabylonJS import)
+const GenesisPlayPage = lazy(() => import("@/pages/genesis-play"));
 
 // ── Grudge Unified Auth ──
 const GRUDGE_AUTH_URL = 'https://id.grudge-studio.com/auth';
@@ -65,6 +68,7 @@ function Router() {
       <Route path="/island" component={IslandPage} />
       <Route path="/genesis-admin" component={GenesisPage} />
       <Route path="/genesis/:instanceId" component={GenesisPage} />
+      <Route path="/genesis-play">{() => <Suspense fallback={<div style={{background:'#000',color:'#c5a059',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'monospace'}}>Loading Genesis...</div>}><GenesisPlayPage /></Suspense>}</Route>
       <Route path="/ai-debug" component={AIDebugPage} />
       <Route path="/toonadmin" component={ToonAdminPage} />
       <Route component={NotFound} />
