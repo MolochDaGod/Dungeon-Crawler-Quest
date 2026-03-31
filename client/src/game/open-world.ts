@@ -731,12 +731,16 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     mp: attrStats.mp + eqStats.mp,
   };
 
-  // Resolve spawn from faction dock (if player character is loaded)
+  // Resolve spawn — new players start on Genesis Island (Zone 10)
+  // Existing players with a faction spawn at their faction dock
   const currentChar = getCurrentCharacter();
   let spawn: { x: number; y: number };
   let startZone = ISLAND_ZONES[0];
 
-  if (currentChar?.faction) {
+  const genesisZone = ISLAND_ZONES.find(z => z.id === 10);
+
+  if (currentChar?.level && currentChar.level > 1 && currentChar.faction) {
+    // Returning player → faction dock
     const factionSpawn = getFactionSpawnPoint(currentChar);
     const factionZone = ISLAND_ZONES.find(z => z.id === factionSpawn.zoneId);
     if (factionZone) {
@@ -745,6 +749,10 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     } else {
       spawn = startZone.playerSpawns[0];
     }
+  } else if (genesisZone) {
+    // New player → Genesis Island (Zone 10)
+    startZone = genesisZone;
+    spawn = startZone.playerSpawns[0];
   } else {
     spawn = startZone.playerSpawns[0];
   }
