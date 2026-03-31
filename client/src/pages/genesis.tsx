@@ -118,6 +118,7 @@ function GenesisIslandView({ instanceId, isLocal }: { instanceId: string; isLoca
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GenesisScene | null>(null);
   const [loading, setLoading] = useState(true);
+  const [playerInfo, setPlayerInfo] = useState<{ name: string; race: string; heroClass: string; level: number } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -127,9 +128,13 @@ function GenesisIslandView({ instanceId, isLocal }: { instanceId: string; isLoca
     buildGenesisScene(containerRef.current).then(gs => {
       if (disposed) { gs.dispose(); return; }
       sceneRef.current = gs;
+      // Read player info from bridge
+      const snap = gs.bridge.getSnapshot();
+      setPlayerInfo({ name: snap.name, race: snap.race, heroClass: snap.heroClass, level: snap.level });
       setLoading(false);
     }).catch(err => {
-      console.error('[Genesis] Scene build failed:', err);
+      console.error('[Genesis] Scene build failed:', err?.message || err, err?.stack);
+      setError(`Scene failed: ${err?.message || String(err)}`);
       setLoading(false);
     });
 
@@ -163,19 +168,7 @@ function GenesisIslandView({ instanceId, isLocal }: { instanceId: string; isLoca
         </div>
       )}
       {/* HUD overlay */}
-      <div style={{
-        position: 'absolute', top: 12, left: 12,
-        background: 'rgba(0,0,0,0.7)', borderRadius: 6,
-        padding: '8px 14px', color: '#c5a059',
-        fontFamily: "'Oxanium', monospace", fontSize: 13,
-        border: '1px solid #c5a05940',
-      }}>
-        <div style={{ fontWeight: 'bold' }}>Genesis Island</div>
-        <div style={{ color: '#888', fontSize: 11 }}>
-          {isLocal ? 'Admin / Local' : instanceId.slice(0, 8) + '...'}
-        </div>
-        <div style={{ color: '#666', fontSize: 10, marginTop: 4 }}>WASD to move · Mouse to look</div>
-      </div>
+      {/* HUD is now rendered by BabylonJS GUI (genesis-hud.ts) */}
     </div>
   );
 }
