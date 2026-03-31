@@ -144,6 +144,18 @@ const AGGRO_MULTIPLIER: Record<string, number> = {
   'Rock Golem': 0.75, 'Earth Golem': 0.8, 'Iron Golem': 0.85,
   Dragon: 1.5, 'Fire Drake': 1.3, 'Frost Wyrm': 1.4, 'Shadow Dragon': 1.5,
   'Lich King': 1.5, 'Infernal Colossus': 1.6, 'Bandit Chief': 1.2,
+  // GRUDGE Legacy monsters
+  'Gargoyle': 1.1, 'Minotaur': 1.3, 'Arachnid': 0.9, 'Demon': 1.2,
+  'Arch Demon': 1.5, 'Necromancer': 1.2, 'Ogre': 1.2, 'Dryad': 0.7,
+  'Horn Beetle': 0.8, 'Cave Hound': 1.0, 'Fiend': 1.1, 'Reptilian': 1.0,
+  'Cerberus': 1.6, 'Gorgoz': 1.6, 'Mimic': 0.5, 'Yeti': 1.3,
+  'Dark Elf Guard': 1.1, 'Dark Elf Archer': 1.3, 'Dark Elf Commander': 1.4,
+  'Dark Elf Lord': 1.5, 'Ice Golem': 0.8, 'Lava Golem': 0.8,
+  'Forest Golem': 0.7, 'Stone Golem': 0.8, 'Juggernaut': 1.5,
+  'Emerald Drake': 1.4, 'Hellfire Drake': 1.4, 'Void Drake': 1.5,
+  'Nightstalker Drake': 1.3, 'Rock Drake': 1.2, 'Frigid Drake': 1.3,
+  'Crab': 0.6, 'Rhino': 1.0, 'Scorpion': 0.9, 'War Saber': 1.1,
+  'Grunk': 0.8, 'Young Ent': 0.6, 'Elder Ent': 0.8, 'Corrupted Ent': 0.9,
 };
 
 function getEnemyAggroRange(type: string, isBoss: boolean): number {
@@ -241,6 +253,71 @@ const ENEMY_TEMPLATES: Record<string, {
   // ── Sloarscorth Roaming Bosses ──
   'KASA':                { hp: 1800, atk: 45, def: 22, spd: 40,  rng: 100, color: '#ff7043', xp: 500, gold: 350, isBoss: true,  size: 30, attackStyle: 'melee' },
   'SHOGUN':              { hp: 2000, atk: 52, def: 26, spd: 36,  rng: 120, color: '#e53935', xp: 600, gold: 400, isBoss: true,  size: 32, attackStyle: 'aoe' },
+
+  // ══════════════════════════════════════════════════════════
+  // GRUDGE Legacy Monsters (from Unity FRESH GRUDGE project)
+  // ══════════════════════════════════════════════════════════
+
+  // World mobs
+  'Raptor':             { hp: 140,  atk: 20, def: 5,  spd: 80,  rng: 50,  color: '#a0522d', xp: 35,  gold: 18,  isBoss: false, size: 12, attackStyle: 'melee' },
+  'Rhino':              { hp: 350,  atk: 28, def: 20, spd: 35,  rng: 70,  color: '#696969', xp: 75,  gold: 40,  isBoss: false, size: 20, attackStyle: 'melee' },
+  'Crab':               { hp: 90,   atk: 12, def: 10, spd: 30,  rng: 40,  color: '#ff6347', xp: 18,  gold: 8,   isBoss: false, size: 8,  attackStyle: 'melee' },
+  'Scorpion':           { hp: 130,  atk: 22, def: 8,  spd: 50,  rng: 50,  color: '#8b4513', xp: 38,  gold: 22,  isBoss: false, size: 11, attackStyle: 'melee' },
+  'War Saber':          { hp: 180,  atk: 24, def: 7,  spd: 70,  rng: 55,  color: '#c0c0c0', xp: 45,  gold: 28,  isBoss: false, size: 14, attackStyle: 'melee' },
+  'Grunk':              { hp: 110,  atk: 16, def: 6,  spd: 55,  rng: 50,  color: '#556b2f', xp: 28,  gold: 15,  isBoss: false, size: 10, attackStyle: 'melee' },
+  'Young Ent':          { hp: 160,  atk: 14, def: 12, spd: 22,  rng: 60,  color: '#228b22', xp: 35,  gold: 12,  isBoss: false, size: 14, attackStyle: 'melee' },
+  'Elder Ent':          { hp: 500,  atk: 28, def: 24, spd: 18,  rng: 70,  color: '#006400', xp: 120, gold: 70,  isBoss: true,  size: 26, attackStyle: 'melee' },
+  'Corrupted Ent':      { hp: 300,  atk: 22, def: 16, spd: 25,  rng: 65,  color: '#4a0e4a', xp: 65,  gold: 35,  isBoss: false, size: 18, attackStyle: 'melee' },
+  'Hairy Spider':       { hp: 95,   atk: 18, def: 4,  spd: 68,  rng: 50,  color: '#3e2723', xp: 26,  gold: 14,  isBoss: false, size: 12, attackStyle: 'melee' },
+  'Poison Spider':      { hp: 80,   atk: 16, def: 3,  spd: 72,  rng: 50,  color: '#4caf50', xp: 24,  gold: 12,  isBoss: false, size: 10, attackStyle: 'melee' },
+
+  // Dungeon mobs
+  'Gargoyle':           { hp: 220,  atk: 22, def: 16, spd: 42,  rng: 55,  color: '#607d8b', xp: 55,  gold: 35,  isBoss: false, size: 14, attackStyle: 'melee' },
+  'Minotaur':           { hp: 450,  atk: 32, def: 18, spd: 45,  rng: 65,  color: '#795548', xp: 110, gold: 70,  isBoss: true,  size: 22, attackStyle: 'melee' },
+  'Arachnid':           { hp: 160,  atk: 20, def: 6,  spd: 58,  rng: 50,  color: '#424242', xp: 42,  gold: 25,  isBoss: false, size: 14, attackStyle: 'melee' },
+  'Demon':              { hp: 300,  atk: 30, def: 10, spd: 50,  rng: 90,  color: '#b71c1c', xp: 85,  gold: 55,  isBoss: false, size: 16, attackStyle: 'aoe' },
+  'Arch Demon':         { hp: 800,  atk: 42, def: 18, spd: 42,  rng: 110, color: '#880e4f', xp: 250, gold: 180, isBoss: true,  size: 26, attackStyle: 'aoe' },
+  'Dryad':              { hp: 130,  atk: 16, def: 8,  spd: 48,  rng: 100, color: '#66bb6a', xp: 35,  gold: 20,  isBoss: false, size: 11, attackStyle: 'ranged' },
+  'Horn Beetle':        { hp: 180,  atk: 20, def: 14, spd: 40,  rng: 50,  color: '#33691e', xp: 45,  gold: 25,  isBoss: false, size: 12, attackStyle: 'melee' },
+  'Cave Hound':         { hp: 120,  atk: 18, def: 5,  spd: 65,  rng: 50,  color: '#4e342e', xp: 30,  gold: 16,  isBoss: false, size: 11, attackStyle: 'melee' },
+  'Fiend':              { hp: 200,  atk: 24, def: 8,  spd: 52,  rng: 80,  color: '#6a1b9a', xp: 55,  gold: 35,  isBoss: false, size: 13, attackStyle: 'ranged' },
+  'Reptilian':          { hp: 170,  atk: 20, def: 10, spd: 55,  rng: 55,  color: '#388e3c', xp: 42,  gold: 26,  isBoss: false, size: 12, attackStyle: 'melee' },
+  'Ogre':               { hp: 500,  atk: 35, def: 14, spd: 32,  rng: 70,  color: '#827717', xp: 110, gold: 65,  isBoss: true,  size: 24, attackStyle: 'melee' },
+  'Ogre Bone Crusher':  { hp: 650,  atk: 40, def: 18, spd: 30,  rng: 75,  color: '#6d4c41', xp: 160, gold: 100, isBoss: true,  size: 26, attackStyle: 'melee' },
+  'Juggernaut':         { hp: 1000, atk: 38, def: 28, spd: 25,  rng: 65,  color: '#455a64', xp: 250, gold: 180, isBoss: true,  size: 28, attackStyle: 'melee' },
+  'Yeti':               { hp: 600,  atk: 32, def: 20, spd: 38,  rng: 70,  color: '#eceff1', xp: 140, gold: 90,  isBoss: true,  size: 24, attackStyle: 'melee' },
+  'Kraken':             { hp: 900,  atk: 40, def: 16, spd: 30,  rng: 150, color: '#006064', xp: 300, gold: 220, isBoss: true,  size: 30, attackStyle: 'aoe' },
+  'Mimic':              { hp: 200,  atk: 26, def: 12, spd: 0,   rng: 50,  color: '#ffd600', xp: 60,  gold: 80,  isBoss: false, size: 10, attackStyle: 'melee' },
+
+  // Golem variants
+  'Ice Golem':          { hp: 400,  atk: 26, def: 22, spd: 24,  rng: 60,  color: '#b3e5fc', xp: 80,  gold: 45,  isBoss: false, size: 18, attackStyle: 'melee' },
+  'Lava Golem':         { hp: 420,  atk: 30, def: 20, spd: 22,  rng: 65,  color: '#ff5722', xp: 85,  gold: 50,  isBoss: false, size: 18, attackStyle: 'melee' },
+  'Forest Golem':       { hp: 350,  atk: 22, def: 20, spd: 26,  rng: 60,  color: '#2e7d32', xp: 70,  gold: 38,  isBoss: false, size: 17, attackStyle: 'melee' },
+  'Stone Golem':        { hp: 380,  atk: 24, def: 24, spd: 20,  rng: 58,  color: '#757575', xp: 75,  gold: 42,  isBoss: false, size: 18, attackStyle: 'melee' },
+
+  // Drake variants (10 — mountable after taming)
+  'Emerald Drake':      { hp: 750,  atk: 34, def: 16, spd: 55,  rng: 130, color: '#00e676', xp: 180, gold: 120, isBoss: false, size: 22, attackStyle: 'ranged' },
+  'Forest Drake':       { hp: 700,  atk: 30, def: 18, spd: 52,  rng: 120, color: '#1b5e20', xp: 160, gold: 100, isBoss: false, size: 20, attackStyle: 'ranged' },
+  'Frigid Drake':       { hp: 720,  atk: 32, def: 16, spd: 50,  rng: 125, color: '#4dd0e1', xp: 170, gold: 110, isBoss: false, size: 21, attackStyle: 'ranged' },
+  'Hellfire Drake':     { hp: 800,  atk: 38, def: 14, spd: 58,  rng: 140, color: '#ff3d00', xp: 200, gold: 140, isBoss: false, size: 23, attackStyle: 'aoe' },
+  'Lava Drake':         { hp: 780,  atk: 36, def: 15, spd: 50,  rng: 130, color: '#dd2c00', xp: 190, gold: 130, isBoss: false, size: 22, attackStyle: 'aoe' },
+  'Nightstalker Drake': { hp: 680,  atk: 34, def: 12, spd: 65,  rng: 120, color: '#311b92', xp: 170, gold: 110, isBoss: false, size: 20, attackStyle: 'melee' },
+  'Rock Drake':         { hp: 850,  atk: 30, def: 26, spd: 38,  rng: 110, color: '#8d6e63', xp: 180, gold: 120, isBoss: false, size: 24, attackStyle: 'melee' },
+  'Void Drake':         { hp: 900,  atk: 40, def: 18, spd: 48,  rng: 150, color: '#1a237e', xp: 250, gold: 180, isBoss: true,  size: 26, attackStyle: 'aoe' },
+  'Dragon Bone Drake':  { hp: 950,  atk: 42, def: 22, spd: 45,  rng: 140, color: '#fafafa', xp: 280, gold: 200, isBoss: true,  size: 28, attackStyle: 'aoe' },
+
+  // Dark Elves
+  'Dark Elf Guard':     { hp: 180,  atk: 20, def: 12, spd: 55,  rng: 55,  color: '#37474f', xp: 45,  gold: 28,  isBoss: false, size: 11, attackStyle: 'melee' },
+  'Dark Elf Archer':    { hp: 140,  atk: 22, def: 6,  spd: 58,  rng: 200, color: '#263238', xp: 42,  gold: 26,  isBoss: false, size: 10, attackStyle: 'ranged' },
+  'Dark Elf Commander': { hp: 350,  atk: 28, def: 16, spd: 50,  rng: 65,  color: '#1a237e', xp: 100, gold: 65,  isBoss: true,  size: 13, attackStyle: 'melee' },
+  'Dark Elf Lord':      { hp: 700,  atk: 38, def: 22, spd: 45,  rng: 80,  color: '#0d47a1', xp: 220, gold: 150, isBoss: true,  size: 16, attackStyle: 'aoe' },
+
+  // World bosses
+  'Cerberus':           { hp: 1600, atk: 48, def: 22, spd: 50,  rng: 80,  color: '#b71c1c', xp: 450, gold: 350, isBoss: true,  size: 30, attackStyle: 'melee' },
+  'Gorgoz':             { hp: 1400, atk: 44, def: 26, spd: 35,  rng: 100, color: '#4a148c', xp: 400, gold: 300, isBoss: true,  size: 28, attackStyle: 'aoe' },
+  'Ancient Thresher':   { hp: 1800, atk: 50, def: 20, spd: 40,  rng: 120, color: '#1b5e20', xp: 500, gold: 380, isBoss: true,  size: 32, attackStyle: 'aoe' },
+  'Vile Terror Bringer':{ hp: 2000, atk: 55, def: 24, spd: 38,  rng: 110, color: '#311b92', xp: 600, gold: 450, isBoss: true,  size: 34, attackStyle: 'aoe' },
+  'Corrupted Flame Eater':{ hp: 1500, atk: 46, def: 18, spd: 45, rng: 130, color: '#ff6f00', xp: 420, gold: 320, isBoss: true, size: 28, attackStyle: 'aoe' },
 };
 
 // ── Interfaces ─────────────────────────────────────────────────

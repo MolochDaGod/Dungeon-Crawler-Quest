@@ -16,6 +16,7 @@ import {
   SG_ENVIRONMENT_PACK,
   HIGHLAND_BUILDINGS_PACK,
 } from './elf-asset-packs';
+import { GRUDGE_LEGACY_PACKS } from './grudge-legacy-packs';
 
 const P = '/assets/packs';
 
@@ -679,6 +680,9 @@ export const MEDIEVAL_PROPS_PACK: AssetPack = {
 
 // ── Elf / Fabled Shore Packs (Zone 2) ──────────────────────────
 // (imported at top of file from './elf-asset-packs')
+
+// ── GRUDGE Legacy Packs (from Unity FRESH GRUDGE project) ────
+// (imported at top of file from './grudge-legacy-packs')
 export {
   ENCHANTED_FOREST_PACK,
   ELF_WEAPON_PACK,
@@ -719,6 +723,8 @@ export const ALL_ASSET_PACKS: AssetPack[] = [
   VILLAGER_CHARACTER_PACK,
   // Elf / Fabled Shore (Zone 2) packs
   ...ELF_ASSET_PACKS,
+  // GRUDGE Legacy (Unity FRESH GRUDGE conversion)
+  ...GRUDGE_LEGACY_PACKS,
 ];
 
 /** Flat list of every asset for quick lookups */
