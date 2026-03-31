@@ -10,6 +10,7 @@ import { HeroData, HEROES } from './types';
 import type { PlayerCharacterState } from './player-characters';
 import { createPlayerCharacterState, RACE_FACTIONS, findBestHeroModel } from './player-characters';
 import { isPuterAvailable, kvSave, kvLoad } from './puter-cloud';
+import { getAuthToken, getSession } from './grudge-auth';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -22,9 +23,9 @@ const LOCAL_KEY = 'grudge_player_character';
 const PUTER_KEY = 'player_character';
 const SYNC_INTERVAL = 30_000; // 30s
 
-/** Returns Authorization header using stored Grudge JWT, or empty object if none */
+/** Returns Authorization header using Grudge JWT from auth service (falls back to localStorage) */
 function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem('grudge_auth_token');
+  const token = getAuthToken();
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
@@ -203,8 +204,9 @@ export function updateCharacter(updates: Partial<PlayerCharacterState>): void {
  * Returns the resolved HeroData or null if no character exists.
  */
 export async function ensurePlayerHeroLoaded(): Promise<HeroData | null> {
-  // 1. Try loading from backend via grudge auth
-  const grudgeId = localStorage.getItem('grudge_id') || null;
+  // 1. Try loading from backend via grudge auth session
+  const session = getSession();
+  const grudgeId = session?.grudgeId || localStorage.getItem('grudge_id') || null;
   let pc = await loadPlayerCharacter(grudgeId || undefined);
 
   // 2. Fallback: recover from grudge_custom_hero localStorage
