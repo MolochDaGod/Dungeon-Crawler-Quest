@@ -90,9 +90,8 @@ export class GenesisPlayerController {
     this.playerNode = playerNode;
     this.canvas = canvas;
 
-    // Replace FreeCamera with ArcRotateCamera for 3rd person
+    // Switch to ArcRotateCamera for 3rd person (don't dispose old — just detach)
     oldCamera.detachControl();
-    oldCamera.dispose();
 
     this.camera = new ArcRotateCamera(
       "thirdPerson",
@@ -109,10 +108,10 @@ export class GenesisPlayerController {
     this.camera.minZ = 0.5;
     this.camera.maxZ = 5000;
     this.camera.wheelPrecision = 30;
-    this.camera.panningSensibility = 0; // disable panning
-    // Only rotate on LMB drag
+    this.camera.panningSensibility = 0;
     this.camera.attachControl(canvas, true);
     this.camera.inputs.removeByType("ArcRotateCameraPointersInput");
+    scene.activeCamera = this.camera;
 
     this.playerY = playerNode.position.y;
 
@@ -314,19 +313,26 @@ export class GenesisPlayerController {
       }
     }
 
-    // ── Gravity / Jump ──────────────────────────────────────
+    // ── Gravity / Jump + terrain raycast ──────────────────
     this.velocityY += GRAVITY * dt;
     this.playerY += this.velocityY * dt;
 
-    // Simple ground collision (terrain at y=0 approx)
-    // TODO: raycast against actual terrain mesh
-    const groundY = 0;
+    // Raycast down to find terrain height
+    let groundY = 0;
+    const terrain = this.scene.getMeshByName("island");
+    if (terrain) {
+      const ray = new Ray(new Vector3(pp.x, pp.y + 50, pp.z), new Vector3(0, -1, 0), 100);
+      const hit = ray.intersectsMesh(terrain as any);
+      if (hit.hit && hit.pickedPoint) {
+        groundY = hit.pickedPoint.y;
+      }
+    }
     if (this.playerY <= groundY) {
       this.playerY = groundY;
       this.velocityY = 0;
       this.grounded = true;
     }
-    pp.y = this.playerY + 0.9; // half player height offset
+    pp.y = this.playerY + 0.9;
 
     // Apply facing rotation
     this.playerNode.rotation = new Vector3(0, this.facing, 0);

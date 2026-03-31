@@ -46,6 +46,11 @@ import { GenesisHUD } from "./genesis-hud";
 import { buildCharacterSelectScene, type CharacterSelectResult } from "./genesis-character-select";
 
 // ── Constants ──────────────────────────────────────────────────
+const MODEL_PATHS = [
+  "/assets/grudge-legacy/character/bambi.glb",
+  "/assets/grudge-legacy/character/basefemale.glb",
+  "/assets/grudge-legacy/character/villhelm.glb",
+];
 const SCALE_XZ = 2.5;
 const SCALE_Y = 0.22;
 const UNITY_CENTER_X = -133.3;
@@ -189,10 +194,11 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
 
   // DefaultRenderingPipeline created AFTER player controller (needs final camera)
 
-  // ── Fog ───────────────────────────────────────────────────
-  scene.fogMode = Scene.FOGMODE_EXP2;
+  // ── Fog (light, doesn't hide geometry) ───────────────────
+  scene.fogMode = Scene.FOGMODE_LINEAR;
   scene.fogColor = new Color3(0.55, 0.78, 0.95);
-  scene.fogDensity = 0.0008;
+  scene.fogStart = 400;
+  scene.fogEnd = 2500;
 
   // ── Terrain ───────────────────────────────────────────────
   const islandW = 734 * SCALE_XZ;
@@ -236,39 +242,20 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
   terrainMat.environmentIntensity = 0.4;
   terrain.material = terrainMat;
 
-  // ── Ocean ─────────────────────────────────────────────────
+  // ── Ocean (simple, no subsurface — renders reliably) ───────
   const ocean = MeshBuilder.CreateGround("ocean", {
-    width: 8000, height: 8000, subdivisions: 128,
+    width: 6000, height: 6000, subdivisions: 32,
   }, scene);
-  ocean.position.y = -0.5;
+  ocean.position.y = -1;
 
   const oceanMat = new PBRMaterial("oceanMat", scene);
-  oceanMat.albedoColor = new Color3(0.05, 0.18, 0.32);
-  oceanMat.roughness = 0.15;
+  oceanMat.albedoColor = new Color3(0.06, 0.2, 0.35);
+  oceanMat.roughness = 0.2;
   oceanMat.metallic = 0.0;
-  oceanMat.alpha = 0.82;
-  oceanMat.subSurface.isRefractionEnabled = true;
-  oceanMat.subSurface.refractionIntensity = 0.4;
-  oceanMat.subSurface.tintColor = new Color3(0.02, 0.12, 0.2);
+  oceanMat.alpha = 0.85;
   oceanMat.backFaceCulling = false;
   ocean.material = oceanMat;
-
-  // Animate ocean waves
-  const oceanVerts = ocean.getVerticesData("position");
-  const oceanOrigY = oceanVerts ? Float32Array.from(oceanVerts) : null;
   let waveTime = 0;
-  scene.onBeforeRenderObservable.add(() => {
-    if (!oceanVerts || !oceanOrigY) return;
-    waveTime += engine.getDeltaTime() * 0.001;
-    for (let i = 0; i < oceanVerts.length; i += 3) {
-      const ox = oceanOrigY[i], oz = oceanOrigY[i + 2];
-      oceanVerts[i + 1] = oceanOrigY[i + 1] +
-        Math.sin(ox * 0.008 + waveTime * 1.2) * 0.6 +
-        Math.cos(oz * 0.01 + waveTime * 0.8) * 0.4 +
-        Math.sin((ox + oz) * 0.005 + waveTime * 0.5) * 0.3;
-    }
-    ocean.updateVerticesData("position", oceanVerts);
-  });
 
   // ── Load scene hierarchy ──────────────────────────────────
   let sceneData: GenesisSceneData | null = null;
@@ -541,11 +528,17 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
     pl.intensity = 15; pl.diffuse = new Color3(1.0, 0.7, 0.3); pl.range = 30;
   }
 
-  // ── Player character ──────────────────────────────────────
-  const spawnPos = raceStarts.barbarian || raceStarts.human || unityToWorld(-380.52, 27.13, -2862.59);
-  const playerNode = await loadGLB(scene, "/assets/grudge-legacy/character/bambi.glb", 1.8, spawnPos, shadowGen);
-  if (playerNode) playerNode.position.y += 1;
-  else {
+  // ── Player character (spawn at island center, guaranteed on terrain) ──
+  // Use race start if found, otherwise island center
+  const spawnPos = raceStarts[selection.race.toLowerCase()] || new Vector3(0, 10, 0);
+  console.log(`[Genesis] Spawn position: ${spawnPos.toString()}, race starts found: ${Object.keys(raceStarts).join(', ') || 'none'}`);
+
+  const charModel = MODEL_PATHS[selection.modelIndex] || "/assets/grudge-legacy/character/bambi.glb";
+  const playerNode = await loadGLB(scene, charModel, 1.8, spawnPos, shadowGen);
+  if (playerNode) {
+    playerNode.name = "player";
+    playerNode.position.y = spawnPos.y + 1;
+  } else {
     const cap = MeshBuilder.CreateCapsule("player", { height: 1.8, radius: 0.4 }, scene);
     cap.position = spawnPos.clone(); cap.position.y += 1;
     const pm = new PBRMaterial("playerMat", scene);

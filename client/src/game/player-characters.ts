@@ -163,7 +163,7 @@ const CLASS_BODY_AFFINITY: Record<string, BodyType[]> = {
   Warrior: ['heavy_male', 'heavy_female', 'medium_male', 'medium_female'],
   Mage:    ['medium_male', 'medium_female', 'slim_male', 'slim_female'],
   Ranger:  ['slim_male', 'slim_female', 'medium_male', 'medium_female'],
-  Worg:    ['medium_male', 'medium_female', 'slim_male', 'slim_female'],
+  Worge:   ['medium_male', 'medium_female', 'slim_male', 'slim_female'],
 };
 
 /**

@@ -106,7 +106,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  human_worg: {
+  human_worge: {
     modelPath: '/assets/models/characters/berserker.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -134,7 +134,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  barbarian_worg: {
+  barbarian_worge: {
     modelPath: '/assets/models/characters/humandeathgiver.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -162,7 +162,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  dwarf_worg: {
+  dwarf_worge: {
     modelPath: '/assets/models/characters/Character_Toon_Animated.glb',
     scale: 0.006,
     offset: new THREE.Vector3(0, 0, 0),
@@ -190,7 +190,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  elf_worg: {
+  elf_worge: {
     modelPath: '/assets/models/characters/Animated_Woman.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -218,7 +218,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  orc_worg: {
+  orc_worge: {
     modelPath: '/assets/models/characters/orcpeon.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -246,7 +246,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  undead_worg: {
+  undead_worge: {
     modelPath: '/assets/models/characters/undeadworker.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -504,7 +504,7 @@ export function getJungleMobPrefab(mobType: string): string {
 export function getWeaponForClass(heroClass: string): string {
   switch (heroClass.toLowerCase()) {
     case 'warrior': return 'sword';
-    case 'worg': return 'axe';
+    case 'worge': return 'axe';
     case 'mage': return 'staff';
     case 'ranger': return 'bow';
     default: return 'sword';
@@ -512,7 +512,7 @@ export function getWeaponForClass(heroClass: string): string {
 }
 
 /**
- * Get the bear form prefab key for Worg shapeshifts.
+ * Get the bear form prefab key for Worge shapeshifts.
  * Always returns 'owlbear' — the per-race color tint is applied
  * after loading via owlbear-form.ts applyBearTintThree/Babylon.
  */
