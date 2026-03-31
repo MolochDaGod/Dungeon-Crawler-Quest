@@ -108,5 +108,7 @@ export default function GenesisPage() {
     );
   }
 
-  return <OpenWorldPage />;
+  // Genesis always uses 3D BabylonJS renderer
+  // The open-world game logic runs the same, but rendering is 3D
+  return <OpenWorldPage force3D={true} />;
 }

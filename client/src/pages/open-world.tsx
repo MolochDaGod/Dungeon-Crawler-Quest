@@ -14,6 +14,7 @@ import {
   useConsumableHotbar,
 } from '@/game/open-world';
 import { OS_BASE } from '@/game/grudge-items';
+import { getSunIntensity } from '@/game/world-state';
 import { getAvailableMissions } from '@/game/missions';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
 import { initGLBSprites } from '@/game/babylon-glb-sprites';
@@ -25,12 +26,15 @@ import NpcDialog from '@/components/NpcDialog';
 import { IntroSequence, shouldShowIntro } from '@/components/IntroSequence';
 import { ensurePlayerHeroLoaded, getPlayerHeroSync } from '@/game/player-account';
 import { ensurePixelGothicLoaded, EVENT_BANNERS } from '@/game/combat-popups';
+import { OpenWorldBabylonRenderer } from '@/game/babylon-ow-renderer';
 
-export default function OpenWorldPage() {
+export default function OpenWorldPage({ force3D = false }: { force3D?: boolean } = {}) {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<OpenWorldState | null>(null);
   const rendererRef = useRef<OpenWorldRenderer | null>(null);
+  const renderer3DRef = useRef<OpenWorldBabylonRenderer | null>(null);
   const minimapRef = useRef<MinimapConfig>(createMinimapConfig());
   const keysRef = useRef<Set<string>>(new Set());
   const [hud, setHud] = useState<OWHudState | null>(null);
@@ -59,18 +63,32 @@ export default function OpenWorldPage() {
     // Sync-ensure the player hero is registered (may have been loaded async above)
     getPlayerHeroSync();
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    resize();
-    window.addEventListener('resize', resize);
-
     const state = createOpenWorldState(heroId);
     stateRef.current = state;
 
-    const renderer = new OpenWorldRenderer(canvas);
-    rendererRef.current = renderer;
+    // ── 3D BabylonJS mode (Genesis / force3D) ──────────────────
+    if (force3D && containerRef.current) {
+      const babylon3D = new OpenWorldBabylonRenderer(containerRef.current);
+      renderer3DRef.current = babylon3D;
+
+      // Load player model
+      const hd = getHeroById(state.player.heroDataId);
+      if (hd) {
+        babylon3D.loadPlayerModel(hd.id, hd.heroClass, hd.race);
+      }
+    }
+
+    // ── 2D Canvas mode (legacy) ─────────────────────────────────
+    const canvas = canvasRef.current;
+    let resize = () => {};
+    if (!force3D && canvas) {
+      resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+      resize();
+      window.addEventListener('resize', resize);
+
+      const renderer = new OpenWorldRenderer(canvas);
+      rendererRef.current = renderer;
+    }
 
     // Load PixelGothic font for canvas text (damage numbers, combo, etc.)
     ensurePixelGothicLoaded();
@@ -93,12 +111,21 @@ export default function OpenWorldPage() {
       const activeKeys = (uiBlocksInputRef.current || state.activeNPC) ? emptyKeys : keysRef.current;
       updateOpenWorld(state, dt, activeKeys, bindings);
 
-      renderer.render(state);
+      // Render with the active renderer
+      if (force3D && renderer3DRef.current) {
+        const p = state.player;
+        const brightness = state.worldState ? getSunIntensity(state.worldState) : 1;
+        renderer3DRef.current.update(p.x, p.y, p.facing, p.animState, state.gameTime, brightness);
+      } else if (rendererRef.current) {
+        rendererRef.current.render(state);
+      }
 
-      // Render minimap on top
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        renderMinimap(ctx, state, minimapRef.current, canvas.width, canvas.height);
+      // Render minimap on top (2D canvas only)
+      if (!force3D && canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          renderMinimap(ctx, state, minimapRef.current, canvas.width, canvas.height);
+        }
       }
 
       hudTimer += dt;
@@ -241,6 +268,7 @@ export default function OpenWorldPage() {
     return () => {
       cancelAnimationFrame(animId);
       if (zoneBannerTimer.current) clearTimeout(zoneBannerTimer.current);
+      if (renderer3DRef.current) { renderer3DRef.current.dispose(); renderer3DRef.current = null; }
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
@@ -274,7 +302,10 @@ export default function OpenWorldPage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black" data-testid="open-world-page">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" data-testid="canvas-openworld" />
+      {/* 3D BabylonJS container (Genesis / force3D mode) */}
+      {force3D && <div ref={containerRef} className="absolute inset-0 w-full h-full" data-testid="babylon-container" />}
+      {/* 2D Canvas (legacy mode) */}
+      {!force3D && <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" data-testid="canvas-openworld" />}
 
       {/* ═ Event banner overlay (animated GIF from Craftpix) ═ */}
       {eventBanner && (
