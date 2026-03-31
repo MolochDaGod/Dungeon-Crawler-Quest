@@ -21,9 +21,9 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 
-// Side-effect imports required by BabylonJS
+// Shadow system — must import the scene component for tree-shaking
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
-import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
+import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 
 // ── Scale constants (from genesis-island-converter) ────────────
 
