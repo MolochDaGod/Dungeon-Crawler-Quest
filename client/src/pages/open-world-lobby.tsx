@@ -3,7 +3,9 @@ import { useLocation } from 'wouter';
 import { io, Socket } from 'socket.io-client';
 import { HEROES } from '@/game/types';
 
-const WORLD_SERVER = import.meta.env.VITE_WORLD_SERVER_URL || 'https://grudge-openworld-server-production.up.railway.app';
+// WebSocket server — Grudge Studio VPS (ws.grudge-studio.com)
+// Override per-env with VITE_WORLD_SERVER_URL
+const WORLD_SERVER = import.meta.env.VITE_WORLD_SERVER_URL || 'https://ws.grudge-studio.com';
 
 interface WorldInfo {
   code: string;
@@ -26,11 +28,13 @@ export default function OpenWorldLobby() {
 
   // Connect to world server
   useEffect(() => {
+    const grudgeToken = localStorage.getItem('grudge_auth_token') || undefined;
     const s = io(WORLD_SERVER, {
-      path: '/world',
+      path: '/game',
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 3,
-      timeout: 5000,
+      timeout: 8000,
+      auth: grudgeToken ? { token: grudgeToken } : undefined,
     });
 
     s.on('connect', () => {

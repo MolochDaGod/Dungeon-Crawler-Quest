@@ -13,10 +13,21 @@ import { isPuterAvailable, kvSave, kvLoad } from './puter-cloud';
 
 // ── Constants ──────────────────────────────────────────────────
 
-const GRUDGE_API_BASE = '/api';
+// Primary: Grudge Studio VPS (api.grudge-studio.com)
+// Fallback: local Express server (/api) for dev without VPS
+const GRUDGE_API_BASE =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GRUDGE_API) ||
+  'https://api.grudge-studio.com';
+
 const LOCAL_KEY = 'grudge_player_character';
 const PUTER_KEY = 'player_character';
 const SYNC_INTERVAL = 30_000; // 30s
+
+/** Returns Authorization header using stored Grudge JWT, or empty object if none */
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('grudge_auth_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
 
 // ── State ──────────────────────────────────────────────────────
 
@@ -34,7 +45,9 @@ export async function loadPlayerCharacter(grudgeId?: string): Promise<PlayerChar
   // 1. Try Grudge backend
   if (grudgeId) {
     try {
-      const resp = await fetch(`${GRUDGE_API_BASE}/characters/${grudgeId}`);
+      const resp = await fetch(`${GRUDGE_API_BASE}/characters/${grudgeId}`, {
+        headers: { ...authHeaders() },
+      });
       if (resp.ok) {
         const data = await resp.json();
         _currentCharacter = data as PlayerCharacterState;
@@ -91,7 +104,7 @@ export async function savePlayerCharacter(character: PlayerCharacterState): Prom
   try {
     const resp = await fetch(`${GRUDGE_API_BASE}/characters/${character.grudgeId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(character),
     });
     backendOk = resp.ok;
@@ -129,7 +142,7 @@ export async function createNewCharacter(
   try {
     const resp = await fetch(`${GRUDGE_API_BASE}/characters`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(character),
     });
     if (resp.ok) {
