@@ -1,0 +1,10410 @@
+{
+  "id": 10,
+  "name": "Genesis Island",
+  "description": "A small island accessible by boat. Guilds can claim and defend it as their own. The birthplace of the GRUDGE legacy.",
+  "bounds": {
+    "x": 0,
+    "y": 0,
+    "w": 16000,
+    "h": 16000
+  },
+  "_scaleRef": {
+    "unityToXZ": 2.5,
+    "unityToY": 0.22,
+    "unityCenterX": -133.3,
+    "unityCenterZ": -155.6,
+    "unityGroundBase": -2901,
+    "unityGroundSurface": -2880,
+    "islandBounds": {
+      "x": 7083,
+      "y": 7139,
+      "w": 1835,
+      "h": 1723
+    },
+    "note": "1 Unity unit ≈ 1 meter ≈ 2.5 DCQ units. Height compressed 0.22x. Island is ~1835×1722 DCQ units centered in 16000×16000 zone."
+  },
+  "requiredLevel": 5,
+  "isPvP": true,
+  "isSafeZone": false,
+  "terrainType": "grass",
+  "ambientColor": "#4a7a3a",
+  "islandType": "village",
+  "claimable": true,
+  "faction": null,
+  "playerSpawns": [
+    {
+      "x": 7382,
+      "y": 8457,
+      "height": 3.83
+    }
+  ],
+  "monsterSpawns": [
+    {
+      "x": 8283,
+      "y": 7626,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8153,
+      "y": 7624,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7960,
+      "y": 7562,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8065,
+      "y": 7414,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7707,
+      "y": 7677,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7592,
+      "y": 8150,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7872,
+      "y": 8719,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7830,
+      "y": 7741,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8017,
+      "y": 7344,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7511,
+      "y": 8792,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7856,
+      "y": 7981,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7517,
+      "y": 8213,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7478,
+      "y": 7734,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7787,
+      "y": 7512,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7650,
+      "y": 8097,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7838,
+      "y": 7768,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7628,
+      "y": 7557,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7310,
+      "y": 7735,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7787,
+      "y": 8137,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8681,
+      "y": 8067,
+      "type": "Crab",
+      "level": 2,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7816,
+      "y": 8581,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7847,
+      "y": 8448,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7823,
+      "y": 8570,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7478,
+      "y": 8602,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7435,
+      "y": 8333,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7689,
+      "y": 8177,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7757,
+      "y": 8323,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7668,
+      "y": 8338,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7773,
+      "y": 8520,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7647,
+      "y": 8708,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8633,
+      "y": 8221,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8419,
+      "y": 8112,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8263,
+      "y": 8197,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8288,
+      "y": 8312,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8413,
+      "y": 7884,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8555,
+      "y": 8172,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8666,
+      "y": 8361,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8101,
+      "y": 8566,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8054,
+      "y": 8535,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8178,
+      "y": 8224,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8068,
+      "y": 8016,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7961,
+      "y": 7742,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8383,
+      "y": 8406,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8566,
+      "y": 8260,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8442,
+      "y": 7463,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7741,
+      "y": 7580,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8367,
+      "y": 8127,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8543,
+      "y": 7339,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8648,
+      "y": 7913,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8575,
+      "y": 8000,
+      "type": "Bandit",
+      "level": 5,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7789,
+      "y": 7894,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7839,
+      "y": 7890,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7805,
+      "y": 7851,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7783,
+      "y": 7851,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7772,
+      "y": 7902,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7781,
+      "y": 7938,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7773,
+      "y": 7852,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7776,
+      "y": 7894,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7882,
+      "y": 7887,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7964,
+      "y": 7894,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7959,
+      "y": 7885,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7962,
+      "y": 7940,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7968,
+      "y": 7929,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7958,
+      "y": 7928,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7926,
+      "y": 7904,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7786,
+      "y": 7947,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7767,
+      "y": 7870,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7968,
+      "y": 7939,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7967,
+      "y": 7886,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 7806,
+      "y": 7833,
+      "type": "Crab",
+      "level": 3,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8312,
+      "y": 7734,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8271,
+      "y": 7713,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8309,
+      "y": 7648,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8450,
+      "y": 7613,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8476,
+      "y": 7572,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8539,
+      "y": 7602,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8297,
+      "y": 7709,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8294,
+      "y": 7668,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8327,
+      "y": 7685,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8475,
+      "y": 7620,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8492,
+      "y": 7589,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8525,
+      "y": 7606,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8485,
+      "y": 7655,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8457,
+      "y": 7708,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8362,
+      "y": 7701,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8403,
+      "y": 7722,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8473,
+      "y": 7758,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8517,
+      "y": 7785,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8493,
+      "y": 7840,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8461,
+      "y": 7881,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8363,
+      "y": 7833,
+      "type": "Spider",
+      "level": 6,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8330,
+      "y": 7522,
+      "type": "Cave Hound",
+      "level": 8,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8332,
+      "y": 7486,
+      "type": "Cave Hound",
+      "level": 8,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8336,
+      "y": 7503,
+      "type": "Cave Hound",
+      "level": 8,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8371,
+      "y": 7531,
+      "type": "Cave Hound",
+      "level": 8,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8292,
+      "y": 7518,
+      "type": "Cave Hound",
+      "level": 8,
+      "respawnTime": 30,
+      "count": 1
+    },
+    {
+      "x": 8367,
+      "y": 7500,
+      "type": "Cave Hound",
+      "level": 8,
+      "respawnTime": 30,
+      "count": 1
+    }
+  ],
+  "npcPositions": [
+    {
+      "x": 7384,
+      "y": 8410,
+      "name": "Barb Scout Path 1"
+    },
+    {
+      "x": 7434,
+      "y": 8354,
+      "name": "Barb Scout Path 2"
+    },
+    {
+      "x": 7405,
+      "y": 8307,
+      "name": "Barb Scout Path 3"
+    },
+    {
+      "x": 7314,
+      "y": 8205,
+      "name": "Barb Scout Path 4"
+    },
+    {
+      "x": 7224,
+      "y": 8190,
+      "name": "Barb Scout Path 5"
+    },
+    {
+      "x": 7285,
+      "y": 8193,
+      "name": "Barb Scout Path 6"
+    },
+    {
+      "x": 7359,
+      "y": 8260,
+      "name": "Barb Scout Path 7"
+    },
+    {
+      "x": 7436,
+      "y": 8335,
+      "name": "Barb Scout Path 8"
+    },
+    {
+      "x": 7408,
+      "y": 8384,
+      "name": "Barb Scout Path 9"
+    }
+  ],
+  "harvestablePositions": [
+    {
+      "x": 8335,
+      "y": 7914,
+      "type": "mining",
+      "name": "CartMetal"
+    },
+    {
+      "x": 8487,
+      "y": 7591,
+      "type": "mining",
+      "name": "CartMetal"
+    },
+    {
+      "x": 8376,
+      "y": 7825,
+      "type": "mining",
+      "name": "CartMetal"
+    },
+    {
+      "x": 8289,
+      "y": 7698,
+      "type": "mining",
+      "name": "CartMetal"
+    },
+    {
+      "x": 8008,
+      "y": 7984,
+      "type": "scavenging",
+      "name": "HARVESTABLES"
+    },
+    {
+      "x": 7525,
+      "y": 7660,
+      "type": "logging",
+      "name": "Tree2 Imposter (1)"
+    },
+    {
+      "x": 7939,
+      "y": 8183,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7939,
+      "y": 8183,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7978,
+      "y": 8473,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7978,
+      "y": 8473,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8364,
+      "y": 8364,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8364,
+      "y": 8364,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8604,
+      "y": 8283,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8604,
+      "y": 8283,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8239,
+      "y": 7991,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8239,
+      "y": 7991,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8393,
+      "y": 7838,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8393,
+      "y": 7838,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7912,
+      "y": 8084,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7912,
+      "y": 8084,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7745,
+      "y": 8265,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7745,
+      "y": 8265,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7959,
+      "y": 8207,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7959,
+      "y": 8207,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8440,
+      "y": 8072,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8440,
+      "y": 8072,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8314,
+      "y": 8307,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8314,
+      "y": 8307,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8424,
+      "y": 8188,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8424,
+      "y": 8188,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8026,
+      "y": 7828,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8026,
+      "y": 7828,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7995,
+      "y": 8238,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7995,
+      "y": 8238,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8522,
+      "y": 7985,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8522,
+      "y": 7985,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8003,
+      "y": 8075,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8003,
+      "y": 8075,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8630,
+      "y": 8265,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8630,
+      "y": 8265,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7785,
+      "y": 8257,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7785,
+      "y": 8257,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8018,
+      "y": 8553,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8018,
+      "y": 8553,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7889,
+      "y": 8150,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7889,
+      "y": 8150,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8051,
+      "y": 8449,
+      "type": "mining",
+      "name": "Stone Imposter (13)"
+    },
+    {
+      "x": 7911,
+      "y": 8175,
+      "type": "mining",
+      "name": "Stone Imposter (12)"
+    },
+    {
+      "x": 8014,
+      "y": 8288,
+      "type": "mining",
+      "name": "Stone Imposter (11)"
+    },
+    {
+      "x": 8105,
+      "y": 8205,
+      "type": "mining",
+      "name": "Stone Imposter (10)"
+    },
+    {
+      "x": 8213,
+      "y": 8262,
+      "type": "mining",
+      "name": "Stone Imposter (9)"
+    },
+    {
+      "x": 8198,
+      "y": 8519,
+      "type": "mining",
+      "name": "Stone Imposter (7)"
+    },
+    {
+      "x": 7862,
+      "y": 8519,
+      "type": "mining",
+      "name": "Stone Imposter (24)"
+    },
+    {
+      "x": 7298,
+      "y": 8537,
+      "type": "mining",
+      "name": "Stone Imposter (23)"
+    },
+    {
+      "x": 7572,
+      "y": 8571,
+      "type": "mining",
+      "name": "Stone Imposter (22)"
+    },
+    {
+      "x": 7437,
+      "y": 8559,
+      "type": "mining",
+      "name": "Stone Imposter (20)"
+    },
+    {
+      "x": 7702,
+      "y": 8311,
+      "type": "mining",
+      "name": "Stone Imposter (19)"
+    },
+    {
+      "x": 7709,
+      "y": 8171,
+      "type": "mining",
+      "name": "Stone Imposter (18)"
+    },
+    {
+      "x": 7977,
+      "y": 7974,
+      "type": "mining",
+      "name": "Stone Imposter (17)"
+    },
+    {
+      "x": 8224,
+      "y": 8013,
+      "type": "mining",
+      "name": "Stone Imposter (16)"
+    },
+    {
+      "x": 7492,
+      "y": 7658,
+      "type": "mining",
+      "name": "Stone Imposter (15)"
+    },
+    {
+      "x": 7803,
+      "y": 7649,
+      "type": "mining",
+      "name": "Stone Imposter (14)"
+    },
+    {
+      "x": 8473,
+      "y": 7395,
+      "type": "mining",
+      "name": "Stone Imposter (8)"
+    },
+    {
+      "x": 8654,
+      "y": 7793,
+      "type": "mining",
+      "name": "Stone Imposter (6)"
+    },
+    {
+      "x": 8494,
+      "y": 7786,
+      "type": "mining",
+      "name": "Stone Imposter (5)"
+    },
+    {
+      "x": 8603,
+      "y": 8032,
+      "type": "mining",
+      "name": "Stone Imposter (4)"
+    },
+    {
+      "x": 8469,
+      "y": 8041,
+      "type": "mining",
+      "name": "Stone Imposter (3)"
+    },
+    {
+      "x": 8685,
+      "y": 8348,
+      "type": "mining",
+      "name": "Stone Imposter (2)"
+    },
+    {
+      "x": 8593,
+      "y": 8328,
+      "type": "mining",
+      "name": "Stone Imposter (1)"
+    },
+    {
+      "x": 8294,
+      "y": 8136,
+      "type": "logging",
+      "name": "Tree Imposter (43)"
+    },
+    {
+      "x": 8399,
+      "y": 7292,
+      "type": "logging",
+      "name": "Tree Imposter (42)"
+    },
+    {
+      "x": 8426,
+      "y": 7354,
+      "type": "logging",
+      "name": "Tree2 Imposter (40)"
+    },
+    {
+      "x": 7730,
+      "y": 8314,
+      "type": "logging",
+      "name": "Tree Imposter (33)"
+    },
+    {
+      "x": 8403,
+      "y": 7595,
+      "type": "logging",
+      "name": "Tree Imposter (41)"
+    },
+    {
+      "x": 8455,
+      "y": 7602,
+      "type": "logging",
+      "name": "Tree2 Imposter (39)"
+    },
+    {
+      "x": 8528,
+      "y": 7604,
+      "type": "logging",
+      "name": "Tree Imposter (40)"
+    },
+    {
+      "x": 8541,
+      "y": 8136,
+      "type": "logging",
+      "name": "Tree2 Imposter (37)"
+    },
+    {
+      "x": 8404,
+      "y": 8288,
+      "type": "logging",
+      "name": "Tree Imposter (38)"
+    },
+    {
+      "x": 8009,
+      "y": 8233,
+      "type": "logging",
+      "name": "Tree2 Imposter (36)"
+    },
+    {
+      "x": 8215,
+      "y": 8125,
+      "type": "logging",
+      "name": "Tree Imposter (37)"
+    },
+    {
+      "x": 8218,
+      "y": 8027,
+      "type": "logging",
+      "name": "Tree Imposter (36)"
+    },
+    {
+      "x": 8187,
+      "y": 7905,
+      "type": "logging",
+      "name": "Tree2 Imposter (35)"
+    },
+    {
+      "x": 8046,
+      "y": 7868,
+      "type": "logging",
+      "name": "Tree Imposter (35)"
+    },
+    {
+      "x": 7981,
+      "y": 8148,
+      "type": "logging",
+      "name": "Tree2 Imposter (34)"
+    },
+    {
+      "x": 7862,
+      "y": 8078,
+      "type": "logging",
+      "name": "Tree Imposter (34)"
+    },
+    {
+      "x": 7863,
+      "y": 8181,
+      "type": "logging",
+      "name": "Tree2 Imposter (33)"
+    },
+    {
+      "x": 7841,
+      "y": 8215,
+      "type": "logging",
+      "name": "Tree2 Imposter (32)"
+    },
+    {
+      "x": 7732,
+      "y": 8145,
+      "type": "logging",
+      "name": "Tree2 Imposter (31)"
+    },
+    {
+      "x": 7365,
+      "y": 8288,
+      "type": "logging",
+      "name": "Tree2 Imposter (27)"
+    },
+    {
+      "x": 7587,
+      "y": 8249,
+      "type": "logging",
+      "name": "Tree2 Imposter (30)"
+    },
+    {
+      "x": 7645,
+      "y": 8197,
+      "type": "logging",
+      "name": "Tree2 Imposter (29)"
+    },
+    {
+      "x": 7655,
+      "y": 8202,
+      "type": "logging",
+      "name": "Tree Imposter (32)"
+    },
+    {
+      "x": 7464,
+      "y": 8344,
+      "type": "logging",
+      "name": "Tree2 Imposter (28)"
+    },
+    {
+      "x": 7548,
+      "y": 8683,
+      "type": "logging",
+      "name": "Tree2 Imposter (26)"
+    },
+    {
+      "x": 7598,
+      "y": 8754,
+      "type": "logging",
+      "name": "Tree2 Imposter (25)"
+    },
+    {
+      "x": 7402,
+      "y": 8608,
+      "type": "logging",
+      "name": "Tree Imposter (30)"
+    },
+    {
+      "x": 7325,
+      "y": 8548,
+      "type": "logging",
+      "name": "Tree2 Imposter (24)"
+    },
+    {
+      "x": 7452,
+      "y": 8555,
+      "type": "logging",
+      "name": "Tree Imposter (29)"
+    },
+    {
+      "x": 7758,
+      "y": 8466,
+      "type": "logging",
+      "name": "Tree2 Imposter (23)"
+    },
+    {
+      "x": 7897,
+      "y": 8480,
+      "type": "logging",
+      "name": "Tree Imposter (28)"
+    },
+    {
+      "x": 7894,
+      "y": 8370,
+      "type": "logging",
+      "name": "Tree2 Imposter (22)"
+    },
+    {
+      "x": 7746,
+      "y": 8357,
+      "type": "logging",
+      "name": "Tree Imposter (27)"
+    },
+    {
+      "x": 7649,
+      "y": 8348,
+      "type": "logging",
+      "name": "Tree2 Imposter (21)"
+    },
+    {
+      "x": 7567,
+      "y": 8519,
+      "type": "logging",
+      "name": "Tree Imposter (26)"
+    },
+    {
+      "x": 7579,
+      "y": 8584,
+      "type": "logging",
+      "name": "Tree2 Imposter (20)"
+    },
+    {
+      "x": 7565,
+      "y": 8541,
+      "type": "logging",
+      "name": "Tree Imposter (25)"
+    },
+    {
+      "x": 7684,
+      "y": 8603,
+      "type": "logging",
+      "name": "Tree2 Imposter (19)"
+    },
+    {
+      "x": 7649,
+      "y": 8659,
+      "type": "logging",
+      "name": "Tree Imposter (24)"
+    },
+    {
+      "x": 8508,
+      "y": 8368,
+      "type": "logging",
+      "name": "Tree Imposter (23)"
+    },
+    {
+      "x": 8295,
+      "y": 8518,
+      "type": "logging",
+      "name": "Tree2 Imposter (18)"
+    },
+    {
+      "x": 8636,
+      "y": 8322,
+      "type": "logging",
+      "name": "Tree Imposter (22)"
+    },
+    {
+      "x": 8686,
+      "y": 8311,
+      "type": "logging",
+      "name": "Tree Imposter (21)"
+    },
+    {
+      "x": 8106,
+      "y": 8535,
+      "type": "logging",
+      "name": "Tree2 Imposter (17)"
+    },
+    {
+      "x": 8023,
+      "y": 8460,
+      "type": "logging",
+      "name": "Tree Imposter (20)"
+    },
+    {
+      "x": 7977,
+      "y": 8518,
+      "type": "logging",
+      "name": "Tree2 Imposter (16)"
+    },
+    {
+      "x": 8021,
+      "y": 8615,
+      "type": "logging",
+      "name": "Tree Imposter (19)"
+    },
+    {
+      "x": 8058,
+      "y": 8573,
+      "type": "logging",
+      "name": "Tree Imposter (18)"
+    },
+    {
+      "x": 8254,
+      "y": 8501,
+      "type": "logging",
+      "name": "Tree Imposter (17)"
+    },
+    {
+      "x": 8253,
+      "y": 8319,
+      "type": "logging",
+      "name": "Tree2 Imposter (15)"
+    },
+    {
+      "x": 8277,
+      "y": 8364,
+      "type": "logging",
+      "name": "Tree2 Imposter (14)"
+    },
+    {
+      "x": 8228,
+      "y": 8548,
+      "type": "logging",
+      "name": "Tree Imposter (16)"
+    },
+    {
+      "x": 8162,
+      "y": 8574,
+      "type": "logging",
+      "name": "Tree Imposter (15)"
+    },
+    {
+      "x": 8660,
+      "y": 8331,
+      "type": "logging",
+      "name": "Tree2 Imposter (13)"
+    },
+    {
+      "x": 8399,
+      "y": 8361,
+      "type": "logging",
+      "name": "Tree Imposter (14)"
+    },
+    {
+      "x": 8284,
+      "y": 8013,
+      "type": "logging",
+      "name": "Tree Imposter (13)"
+    },
+    {
+      "x": 8340,
+      "y": 8320,
+      "type": "logging",
+      "name": "Tree2 Imposter (12)"
+    },
+    {
+      "x": 8432,
+      "y": 8170,
+      "type": "logging",
+      "name": "Tree2 Imposter (11)"
+    },
+    {
+      "x": 8542,
+      "y": 8218,
+      "type": "logging",
+      "name": "Tree Imposter (12)"
+    },
+    {
+      "x": 8613,
+      "y": 8227,
+      "type": "logging",
+      "name": "Tree2 Imposter (10)"
+    },
+    {
+      "x": 8565,
+      "y": 8027,
+      "type": "logging",
+      "name": "Tree Imposter (11)"
+    },
+    {
+      "x": 8398,
+      "y": 7938,
+      "type": "logging",
+      "name": "Tree Imposter (10)"
+    },
+    {
+      "x": 8424,
+      "y": 7805,
+      "type": "logging",
+      "name": "Tree2 Imposter (9)"
+    },
+    {
+      "x": 8588,
+      "y": 7740,
+      "type": "logging",
+      "name": "Tree Imposter (9)"
+    },
+    {
+      "x": 8587,
+      "y": 7692,
+      "type": "logging",
+      "name": "Tree Imposter (8)"
+    },
+    {
+      "x": 8526,
+      "y": 7993,
+      "type": "logging",
+      "name": "Tree2 Imposter (8)"
+    },
+    {
+      "x": 8476,
+      "y": 7670,
+      "type": "logging",
+      "name": "Tree2 Imposter (6)"
+    },
+    {
+      "x": 8506,
+      "y": 7527,
+      "type": "logging",
+      "name": "Tree Imposter (6)"
+    },
+    {
+      "x": 8294,
+      "y": 7493,
+      "type": "logging",
+      "name": "Tree Imposter (5)"
+    },
+    {
+      "x": 8268,
+      "y": 7505,
+      "type": "logging",
+      "name": "Tree2 Imposter (5)"
+    },
+    {
+      "x": 8355,
+      "y": 7494,
+      "type": "logging",
+      "name": "Tree Imposter (4)"
+    },
+    {
+      "x": 8449,
+      "y": 7408,
+      "type": "logging",
+      "name": "Tree2 Imposter (4)"
+    },
+    {
+      "x": 8320,
+      "y": 7323,
+      "type": "logging",
+      "name": "Tree2 Imposter (3)"
+    },
+    {
+      "x": 8344,
+      "y": 7319,
+      "type": "logging",
+      "name": "Tree Imposter (3)"
+    },
+    {
+      "x": 8142,
+      "y": 7376,
+      "type": "logging",
+      "name": "Tree2 Imposter (2)"
+    },
+    {
+      "x": 8131,
+      "y": 7308,
+      "type": "logging",
+      "name": "Tree Imposter (2)"
+    },
+    {
+      "x": 8213,
+      "y": 7283,
+      "type": "logging",
+      "name": "Tree Imposter (1)"
+    },
+    {
+      "x": 8096,
+      "y": 7349,
+      "type": "logging",
+      "name": "Tree2 Imposter (1)"
+    },
+    {
+      "x": 7914,
+      "y": 7740,
+      "type": "logging",
+      "name": "Tree2 Imposter (43)"
+    },
+    {
+      "x": 7945,
+      "y": 7797,
+      "type": "logging",
+      "name": "Tree2 Imposter (42)"
+    },
+    {
+      "x": 7983,
+      "y": 7792,
+      "type": "logging",
+      "name": "Tree Imposter (44)"
+    },
+    {
+      "x": 7872,
+      "y": 7775,
+      "type": "mining",
+      "name": "Small Stone Imposter (7)"
+    },
+    {
+      "x": 7916,
+      "y": 7839,
+      "type": "scavenging",
+      "name": "Branch Imposter (6)"
+    },
+    {
+      "x": 7276,
+      "y": 8286,
+      "type": "mining",
+      "name": "Small Stone Imposter (6)"
+    },
+    {
+      "x": 7351,
+      "y": 8249,
+      "type": "mining",
+      "name": "Small Stone Imposter (5)"
+    },
+    {
+      "x": 7369,
+      "y": 8251,
+      "type": "scavenging",
+      "name": "Branch Imposter (5)"
+    },
+    {
+      "x": 7568,
+      "y": 8190,
+      "type": "mining",
+      "name": "Small Stone Imposter (4)"
+    },
+    {
+      "x": 7478,
+      "y": 8244,
+      "type": "scavenging",
+      "name": "Branch Imposter (4)"
+    },
+    {
+      "x": 7460,
+      "y": 8252,
+      "type": "scavenging",
+      "name": "Branch Imposter (3)"
+    },
+    {
+      "x": 7557,
+      "y": 8206,
+      "type": "mining",
+      "name": "Small Stone Imposter (3)"
+    },
+    {
+      "x": 7611,
+      "y": 8149,
+      "type": "scavenging",
+      "name": "Branch Imposter (2)"
+    },
+    {
+      "x": 7798,
+      "y": 8037,
+      "type": "mining",
+      "name": "Small Stone Imposter (2)"
+    },
+    {
+      "x": 7671,
+      "y": 8105,
+      "type": "mining",
+      "name": "Small Stone Imposter (1)"
+    },
+    {
+      "x": 7731,
+      "y": 8060,
+      "type": "scavenging",
+      "name": "Branch Imposter (1)"
+    },
+    {
+      "x": 8008,
+      "y": 7984,
+      "type": "scavenging",
+      "name": "HARVESTABLES (1)"
+    },
+    {
+      "x": 7525,
+      "y": 7660,
+      "type": "logging",
+      "name": "Tree2 Imposter (1)"
+    },
+    {
+      "x": 7939,
+      "y": 8183,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7939,
+      "y": 8183,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7978,
+      "y": 8473,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7978,
+      "y": 8473,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8364,
+      "y": 8364,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8364,
+      "y": 8364,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8604,
+      "y": 8283,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8604,
+      "y": 8283,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8239,
+      "y": 7991,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8239,
+      "y": 7991,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8393,
+      "y": 7838,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8393,
+      "y": 7838,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7912,
+      "y": 8084,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7912,
+      "y": 8084,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7745,
+      "y": 8265,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7745,
+      "y": 8265,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7959,
+      "y": 8207,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7959,
+      "y": 8207,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8440,
+      "y": 8072,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8440,
+      "y": 8072,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8314,
+      "y": 8307,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8314,
+      "y": 8307,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8424,
+      "y": 8188,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8424,
+      "y": 8188,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8026,
+      "y": 7828,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8026,
+      "y": 7828,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7995,
+      "y": 8238,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7995,
+      "y": 8238,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8522,
+      "y": 7985,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8522,
+      "y": 7985,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8003,
+      "y": 8075,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8003,
+      "y": 8075,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8630,
+      "y": 8265,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8630,
+      "y": 8265,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7785,
+      "y": 8257,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7785,
+      "y": 8257,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8018,
+      "y": 8553,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 8018,
+      "y": 8553,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 7889,
+      "y": 8150,
+      "type": "herbalism",
+      "name": "Hemp Imposter"
+    },
+    {
+      "x": 7889,
+      "y": 8150,
+      "type": "herbalism",
+      "name": "Hemp"
+    },
+    {
+      "x": 8051,
+      "y": 8449,
+      "type": "mining",
+      "name": "Stone Imposter (13)"
+    },
+    {
+      "x": 7911,
+      "y": 8175,
+      "type": "mining",
+      "name": "Stone Imposter (12)"
+    },
+    {
+      "x": 8014,
+      "y": 8288,
+      "type": "mining",
+      "name": "Stone Imposter (11)"
+    },
+    {
+      "x": 8105,
+      "y": 8205,
+      "type": "mining",
+      "name": "Stone Imposter (10)"
+    },
+    {
+      "x": 8213,
+      "y": 8262,
+      "type": "mining",
+      "name": "Stone Imposter (9)"
+    },
+    {
+      "x": 8198,
+      "y": 8519,
+      "type": "mining",
+      "name": "Stone Imposter (7)"
+    },
+    {
+      "x": 7862,
+      "y": 8519,
+      "type": "mining",
+      "name": "Stone Imposter (24)"
+    },
+    {
+      "x": 7298,
+      "y": 8537,
+      "type": "mining",
+      "name": "Stone Imposter (23)"
+    },
+    {
+      "x": 7572,
+      "y": 8571,
+      "type": "mining",
+      "name": "Stone Imposter (22)"
+    },
+    {
+      "x": 7437,
+      "y": 8559,
+      "type": "mining",
+      "name": "Stone Imposter (20)"
+    },
+    {
+      "x": 7702,
+      "y": 8311,
+      "type": "mining",
+      "name": "Stone Imposter (19)"
+    },
+    {
+      "x": 7709,
+      "y": 8171,
+      "type": "mining",
+      "name": "Stone Imposter (18)"
+    },
+    {
+      "x": 7977,
+      "y": 7974,
+      "type": "mining",
+      "name": "Stone Imposter (17)"
+    },
+    {
+      "x": 8224,
+      "y": 8013,
+      "type": "mining",
+      "name": "Stone Imposter (16)"
+    },
+    {
+      "x": 7492,
+      "y": 7658,
+      "type": "mining",
+      "name": "Stone Imposter (15)"
+    },
+    {
+      "x": 7803,
+      "y": 7649,
+      "type": "mining",
+      "name": "Stone Imposter (14)"
+    },
+    {
+      "x": 8473,
+      "y": 7395,
+      "type": "mining",
+      "name": "Stone Imposter (8)"
+    },
+    {
+      "x": 8654,
+      "y": 7793,
+      "type": "mining",
+      "name": "Stone Imposter (6)"
+    },
+    {
+      "x": 8494,
+      "y": 7786,
+      "type": "mining",
+      "name": "Stone Imposter (5)"
+    },
+    {
+      "x": 8603,
+      "y": 8032,
+      "type": "mining",
+      "name": "Stone Imposter (4)"
+    },
+    {
+      "x": 8469,
+      "y": 8041,
+      "type": "mining",
+      "name": "Stone Imposter (3)"
+    },
+    {
+      "x": 8685,
+      "y": 8348,
+      "type": "mining",
+      "name": "Stone Imposter (2)"
+    },
+    {
+      "x": 8593,
+      "y": 8328,
+      "type": "mining",
+      "name": "Stone Imposter (1)"
+    },
+    {
+      "x": 8294,
+      "y": 8136,
+      "type": "logging",
+      "name": "Tree Imposter (43)"
+    },
+    {
+      "x": 8399,
+      "y": 7292,
+      "type": "logging",
+      "name": "Tree Imposter (42)"
+    },
+    {
+      "x": 8426,
+      "y": 7354,
+      "type": "logging",
+      "name": "Tree2 Imposter (40)"
+    },
+    {
+      "x": 7730,
+      "y": 8314,
+      "type": "logging",
+      "name": "Tree Imposter (33)"
+    },
+    {
+      "x": 8403,
+      "y": 7595,
+      "type": "logging",
+      "name": "Tree Imposter (41)"
+    },
+    {
+      "x": 8455,
+      "y": 7602,
+      "type": "logging",
+      "name": "Tree2 Imposter (39)"
+    },
+    {
+      "x": 8528,
+      "y": 7604,
+      "type": "logging",
+      "name": "Tree Imposter (40)"
+    },
+    {
+      "x": 8541,
+      "y": 8136,
+      "type": "logging",
+      "name": "Tree2 Imposter (37)"
+    },
+    {
+      "x": 8404,
+      "y": 8288,
+      "type": "logging",
+      "name": "Tree Imposter (38)"
+    },
+    {
+      "x": 8009,
+      "y": 8233,
+      "type": "logging",
+      "name": "Tree2 Imposter (36)"
+    },
+    {
+      "x": 8215,
+      "y": 8125,
+      "type": "logging",
+      "name": "Tree Imposter (37)"
+    },
+    {
+      "x": 8218,
+      "y": 8027,
+      "type": "logging",
+      "name": "Tree Imposter (36)"
+    },
+    {
+      "x": 8187,
+      "y": 7905,
+      "type": "logging",
+      "name": "Tree2 Imposter (35)"
+    },
+    {
+      "x": 8046,
+      "y": 7868,
+      "type": "logging",
+      "name": "Tree Imposter (35)"
+    },
+    {
+      "x": 7981,
+      "y": 8148,
+      "type": "logging",
+      "name": "Tree2 Imposter (34)"
+    },
+    {
+      "x": 7862,
+      "y": 8078,
+      "type": "logging",
+      "name": "Tree Imposter (34)"
+    },
+    {
+      "x": 7863,
+      "y": 8181,
+      "type": "logging",
+      "name": "Tree2 Imposter (33)"
+    },
+    {
+      "x": 7841,
+      "y": 8215,
+      "type": "logging",
+      "name": "Tree2 Imposter (32)"
+    },
+    {
+      "x": 7732,
+      "y": 8145,
+      "type": "logging",
+      "name": "Tree2 Imposter (31)"
+    },
+    {
+      "x": 7365,
+      "y": 8288,
+      "type": "logging",
+      "name": "Tree2 Imposter (27)"
+    },
+    {
+      "x": 7587,
+      "y": 8249,
+      "type": "logging",
+      "name": "Tree2 Imposter (30)"
+    },
+    {
+      "x": 7645,
+      "y": 8197,
+      "type": "logging",
+      "name": "Tree2 Imposter (29)"
+    },
+    {
+      "x": 7655,
+      "y": 8202,
+      "type": "logging",
+      "name": "Tree Imposter (32)"
+    },
+    {
+      "x": 7464,
+      "y": 8344,
+      "type": "logging",
+      "name": "Tree2 Imposter (28)"
+    },
+    {
+      "x": 7548,
+      "y": 8683,
+      "type": "logging",
+      "name": "Tree2 Imposter (26)"
+    },
+    {
+      "x": 7598,
+      "y": 8754,
+      "type": "logging",
+      "name": "Tree2 Imposter (25)"
+    },
+    {
+      "x": 7402,
+      "y": 8608,
+      "type": "logging",
+      "name": "Tree Imposter (30)"
+    },
+    {
+      "x": 7325,
+      "y": 8548,
+      "type": "logging",
+      "name": "Tree2 Imposter (24)"
+    },
+    {
+      "x": 7452,
+      "y": 8555,
+      "type": "logging",
+      "name": "Tree Imposter (29)"
+    },
+    {
+      "x": 7758,
+      "y": 8466,
+      "type": "logging",
+      "name": "Tree2 Imposter (23)"
+    },
+    {
+      "x": 7897,
+      "y": 8480,
+      "type": "logging",
+      "name": "Tree Imposter (28)"
+    },
+    {
+      "x": 7894,
+      "y": 8370,
+      "type": "logging",
+      "name": "Tree2 Imposter (22)"
+    },
+    {
+      "x": 7746,
+      "y": 8357,
+      "type": "logging",
+      "name": "Tree Imposter (27)"
+    },
+    {
+      "x": 7649,
+      "y": 8348,
+      "type": "logging",
+      "name": "Tree2 Imposter (21)"
+    },
+    {
+      "x": 7567,
+      "y": 8519,
+      "type": "logging",
+      "name": "Tree Imposter (26)"
+    },
+    {
+      "x": 7579,
+      "y": 8584,
+      "type": "logging",
+      "name": "Tree2 Imposter (20)"
+    },
+    {
+      "x": 7565,
+      "y": 8541,
+      "type": "logging",
+      "name": "Tree Imposter (25)"
+    },
+    {
+      "x": 7684,
+      "y": 8603,
+      "type": "logging",
+      "name": "Tree2 Imposter (19)"
+    },
+    {
+      "x": 7649,
+      "y": 8659,
+      "type": "logging",
+      "name": "Tree Imposter (24)"
+    },
+    {
+      "x": 8508,
+      "y": 8368,
+      "type": "logging",
+      "name": "Tree Imposter (23)"
+    },
+    {
+      "x": 8295,
+      "y": 8518,
+      "type": "logging",
+      "name": "Tree2 Imposter (18)"
+    },
+    {
+      "x": 8636,
+      "y": 8322,
+      "type": "logging",
+      "name": "Tree Imposter (22)"
+    },
+    {
+      "x": 8686,
+      "y": 8311,
+      "type": "logging",
+      "name": "Tree Imposter (21)"
+    },
+    {
+      "x": 8106,
+      "y": 8535,
+      "type": "logging",
+      "name": "Tree2 Imposter (17)"
+    },
+    {
+      "x": 8023,
+      "y": 8460,
+      "type": "logging",
+      "name": "Tree Imposter (20)"
+    },
+    {
+      "x": 7977,
+      "y": 8518,
+      "type": "logging",
+      "name": "Tree2 Imposter (16)"
+    },
+    {
+      "x": 8021,
+      "y": 8615,
+      "type": "logging",
+      "name": "Tree Imposter (19)"
+    },
+    {
+      "x": 8058,
+      "y": 8573,
+      "type": "logging",
+      "name": "Tree Imposter (18)"
+    },
+    {
+      "x": 8254,
+      "y": 8501,
+      "type": "logging",
+      "name": "Tree Imposter (17)"
+    },
+    {
+      "x": 8253,
+      "y": 8319,
+      "type": "logging",
+      "name": "Tree2 Imposter (15)"
+    },
+    {
+      "x": 8277,
+      "y": 8364,
+      "type": "logging",
+      "name": "Tree2 Imposter (14)"
+    },
+    {
+      "x": 8228,
+      "y": 8548,
+      "type": "logging",
+      "name": "Tree Imposter (16)"
+    },
+    {
+      "x": 8162,
+      "y": 8574,
+      "type": "logging",
+      "name": "Tree Imposter (15)"
+    },
+    {
+      "x": 8660,
+      "y": 8331,
+      "type": "logging",
+      "name": "Tree2 Imposter (13)"
+    },
+    {
+      "x": 8399,
+      "y": 8361,
+      "type": "logging",
+      "name": "Tree Imposter (14)"
+    },
+    {
+      "x": 8284,
+      "y": 8013,
+      "type": "logging",
+      "name": "Tree Imposter (13)"
+    },
+    {
+      "x": 8340,
+      "y": 8320,
+      "type": "logging",
+      "name": "Tree2 Imposter (12)"
+    },
+    {
+      "x": 8432,
+      "y": 8170,
+      "type": "logging",
+      "name": "Tree2 Imposter (11)"
+    },
+    {
+      "x": 8542,
+      "y": 8218,
+      "type": "logging",
+      "name": "Tree Imposter (12)"
+    },
+    {
+      "x": 8613,
+      "y": 8227,
+      "type": "logging",
+      "name": "Tree2 Imposter (10)"
+    },
+    {
+      "x": 8565,
+      "y": 8027,
+      "type": "logging",
+      "name": "Tree Imposter (11)"
+    },
+    {
+      "x": 8398,
+      "y": 7938,
+      "type": "logging",
+      "name": "Tree Imposter (10)"
+    },
+    {
+      "x": 8424,
+      "y": 7805,
+      "type": "logging",
+      "name": "Tree2 Imposter (9)"
+    },
+    {
+      "x": 8588,
+      "y": 7740,
+      "type": "logging",
+      "name": "Tree Imposter (9)"
+    },
+    {
+      "x": 8587,
+      "y": 7692,
+      "type": "logging",
+      "name": "Tree Imposter (8)"
+    },
+    {
+      "x": 8526,
+      "y": 7993,
+      "type": "logging",
+      "name": "Tree2 Imposter (8)"
+    },
+    {
+      "x": 8476,
+      "y": 7670,
+      "type": "logging",
+      "name": "Tree2 Imposter (6)"
+    },
+    {
+      "x": 8506,
+      "y": 7527,
+      "type": "logging",
+      "name": "Tree Imposter (6)"
+    },
+    {
+      "x": 8294,
+      "y": 7493,
+      "type": "logging",
+      "name": "Tree Imposter (5)"
+    },
+    {
+      "x": 8268,
+      "y": 7505,
+      "type": "logging",
+      "name": "Tree2 Imposter (5)"
+    },
+    {
+      "x": 8355,
+      "y": 7494,
+      "type": "logging",
+      "name": "Tree Imposter (4)"
+    },
+    {
+      "x": 8449,
+      "y": 7408,
+      "type": "logging",
+      "name": "Tree2 Imposter (4)"
+    },
+    {
+      "x": 8320,
+      "y": 7323,
+      "type": "logging",
+      "name": "Tree2 Imposter (3)"
+    },
+    {
+      "x": 8344,
+      "y": 7319,
+      "type": "logging",
+      "name": "Tree Imposter (3)"
+    },
+    {
+      "x": 8142,
+      "y": 7376,
+      "type": "logging",
+      "name": "Tree2 Imposter (2)"
+    },
+    {
+      "x": 8131,
+      "y": 7308,
+      "type": "logging",
+      "name": "Tree Imposter (2)"
+    },
+    {
+      "x": 8213,
+      "y": 7283,
+      "type": "logging",
+      "name": "Tree Imposter (1)"
+    },
+    {
+      "x": 8096,
+      "y": 7349,
+      "type": "logging",
+      "name": "Tree2 Imposter (1)"
+    },
+    {
+      "x": 7914,
+      "y": 7740,
+      "type": "logging",
+      "name": "Tree2 Imposter (43)"
+    },
+    {
+      "x": 7945,
+      "y": 7797,
+      "type": "logging",
+      "name": "Tree2 Imposter (42)"
+    },
+    {
+      "x": 7983,
+      "y": 7792,
+      "type": "logging",
+      "name": "Tree Imposter (44)"
+    },
+    {
+      "x": 7872,
+      "y": 7775,
+      "type": "mining",
+      "name": "Small Stone Imposter (7)"
+    },
+    {
+      "x": 7916,
+      "y": 7839,
+      "type": "scavenging",
+      "name": "Branch Imposter (6)"
+    },
+    {
+      "x": 7276,
+      "y": 8286,
+      "type": "mining",
+      "name": "Small Stone Imposter (6)"
+    },
+    {
+      "x": 7351,
+      "y": 8249,
+      "type": "mining",
+      "name": "Small Stone Imposter (5)"
+    },
+    {
+      "x": 7369,
+      "y": 8251,
+      "type": "scavenging",
+      "name": "Branch Imposter (5)"
+    },
+    {
+      "x": 7568,
+      "y": 8190,
+      "type": "mining",
+      "name": "Small Stone Imposter (4)"
+    },
+    {
+      "x": 7478,
+      "y": 8244,
+      "type": "scavenging",
+      "name": "Branch Imposter (4)"
+    },
+    {
+      "x": 7460,
+      "y": 8252,
+      "type": "scavenging",
+      "name": "Branch Imposter (3)"
+    },
+    {
+      "x": 7557,
+      "y": 8206,
+      "type": "mining",
+      "name": "Small Stone Imposter (3)"
+    },
+    {
+      "x": 7611,
+      "y": 8149,
+      "type": "scavenging",
+      "name": "Branch Imposter (2)"
+    },
+    {
+      "x": 7798,
+      "y": 8037,
+      "type": "mining",
+      "name": "Small Stone Imposter (2)"
+    },
+    {
+      "x": 7671,
+      "y": 8105,
+      "type": "mining",
+      "name": "Small Stone Imposter (1)"
+    },
+    {
+      "x": 7731,
+      "y": 8060,
+      "type": "scavenging",
+      "name": "Branch Imposter (1)"
+    }
+  ],
+  "structurePositions": [
+    {
+      "x": 7842,
+      "y": 7852,
+      "name": "Dock_2C (1)",
+      "type": "dock"
+    },
+    {
+      "x": 7805,
+      "y": 7854,
+      "name": "Dock_2C (2)",
+      "type": "dock"
+    },
+    {
+      "x": 7791,
+      "y": 7919,
+      "name": "StylShip_Wall",
+      "type": "wall"
+    },
+    {
+      "x": 7832,
+      "y": 7892,
+      "name": "Dock_2C",
+      "type": "dock"
+    },
+    {
+      "x": 7898,
+      "y": 7887,
+      "name": "Dock_2C (3)",
+      "type": "dock"
+    },
+    {
+      "x": 8346,
+      "y": 7901,
+      "name": "Wall (6)",
+      "type": "wall"
+    },
+    {
+      "x": 8351,
+      "y": 7890,
+      "name": "Wall (7)",
+      "type": "wall"
+    },
+    {
+      "x": 8363,
+      "y": 7867,
+      "name": "Wall (8)",
+      "type": "wall"
+    },
+    {
+      "x": 8357,
+      "y": 7878,
+      "name": "Wall (9)",
+      "type": "wall"
+    },
+    {
+      "x": 8340,
+      "y": 7855,
+      "name": "Wall (18)",
+      "type": "wall"
+    },
+    {
+      "x": 8345,
+      "y": 7844,
+      "name": "Wall (19)",
+      "type": "wall"
+    },
+    {
+      "x": 8357,
+      "y": 7818,
+      "name": "Wall (23)",
+      "type": "wall"
+    },
+    {
+      "x": 8380,
+      "y": 7855,
+      "name": "Wall (24)",
+      "type": "wall"
+    },
+    {
+      "x": 8393,
+      "y": 7861,
+      "name": "Wall (25)",
+      "type": "wall"
+    },
+    {
+      "x": 8333,
+      "y": 7925,
+      "name": "Wall",
+      "type": "wall"
+    },
+    {
+      "x": 8340,
+      "y": 7913,
+      "name": "Wall (1)",
+      "type": "wall"
+    },
+    {
+      "x": 8405,
+      "y": 7868,
+      "name": "Wall (27)",
+      "type": "wall"
+    },
+    {
+      "x": 8430,
+      "y": 7881,
+      "name": "Wall (28)",
+      "type": "wall"
+    },
+    {
+      "x": 8443,
+      "y": 7887,
+      "name": "Wall (29)",
+      "type": "wall"
+    },
+    {
+      "x": 8455,
+      "y": 7893,
+      "name": "Wall (31)",
+      "type": "wall"
+    },
+    {
+      "x": 8499,
+      "y": 7849,
+      "name": "Wall (32)",
+      "type": "wall"
+    },
+    {
+      "x": 8492,
+      "y": 7862,
+      "name": "Wall (30)",
+      "type": "wall"
+    },
+    {
+      "x": 8486,
+      "y": 7874,
+      "name": "Wall (33)",
+      "type": "wall"
+    },
+    {
+      "x": 8505,
+      "y": 7836,
+      "name": "Wall (34)",
+      "type": "wall"
+    },
+    {
+      "x": 8512,
+      "y": 7824,
+      "name": "Wall (35)",
+      "type": "wall"
+    },
+    {
+      "x": 8518,
+      "y": 7811,
+      "name": "Wall (36)",
+      "type": "wall"
+    },
+    {
+      "x": 8531,
+      "y": 7786,
+      "name": "Wall (37)",
+      "type": "wall"
+    },
+    {
+      "x": 8524,
+      "y": 7799,
+      "name": "Wall (38)",
+      "type": "wall"
+    },
+    {
+      "x": 8493,
+      "y": 7752,
+      "name": "Wall (39)",
+      "type": "wall"
+    },
+    {
+      "x": 8481,
+      "y": 7746,
+      "name": "Wall (40)",
+      "type": "wall"
+    },
+    {
+      "x": 8506,
+      "y": 7759,
+      "name": "Wall (41)",
+      "type": "wall"
+    },
+    {
+      "x": 8518,
+      "y": 7765,
+      "name": "Wall (42)",
+      "type": "wall"
+    },
+    {
+      "x": 8468,
+      "y": 7740,
+      "name": "Wall (43)",
+      "type": "wall"
+    },
+    {
+      "x": 8492,
+      "y": 7786,
+      "name": "Wall (44)",
+      "type": "wall"
+    },
+    {
+      "x": 8442,
+      "y": 7760,
+      "name": "Wall (45)",
+      "type": "wall"
+    },
+    {
+      "x": 8454,
+      "y": 7767,
+      "name": "Wall (46)",
+      "type": "wall"
+    },
+    {
+      "x": 8479,
+      "y": 7780,
+      "name": "Wall (47)",
+      "type": "wall"
+    },
+    {
+      "x": 8467,
+      "y": 7773,
+      "name": "Wall (48)",
+      "type": "wall"
+    },
+    {
+      "x": 8467,
+      "y": 7849,
+      "name": "Wall (49)",
+      "type": "wall"
+    },
+    {
+      "x": 8474,
+      "y": 7836,
+      "name": "Wall (50)",
+      "type": "wall"
+    },
+    {
+      "x": 8480,
+      "y": 7824,
+      "name": "Wall (51)",
+      "type": "wall"
+    },
+    {
+      "x": 8493,
+      "y": 7798,
+      "name": "Wall (52)",
+      "type": "wall"
+    },
+    {
+      "x": 8487,
+      "y": 7811,
+      "name": "Wall (53)",
+      "type": "wall"
+    },
+    {
+      "x": 8351,
+      "y": 7830,
+      "name": "Wall (22)",
+      "type": "wall"
+    },
+    {
+      "x": 8381,
+      "y": 7821,
+      "name": "Wall (26)",
+      "type": "wall"
+    },
+    {
+      "x": 8393,
+      "y": 7828,
+      "name": "Wall (55)",
+      "type": "wall"
+    },
+    {
+      "x": 8406,
+      "y": 7834,
+      "name": "Wall (56)",
+      "type": "wall"
+    },
+    {
+      "x": 8443,
+      "y": 7853,
+      "name": "Wall (57)",
+      "type": "wall"
+    },
+    {
+      "x": 8431,
+      "y": 7847,
+      "name": "Wall (58)",
+      "type": "wall"
+    },
+    {
+      "x": 8418,
+      "y": 7841,
+      "name": "Wall (59)",
+      "type": "wall"
+    },
+    {
+      "x": 8456,
+      "y": 7860,
+      "name": "Wall (60)",
+      "type": "wall"
+    },
+    {
+      "x": 8316,
+      "y": 7901,
+      "name": "Wall (21)",
+      "type": "wall"
+    },
+    {
+      "x": 8417,
+      "y": 7748,
+      "name": "Wall (61)",
+      "type": "wall"
+    },
+    {
+      "x": 8404,
+      "y": 7741,
+      "name": "Wall (62)",
+      "type": "wall"
+    },
+    {
+      "x": 8430,
+      "y": 7722,
+      "name": "Wall (63)",
+      "type": "wall"
+    },
+    {
+      "x": 8417,
+      "y": 7716,
+      "name": "Wall (64)",
+      "type": "wall"
+    },
+    {
+      "x": 8429,
+      "y": 7755,
+      "name": "Wall_Corner (5)",
+      "type": "wall"
+    },
+    {
+      "x": 8461,
+      "y": 7856,
+      "name": "Wall_Corner (3)",
+      "type": "wall"
+    },
+    {
+      "x": 8530,
+      "y": 7773,
+      "name": "Wall_Corner (2)",
+      "type": "wall"
+    },
+    {
+      "x": 8479,
+      "y": 7886,
+      "name": "Wall",
+      "type": "wall"
+    },
+    {
+      "x": 8417,
+      "y": 7875,
+      "name": "Wall_Corner (1)",
+      "type": "wall"
+    },
+    {
+      "x": 8469,
+      "y": 7896,
+      "name": "Wall_Corner",
+      "type": "wall"
+    },
+    {
+      "x": 8443,
+      "y": 7713,
+      "name": "Wall 2x1 (1)",
+      "type": "wall"
+    },
+    {
+      "x": 8470,
+      "y": 7722,
+      "name": "Wall 2x1 (2)",
+      "type": "wall"
+    },
+    {
+      "x": 8452,
+      "y": 7694,
+      "name": "Wall (65)",
+      "type": "wall"
+    },
+    {
+      "x": 8459,
+      "y": 7681,
+      "name": "Wall (66)",
+      "type": "wall"
+    },
+    {
+      "x": 8472,
+      "y": 7656,
+      "name": "Wall (67)",
+      "type": "wall"
+    },
+    {
+      "x": 8465,
+      "y": 7668,
+      "name": "Wall (68)",
+      "type": "wall"
+    },
+    {
+      "x": 8481,
+      "y": 7703,
+      "name": "Wall (71)",
+      "type": "wall"
+    },
+    {
+      "x": 8487,
+      "y": 7691,
+      "name": "Wall (72)",
+      "type": "wall"
+    },
+    {
+      "x": 8493,
+      "y": 7678,
+      "name": "Wall (73)",
+      "type": "wall"
+    },
+    {
+      "x": 8500,
+      "y": 7666,
+      "name": "Wall (74)",
+      "type": "wall"
+    },
+    {
+      "x": 8555,
+      "y": 7620,
+      "name": "Wall (76)",
+      "type": "wall"
+    },
+    {
+      "x": 8548,
+      "y": 7633,
+      "name": "Wall (77)",
+      "type": "wall"
+    },
+    {
+      "x": 8542,
+      "y": 7645,
+      "name": "Wall (78)",
+      "type": "wall"
+    },
+    {
+      "x": 8535,
+      "y": 7658,
+      "name": "Wall (80)",
+      "type": "wall"
+    },
+    {
+      "x": 8512,
+      "y": 7666,
+      "name": "Wall (82)",
+      "type": "wall"
+    },
+    {
+      "x": 8548,
+      "y": 7593,
+      "name": "Wall (81)",
+      "type": "wall"
+    },
+    {
+      "x": 8536,
+      "y": 7587,
+      "name": "Wall (79)",
+      "type": "wall"
+    },
+    {
+      "x": 8523,
+      "y": 7580,
+      "name": "Wall (83)",
+      "type": "wall"
+    },
+    {
+      "x": 8511,
+      "y": 7574,
+      "name": "Wall (84)",
+      "type": "wall"
+    },
+    {
+      "x": 8473,
+      "y": 7555,
+      "name": "Wall (86)",
+      "type": "wall"
+    },
+    {
+      "x": 8486,
+      "y": 7561,
+      "name": "Wall (87)",
+      "type": "wall"
+    },
+    {
+      "x": 8446,
+      "y": 7582,
+      "name": "Wall (89)",
+      "type": "wall"
+    },
+    {
+      "x": 8498,
+      "y": 7568,
+      "name": "Wall (88)",
+      "type": "wall"
+    },
+    {
+      "x": 8440,
+      "y": 7595,
+      "name": "Wall (90)",
+      "type": "wall"
+    },
+    {
+      "x": 8433,
+      "y": 7607,
+      "name": "Wall (91)",
+      "type": "wall"
+    },
+    {
+      "x": 8453,
+      "y": 7570,
+      "name": "Wall (85)",
+      "type": "wall"
+    },
+    {
+      "x": 8466,
+      "y": 7643,
+      "name": "Wall (92)",
+      "type": "wall"
+    },
+    {
+      "x": 8453,
+      "y": 7636,
+      "name": "Wall (93)",
+      "type": "wall"
+    },
+    {
+      "x": 8441,
+      "y": 7630,
+      "name": "Wall (94)",
+      "type": "wall"
+    },
+    {
+      "x": 8303,
+      "y": 7926,
+      "name": "Wall (75)",
+      "type": "wall"
+    },
+    {
+      "x": 8293,
+      "y": 7946,
+      "name": "Wall (95)",
+      "type": "wall"
+    },
+    {
+      "x": 8327,
+      "y": 7938,
+      "name": "Wall (10)",
+      "type": "wall"
+    },
+    {
+      "x": 8334,
+      "y": 7867,
+      "name": "Wall (54)",
+      "type": "wall"
+    },
+    {
+      "x": 8315,
+      "y": 7958,
+      "name": "Wall (96)",
+      "type": "wall"
+    },
+    {
+      "x": 8367,
+      "y": 7859,
+      "name": "Wall (20)",
+      "type": "wall"
+    },
+    {
+      "x": 8328,
+      "y": 7878,
+      "name": "Wall (69)",
+      "type": "wall"
+    },
+    {
+      "x": 8462,
+      "y": 7556,
+      "name": "Wall_Corner (8)",
+      "type": "wall"
+    },
+    {
+      "x": 8309,
+      "y": 7913,
+      "name": "Wall (97)",
+      "type": "wall"
+    },
+    {
+      "x": 8321,
+      "y": 7888,
+      "name": "Wall_Corner (9)",
+      "type": "wall"
+    },
+    {
+      "x": 8368,
+      "y": 7815,
+      "name": "Wall_Corner (5)",
+      "type": "wall"
+    },
+    {
+      "x": 8525,
+      "y": 7668,
+      "name": "Wall_Corner",
+      "type": "wall"
+    },
+    {
+      "x": 8462,
+      "y": 7556,
+      "name": "Wall_Corner (3)",
+      "type": "wall"
+    },
+    {
+      "x": 8431,
+      "y": 7620,
+      "name": "Wall_Corner (2)",
+      "type": "wall"
+    },
+    {
+      "x": 8556,
+      "y": 7604,
+      "name": "Wall_Corner (1)",
+      "type": "wall"
+    },
+    {
+      "x": 8304,
+      "y": 7976,
+      "name": "WoodenWalllp (3)",
+      "type": "wall"
+    },
+    {
+      "x": 8327,
+      "y": 7930,
+      "name": "WoodenWall",
+      "type": "wall"
+    },
+    {
+      "x": 8286,
+      "y": 7966,
+      "name": "WoodenWalllp (4)",
+      "type": "wall"
+    },
+    {
+      "x": 8309,
+      "y": 7921,
+      "name": "WoodenWall",
+      "type": "wall"
+    },
+    {
+      "x": 8411,
+      "y": 7740,
+      "name": "WoodenWall",
+      "type": "wall"
+    },
+    {
+      "x": 8411,
+      "y": 7740,
+      "name": "WoodenWall",
+      "type": "wall"
+    },
+    {
+      "x": 8421,
+      "y": 7722,
+      "name": "WoodenWalllp (2)",
+      "type": "wall"
+    },
+    {
+      "x": 8421,
+      "y": 7722,
+      "name": "WoodenWall",
+      "type": "wall"
+    },
+    {
+      "x": 8480,
+      "y": 7693,
+      "name": "woodenWall_2 (8)",
+      "type": "wall"
+    },
+    {
+      "x": 8430,
+      "y": 7851,
+      "name": "woodenWall_2 (7)",
+      "type": "wall"
+    },
+    {
+      "x": 8500,
+      "y": 7837,
+      "name": "woodenWall_2 (5)",
+      "type": "wall"
+    },
+    {
+      "x": 8475,
+      "y": 7772,
+      "name": "WoodenWall_Long",
+      "type": "wall"
+    },
+    {
+      "x": 8484,
+      "y": 7753,
+      "name": "woodenWall_2 (4)",
+      "type": "wall"
+    },
+    {
+      "x": 8483,
+      "y": 7827,
+      "name": "woodenWall_2 (6)",
+      "type": "wall"
+    },
+    {
+      "x": 8329,
+      "y": 7924,
+      "name": "WoodenWall",
+      "type": "wall"
+    },
+    {
+      "x": 8312,
+      "y": 7916,
+      "name": "WoodenWalllp (2)",
+      "type": "wall"
+    },
+    {
+      "x": 8391,
+      "y": 7735,
+      "name": "Wall (70)",
+      "type": "wall"
+    },
+    {
+      "x": 8401,
+      "y": 7707,
+      "name": "Wall (98)",
+      "type": "wall"
+    },
+    {
+      "x": 8389,
+      "y": 7700,
+      "name": "Wall (99)",
+      "type": "wall"
+    },
+    {
+      "x": 8376,
+      "y": 7693,
+      "name": "Wall (100)",
+      "type": "wall"
+    },
+    {
+      "x": 8320,
+      "y": 7631,
+      "name": "Wall (101)",
+      "type": "wall"
+    },
+    {
+      "x": 8332,
+      "y": 7638,
+      "name": "Wall (102)",
+      "type": "wall"
+    },
+    {
+      "x": 8357,
+      "y": 7651,
+      "name": "Wall (103)",
+      "type": "wall"
+    },
+    {
+      "x": 8292,
+      "y": 7637,
+      "name": "Wall (104)",
+      "type": "wall"
+    },
+    {
+      "x": 8286,
+      "y": 7649,
+      "name": "Wall (105)",
+      "type": "wall"
+    },
+    {
+      "x": 8273,
+      "y": 7674,
+      "name": "Wall (106)",
+      "type": "wall"
+    },
+    {
+      "x": 8253,
+      "y": 7711,
+      "name": "Wall (107)",
+      "type": "wall"
+    },
+    {
+      "x": 8259,
+      "y": 7699,
+      "name": "Wall (108)",
+      "type": "wall"
+    },
+    {
+      "x": 8327,
+      "y": 7745,
+      "name": "Wall (109)",
+      "type": "wall"
+    },
+    {
+      "x": 8340,
+      "y": 7720,
+      "name": "Wall (110)",
+      "type": "wall"
+    },
+    {
+      "x": 8267,
+      "y": 7732,
+      "name": "Wall (111)",
+      "type": "wall"
+    },
+    {
+      "x": 8254,
+      "y": 7722,
+      "name": "Wall_Corner (10)",
+      "type": "wall"
+    },
+    {
+      "x": 8365,
+      "y": 7675,
+      "name": "Wall (112)",
+      "type": "wall"
+    },
+    {
+      "x": 8280,
+      "y": 7739,
+      "name": "Wall (113)",
+      "type": "wall"
+    },
+    {
+      "x": 8254,
+      "y": 7722,
+      "name": "Wall_Corner (4)",
+      "type": "wall"
+    },
+    {
+      "x": 8317,
+      "y": 7755,
+      "name": "Wall_Corner (6)",
+      "type": "wall"
+    },
+    {
+      "x": 8279,
+      "y": 7662,
+      "name": "Wall (114)",
+      "type": "wall"
+    },
+    {
+      "x": 8344,
+      "y": 7644,
+      "name": "Wall (115)",
+      "type": "wall"
+    },
+    {
+      "x": 8366,
+      "y": 7721,
+      "name": "Wall (116)",
+      "type": "wall"
+    },
+    {
+      "x": 8304,
+      "y": 7752,
+      "name": "Wall (117)",
+      "type": "wall"
+    },
+    {
+      "x": 8334,
+      "y": 7733,
+      "name": "Wall (118)",
+      "type": "wall"
+    },
+    {
+      "x": 8379,
+      "y": 7728,
+      "name": "Wall (119)",
+      "type": "wall"
+    },
+    {
+      "x": 8354,
+      "y": 7715,
+      "name": "Wall (120)",
+      "type": "wall"
+    },
+    {
+      "x": 8364,
+      "y": 7687,
+      "name": "Wall (121)",
+      "type": "wall"
+    },
+    {
+      "x": 8292,
+      "y": 7745,
+      "name": "Wall (122)",
+      "type": "wall"
+    },
+    {
+      "x": 8266,
+      "y": 7687,
+      "name": "Wall (123)",
+      "type": "wall"
+    },
+    {
+      "x": 8303,
+      "y": 7629,
+      "name": "Wall_Corner (7)",
+      "type": "wall"
+    },
+    {
+      "x": 8367,
+      "y": 7661,
+      "name": "Wall_Corner (11)",
+      "type": "wall"
+    },
+    {
+      "x": 8391,
+      "y": 7707,
+      "name": "woodenWall_2 (9)",
+      "type": "wall"
+    },
+    {
+      "x": 8410,
+      "y": 7711,
+      "name": "Wall (124)",
+      "type": "wall"
+    },
+    {
+      "x": 8339,
+      "y": 7502,
+      "name": "Caves_U_wall",
+      "type": "wall"
+    },
+    {
+      "x": 7437,
+      "y": 8466,
+      "name": "Gate",
+      "type": "gate"
+    },
+    {
+      "x": 7357,
+      "y": 8410,
+      "name": "Barbarian Camp (1)",
+      "type": "camp"
+    },
+    {
+      "x": 7408,
+      "y": 8409,
+      "name": "wall_wood_2m_2.003 (4)",
+      "type": "wall"
+    },
+    {
+      "x": 7415,
+      "y": 8419,
+      "name": "wall_wood_2m_2.003 (5)",
+      "type": "wall"
+    },
+    {
+      "x": 7392,
+      "y": 8412,
+      "name": "wall_wood_2m_2.003 (2)",
+      "type": "wall"
+    },
+    {
+      "x": 7389,
+      "y": 8424,
+      "name": "wall_wood_2m_2.003 (3)",
+      "type": "wall"
+    },
+    {
+      "x": 7371,
+      "y": 8405,
+      "name": "Stable Preview",
+      "type": "building"
+    },
+    {
+      "x": 7370,
+      "y": 8405,
+      "name": "Stable",
+      "type": "building"
+    },
+    {
+      "x": 7363,
+      "y": 8403,
+      "name": "wall_wood_2m_2.003 (2)",
+      "type": "wall"
+    },
+    {
+      "x": 7362,
+      "y": 8412,
+      "name": "wall_wood_2m_2.003 (3)",
+      "type": "wall"
+    },
+    {
+      "x": 7376,
+      "y": 8399,
+      "name": "wall_wood_2m_2.003 (4)",
+      "type": "wall"
+    },
+    {
+      "x": 7382,
+      "y": 8407,
+      "name": "wall_wood_2m_2.003 (5)",
+      "type": "wall"
+    }
+  ],
+  "terrainDecorations": [
+    {
+      "x": 8419,
+      "y": 8329,
+      "height": -0.03,
+      "name": "tree (14)",
+      "type": "tree"
+    },
+    {
+      "x": 8419,
+      "y": 8329,
+      "height": -0.03,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8155,
+      "y": 8329,
+      "height": 1.23,
+      "name": "tree (15)",
+      "type": "tree"
+    },
+    {
+      "x": 8155,
+      "y": 8329,
+      "height": 1.23,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8234,
+      "y": 8562,
+      "height": 4.98,
+      "name": "tree (16)",
+      "type": "tree"
+    },
+    {
+      "x": 8234,
+      "y": 8562,
+      "height": 4.98,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 7908,
+      "y": 8543,
+      "height": 1.27,
+      "name": "tree (17)",
+      "type": "tree"
+    },
+    {
+      "x": 7908,
+      "y": 8543,
+      "height": 1.27,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 7955,
+      "y": 8275,
+      "height": 6.3,
+      "name": "tree (18)",
+      "type": "tree"
+    },
+    {
+      "x": 7955,
+      "y": 8275,
+      "height": 7.92,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 7857,
+      "y": 8275,
+      "height": 5.59,
+      "name": "tree (19)",
+      "type": "tree"
+    },
+    {
+      "x": 7857,
+      "y": 8275,
+      "height": 6.87,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 7532,
+      "y": 8614,
+      "height": 2.51,
+      "name": "tree (20)",
+      "type": "tree"
+    },
+    {
+      "x": 7532,
+      "y": 8614,
+      "height": 3.66,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 7532,
+      "y": 8290,
+      "height": 1.16,
+      "name": "tree (21)",
+      "type": "tree"
+    },
+    {
+      "x": 7532,
+      "y": 8290,
+      "height": 1.91,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8123,
+      "y": 7952,
+      "height": 2.19,
+      "name": "tree (22)",
+      "type": "tree"
+    },
+    {
+      "x": 8123,
+      "y": 7952,
+      "height": 3.1,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8549,
+      "y": 8101,
+      "height": 1.23,
+      "name": "tree (23)",
+      "type": "tree"
+    },
+    {
+      "x": 8549,
+      "y": 8101,
+      "height": 1.73,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8549,
+      "y": 7439,
+      "height": 0.91,
+      "name": "tree (24)",
+      "type": "tree"
+    },
+    {
+      "x": 8549,
+      "y": 7439,
+      "height": 0.91,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8173,
+      "y": 7326,
+      "height": 1.96,
+      "name": "tree (25)",
+      "type": "tree"
+    },
+    {
+      "x": 8173,
+      "y": 7326,
+      "height": 2.34,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8231,
+      "y": 7439,
+      "height": 3.58,
+      "name": "tree (26)",
+      "type": "tree"
+    },
+    {
+      "x": 8231,
+      "y": 7439,
+      "height": 4.95,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 7881,
+      "y": 7677,
+      "height": 1.65,
+      "name": "tree (27)",
+      "type": "tree"
+    },
+    {
+      "x": 7881,
+      "y": 7677,
+      "height": 1.65,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8273,
+      "y": 7351,
+      "height": -1.08,
+      "name": "Log",
+      "type": "log"
+    },
+    {
+      "x": 8087,
+      "y": 8113,
+      "height": -0.5,
+      "name": "Log (1)",
+      "type": "log"
+    },
+    {
+      "x": 7836,
+      "y": 8567,
+      "height": -1.84,
+      "name": "Log (2)",
+      "type": "log"
+    },
+    {
+      "x": 8383,
+      "y": 7380,
+      "height": 2.56,
+      "name": "Log (3)",
+      "type": "log"
+    },
+    {
+      "x": 8439,
+      "y": 7684,
+      "height": 4.44,
+      "name": "Log (4)",
+      "type": "log"
+    },
+    {
+      "x": 8164,
+      "y": 8219,
+      "height": 1.24,
+      "name": "Log (5)",
+      "type": "log"
+    },
+    {
+      "x": 7970,
+      "y": 8011,
+      "height": 0.73,
+      "name": "Log (6)",
+      "type": "log"
+    },
+    {
+      "x": 7835,
+      "y": 8462,
+      "height": 0.66,
+      "name": "Log (7)",
+      "type": "log"
+    },
+    {
+      "x": 7932,
+      "y": 8462,
+      "height": 1.75,
+      "name": "Log (8)",
+      "type": "log"
+    },
+    {
+      "x": 8521,
+      "y": 8219,
+      "height": -0.74,
+      "name": "Log (9)",
+      "type": "log"
+    },
+    {
+      "x": 8497,
+      "y": 7692,
+      "height": 7.23,
+      "name": "tree (29)",
+      "type": "tree"
+    },
+    {
+      "x": 8497,
+      "y": 7692,
+      "height": 6.97,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8480,
+      "y": 7883,
+      "height": 6.83,
+      "name": "tree (30)",
+      "type": "tree"
+    },
+    {
+      "x": 8480,
+      "y": 7883,
+      "height": 6.83,
+      "name": "tree_1_collision",
+      "type": "tree"
+    },
+    {
+      "x": 8170,
+      "y": 7607,
+      "height": 4.04,
+      "name": "Water",
+      "type": "water"
+    },
+    {
+      "x": 8336,
+      "y": 7683,
+      "height": 8.04,
+      "name": "Water",
+      "type": "water"
+    },
+    {
+      "x": 8083,
+      "y": 8139,
+      "height": -0.7,
+      "name": "Water",
+      "type": "water"
+    },
+    {
+      "x": 8083,
+      "y": 8139,
+      "height": -0.92,
+      "name": "Water",
+      "type": "water"
+    },
+    {
+      "x": 8109,
+      "y": 7549,
+      "height": 4.53,
+      "name": "willow tree",
+      "type": "tree"
+    },
+    {
+      "x": 8211,
+      "y": 7704,
+      "height": 9.96,
+      "name": "willow tree (2)",
+      "type": "tree"
+    },
+    {
+      "x": 8115,
+      "y": 7634,
+      "height": 4.21,
+      "name": "Waterfall (4)",
+      "type": "water"
+    },
+    {
+      "x": 8115,
+      "y": 7640,
+      "height": 4.21,
+      "name": "Waterfall (6)",
+      "type": "water"
+    },
+    {
+      "x": 8245,
+      "y": 7650,
+      "height": 8.13,
+      "name": "Waterfall (7)",
+      "type": "water"
+    },
+    {
+      "x": 8245,
+      "y": 7656,
+      "height": 8.13,
+      "name": "Waterfall (8)",
+      "type": "water"
+    },
+    {
+      "x": 8156,
+      "y": 7523,
+      "height": 4.28,
+      "name": "Waterfall (9)",
+      "type": "water"
+    },
+    {
+      "x": 8166,
+      "y": 7522,
+      "height": 4.28,
+      "name": "Waterfall (10)",
+      "type": "water"
+    },
+    {
+      "x": 8245,
+      "y": 7664,
+      "height": 7.57,
+      "name": "Big_stone_01",
+      "type": "rock"
+    },
+    {
+      "x": 8115,
+      "y": 7643,
+      "height": 3.68,
+      "name": "Big_stone_01 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 8157,
+      "y": 7525,
+      "height": 3.68,
+      "name": "Big_stone_01 (2)",
+      "type": "rock"
+    },
+    {
+      "x": 8121,
+      "y": 7745,
+      "height": 6.92,
+      "name": "willow tree (3)",
+      "type": "tree"
+    },
+    {
+      "x": 8241,
+      "y": 7537,
+      "height": 6.19,
+      "name": "willow tree (6)",
+      "type": "tree"
+    },
+    {
+      "x": 8299,
+      "y": 7941,
+      "height": 6.79,
+      "name": "Rocks (1)",
+      "type": "rock"
+    },
+    {
+      "x": 8322,
+      "y": 7894,
+      "height": 10.28,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8498,
+      "y": 7791,
+      "height": 7.69,
+      "name": "Rocks (1)",
+      "type": "rock"
+    },
+    {
+      "x": 8498,
+      "y": 7791,
+      "height": 7.69,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8320,
+      "y": 7949,
+      "height": 7.36,
+      "name": "Rocks",
+      "type": "rock"
+    },
+    {
+      "x": 8342,
+      "y": 7904,
+      "height": 10.6,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8460,
+      "y": 7733,
+      "height": 9.28,
+      "name": "Rocks (1)",
+      "type": "rock"
+    },
+    {
+      "x": 8460,
+      "y": 7733,
+      "height": 9.28,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8370,
+      "y": 7851,
+      "height": 12.52,
+      "name": "Rocks (5)",
+      "type": "rock"
+    },
+    {
+      "x": 8370,
+      "y": 7851,
+      "height": 12.52,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8474,
+      "y": 7647,
+      "height": 7.51,
+      "name": "Rocks (4)",
+      "type": "rock"
+    },
+    {
+      "x": 8474,
+      "y": 7647,
+      "height": 7.51,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8457,
+      "y": 7564,
+      "height": 8.54,
+      "name": "Rocks (3)",
+      "type": "rock"
+    },
+    {
+      "x": 8457,
+      "y": 7564,
+      "height": 14.24,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8556,
+      "y": 7613,
+      "height": 6.16,
+      "name": "Rocks (2)",
+      "type": "rock"
+    },
+    {
+      "x": 8556,
+      "y": 7613,
+      "height": 9.4,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8503,
+      "y": 7658,
+      "height": 6.92,
+      "name": "Rocks",
+      "type": "rock"
+    },
+    {
+      "x": 8503,
+      "y": 7658,
+      "height": 6.92,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8503,
+      "y": 7576,
+      "height": 6.68,
+      "name": "Rocks",
+      "type": "rock"
+    },
+    {
+      "x": 8503,
+      "y": 7576,
+      "height": 6.68,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8435,
+      "y": 7725,
+      "height": 9.96,
+      "name": "Rocks",
+      "type": "rock"
+    },
+    {
+      "x": 8435,
+      "y": 7725,
+      "height": 9.96,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8479,
+      "y": 7652,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8534,
+      "y": 7650,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8471,
+      "y": 7559,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8456,
+      "y": 7572,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8550,
+      "y": 7621,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8547,
+      "y": 7598,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8537,
+      "y": 7592,
+      "height": 3.08,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8513,
+      "y": 7582,
+      "height": 3.08,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8262,
+      "y": 7727,
+      "height": 6.79,
+      "name": "Rocks (6)",
+      "type": "rock"
+    },
+    {
+      "x": 8262,
+      "y": 7727,
+      "height": 6.79,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8345,
+      "y": 7712,
+      "height": 7.04,
+      "name": "Rocks (7)",
+      "type": "rock"
+    },
+    {
+      "x": 8345,
+      "y": 7712,
+      "height": 7.04,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8313,
+      "y": 7630,
+      "height": 6.79,
+      "name": "Rocks (8)",
+      "type": "rock"
+    },
+    {
+      "x": 8313,
+      "y": 7630,
+      "height": 10.67,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8357,
+      "y": 7683,
+      "height": 7.73,
+      "name": "Rocks (9)",
+      "type": "rock"
+    },
+    {
+      "x": 8357,
+      "y": 7683,
+      "height": 7.73,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8274,
+      "y": 7682,
+      "height": 6.79,
+      "name": "Rocks (10)",
+      "type": "rock"
+    },
+    {
+      "x": 8274,
+      "y": 7682,
+      "height": 6.79,
+      "name": "Rock",
+      "type": "rock"
+    },
+    {
+      "x": 8350,
+      "y": 7707,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8349,
+      "y": 7652,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8270,
+      "y": 7729,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8297,
+      "y": 7639,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8320,
+      "y": 7635,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8291,
+      "y": 7649,
+      "height": 3.08,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8281,
+      "y": 7672,
+      "height": 3.08,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8257,
+      "y": 7713,
+      "height": 2.99,
+      "name": "CrystalStone",
+      "type": "rock"
+    },
+    {
+      "x": 8332,
+      "y": 7449,
+      "height": 2.07,
+      "name": "small_stone_04 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 8347,
+      "y": 7448,
+      "height": 3.81,
+      "name": "small_stone_04 (2)",
+      "type": "rock"
+    },
+    {
+      "x": 8313,
+      "y": 7447,
+      "height": 4.09,
+      "name": "small_stone_04 (3)",
+      "type": "rock"
+    },
+    {
+      "x": 8321,
+      "y": 7455,
+      "height": 5.27,
+      "name": "small_stone_04 (4)",
+      "type": "rock"
+    },
+    {
+      "x": 8335,
+      "y": 7451,
+      "height": 5.35,
+      "name": "small_stone_04 (5)",
+      "type": "rock"
+    },
+    {
+      "x": 8326,
+      "y": 7451,
+      "height": 5.27,
+      "name": "small_stone_04 (6)",
+      "type": "rock"
+    },
+    {
+      "x": 8335,
+      "y": 7447,
+      "height": 4.98,
+      "name": "small_stone_04 (7)",
+      "type": "rock"
+    },
+    {
+      "x": 8346,
+      "y": 7456,
+      "height": 3.83,
+      "name": "small_stone_04 (8)",
+      "type": "rock"
+    },
+    {
+      "x": 8349,
+      "y": 7464,
+      "height": 4.92,
+      "name": "small_stone_04 (9)",
+      "type": "rock"
+    },
+    {
+      "x": 8334,
+      "y": 7459,
+      "height": 5.37,
+      "name": "small_stone_04 (10)",
+      "type": "rock"
+    },
+    {
+      "x": 8325,
+      "y": 7459,
+      "height": 5.29,
+      "name": "small_stone_04 (11)",
+      "type": "rock"
+    },
+    {
+      "x": 8333,
+      "y": 7455,
+      "height": 5,
+      "name": "small_stone_04 (12)",
+      "type": "rock"
+    },
+    {
+      "x": 8310,
+      "y": 7454,
+      "height": 4.99,
+      "name": "small_stone_04 (13)",
+      "type": "rock"
+    },
+    {
+      "x": 8317,
+      "y": 7452,
+      "height": 3.12,
+      "name": "small_stone_04 (14)",
+      "type": "rock"
+    },
+    {
+      "x": 8335,
+      "y": 7469,
+      "height": 4.87,
+      "name": "small_stone_04 (15)",
+      "type": "rock"
+    },
+    {
+      "x": 8326,
+      "y": 7466,
+      "height": 4.87,
+      "name": "small_stone_04 (16)",
+      "type": "rock"
+    },
+    {
+      "x": 8317,
+      "y": 7481,
+      "height": 5.44,
+      "name": "small_stone_04 (17)",
+      "type": "rock"
+    },
+    {
+      "x": 8332,
+      "y": 7477,
+      "height": 5.52,
+      "name": "small_stone_04 (18)",
+      "type": "rock"
+    },
+    {
+      "x": 8323,
+      "y": 7477,
+      "height": 5.45,
+      "name": "small_stone_04 (19)",
+      "type": "rock"
+    },
+    {
+      "x": 8331,
+      "y": 7483,
+      "height": 6.25,
+      "name": "small_stone_04 (20)",
+      "type": "rock"
+    },
+    {
+      "x": 8322,
+      "y": 7483,
+      "height": 6.17,
+      "name": "small_stone_04 (21)",
+      "type": "rock"
+    },
+    {
+      "x": 8331,
+      "y": 7494,
+      "height": 5.05,
+      "name": "small_stone_04 (22)",
+      "type": "rock"
+    },
+    {
+      "x": 8323,
+      "y": 7492,
+      "height": 5.05,
+      "name": "small_stone_04 (23)",
+      "type": "rock"
+    },
+    {
+      "x": 8348,
+      "y": 7479,
+      "height": 5.84,
+      "name": "small_stone_04 (24)",
+      "type": "rock"
+    },
+    {
+      "x": 8310,
+      "y": 7463,
+      "height": 4.54,
+      "name": "small_stone_04 (25)",
+      "type": "rock"
+    },
+    {
+      "x": 8317,
+      "y": 7472,
+      "height": 5.71,
+      "name": "small_stone_04 (26)",
+      "type": "rock"
+    },
+    {
+      "x": 8307,
+      "y": 7471,
+      "height": 5.43,
+      "name": "small_stone_04 (27)",
+      "type": "rock"
+    },
+    {
+      "x": 8330,
+      "y": 7463,
+      "height": 5.83,
+      "name": "small_stone_04 (28)",
+      "type": "rock"
+    },
+    {
+      "x": 8301,
+      "y": 7451,
+      "height": 3.94,
+      "name": "small_stone_04 (29)",
+      "type": "rock"
+    },
+    {
+      "x": 8361,
+      "y": 7464,
+      "height": 4.92,
+      "name": "small_stone_04 (30)",
+      "type": "rock"
+    },
+    {
+      "x": 8355,
+      "y": 7464,
+      "height": 3.83,
+      "name": "small_stone_04 (31)",
+      "type": "rock"
+    },
+    {
+      "x": 8307,
+      "y": 7482,
+      "height": 6.84,
+      "name": "small_stone_04 (32)",
+      "type": "rock"
+    },
+    {
+      "x": 8316,
+      "y": 7488,
+      "height": 6.77,
+      "name": "small_stone_04 (33)",
+      "type": "rock"
+    },
+    {
+      "x": 8353,
+      "y": 7474,
+      "height": 5.57,
+      "name": "small_stone_04 (34)",
+      "type": "rock"
+    },
+    {
+      "x": 8343,
+      "y": 7484,
+      "height": 5.84,
+      "name": "small_stone_04 (35)",
+      "type": "rock"
+    },
+    {
+      "x": 7525,
+      "y": 7660,
+      "height": 1.25,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8051,
+      "y": 8449,
+      "height": 3.05,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7911,
+      "y": 8175,
+      "height": 4.53,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8014,
+      "y": 8288,
+      "height": 4.97,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8105,
+      "y": 8205,
+      "height": 2.48,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8213,
+      "y": 8262,
+      "height": 0.1,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8198,
+      "y": 8519,
+      "height": 4.58,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7862,
+      "y": 8519,
+      "height": -0.14,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7298,
+      "y": 8537,
+      "height": 0.44,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7572,
+      "y": 8571,
+      "height": 2.71,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7437,
+      "y": 8559,
+      "height": 1.53,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7702,
+      "y": 8311,
+      "height": 2.99,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7709,
+      "y": 8171,
+      "height": -0.26,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7977,
+      "y": 7974,
+      "height": -1.16,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8224,
+      "y": 8013,
+      "height": 3.91,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7492,
+      "y": 7658,
+      "height": 0.9,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7803,
+      "y": 7649,
+      "height": -1.21,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8473,
+      "y": 7395,
+      "height": 1.42,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8654,
+      "y": 7793,
+      "height": 1.13,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8494,
+      "y": 7786,
+      "height": 6.36,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8603,
+      "y": 8032,
+      "height": 1.33,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8469,
+      "y": 8041,
+      "height": 2.65,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8685,
+      "y": 8348,
+      "height": -1.09,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8593,
+      "y": 8328,
+      "height": -1.35,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8294,
+      "y": 8136,
+      "height": 5.52,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8399,
+      "y": 7292,
+      "height": 1.91,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8426,
+      "y": 7354,
+      "height": 3.27,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7730,
+      "y": 8314,
+      "height": 4.64,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8403,
+      "y": 7595,
+      "height": 9.77,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8455,
+      "y": 7602,
+      "height": 8.72,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8528,
+      "y": 7604,
+      "height": 6.91,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8541,
+      "y": 8136,
+      "height": 0.8,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8404,
+      "y": 8288,
+      "height": 0.17,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8009,
+      "y": 8233,
+      "height": 6.25,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8215,
+      "y": 8125,
+      "height": 5.49,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8218,
+      "y": 8027,
+      "height": 5.43,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8187,
+      "y": 7905,
+      "height": 4.03,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8046,
+      "y": 7868,
+      "height": 1.2,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7981,
+      "y": 8148,
+      "height": 4.09,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7862,
+      "y": 8078,
+      "height": 0.96,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7863,
+      "y": 8181,
+      "height": 5.04,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7841,
+      "y": 8215,
+      "height": 5.18,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7732,
+      "y": 8145,
+      "height": 0.91,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7365,
+      "y": 8288,
+      "height": 0.03,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7587,
+      "y": 8249,
+      "height": 0.92,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7645,
+      "y": 8197,
+      "height": 0.98,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7655,
+      "y": 8202,
+      "height": 1.25,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7464,
+      "y": 8344,
+      "height": 1.21,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7548,
+      "y": 8683,
+      "height": 0.98,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7598,
+      "y": 8754,
+      "height": 1.58,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7402,
+      "y": 8608,
+      "height": 1.81,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7325,
+      "y": 8548,
+      "height": 2.13,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7452,
+      "y": 8555,
+      "height": 3.3,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7758,
+      "y": 8466,
+      "height": 2.6,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7897,
+      "y": 8480,
+      "height": 1.75,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7894,
+      "y": 8370,
+      "height": 4.75,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7746,
+      "y": 8357,
+      "height": 4.04,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7649,
+      "y": 8348,
+      "height": 4.49,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7567,
+      "y": 8519,
+      "height": 5.3,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7579,
+      "y": 8584,
+      "height": 3.91,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7565,
+      "y": 8541,
+      "height": 4.79,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7684,
+      "y": 8603,
+      "height": 5.29,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7649,
+      "y": 8659,
+      "height": 3.58,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8508,
+      "y": 8368,
+      "height": 0.52,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8295,
+      "y": 8518,
+      "height": 4.79,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8636,
+      "y": 8322,
+      "height": 0.28,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8686,
+      "y": 8311,
+      "height": 0.29,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8106,
+      "y": 8535,
+      "height": 3.24,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8023,
+      "y": 8460,
+      "height": 3.69,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7977,
+      "y": 8518,
+      "height": 1.67,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8021,
+      "y": 8615,
+      "height": 1.83,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8058,
+      "y": 8573,
+      "height": 1.52,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8254,
+      "y": 8501,
+      "height": 5.81,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8253,
+      "y": 8319,
+      "height": 0.41,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8277,
+      "y": 8364,
+      "height": 0.04,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8228,
+      "y": 8548,
+      "height": 5.32,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8162,
+      "y": 8574,
+      "height": 3.61,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8660,
+      "y": 8331,
+      "height": 0.24,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8399,
+      "y": 8361,
+      "height": 0.02,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8284,
+      "y": 8013,
+      "height": 4.99,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8340,
+      "y": 8320,
+      "height": 0.25,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8432,
+      "y": 8170,
+      "height": 1.45,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8542,
+      "y": 8218,
+      "height": -0.03,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8613,
+      "y": 8227,
+      "height": -0.27,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8565,
+      "y": 8027,
+      "height": 2.78,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8398,
+      "y": 7938,
+      "height": 8.62,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8424,
+      "y": 7805,
+      "height": 10.77,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8588,
+      "y": 7740,
+      "height": 4.58,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8587,
+      "y": 7692,
+      "height": 3.57,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8526,
+      "y": 7993,
+      "height": 4,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8476,
+      "y": 7670,
+      "height": 7.51,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8506,
+      "y": 7527,
+      "height": 4.08,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8294,
+      "y": 7493,
+      "height": 6.64,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8268,
+      "y": 7505,
+      "height": 6.93,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8355,
+      "y": 7494,
+      "height": 6.53,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8449,
+      "y": 7408,
+      "height": 3.43,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8320,
+      "y": 7323,
+      "height": 2.81,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8344,
+      "y": 7319,
+      "height": 3.2,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8142,
+      "y": 7376,
+      "height": 1.43,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8131,
+      "y": 7308,
+      "height": 0.65,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8213,
+      "y": 7283,
+      "height": 1.89,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8096,
+      "y": 7349,
+      "height": 0.15,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7914,
+      "y": 7740,
+      "height": 0.88,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7945,
+      "y": 7797,
+      "height": 0.06,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7983,
+      "y": 7792,
+      "height": 0.37,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7869,
+      "y": 7779,
+      "height": -0.58,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7867,
+      "y": 7777,
+      "height": -0.57,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7877,
+      "y": 7775,
+      "height": -0.34,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7871,
+      "y": 7773,
+      "height": -0.4,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7874,
+      "y": 7777,
+      "height": -0.43,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7872,
+      "y": 7782,
+      "height": -0.6,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7867,
+      "y": 7782,
+      "height": -0.7,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7872,
+      "y": 7776,
+      "height": -0.44,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7875,
+      "y": 7771,
+      "height": -0.28,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7869,
+      "y": 7774,
+      "height": -0.45,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7876,
+      "y": 7775,
+      "height": -0.38,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7916,
+      "y": 7837,
+      "height": -0.51,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7913,
+      "y": 7841,
+      "height": -0.61,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7919,
+      "y": 7841,
+      "height": -0.46,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7916,
+      "y": 7843,
+      "height": -0.53,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7912,
+      "y": 7843,
+      "height": -0.63,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7274,
+      "y": 8290,
+      "height": -0.61,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7271,
+      "y": 8287,
+      "height": -0.65,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7282,
+      "y": 8285,
+      "height": -0.7,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7275,
+      "y": 8284,
+      "height": -0.72,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7278,
+      "y": 8287,
+      "height": -0.69,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7276,
+      "y": 8293,
+      "height": -0.55,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7271,
+      "y": 8292,
+      "height": -0.55,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7276,
+      "y": 8286,
+      "height": -0.69,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7279,
+      "y": 8282,
+      "height": -0.75,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7273,
+      "y": 8285,
+      "height": -0.7,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7280,
+      "y": 8285,
+      "height": -0.7,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7348,
+      "y": 8253,
+      "height": -0.3,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7345,
+      "y": 8251,
+      "height": -0.34,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7356,
+      "y": 8248,
+      "height": -0.4,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7349,
+      "y": 8247,
+      "height": -0.41,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7353,
+      "y": 8250,
+      "height": -0.37,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7351,
+      "y": 8256,
+      "height": -0.3,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7346,
+      "y": 8255,
+      "height": -0.22,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7351,
+      "y": 8249,
+      "height": -0.37,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7353,
+      "y": 8245,
+      "height": -0.46,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7348,
+      "y": 8248,
+      "height": -0.4,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7354,
+      "y": 8249,
+      "height": -0.39,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7368,
+      "y": 8249,
+      "height": -0.55,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7365,
+      "y": 8253,
+      "height": -0.48,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7371,
+      "y": 8253,
+      "height": -0.53,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7368,
+      "y": 8255,
+      "height": -0.49,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7364,
+      "y": 8255,
+      "height": -0.45,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7565,
+      "y": 8194,
+      "height": -0.78,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7562,
+      "y": 8191,
+      "height": -0.85,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7573,
+      "y": 8189,
+      "height": -0.77,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7567,
+      "y": 8188,
+      "height": -0.88,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7570,
+      "y": 8191,
+      "height": -0.78,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7568,
+      "y": 8197,
+      "height": -0.7,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7563,
+      "y": 8196,
+      "height": -0.75,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7568,
+      "y": 8190,
+      "height": -0.82,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7570,
+      "y": 8186,
+      "height": -0.87,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7565,
+      "y": 8189,
+      "height": -0.88,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7572,
+      "y": 8189,
+      "height": -0.79,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7477,
+      "y": 8242,
+      "height": -0.51,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7474,
+      "y": 8246,
+      "height": -0.49,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7480,
+      "y": 8246,
+      "height": -0.42,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7477,
+      "y": 8248,
+      "height": -0.42,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7473,
+      "y": 8248,
+      "height": -0.47,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7459,
+      "y": 8250,
+      "height": -0.6,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7456,
+      "y": 8254,
+      "height": -0.57,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7462,
+      "y": 8254,
+      "height": -0.53,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7459,
+      "y": 8256,
+      "height": -0.52,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7455,
+      "y": 8256,
+      "height": -0.55,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7554,
+      "y": 8211,
+      "height": -0.53,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7552,
+      "y": 8208,
+      "height": -0.6,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7562,
+      "y": 8206,
+      "height": -0.56,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7556,
+      "y": 8205,
+      "height": -0.64,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7559,
+      "y": 8208,
+      "height": -0.55,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7557,
+      "y": 8214,
+      "height": -0.45,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7552,
+      "y": 8213,
+      "height": -0.5,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7557,
+      "y": 8207,
+      "height": -0.59,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7560,
+      "y": 8202,
+      "height": -0.65,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7554,
+      "y": 8205,
+      "height": -0.64,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7561,
+      "y": 8206,
+      "height": -0.56,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7610,
+      "y": 8147,
+      "height": -0.81,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7607,
+      "y": 8151,
+      "height": -0.82,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7613,
+      "y": 8151,
+      "height": -0.71,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7610,
+      "y": 8153,
+      "height": -0.73,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7606,
+      "y": 8153,
+      "height": -0.8,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7795,
+      "y": 8041,
+      "height": -0.25,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7793,
+      "y": 8039,
+      "height": -0.34,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7803,
+      "y": 8037,
+      "height": -0.36,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7797,
+      "y": 8035,
+      "height": -0.44,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7800,
+      "y": 8039,
+      "height": -0.33,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7798,
+      "y": 8044,
+      "height": -0.12,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7793,
+      "y": 8044,
+      "height": -0.16,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7798,
+      "y": 8038,
+      "height": -0.38,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7801,
+      "y": 8033,
+      "height": -0.48,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7795,
+      "y": 8036,
+      "height": -0.42,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7802,
+      "y": 8037,
+      "height": -0.36,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7669,
+      "y": 8109,
+      "height": -0.77,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7666,
+      "y": 8107,
+      "height": -0.87,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7677,
+      "y": 8105,
+      "height": -0.75,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7670,
+      "y": 8103,
+      "height": -0.89,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7673,
+      "y": 8107,
+      "height": -0.77,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7671,
+      "y": 8112,
+      "height": -0.66,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7666,
+      "y": 8112,
+      "height": -0.74,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7671,
+      "y": 8106,
+      "height": -0.82,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7674,
+      "y": 8101,
+      "height": -0.86,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7668,
+      "y": 8104,
+      "height": -0.89,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7675,
+      "y": 8105,
+      "height": -0.78,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7730,
+      "y": 8058,
+      "height": -0.69,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7727,
+      "y": 8062,
+      "height": -0.67,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7733,
+      "y": 8062,
+      "height": -0.57,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7730,
+      "y": 8065,
+      "height": -0.58,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7726,
+      "y": 8065,
+      "height": -0.64,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7958,
+      "y": 8861,
+      "height": 37.11,
+      "name": "SHRUBS",
+      "type": "prop"
+    },
+    {
+      "x": 8094,
+      "y": 8210,
+      "height": 3.96,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8064,
+      "y": 7692,
+      "height": 2.46,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7918,
+      "y": 7638,
+      "height": 0.59,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8260,
+      "y": 7558,
+      "height": 7.49,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8359,
+      "y": 7509,
+      "height": 6.35,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7631,
+      "y": 8733,
+      "height": 1.84,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7530,
+      "y": 8403,
+      "height": 4.75,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7574,
+      "y": 8417,
+      "height": 4.86,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8000,
+      "y": 7752,
+      "height": 1.52,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8496,
+      "y": 7289,
+      "height": 0.84,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8192,
+      "y": 7400,
+      "height": 2.08,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8682,
+      "y": 8300,
+      "height": 0.23,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7626,
+      "y": 8497,
+      "height": 5.94,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8342,
+      "y": 8649,
+      "height": 1.96,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7577,
+      "y": 8728,
+      "height": 0.76,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8399,
+      "y": 7790,
+      "height": 10.72,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8594,
+      "y": 7671,
+      "height": 2.34,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7657,
+      "y": 8698,
+      "height": 2.38,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7642,
+      "y": 8362,
+      "height": 4.05,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8302,
+      "y": 8249,
+      "height": 1.52,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7625,
+      "y": 8257,
+      "height": 1.61,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7333,
+      "y": 7599,
+      "height": -0.25,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7367,
+      "y": 7709,
+      "height": 0.96,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8324,
+      "y": 8652,
+      "height": 2.45,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8608,
+      "y": 7826,
+      "height": 4.5,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7416,
+      "y": 8636,
+      "height": 1.04,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8606,
+      "y": 7639,
+      "height": 0.76,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8235,
+      "y": 8273,
+      "height": 1.24,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8458,
+      "y": 7640,
+      "height": 7.52,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8615,
+      "y": 7824,
+      "height": 4.24,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7889,
+      "y": 8046,
+      "height": 0.01,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7968,
+      "y": 7825,
+      "height": -0.15,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8321,
+      "y": 8261,
+      "height": 0.98,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8115,
+      "y": 8194,
+      "height": 3.26,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8238,
+      "y": 8116,
+      "height": 5.05,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7772,
+      "y": 7650,
+      "height": -0.21,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8599,
+      "y": 7629,
+      "height": 0.9,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7483,
+      "y": 8422,
+      "height": 4.25,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7717,
+      "y": 7596,
+      "height": -0.07,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8566,
+      "y": 7586,
+      "height": 1.61,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8008,
+      "y": 8270,
+      "height": 5.77,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7680,
+      "y": 7590,
+      "height": 0.61,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7470,
+      "y": 8319,
+      "height": 0.5,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8026,
+      "y": 7803,
+      "height": 1.48,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7780,
+      "y": 7636,
+      "height": -0.02,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7826,
+      "y": 7601,
+      "height": 0.88,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8095,
+      "y": 8160,
+      "height": 4.03,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8311,
+      "y": 8123,
+      "height": 4.96,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7670,
+      "y": 8628,
+      "height": 4.13,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8574,
+      "y": 7737,
+      "height": 4.87,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8617,
+      "y": 7777,
+      "height": 3.13,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8198,
+      "y": 7785,
+      "height": 7.52,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7348,
+      "y": 8476,
+      "height": 3.04,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8003,
+      "y": 7780,
+      "height": 1.08,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8084,
+      "y": 8226,
+      "height": 3.96,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8466,
+      "y": 8437,
+      "height": 1.46,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8644,
+      "y": 8365,
+      "height": 0.29,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8271,
+      "y": 8249,
+      "height": 1.69,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7814,
+      "y": 7581,
+      "height": 0.74,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7421,
+      "y": 7712,
+      "height": 1.48,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8156,
+      "y": 7715,
+      "height": 5.9,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7467,
+      "y": 8418,
+      "height": 4.23,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8621,
+      "y": 8041,
+      "height": 2.72,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8069,
+      "y": 7815,
+      "height": 2.43,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8272,
+      "y": 7962,
+      "height": 4.59,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8602,
+      "y": 7695,
+      "height": 2.32,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8070,
+      "y": 8577,
+      "height": 1.32,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8592,
+      "y": 8144,
+      "height": 0.22,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8326,
+      "y": 8641,
+      "height": 2.43,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7846,
+      "y": 8407,
+      "height": 2.31,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7610,
+      "y": 7621,
+      "height": 0.66,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8281,
+      "y": 8381,
+      "height": -0.19,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8044,
+      "y": 7843,
+      "height": 1.54,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8042,
+      "y": 7731,
+      "height": 4.02,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8260,
+      "y": 8156,
+      "height": 4.86,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8309,
+      "y": 7303,
+      "height": 2.13,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8633,
+      "y": 7834,
+      "height": 3.91,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8427,
+      "y": 7294,
+      "height": 1.37,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7324,
+      "y": 8349,
+      "height": 2.22,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7917,
+      "y": 8160,
+      "height": 5.61,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8013,
+      "y": 7675,
+      "height": 1.41,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7680,
+      "y": 8364,
+      "height": 3.93,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7994,
+      "y": 8141,
+      "height": 2.92,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8281,
+      "y": 8423,
+      "height": 3.35,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8538,
+      "y": 7612,
+      "height": 6.38,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8388,
+      "y": 7647,
+      "height": 9.65,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7592,
+      "y": 8244,
+      "height": 0.7,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7953,
+      "y": 7649,
+      "height": 1.07,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8204,
+      "y": 7766,
+      "height": 8.43,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8323,
+      "y": 8001,
+      "height": 4.91,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8632,
+      "y": 7968,
+      "height": 2.48,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8337,
+      "y": 8662,
+      "height": 2.41,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8259,
+      "y": 7994,
+      "height": 4.39,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8225,
+      "y": 8106,
+      "height": 5.12,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8604,
+      "y": 8317,
+      "height": -0.08,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8120,
+      "y": 8538,
+      "height": 2.91,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8376,
+      "y": 7861,
+      "height": 10.66,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7751,
+      "y": 7635,
+      "height": -0.2,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7740,
+      "y": 8134,
+      "height": 0.6,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8492,
+      "y": 7741,
+      "height": 7.46,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7691,
+      "y": 8277,
+      "height": 4.1,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8471,
+      "y": 8003,
+      "height": 4.43,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7739,
+      "y": 8339,
+      "height": 3.91,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8323,
+      "y": 8324,
+      "height": 0.09,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8583,
+      "y": 8749,
+      "height": 1.46,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8476,
+      "y": 8768,
+      "height": 1.46,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8610,
+      "y": 8333,
+      "height": 0.21,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7487,
+      "y": 8525,
+      "height": 3.96,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7857,
+      "y": 8093,
+      "height": 1.36,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7619,
+      "y": 8213,
+      "height": 0.65,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7481,
+      "y": 7646,
+      "height": 2.27,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7410,
+      "y": 8603,
+      "height": 1.57,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8609,
+      "y": 7855,
+      "height": 4.67,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8263,
+      "y": 8168,
+      "height": 4.71,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8317,
+      "y": 8573,
+      "height": 2.67,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7997,
+      "y": 7816,
+      "height": 0.67,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7683,
+      "y": 8569,
+      "height": 5.62,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8589,
+      "y": 8123,
+      "height": 0.48,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8551,
+      "y": 8343,
+      "height": 0.08,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7848,
+      "y": 7703,
+      "height": 0.26,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8485,
+      "y": 7791,
+      "height": 7.39,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8491,
+      "y": 7554,
+      "height": 4.97,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8543,
+      "y": 8750,
+      "height": 1.46,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8590,
+      "y": 7751,
+      "height": 3.89,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8571,
+      "y": 7803,
+      "height": 5.93,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8620,
+      "y": 8377,
+      "height": 0.41,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8527,
+      "y": 7824,
+      "height": 6.14,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7887,
+      "y": 8155,
+      "height": 5.08,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8317,
+      "y": 8572,
+      "height": 2.69,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7581,
+      "y": 7643,
+      "height": 0.3,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8322,
+      "y": 8647,
+      "height": 2.45,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8588,
+      "y": 8355,
+      "height": 0.33,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8615,
+      "y": 7688,
+      "height": 1.45,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8394,
+      "y": 7988,
+      "height": 7.19,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8114,
+      "y": 8255,
+      "height": 2.56,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8465,
+      "y": 7758,
+      "height": 8.49,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8338,
+      "y": 8670,
+      "height": 2.63,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8723,
+      "y": 8367,
+      "height": 0.26,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7564,
+      "y": 8503,
+      "height": 5.22,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8070,
+      "y": 8558,
+      "height": 1.45,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8370,
+      "y": 7847,
+      "height": 11.6,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7886,
+      "y": 8038,
+      "height": -0.16,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8360,
+      "y": 8427,
+      "height": -0.31,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8051,
+      "y": 7787,
+      "height": 2.38,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8574,
+      "y": 7395,
+      "height": 1.12,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7553,
+      "y": 8493,
+      "height": 5.07,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8488,
+      "y": 7723,
+      "height": 7.56,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8611,
+      "y": 8116,
+      "height": 0.4,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8452,
+      "y": 8067,
+      "height": 3.72,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8663,
+      "y": 8672,
+      "height": 1.46,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8701,
+      "y": 8534,
+      "height": 1.48,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8600,
+      "y": 7926,
+      "height": 3.78,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8662,
+      "y": 7715,
+      "height": 1.22,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8087,
+      "y": 7763,
+      "height": 5.3,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8096,
+      "y": 7759,
+      "height": 5.68,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8258,
+      "y": 7567,
+      "height": 7.75,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7297,
+      "y": 8370,
+      "height": 1.64,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8633,
+      "y": 8035,
+      "height": 2.53,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7693,
+      "y": 8549,
+      "height": 6.03,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8212,
+      "y": 7789,
+      "height": 8.01,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8400,
+      "y": 7642,
+      "height": 9.38,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8274,
+      "y": 7832,
+      "height": 11.22,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8084,
+      "y": 8275,
+      "height": 4.19,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8595,
+      "y": 7595,
+      "height": 0.7,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8649,
+      "y": 8359,
+      "height": 0.19,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8128,
+      "y": 8510,
+      "height": 3.6,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8412,
+      "y": 7747,
+      "height": 9.88,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8304,
+      "y": 8406,
+      "height": 0.13,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7636,
+      "y": 8376,
+      "height": 4.05,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7340,
+      "y": 8469,
+      "height": 2.46,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8049,
+      "y": 8607,
+      "height": 1.43,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8000,
+      "y": 8576,
+      "height": 1.02,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7965,
+      "y": 8447,
+      "height": 2.44,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 8241,
+      "y": 8401,
+      "height": 3.57,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7639,
+      "y": 8779,
+      "height": 1.78,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7333,
+      "y": 7609,
+      "height": -0.31,
+      "name": "Bush02",
+      "type": "prop"
+    },
+    {
+      "x": 7958,
+      "y": 8861,
+      "height": 37.53,
+      "name": "SHRUBS",
+      "type": "prop"
+    },
+    {
+      "x": 7577,
+      "y": 8742,
+      "height": 0.81,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8696,
+      "y": 8613,
+      "height": 1.62,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8402,
+      "y": 7564,
+      "height": 8.7,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8553,
+      "y": 7639,
+      "height": 6.05,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8602,
+      "y": 7860,
+      "height": 5,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8535,
+      "y": 8341,
+      "height": -0.13,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8298,
+      "y": 8319,
+      "height": 0.2,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8041,
+      "y": 8559,
+      "height": 1.41,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8516,
+      "y": 7616,
+      "height": 6.9,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8485,
+      "y": 7723,
+      "height": 8.21,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8484,
+      "y": 7336,
+      "height": 1.85,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7393,
+      "y": 8305,
+      "height": -0.09,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8101,
+      "y": 8472,
+      "height": 4.49,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8369,
+      "y": 8509,
+      "height": 2,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7978,
+      "y": 7808,
+      "height": 0.44,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7647,
+      "y": 8601,
+      "height": 4.37,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7905,
+      "y": 8036,
+      "height": 0.02,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8381,
+      "y": 7542,
+      "height": 8.42,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8665,
+      "y": 8034,
+      "height": 1.02,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7922,
+      "y": 7661,
+      "height": 1.28,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8500,
+      "y": 7880,
+      "height": 15.45,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8561,
+      "y": 7718,
+      "height": 5.16,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8277,
+      "y": 8319,
+      "height": 0.18,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8575,
+      "y": 7746,
+      "height": 5.18,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8302,
+      "y": 8550,
+      "height": 3.74,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7698,
+      "y": 8198,
+      "height": 1.74,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8670,
+      "y": 8207,
+      "height": 0.33,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8310,
+      "y": 8026,
+      "height": 4.97,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7687,
+      "y": 8168,
+      "height": 0.75,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8671,
+      "y": 8353,
+      "height": 0.45,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7665,
+      "y": 7599,
+      "height": 0.62,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7341,
+      "y": 7614,
+      "height": -0.19,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8065,
+      "y": 7830,
+      "height": 2.41,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8216,
+      "y": 7870,
+      "height": 6.87,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8395,
+      "y": 7460,
+      "height": 4.86,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8391,
+      "y": 7803,
+      "height": 11.93,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8420,
+      "y": 8740,
+      "height": 1.69,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8326,
+      "y": 8556,
+      "height": 3.09,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8374,
+      "y": 8691,
+      "height": 1.75,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8631,
+      "y": 8335,
+      "height": 0.15,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8590,
+      "y": 7756,
+      "height": 5.15,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7706,
+      "y": 8340,
+      "height": 4.27,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7708,
+      "y": 8313,
+      "height": 4.91,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8430,
+      "y": 7556,
+      "height": 8.29,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7708,
+      "y": 8353,
+      "height": 4.21,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7627,
+      "y": 8369,
+      "height": 4.42,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8277,
+      "y": 8370,
+      "height": -0.09,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8166,
+      "y": 7734,
+      "height": 7.35,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8579,
+      "y": 7627,
+      "height": 4.52,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7498,
+      "y": 8539,
+      "height": 4.08,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8440,
+      "y": 7625,
+      "height": 8.77,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8654,
+      "y": 7801,
+      "height": 2.97,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7789,
+      "y": 7627,
+      "height": 0.31,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7609,
+      "y": 8741,
+      "height": 1.69,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8373,
+      "y": 8106,
+      "height": 4.9,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7710,
+      "y": 8315,
+      "height": 4.63,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8096,
+      "y": 7835,
+      "height": 3.05,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8202,
+      "y": 8392,
+      "height": 3.94,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8099,
+      "y": 8230,
+      "height": 4.36,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8575,
+      "y": 7598,
+      "height": 4.79,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8335,
+      "y": 8109,
+      "height": 5.33,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7864,
+      "y": 8181,
+      "height": 4.95,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8249,
+      "y": 8255,
+      "height": 1.78,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8040,
+      "y": 7890,
+      "height": 1.31,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7603,
+      "y": 8730,
+      "height": 1.57,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8251,
+      "y": 8491,
+      "height": 5.89,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8422,
+      "y": 7792,
+      "height": 10.71,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8692,
+      "y": 8538,
+      "height": 1.62,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8332,
+      "y": 8518,
+      "height": 4.1,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8229,
+      "y": 7944,
+      "height": 3.42,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7932,
+      "y": 7763,
+      "height": 0.45,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7746,
+      "y": 8133,
+      "height": 0.79,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7738,
+      "y": 7612,
+      "height": -0.11,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7777,
+      "y": 7580,
+      "height": 0.75,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7867,
+      "y": 8176,
+      "height": 5.01,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7712,
+      "y": 8152,
+      "height": 0.7,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8285,
+      "y": 8488,
+      "height": 5.03,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8688,
+      "y": 8480,
+      "height": 2.44,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7346,
+      "y": 8562,
+      "height": 2.08,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8388,
+      "y": 7947,
+      "height": 8.65,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8463,
+      "y": 8421,
+      "height": 1.5,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8012,
+      "y": 8255,
+      "height": 6.16,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8509,
+      "y": 7785,
+      "height": 7.38,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7507,
+      "y": 7657,
+      "height": 2,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8282,
+      "y": 8500,
+      "height": 5.25,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8279,
+      "y": 7530,
+      "height": 9.36,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8621,
+      "y": 8367,
+      "height": 0.26,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8155,
+      "y": 8617,
+      "height": 1.9,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8176,
+      "y": 8271,
+      "height": 1.42,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7361,
+      "y": 8591,
+      "height": 1.72,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7478,
+      "y": 8558,
+      "height": 3.34,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8054,
+      "y": 8448,
+      "height": 5.18,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7813,
+      "y": 8097,
+      "height": 2.15,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7685,
+      "y": 8300,
+      "height": 4.39,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8158,
+      "y": 7755,
+      "height": 7.65,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8477,
+      "y": 7799,
+      "height": 8.15,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8222,
+      "y": 8474,
+      "height": 7.03,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8253,
+      "y": 8300,
+      "height": 0.76,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8309,
+      "y": 8397,
+      "height": -0.19,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8576,
+      "y": 7584,
+      "height": 4.64,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8530,
+      "y": 8170,
+      "height": 0.36,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8186,
+      "y": 8483,
+      "height": 7.78,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8419,
+      "y": 7934,
+      "height": 8.02,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7996,
+      "y": 8552,
+      "height": 1.31,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8536,
+      "y": 7773,
+      "height": 6.94,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8032,
+      "y": 7839,
+      "height": 1.38,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8493,
+      "y": 8449,
+      "height": 1.62,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7705,
+      "y": 8143,
+      "height": 0.38,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8675,
+      "y": 8325,
+      "height": 0.09,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8366,
+      "y": 7340,
+      "height": 3.2,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8171,
+      "y": 7782,
+      "height": 7.3,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8046,
+      "y": 8614,
+      "height": 1.9,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7567,
+      "y": 8514,
+      "height": 5.34,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7903,
+      "y": 7706,
+      "height": 1.44,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8372,
+      "y": 7433,
+      "height": 2.26,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7613,
+      "y": 8217,
+      "height": 0.66,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8309,
+      "y": 8338,
+      "height": -0.01,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7309,
+      "y": 8375,
+      "height": 1.9,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8007,
+      "y": 8497,
+      "height": 1.97,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8687,
+      "y": 7827,
+      "height": 2.07,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8426,
+      "y": 7742,
+      "height": 10.22,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8360,
+      "y": 8248,
+      "height": 0.81,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8284,
+      "y": 8124,
+      "height": 5.53,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8210,
+      "y": 8100,
+      "height": 5.5,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7644,
+      "y": 8326,
+      "height": 4.42,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8271,
+      "y": 7968,
+      "height": 4.69,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8050,
+      "y": 8005,
+      "height": 1.42,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7615,
+      "y": 8746,
+      "height": 1.79,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7913,
+      "y": 8039,
+      "height": 0.18,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8514,
+      "y": 7487,
+      "height": 2.48,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8098,
+      "y": 8508,
+      "height": 3.5,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8004,
+      "y": 8421,
+      "height": 3.97,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7873,
+      "y": 8391,
+      "height": 3.4,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7428,
+      "y": 8574,
+      "height": 2.55,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7668,
+      "y": 8795,
+      "height": 2.12,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8013,
+      "y": 7856,
+      "height": 0.85,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8559,
+      "y": 7374,
+      "height": 1.45,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8421,
+      "y": 8754,
+      "height": 2.01,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8326,
+      "y": 8261,
+      "height": 1.01,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7561,
+      "y": 8520,
+      "height": 5.08,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8046,
+      "y": 8592,
+      "height": 1.23,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8504,
+      "y": 7611,
+      "height": 7.01,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7394,
+      "y": 8654,
+      "height": 0.07,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7782,
+      "y": 8107,
+      "height": 1.83,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8190,
+      "y": 7780,
+      "height": 7.94,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8060,
+      "y": 8622,
+      "height": 2.59,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8552,
+      "y": 8017,
+      "height": 3,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 7573,
+      "y": 8244,
+      "height": 0.43,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8642,
+      "y": 7754,
+      "height": 2.16,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8725,
+      "y": 8333,
+      "height": 0.13,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8388,
+      "y": 7272,
+      "height": 1.6,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8241,
+      "y": 8252,
+      "height": 1.81,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8382,
+      "y": 7918,
+      "height": 9.11,
+      "name": "Bush-1",
+      "type": "prop"
+    },
+    {
+      "x": 8091,
+      "y": 7752,
+      "height": 6.19,
+      "name": "P_AncientRuins_Rock4 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 8172,
+      "y": 7756,
+      "height": 7.96,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 8212,
+      "y": 7498,
+      "height": 4.7,
+      "name": "P_AncientRuins_Rock4 (2)",
+      "type": "rock"
+    },
+    {
+      "x": 8165,
+      "y": 7403,
+      "height": 1.96,
+      "name": "P_AncientRuins_Rock4 (3)",
+      "type": "rock"
+    },
+    {
+      "x": 8008,
+      "y": 7715,
+      "height": 3.52,
+      "name": "P_AncientRuins_Rock4 (4)",
+      "type": "rock"
+    },
+    {
+      "x": 8800,
+      "y": 7789,
+      "height": -0.57,
+      "name": "P_AncientRuins_Rock4 (5)",
+      "type": "rock"
+    },
+    {
+      "x": 8876,
+      "y": 7775,
+      "height": -2.73,
+      "name": "P_AncientRuins_Rock4 (6)",
+      "type": "rock"
+    },
+    {
+      "x": 8876,
+      "y": 7896,
+      "height": -1.43,
+      "name": "P_AncientRuins_Rock4 (7)",
+      "type": "rock"
+    },
+    {
+      "x": 8809,
+      "y": 7889,
+      "height": -0.57,
+      "name": "P_AncientRuins_Rock4 (8)",
+      "type": "rock"
+    },
+    {
+      "x": 8917,
+      "y": 7830,
+      "height": -2.78,
+      "name": "P_AncientRuins_Rock4 (9)",
+      "type": "rock"
+    },
+    {
+      "x": 8243,
+      "y": 7809,
+      "height": 10.6,
+      "name": "P_AncientRuins_Rock4 (10)",
+      "type": "rock"
+    },
+    {
+      "x": 8310,
+      "y": 7853,
+      "height": 13.41,
+      "name": "P_AncientRuins_Rock4 (11)",
+      "type": "rock"
+    },
+    {
+      "x": 8388,
+      "y": 7622,
+      "height": 11.06,
+      "name": "P_AncientRuins_Rock4 (12)",
+      "type": "rock"
+    },
+    {
+      "x": 8293,
+      "y": 7532,
+      "height": 9.42,
+      "name": "P_AncientRuins_Rock4 (13)",
+      "type": "rock"
+    },
+    {
+      "x": 8608,
+      "y": 8743,
+      "height": 1.72,
+      "name": "P_AncientRuins_Rock4 (15)",
+      "type": "rock"
+    },
+    {
+      "x": 8407,
+      "y": 8752,
+      "height": 2.72,
+      "name": "P_AncientRuins_Rock4 (16)",
+      "type": "rock"
+    },
+    {
+      "x": 8675,
+      "y": 8540,
+      "height": 1.73,
+      "name": "P_AncientRuins_Rock4 (17)",
+      "type": "rock"
+    },
+    {
+      "x": 8525,
+      "y": 8427,
+      "height": 1.73,
+      "name": "P_AncientRuins_Rock4 (18)",
+      "type": "rock"
+    },
+    {
+      "x": 8343,
+      "y": 8592,
+      "height": 1.87,
+      "name": "P_AncientRuins_Rock4 (19)",
+      "type": "rock"
+    },
+    {
+      "x": 7525,
+      "y": 7660,
+      "height": -0.28,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8051,
+      "y": 8449,
+      "height": 3.05,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7911,
+      "y": 8175,
+      "height": 4.53,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8014,
+      "y": 8288,
+      "height": 4.97,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8105,
+      "y": 8205,
+      "height": 2.48,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8213,
+      "y": 8262,
+      "height": 0.1,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8198,
+      "y": 8519,
+      "height": 4.58,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7862,
+      "y": 8519,
+      "height": -0.14,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7298,
+      "y": 8537,
+      "height": 0.44,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7572,
+      "y": 8571,
+      "height": 2.71,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7437,
+      "y": 8559,
+      "height": 1.53,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7702,
+      "y": 8311,
+      "height": 2.99,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7709,
+      "y": 8171,
+      "height": -0.26,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7977,
+      "y": 7974,
+      "height": -1.16,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8224,
+      "y": 8013,
+      "height": 3.91,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7492,
+      "y": 7658,
+      "height": 0.9,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 7803,
+      "y": 7649,
+      "height": -1.21,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8473,
+      "y": 7395,
+      "height": 1.42,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8654,
+      "y": 7793,
+      "height": 1.13,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8494,
+      "y": 7786,
+      "height": 6.36,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8603,
+      "y": 8032,
+      "height": 1.33,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8469,
+      "y": 8041,
+      "height": 2.65,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8685,
+      "y": 8348,
+      "height": -1.09,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8593,
+      "y": 8328,
+      "height": -1.35,
+      "name": "Stone",
+      "type": "rock"
+    },
+    {
+      "x": 8294,
+      "y": 8136,
+      "height": 4,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8399,
+      "y": 7292,
+      "height": 0.39,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8426,
+      "y": 7354,
+      "height": 3.27,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7730,
+      "y": 8314,
+      "height": 4.64,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8403,
+      "y": 7595,
+      "height": 11.29,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8455,
+      "y": 7602,
+      "height": 8.72,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8528,
+      "y": 7604,
+      "height": 6.91,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8541,
+      "y": 8136,
+      "height": 0.8,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8404,
+      "y": 8288,
+      "height": 0.17,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8009,
+      "y": 8233,
+      "height": 6.25,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8215,
+      "y": 8125,
+      "height": 5.49,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8218,
+      "y": 8027,
+      "height": 5.43,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8187,
+      "y": 7905,
+      "height": 4.03,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8046,
+      "y": 7868,
+      "height": 1.2,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7981,
+      "y": 8148,
+      "height": 2.57,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7862,
+      "y": 8078,
+      "height": -0.56,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7863,
+      "y": 8181,
+      "height": 3.51,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7841,
+      "y": 8215,
+      "height": 5.18,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7732,
+      "y": 8145,
+      "height": -0.61,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7365,
+      "y": 8288,
+      "height": 0.03,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7587,
+      "y": 8249,
+      "height": 0.92,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7645,
+      "y": 8197,
+      "height": 2.5,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7655,
+      "y": 8202,
+      "height": 1.25,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7464,
+      "y": 8344,
+      "height": -0.31,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7548,
+      "y": 8683,
+      "height": 0.98,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7598,
+      "y": 8754,
+      "height": 3.1,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7402,
+      "y": 8608,
+      "height": 1.81,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7325,
+      "y": 8548,
+      "height": 2.13,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7452,
+      "y": 8555,
+      "height": 3.3,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7758,
+      "y": 8466,
+      "height": 2.6,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7897,
+      "y": 8480,
+      "height": 1.75,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7894,
+      "y": 8370,
+      "height": 3.23,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7746,
+      "y": 8357,
+      "height": 2.51,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7649,
+      "y": 8348,
+      "height": 4.49,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7567,
+      "y": 8519,
+      "height": 3.78,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7579,
+      "y": 8584,
+      "height": 5.43,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7565,
+      "y": 8541,
+      "height": 4.79,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7684,
+      "y": 8603,
+      "height": 5.29,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7649,
+      "y": 8659,
+      "height": 3.58,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8508,
+      "y": 8368,
+      "height": 2.04,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8295,
+      "y": 8518,
+      "height": 4.79,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8636,
+      "y": 8322,
+      "height": 0.28,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8686,
+      "y": 8311,
+      "height": 1.81,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8106,
+      "y": 8535,
+      "height": 3.24,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8023,
+      "y": 8460,
+      "height": 3.69,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7977,
+      "y": 8518,
+      "height": 0.15,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8021,
+      "y": 8615,
+      "height": 0.31,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8058,
+      "y": 8573,
+      "height": 1.52,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8254,
+      "y": 8501,
+      "height": 7.33,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8253,
+      "y": 8319,
+      "height": 1.93,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8277,
+      "y": 8364,
+      "height": 0.04,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8228,
+      "y": 8548,
+      "height": 6.84,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8162,
+      "y": 8574,
+      "height": 3.61,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8660,
+      "y": 8331,
+      "height": 0.24,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8399,
+      "y": 8361,
+      "height": 0.02,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8284,
+      "y": 8013,
+      "height": 3.47,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8340,
+      "y": 8320,
+      "height": -1.27,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8432,
+      "y": 8170,
+      "height": 1.45,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8542,
+      "y": 8218,
+      "height": -1.55,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8613,
+      "y": 8227,
+      "height": -0.27,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8565,
+      "y": 8027,
+      "height": 2.78,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8398,
+      "y": 7938,
+      "height": 8.62,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8424,
+      "y": 7805,
+      "height": 9.25,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8588,
+      "y": 7740,
+      "height": 4.58,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8587,
+      "y": 7692,
+      "height": 3.57,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8526,
+      "y": 7993,
+      "height": 4,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8476,
+      "y": 7670,
+      "height": 7.51,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8506,
+      "y": 7527,
+      "height": 4.08,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8294,
+      "y": 7493,
+      "height": 6.64,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8268,
+      "y": 7505,
+      "height": 5.41,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8355,
+      "y": 7494,
+      "height": 6.53,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8449,
+      "y": 7408,
+      "height": 3.43,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8320,
+      "y": 7323,
+      "height": 2.81,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8344,
+      "y": 7319,
+      "height": 3.2,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8142,
+      "y": 7376,
+      "height": 2.95,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 8131,
+      "y": 7308,
+      "height": 0.65,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8213,
+      "y": 7283,
+      "height": 1.89,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 8096,
+      "y": 7349,
+      "height": 0.15,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7914,
+      "y": 7740,
+      "height": 0.88,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7945,
+      "y": 7797,
+      "height": 0.06,
+      "name": "OakTree-1",
+      "type": "tree"
+    },
+    {
+      "x": 7983,
+      "y": 7792,
+      "height": 0.37,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7869,
+      "y": 7779,
+      "height": -2.1,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7867,
+      "y": 7777,
+      "height": -0.57,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7877,
+      "y": 7775,
+      "height": -1.86,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7871,
+      "y": 7773,
+      "height": -1.92,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7874,
+      "y": 7777,
+      "height": -0.43,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7872,
+      "y": 7782,
+      "height": -0.6,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7867,
+      "y": 7782,
+      "height": -2.22,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7872,
+      "y": 7776,
+      "height": -1.96,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7875,
+      "y": 7771,
+      "height": -1.81,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7869,
+      "y": 7774,
+      "height": -1.97,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7876,
+      "y": 7775,
+      "height": -0.38,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7916,
+      "y": 7837,
+      "height": -2.03,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7913,
+      "y": 7841,
+      "height": -0.61,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7919,
+      "y": 7841,
+      "height": -1.98,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7916,
+      "y": 7843,
+      "height": -2.06,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7912,
+      "y": 7843,
+      "height": -0.63,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7274,
+      "y": 8290,
+      "height": -2.14,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7271,
+      "y": 8287,
+      "height": -2.17,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7282,
+      "y": 8285,
+      "height": -0.7,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7275,
+      "y": 8284,
+      "height": -0.72,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7278,
+      "y": 8287,
+      "height": -2.21,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7276,
+      "y": 8293,
+      "height": -0.55,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7271,
+      "y": 8292,
+      "height": -2.07,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7276,
+      "y": 8286,
+      "height": -2.21,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7279,
+      "y": 8282,
+      "height": -0.75,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7273,
+      "y": 8285,
+      "height": -2.22,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7280,
+      "y": 8285,
+      "height": -2.22,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7348,
+      "y": 8253,
+      "height": -1.82,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7345,
+      "y": 8251,
+      "height": -1.86,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7356,
+      "y": 8248,
+      "height": -0.4,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7349,
+      "y": 8247,
+      "height": -0.41,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7353,
+      "y": 8250,
+      "height": -1.89,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7351,
+      "y": 8256,
+      "height": -1.82,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7346,
+      "y": 8255,
+      "height": -1.74,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7351,
+      "y": 8249,
+      "height": -0.37,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7353,
+      "y": 8245,
+      "height": -0.46,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7348,
+      "y": 8248,
+      "height": -1.92,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7354,
+      "y": 8249,
+      "height": -0.39,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7368,
+      "y": 8249,
+      "height": -0.55,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7365,
+      "y": 8253,
+      "height": -0.48,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7371,
+      "y": 8253,
+      "height": -2.05,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7368,
+      "y": 8255,
+      "height": -2.01,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7364,
+      "y": 8255,
+      "height": -0.45,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7565,
+      "y": 8194,
+      "height": -2.3,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7562,
+      "y": 8191,
+      "height": -0.85,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7573,
+      "y": 8189,
+      "height": -2.29,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7567,
+      "y": 8188,
+      "height": -0.88,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7570,
+      "y": 8191,
+      "height": -2.3,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7568,
+      "y": 8197,
+      "height": -2.22,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7563,
+      "y": 8196,
+      "height": -0.75,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7568,
+      "y": 8190,
+      "height": -0.82,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7570,
+      "y": 8186,
+      "height": -2.39,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7565,
+      "y": 8189,
+      "height": -2.4,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7572,
+      "y": 8189,
+      "height": -2.31,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7477,
+      "y": 8242,
+      "height": -0.51,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7474,
+      "y": 8246,
+      "height": -2.02,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7480,
+      "y": 8246,
+      "height": -0.42,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7477,
+      "y": 8248,
+      "height": -1.95,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7473,
+      "y": 8248,
+      "height": -1.99,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7459,
+      "y": 8250,
+      "height": -2.12,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7456,
+      "y": 8254,
+      "height": -2.09,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7462,
+      "y": 8254,
+      "height": -0.53,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7459,
+      "y": 8256,
+      "height": -2.04,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7455,
+      "y": 8256,
+      "height": -0.55,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7554,
+      "y": 8211,
+      "height": -0.53,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7552,
+      "y": 8208,
+      "height": -2.12,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7562,
+      "y": 8206,
+      "height": -0.56,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7556,
+      "y": 8205,
+      "height": -0.64,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7559,
+      "y": 8208,
+      "height": -2.08,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7557,
+      "y": 8214,
+      "height": -1.97,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7552,
+      "y": 8213,
+      "height": -2.02,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7557,
+      "y": 8207,
+      "height": -0.59,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7560,
+      "y": 8202,
+      "height": -0.65,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7554,
+      "y": 8205,
+      "height": -0.64,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7561,
+      "y": 8206,
+      "height": -2.09,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7610,
+      "y": 8147,
+      "height": -0.81,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7607,
+      "y": 8151,
+      "height": -2.34,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7613,
+      "y": 8151,
+      "height": -0.71,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7610,
+      "y": 8153,
+      "height": -0.73,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7606,
+      "y": 8153,
+      "height": -0.8,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7795,
+      "y": 8041,
+      "height": -1.77,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7793,
+      "y": 8039,
+      "height": -0.34,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7803,
+      "y": 8037,
+      "height": -0.36,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7797,
+      "y": 8035,
+      "height": -0.44,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7800,
+      "y": 8039,
+      "height": -0.33,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7798,
+      "y": 8044,
+      "height": -0.12,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7793,
+      "y": 8044,
+      "height": -1.68,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7798,
+      "y": 8038,
+      "height": -0.38,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7801,
+      "y": 8033,
+      "height": -2,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7795,
+      "y": 8036,
+      "height": -0.42,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7802,
+      "y": 8037,
+      "height": -0.36,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7669,
+      "y": 8109,
+      "height": -2.29,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7666,
+      "y": 8107,
+      "height": -0.87,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7677,
+      "y": 8105,
+      "height": -2.27,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7670,
+      "y": 8103,
+      "height": -0.89,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7673,
+      "y": 8107,
+      "height": -0.77,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7671,
+      "y": 8112,
+      "height": -2.18,
+      "name": "P_AncientRuins_Rock2",
+      "type": "rock"
+    },
+    {
+      "x": 7666,
+      "y": 8112,
+      "height": -0.74,
+      "name": "P_AncientRuins_Rock1",
+      "type": "rock"
+    },
+    {
+      "x": 7671,
+      "y": 8106,
+      "height": -2.34,
+      "name": "P_AncientRuins_Rock4",
+      "type": "rock"
+    },
+    {
+      "x": 7674,
+      "y": 8101,
+      "height": -0.86,
+      "name": "P_AncientRuins_Rock3",
+      "type": "rock"
+    },
+    {
+      "x": 7668,
+      "y": 8104,
+      "height": -2.42,
+      "name": "P_AncientRuins_Rock2 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7675,
+      "y": 8105,
+      "height": -2.3,
+      "name": "P_AncientRuins_Rock1 (1)",
+      "type": "rock"
+    },
+    {
+      "x": 7730,
+      "y": 8058,
+      "height": -0.69,
+      "name": "Tree1",
+      "type": "tree"
+    },
+    {
+      "x": 7727,
+      "y": 8062,
+      "height": -0.67,
+      "name": "Tree1 (1)",
+      "type": "tree"
+    },
+    {
+      "x": 7733,
+      "y": 8062,
+      "height": -0.57,
+      "name": "Tree1 (2)",
+      "type": "tree"
+    },
+    {
+      "x": 7730,
+      "y": 8065,
+      "height": -2.1,
+      "name": "Tree1 (3)",
+      "type": "tree"
+    },
+    {
+      "x": 7726,
+      "y": 8065,
+      "height": -2.16,
+      "name": "Tree1 (4)",
+      "type": "tree"
+    },
+    {
+      "x": 7379,
+      "y": 8391,
+      "height": 3.68,
+      "name": "WallLog",
+      "type": "log"
+    },
+    {
+      "x": 7345,
+      "y": 8402,
+      "height": 3.68,
+      "name": "WallLog (1)",
+      "type": "log"
+    },
+    {
+      "x": 7414,
+      "y": 8402,
+      "height": 3.68,
+      "name": "WallLog (2)",
+      "type": "log"
+    },
+    {
+      "x": 7434,
+      "y": 8432,
+      "height": 3.68,
+      "name": "WallLog (3)",
+      "type": "log"
+    },
+    {
+      "x": 7322,
+      "y": 8431,
+      "height": 3.65,
+      "name": "WallLog (4)",
+      "type": "log"
+    },
+    {
+      "x": 7317,
+      "y": 8467,
+      "height": 3.65,
+      "name": "WallLog (5)",
+      "type": "log"
+    },
+    {
+      "x": 7358,
+      "y": 8512,
+      "height": 3.65,
+      "name": "WallLog (7)",
+      "type": "log"
+    },
+    {
+      "x": 7394,
+      "y": 8515,
+      "height": 3.65,
+      "name": "WallLog (8)",
+      "type": "log"
+    },
+    {
+      "x": 7425,
+      "y": 8497,
+      "height": 3.65,
+      "name": "WallLog (9)",
+      "type": "log"
+    },
+    {
+      "x": 7330,
+      "y": 8495,
+      "height": 3.65,
+      "name": "WallLog (10)",
+      "type": "log"
+    }
+  ],
+  "subZones": [
+    {
+      "name": "Harbor",
+      "bounds": {
+        "x": 7783,
+        "y": 7839,
+        "w": 250,
+        "h": 250
+      },
+      "terrainType": "water",
+      "safe": true,
+      "description": "Docked ships and fishing boats. Safe harbor for arriving players."
+    },
+    {
+      "name": "Mine",
+      "bounds": {
+        "x": 8401,
+        "y": 7839,
+        "w": 400,
+        "h": 200
+      },
+      "terrainType": "stone",
+      "safe": false,
+      "description": "Rich ore deposits. Mining carts and crystal veins."
+    },
+    {
+      "name": "Cave Entrance",
+      "bounds": {
+        "x": 8338,
+        "y": 7509,
+        "w": 150,
+        "h": 150
+      },
+      "terrainType": "stone",
+      "safe": false,
+      "description": "Dark cave entrance leading underground. Spiders lurk within."
+    },
+    {
+      "name": "Barbarian Camp",
+      "bounds": {
+        "x": 7381,
+        "y": 8457,
+        "w": 200,
+        "h": 200
+      },
+      "terrainType": "grass",
+      "safe": true,
+      "description": "Fortified starting camp with palisade walls, armory, and stables."
+    },
+    {
+      "name": "PvP Arena Platform",
+      "bounds": {
+        "x": 7500,
+        "y": 1000,
+        "w": 1000,
+        "h": 1000
+      },
+      "terrainType": "stone",
+      "safe": false,
+      "description": "Elevated stone platform with tiered arenas for duels and crew battles."
+    }
+  ],
+  "waterLanes": [
+    {
+      "type": "lake",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 16000,
+          "y": 0
+        },
+        {
+          "x": 16000,
+          "y": 16000
+        },
+        {
+          "x": 0,
+          "y": 16000
+        }
+      ]
+    }
+  ],
+  "cliffWalls": [],
+  "dungeons": [
+    {
+      "id": "genesis-cave",
+      "name": "Genesis Cave",
+      "x": 8338,
+      "y": 7509,
+      "requiredLevel": 5,
+      "description": "Winding cave beneath the island. Spiders, bats, and hidden treasure.",
+      "difficulty": "normal",
+      "icon": "🕸️",
+      "floors": 3
+    }
+  ],
+  "exits": [],
+  "connectedZoneIds": [
+    4
+  ],
+  "portalPositions": [
+    {
+      "x": 7841,
+      "y": 7889,
+      "targetZoneId": 4
+    }
+  ]
+}
