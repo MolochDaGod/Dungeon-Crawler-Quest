@@ -13,11 +13,10 @@ import { isPuterAvailable, kvSave, kvLoad } from './puter-cloud';
 
 // ── Constants ──────────────────────────────────────────────────
 
-// Primary: Grudge Studio VPS (api.grudge-studio.com)
-// Fallback: local Express server (/api) for dev without VPS
-const GRUDGE_API_BASE =
-  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GRUDGE_API) ||
-  'https://api.grudge-studio.com';
+// All API calls go through the Vercel/Express proxy at /api/characters
+// which forwards to api.grudge-studio.com server-side (avoids CORS + hides VPS URL)
+// See: api/Grudge Studio Network Audit.md for the canonical pattern
+const GRUDGE_API_BASE = '/api';
 
 const LOCAL_KEY = 'grudge_player_character';
 const PUTER_KEY = 'player_character';
