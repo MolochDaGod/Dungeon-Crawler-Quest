@@ -255,22 +255,31 @@ export function unityToGenesisHeight(unityY: number): number {
 
 // ── New Player Starting Position ───────────────────────────────
 //
-// New players spawn ON THE AIRSHIP floating above the island.
-// Unity airship pos: (-118.5, -2506, -105.18)  →  469 Unity units above ground
-// Race spawns:       (-118.5, -2411, -105.18)  →  on the airship deck
+// SPAWN FLOW (matches original Unity implementation):
+//   1. Character spawns at a SAFE TELEPORTER position (ground level or below)
+//   2. Invisible teleporter INSTANTLY warps player to the airship deck
+//   3. Player is now standing on the airship — no falling through mesh
+//   4. Player chooses race/class, then jumps off the airship to the island
+//   5. Normal fall physics brings them to the Barbarian Camp below
 //
-// The airship slowly rotates (AIR SHIP ROTATOR) above the island.
-// Players choose race/class on deck, then jump/teleport down to the
-// Barbarian Camp starting area.
+// This avoids the common problem of spawning at height and falling
+// through unloaded meshes.  The teleporter fires on the first frame
+// before any rendering occurs.
 
-/** Airship position (floating above the island) */
+/** Safe teleporter position — where the character actually spawns (ground-safe) */
+export const GENESIS_SAFE_SPAWN = {
+  ...unityToGenesisDCQ(-118.5, -105.18),
+  height: 0,  // ground level, immediately teleported away
+};
+
+/** Airship body position (floating above the island) */
 export const GENESIS_AIRSHIP_POS = {
   ...unityToGenesisDCQ(-118.5, -105.18),
   height: unityToGenesisHeight(-2506),  // ~82 DCQ units above ground
 };
 
-/** Where new characters spawn — on the airship deck */
-export const GENESIS_SPAWN_POINT = {
+/** Airship deck — where the teleporter sends you (actual play position) */
+export const GENESIS_AIRSHIP_DECK = {
   ...unityToGenesisDCQ(-118.5, -105.18),
   height: unityToGenesisHeight(-2411),  // ~103 DCQ units above ground (deck level)
 };
@@ -278,7 +287,12 @@ export const GENESIS_SPAWN_POINT = {
 /** Ground-level landing zone — the Barbarian Camp starting area */
 export const GENESIS_LANDING_POINT = unityToGenesisDCQ(-380.52, 27.13);
 
-/** All race spawn points (same position on the airship deck) */
+/** The spawn point used by the game — set to safe teleporter position.
+ *  The open-world engine should detect this zone and immediately
+ *  teleport to GENESIS_AIRSHIP_DECK on first frame. */
+export const GENESIS_SPAWN_POINT = GENESIS_SAFE_SPAWN;
+
+/** All race spawn points (same position — teleported to airship deck) */
 export const RACE_SPAWN_POINTS: Record<string, { x: number; y: number; height: number }> = {
   Human:     GENESIS_SPAWN_POINT,
   Barbarian: GENESIS_SPAWN_POINT,
@@ -287,3 +301,21 @@ export const RACE_SPAWN_POINTS: Record<string, { x: number; y: number; height: n
   Orc:       GENESIS_SPAWN_POINT,
   Undead:    GENESIS_SPAWN_POINT,
 };
+
+/**
+ * Check if a player just spawned and needs the airship teleport.
+ * Call on the first frame after entering Zone 10.
+ * Returns the airship deck position if teleport needed, null otherwise.
+ */
+export function checkAirshipTeleport(
+  playerX: number, playerY: number, playerHeight: number,
+): { x: number; y: number; height: number } | null {
+  const dx = playerX - GENESIS_SAFE_SPAWN.x;
+  const dy = playerY - GENESIS_SAFE_SPAWN.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  // If player is within 50 units of the safe spawn and at ground level, teleport up
+  if (dist < 50 && playerHeight < 5) {
+    return GENESIS_AIRSHIP_DECK;
+  }
+  return null;
+}
