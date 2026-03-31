@@ -14,19 +14,16 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
-import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
-import { Vector3, Color3, Color4 } from "@babylonjs/core/Maths/math";
+import { Vector3, Color3, Color4, Matrix } from "@babylonjs/core/Maths/math";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
-import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 
-import "@babylonjs/loaders/glTF";
-import "@babylonjs/loaders"; // includes FBX loader
+// Side-effect imports required by BabylonJS
+import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
+import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 
 // ── Scale constants (from genesis-island-converter) ────────────
 
@@ -188,23 +185,167 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
   terrainMat.metallic = 0;
   terrain.material = terrainMat;
 
-  // ── Place objects from scene hierarchy ─────────────────────
-  // Load the hierarchy JSON
+  // ── Shared materials (one per type, not per mesh) ────────
+  const mats = {
+    trunk: new StandardMaterial("mat_trunk", scene),
+    canopy: new StandardMaterial("mat_canopy", scene),
+    canopyWillow: new StandardMaterial("mat_canopy_willow", scene),
+    rock: new StandardMaterial("mat_rock", scene),
+    log: new StandardMaterial("mat_log", scene),
+    wall: new StandardMaterial("mat_wall", scene),
+    dock: new StandardMaterial("mat_dock", scene),
+    building: new StandardMaterial("mat_building", scene),
+    roof: new StandardMaterial("mat_roof", scene),
+  };
+  mats.trunk.diffuseColor = new Color3(0.35, 0.22, 0.1);
+  mats.canopy.diffuseColor = new Color3(0.18, 0.38, 0.12);
+  mats.canopyWillow.diffuseColor = new Color3(0.2, 0.5, 0.2);
+  mats.rock.diffuseColor = new Color3(0.42, 0.4, 0.37);
+  mats.log.diffuseColor = new Color3(0.3, 0.2, 0.1);
+  mats.wall.diffuseColor = new Color3(0.35, 0.25, 0.15);
+  mats.dock.diffuseColor = new Color3(0.4, 0.3, 0.18);
+  mats.building.diffuseColor = new Color3(0.45, 0.35, 0.2);
+  mats.roof.diffuseColor = new Color3(0.5, 0.25, 0.1);
+  // Freeze materials so they don't recompute every frame
+  Object.values(mats).forEach(m => m.freeze());
+
+  // ── Template meshes for thin instancing ─────────────────
+  const trunkTemplate = MeshBuilder.CreateCylinder("t_trunk", { height: 5, diameterTop: 0.3, diameterBottom: 0.6, tessellation: 6 }, scene);
+  trunkTemplate.material = mats.trunk;
+  trunkTemplate.isVisible = false;
+  shadowGen.addShadowCaster(trunkTemplate);
+
+  const canopyTemplate = MeshBuilder.CreateSphere("t_canopy", { diameter: 5, segments: 5 }, scene);
+  canopyTemplate.material = mats.canopy;
+  canopyTemplate.isVisible = false;
+  canopyTemplate.receiveShadows = true;
+  shadowGen.addShadowCaster(canopyTemplate);
+
+  const rockTemplate = MeshBuilder.CreateSphere("t_rock", { diameter: 2, segments: 4 }, scene);
+  rockTemplate.material = mats.rock;
+  rockTemplate.isVisible = false;
+  rockTemplate.receiveShadows = true;
+
+  // ── Collect positions from scene hierarchy, then batch ───
+  const treePositions: Vector3[] = [];
+  const rockPositions: Vector3[] = [];
+  const logPositions: Vector3[] = [];
+  const wallPositions: Vector3[] = [];
+  const dockPositions: Vector3[] = [];
+  const buildingPositions: { pos: Vector3; name: string }[] = [];
+
+  function collectPositions(objects: SceneObject[]) {
+    for (const obj of objects) {
+      const name = obj.name.toLowerCase();
+      const pos = obj.position;
+      if (pos.y > -2700) continue; // skip PvP arena
+      const wp = unityToWorld(pos.x, pos.z, pos.y);
+
+      if (name.includes("tree") || name.includes("willow") || name.includes("palm")) treePositions.push(wp);
+      else if (name.includes("rock") || name.includes("stone") || name.includes("big_stone")) rockPositions.push(wp);
+      else if (name.includes("log")) logPositions.push(wp);
+      else if (name.includes("wall") || name.includes("gate") || name.includes("stake")) wallPositions.push(wp);
+      else if (name.includes("dock") || name.includes("stair")) dockPositions.push(wp);
+      else if (name.includes("windmill") || name.includes("camp") || name.includes("armory") || name.includes("stable")) buildingPositions.push({ pos: wp, name });
+
+      if (obj.children) collectPositions(obj.children);
+    }
+  }
+
+  // Load scene data
   let sceneData: GenesisSceneData | null = null;
   try {
     const res = await fetch("/genesis-scene-data.json");
     if (res.ok) sceneData = await res.json();
-  } catch { /* will use fallback placement */ }
+  } catch { /* fallback */ }
 
   if (sceneData) {
     const gi = sceneData.rootObjects.find(o => o.name === "genesis island");
-    if (gi?.children) {
-      placeSceneObjects(scene, gi.children, shadowGen);
-    }
-  } else {
-    // Fallback: place procedural trees and rocks
-    placeProceduralObjects(scene, shadowGen);
+    if (gi?.children) collectPositions(gi.children);
   }
+
+  // Fallback procedural if no data
+  if (treePositions.length === 0) {
+    for (let i = 0; i < 200; i++) {
+      const a = Math.random() * Math.PI * 2, r = 100 + Math.random() * 600;
+      treePositions.push(new Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
+    }
+    for (let i = 0; i < 80; i++) {
+      const a = Math.random() * Math.PI * 2, r = 50 + Math.random() * 700;
+      rockPositions.push(new Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
+    }
+  }
+
+  // ── Batch trees as thin instances ───────────────────────
+  if (treePositions.length > 0) {
+    trunkTemplate.isVisible = true;
+    canopyTemplate.isVisible = true;
+    const trunkBuf = new Float32Array(treePositions.length * 16);
+    const canopyBuf = new Float32Array(treePositions.length * 16);
+    for (let i = 0; i < treePositions.length; i++) {
+      const p = treePositions[i];
+      const h = 4 + Math.random() * 3;
+      const s = 0.8 + Math.random() * 0.4;
+      Matrix.ComposeToRef(
+        new Vector3(s, 1, s), // scale
+        Vector3.Zero().toQuaternion(), // no rotation
+        new Vector3(p.x, p.y + h / 2, p.z), // position
+        Matrix.Identity(),
+      );
+      Matrix.Translation(p.x, p.y + h / 2, p.z).copyToArray(trunkBuf, i * 16);
+      Matrix.Compose(
+        new Vector3(s, 0.7 * s, s),
+        Vector3.Zero().toQuaternion(),
+        new Vector3(p.x, p.y + h + 1.5 * s, p.z),
+      ).copyToArray(canopyBuf, i * 16);
+    }
+    trunkTemplate.thinInstanceSetBuffer("matrix", trunkBuf, 16);
+    canopyTemplate.thinInstanceSetBuffer("matrix", canopyBuf, 16);
+  }
+
+  // ── Batch rocks as thin instances ───────────────────────
+  if (rockPositions.length > 0) {
+    rockTemplate.isVisible = true;
+    const rockBuf = new Float32Array(rockPositions.length * 16);
+    for (let i = 0; i < rockPositions.length; i++) {
+      const p = rockPositions[i];
+      const s = 0.5 + Math.random() * 1.5;
+      Matrix.Compose(
+        new Vector3(s, s * 0.6, s),
+        Vector3.Zero().toQuaternion(),
+        new Vector3(p.x, p.y + s * 0.3, p.z),
+      ).copyToArray(rockBuf, i * 16);
+    }
+    rockTemplate.thinInstanceSetBuffer("matrix", rockBuf, 16);
+  }
+
+  // ── Individual meshes for unique objects (few) ───────────
+  for (const p of wallPositions) {
+    const wall = MeshBuilder.CreateBox("wall", { width: 2, height: 3, depth: 0.5 }, scene);
+    wall.position.set(p.x, p.y + 1.5, p.z);
+    wall.material = mats.wall;
+    wall.receiveShadows = true;
+  }
+  for (const p of dockPositions) {
+    const dock = MeshBuilder.CreateBox("dock", { width: 6, height: 0.3, depth: 3 }, scene);
+    dock.position.set(p.x, p.y + 0.15, p.z);
+    dock.material = mats.dock;
+  }
+  for (const { pos, name } of buildingPositions) {
+    const bld = MeshBuilder.CreateBox("bld", { width: 6, height: 4, depth: 5 }, scene);
+    bld.position.set(pos.x, pos.y + 2, pos.z);
+    bld.material = mats.building;
+    bld.receiveShadows = true;
+    shadowGen.addShadowCaster(bld);
+    const roof = MeshBuilder.CreateCylinder("roof", { height: 2, diameterTop: 0, diameterBottom: 7.2, tessellation: 4 }, scene);
+    roof.position.set(pos.x, pos.y + 5, pos.z);
+    roof.material = mats.roof;
+  }
+
+  // ── Enable octree for spatial culling ───────────────────
+  scene.createOrUpdateSelectionOctree(32, 2);
+
+  console.log(`[Genesis3D] Scene built: ${treePositions.length} trees (instanced), ${rockPositions.length} rocks (instanced), ${wallPositions.length} walls, ${buildingPositions.length} buildings`);
 
   // ── Render loop ───────────────────────────────────────────
   engine.runRenderLoop(() => scene.render());
@@ -220,207 +361,4 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
   return { engine, scene, camera, dispose };
 }
 
-// ── Place objects from Unity scene hierarchy ────────────────────
-
-function placeSceneObjects(
-  scene: Scene,
-  objects: SceneObject[],
-  shadowGen: ShadowGenerator,
-): void {
-  let treeCount = 0;
-  let rockCount = 0;
-  let structCount = 0;
-
-  for (const obj of objects) {
-    const name = obj.name.toLowerCase();
-    const pos = obj.position;
-
-    // Skip UI objects (high Y = PvP arena floating above)
-    if (pos.y > -2700) continue;
-
-    const worldPos = unityToWorld(pos.x, pos.z, pos.y);
-
-    if (name.includes("tree") || name.includes("willow") || name.includes("palm")) {
-      createTree(scene, worldPos, name, shadowGen);
-      treeCount++;
-    } else if (name.includes("rock") || name.includes("stone") || name.includes("big_stone")) {
-      createRock(scene, worldPos, name);
-      rockCount++;
-    } else if (name.includes("log")) {
-      createLog(scene, worldPos);
-    } else if (name.includes("wall") || name.includes("gate") || name.includes("stake")) {
-      createWallSegment(scene, worldPos, name);
-      structCount++;
-    } else if (name.includes("dock") || name.includes("stair")) {
-      createDock(scene, worldPos);
-      structCount++;
-    } else if (name.includes("water") && !name.includes("fall")) {
-      // Water features handled by ocean
-    } else if (name.includes("windmill")) {
-      createWindmill(scene, worldPos, shadowGen);
-      structCount++;
-    } else if (name.includes("camp") || name.includes("armory") || name.includes("stable")) {
-      createCampBuilding(scene, worldPos, name, shadowGen);
-      structCount++;
-    }
-
-    // Recurse into children
-    if (obj.children && obj.children.length > 0) {
-      placeSceneObjects(scene, obj.children, shadowGen);
-    }
-  }
-
-  console.log(`[Genesis3D] Placed: ${treeCount} trees, ${rockCount} rocks, ${structCount} structures`);
-}
-
-// ── Procedural fallback objects ─────────────────────────────────
-
-function placeProceduralObjects(scene: Scene, shadowGen: ShadowGenerator): void {
-  // Place trees in a ring pattern
-  for (let i = 0; i < 200; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const r = 100 + Math.random() * 600;
-    const x = Math.cos(angle) * r;
-    const z = Math.sin(angle) * r;
-    createTree(scene, new Vector3(x, 0, z), "tree", shadowGen);
-  }
-  // Place rocks
-  for (let i = 0; i < 80; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const r = 50 + Math.random() * 700;
-    createRock(scene, new Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r), "rock");
-  }
-  console.log("[Genesis3D] Placed 200 procedural trees + 80 rocks (no scene data loaded)");
-}
-
-// ── Primitive mesh factories ────────────────────────────────────
-// These create simple colored meshes as stand-ins until FBX models load
-
-function createTree(scene: Scene, pos: Vector3, name: string, shadowGen: ShadowGenerator): void {
-  const isWillow = name.includes("willow");
-  const trunkH = isWillow ? 6 : 4 + Math.random() * 3;
-  const canopyR = isWillow ? 5 : 2.5 + Math.random() * 2;
-
-  const trunk = MeshBuilder.CreateCylinder(`trunk_${pos.x}`, {
-    height: trunkH, diameterTop: 0.3, diameterBottom: 0.6, tessellation: 6,
-  }, scene);
-  trunk.position = pos.clone();
-  trunk.position.y += trunkH / 2;
-  const trunkMat = new StandardMaterial("trunkMat", scene);
-  trunkMat.diffuseColor = new Color3(0.35, 0.22, 0.1);
-  trunk.material = trunkMat;
-  shadowGen.addShadowCaster(trunk);
-
-  const canopy = MeshBuilder.CreateSphere(`canopy_${pos.x}`, {
-    diameter: canopyR * 2, segments: 6,
-  }, scene);
-  canopy.position = pos.clone();
-  canopy.position.y += trunkH + canopyR * 0.4;
-  canopy.scaling.y = 0.7;
-  const canopyMat = new StandardMaterial("canopyMat", scene);
-  canopyMat.diffuseColor = isWillow
-    ? new Color3(0.2, 0.5, 0.2)
-    : new Color3(0.15 + Math.random() * 0.1, 0.35 + Math.random() * 0.15, 0.1);
-  canopy.material = canopyMat;
-  canopy.receiveShadows = true;
-  shadowGen.addShadowCaster(canopy);
-}
-
-function createRock(scene: Scene, pos: Vector3, name: string): void {
-  const size = name.includes("big") ? 3 + Math.random() * 2 : 1 + Math.random() * 1.5;
-  const rock = MeshBuilder.CreateSphere(`rock_${pos.x}`, {
-    diameter: size, segments: 4,
-  }, scene);
-  rock.position = pos.clone();
-  rock.position.y += size * 0.3;
-  rock.scaling.set(1, 0.6 + Math.random() * 0.3, 1 + Math.random() * 0.3);
-  const mat = new StandardMaterial("rockMat", scene);
-  mat.diffuseColor = new Color3(0.4 + Math.random() * 0.1, 0.38, 0.35);
-  rock.material = mat;
-  rock.receiveShadows = true;
-}
-
-function createLog(scene: Scene, pos: Vector3): void {
-  const log = MeshBuilder.CreateCylinder(`log_${pos.x}`, {
-    height: 3 + Math.random() * 2, diameter: 0.5, tessellation: 6,
-  }, scene);
-  log.position = pos.clone();
-  log.position.y += 0.25;
-  log.rotation.z = Math.PI / 2;
-  log.rotation.y = Math.random() * Math.PI;
-  const mat = new StandardMaterial("logMat", scene);
-  mat.diffuseColor = new Color3(0.3, 0.2, 0.1);
-  log.material = mat;
-}
-
-function createWallSegment(scene: Scene, pos: Vector3, name: string): void {
-  const h = 3;
-  const w = name.includes("gate") ? 4 : 2;
-  const wall = MeshBuilder.CreateBox(`wall_${pos.x}`, {
-    width: w, height: h, depth: 0.5,
-  }, scene);
-  wall.position = pos.clone();
-  wall.position.y += h / 2;
-  const mat = new StandardMaterial("wallMat", scene);
-  mat.diffuseColor = new Color3(0.35, 0.25, 0.15);
-  wall.material = mat;
-  wall.receiveShadows = true;
-}
-
-function createDock(scene: Scene, pos: Vector3): void {
-  const plank = MeshBuilder.CreateBox(`dock_${pos.x}`, {
-    width: 6, height: 0.3, depth: 3,
-  }, scene);
-  plank.position = pos.clone();
-  plank.position.y += 0.15;
-  const mat = new StandardMaterial("dockMat", scene);
-  mat.diffuseColor = new Color3(0.4, 0.3, 0.18);
-  plank.material = mat;
-}
-
-function createWindmill(scene: Scene, pos: Vector3, shadowGen: ShadowGenerator): void {
-  // Base
-  const base = MeshBuilder.CreateCylinder("windmill_base", {
-    height: 10, diameterTop: 2, diameterBottom: 3.5, tessellation: 8,
-  }, scene);
-  base.position = pos.clone();
-  base.position.y += 5;
-  const baseMat = new StandardMaterial("wmBaseMat", scene);
-  baseMat.diffuseColor = new Color3(0.6, 0.55, 0.45);
-  base.material = baseMat;
-  shadowGen.addShadowCaster(base);
-
-  // Roof
-  const roof = MeshBuilder.CreateCylinder("windmill_roof", {
-    height: 3, diameterTop: 0, diameterBottom: 3, tessellation: 8,
-  }, scene);
-  roof.position = pos.clone();
-  roof.position.y += 11.5;
-  const roofMat = new StandardMaterial("wmRoofMat", scene);
-  roofMat.diffuseColor = new Color3(0.5, 0.2, 0.1);
-  roof.material = roofMat;
-}
-
-function createCampBuilding(scene: Scene, pos: Vector3, name: string, shadowGen: ShadowGenerator): void {
-  const w = 6, h = 4, d = 5;
-  const building = MeshBuilder.CreateBox(`camp_${name}`, {
-    width: w, height: h, depth: d,
-  }, scene);
-  building.position = pos.clone();
-  building.position.y += h / 2;
-  const mat = new StandardMaterial("campMat", scene);
-  mat.diffuseColor = new Color3(0.45, 0.35, 0.2);
-  building.material = mat;
-  building.receiveShadows = true;
-  shadowGen.addShadowCaster(building);
-
-  // Roof
-  const roof = MeshBuilder.CreateCylinder(`roof_${name}`, {
-    height: 2, diameterTop: 0, diameterBottom: Math.max(w, d) * 1.2, tessellation: 4,
-  }, scene);
-  roof.position = pos.clone();
-  roof.position.y += h + 1;
-  const roofMat = new StandardMaterial("roofMat", scene);
-  roofMat.diffuseColor = new Color3(0.5, 0.25, 0.1);
-  roof.material = roofMat;
-}
+// Old individual mesh factories removed — now using thin instances above
