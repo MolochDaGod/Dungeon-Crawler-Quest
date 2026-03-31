@@ -128,7 +128,6 @@ function GenesisIslandView({ instanceId, isLocal }: { instanceId: string; isLoca
     buildGenesisScene(containerRef.current).then(gs => {
       if (disposed) { gs.dispose(); return; }
       sceneRef.current = gs;
-      // Read player info from bridge
       const snap = gs.bridge.getSnapshot();
       setPlayerInfo({ name: snap.name, race: snap.race, heroClass: snap.heroClass, level: snap.level });
       setLoading(false);

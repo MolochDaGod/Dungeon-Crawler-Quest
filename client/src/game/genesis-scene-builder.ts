@@ -341,7 +341,7 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
   fallbackMat.roughness = 0.9;
   fallbackMat.metallic = 0;
 
-  // ── Trees (thin instances across 4 GLB types) ─────────────
+  // ── Data for background loading ──────────────────────────
   const treeGLBs = [
     "/assets/grudge-legacy/environment/pine_tree.glb",
     "/assets/grudge-legacy/environment/oak_tree.glb",
@@ -350,42 +350,36 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
   ];
   const treesPerModel = Math.ceil(treePositions.length / treeGLBs.length);
 
-  for (let ti = 0; ti < treeGLBs.length; ti++) {
-    const subset = treePositions.slice(ti * treesPerModel, (ti + 1) * treesPerModel);
-    if (subset.length === 0) continue;
-    try {
-      const result = await SceneLoader.ImportMeshAsync("", treeGLBs[ti], "", scene);
-      const root = result.meshes[0];
-      const template = result.meshes.find(m => m !== root && (m as Mesh).getTotalVertices?.() > 0) as Mesh | undefined;
-      if (template) {
-        root.setEnabled(false);
-        template.isVisible = true;
-        template.refreshBoundingInfo(true);
-        const ext = template.getBoundingInfo().boundingBox.extendSize;
-        const maxExt = Math.max(ext.x, ext.y, ext.z) * 2;
-        const baseScale = maxExt > 0 ? 8 / maxExt : 0.02;
-
-        const buf = new Float32Array(subset.length * 16);
-        for (let i = 0; i < subset.length; i++) {
-          const p = subset[i];
-          const s = baseScale * (0.6 + Math.random() * 0.8);
-          Matrix.Compose(
-            new Vector3(s, s, s),
-            Quaternion.RotationAxis(Vector3.Up(), Math.random() * Math.PI * 2),
-            p,
-          ).copyToArray(buf, i * 16);
-        }
-        template.thinInstanceSetBuffer("matrix", buf, 16);
-        template.receiveShadows = true;
-        shadowGen.addShadowCaster(template);
-        console.log(`[Genesis] Trees: ${subset.length}x ${treeGLBs[ti].split("/").pop()}`);
-      }
-    } catch (err) {
-      console.warn(`[Genesis] Tree GLB failed: ${treeGLBs[ti]}`, err);
-    }
+  const bldgMap: Record<string, string> = {
+    house: "/assets/grudge-legacy/building/wooden_house.glb",
+    tavern: "/assets/grudge-legacy/building/tavern.glb",
+    windmill: "/assets/grudge-legacy/building/windmill.glb",
+    wall: "/assets/grudge-legacy/building/wall.glb",
+    tower: "/assets/grudge-legacy/building/wall_tower.glb",
+  };
+  const bldgGroups: Record<string, Vector3[]> = {};
+  for (const b of buildingPositions) {
+    const n = b.name.toLowerCase();
+    let type = "house";
+    if (n.includes("tavern")) type = "tavern";
+    else if (n.includes("windmill")) type = "windmill";
+    else if (n.includes("tower")) type = "tower";
+    else if (/wall|gate|stake/.test(n)) type = "wall";
+    (bldgGroups[type] ||= []).push(b.pos);
+  }
+  const npcModels = [
+    "/assets/grudge-legacy/character/bambi.glb",
+    "/assets/grudge-legacy/character/basefemale.glb",
+    "/assets/grudge-legacy/character/villhelm.glb",
+  ];
+  const monsterMap: Record<number, string[]> = {
+    5: ["/assets/grudge-legacy/monster/wolf.glb", "/assets/grudge-legacy/monster/bat.glb"],
+    10: ["/assets/grudge-legacy/monster/bear.glb", "/assets/grudge-legacy/monster/arachnid.glb"],
+    15: ["/assets/grudge-legacy/monster/gargoyle.glb", "/assets/grudge-legacy/monster/reptilian.glb"],
+    20: ["/assets/grudge-legacy/monster/juggernaut.glb", "/assets/grudge-legacy/monster/hunter_boss.glb"],
   }
 
-  // ── Rocks (thin instances) ────────────────────────────────
+  // Rocks (instant — primitive thin instances, no GLB needed)
   if (rockPositions.length > 0) {
     const rockTpl = MeshBuilder.CreateSphere("rock_t", { diameter: 2, segments: 4 }, scene);
     rockTpl.material = fallbackMat;
@@ -404,209 +398,129 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
     console.log(`[Genesis] Rocks: ${rockPositions.length} thin instances`);
   }
 
-  // ── Buildings ─────────────────────────────────────────────
-  const bldgMap: Record<string, string> = {
-    house: "/assets/grudge-legacy/building/wooden_house.glb",
-    tavern: "/assets/grudge-legacy/building/tavern.glb",
-    windmill: "/assets/grudge-legacy/building/windmill.glb",
-    wall: "/assets/grudge-legacy/building/wall.glb",
-    tower: "/assets/grudge-legacy/building/wall_tower.glb",
-  };
-  const bldgGroups: Record<string, Vector3[]> = {};
-  for (const b of buildingPositions) {
-    const n = b.name.toLowerCase();
-    let type = "house";
-    if (n.includes("tavern")) type = "tavern";
-    else if (n.includes("windmill")) type = "windmill";
-    else if (n.includes("tower")) type = "tower";
-    else if (/wall|gate|stake/.test(n)) type = "wall";
-    (bldgGroups[type] ||= []).push(b.pos);
-  }
+  // ── Player (capsule placeholder — instant, no GLB wait) ──────
+  const spawnPos = new Vector3(0, 10, 0);
+  const playerCap = MeshBuilder.CreateCapsule("player", { height: 1.8, radius: 0.4 }, scene);
+  playerCap.position = spawnPos.clone();
+  playerCap.position.y += 1;
+  const playerMat = new PBRMaterial("playerMat", scene);
+  playerMat.albedoColor = new Color3(0.2, 0.6, 0.9);
+  playerMat.roughness = 0.6;
+  playerCap.material = playerMat;
+  shadowGen.addShadowCaster(playerCap);
 
-  for (const [type, posArr] of Object.entries(bldgGroups)) {
-    const glbPath = bldgMap[type] || bldgMap.house;
-    const cap = Math.min(posArr.length, 20);
-    try {
-      const result = await SceneLoader.ImportMeshAsync("", glbPath, "", scene);
-      const root = result.meshes[0];
-      let maxY = 1;
-      result.meshes.forEach(m => {
-        const e = m.getBoundingInfo?.()?.boundingBox?.extendSize;
-        if (e) maxY = Math.max(maxY, e.y * 2);
-      });
-      const targetH = type === "wall" ? 4 : type === "tower" ? 8 : 6;
-      root.scaling.setAll(maxY > 0 ? targetH / maxY : 1);
-      root.position = posArr[0];
-      result.meshes.forEach(m => { m.receiveShadows = true; shadowGen.addShadowCaster(m); });
-      for (let i = 1; i < cap; i++) {
-        const clone = root.clone(`${type}_${i}`, null);
-        if (clone) {
-          clone.position = posArr[i];
-          (clone as Mesh).rotation = new Vector3(0, Math.random() * Math.PI * 2, 0);
-        }
-      }
-      console.log(`[Genesis] Buildings: ${cap}x ${type}`);
-    } catch {
-      for (const p of posArr.slice(0, cap)) {
-        const box = MeshBuilder.CreateBox("fb", { width: 4, height: 4, depth: 4 }, scene);
-        box.position.set(p.x, p.y + 2, p.z);
-        box.material = fallbackMat;
-        box.receiveShadows = true;
-      }
-    }
-  }
-
-  // ── NPCs ──────────────────────────────────────────────────
-  const npcModels = [
-    "/assets/grudge-legacy/character/bambi.glb",
-    "/assets/grudge-legacy/character/basefemale.glb",
-    "/assets/grudge-legacy/character/villhelm.glb",
-  ];
-  for (let i = 0; i < Math.min(npcPositions.length, 15); i++) {
-    const npc = npcPositions[i];
-    const node = await loadGLB(scene, npcModels[i % npcModels.length], 1.8, npc.pos, shadowGen);
-    if (!node) {
-      const cap = MeshBuilder.CreateCapsule("npc", { height: 1.8, radius: 0.3 }, scene);
-      cap.position = npc.pos; cap.position.y += 0.9;
-      const m = new PBRMaterial("nm", scene);
-      m.albedoColor = new Color3(0.7, 0.5, 0.3); m.roughness = 0.8;
-      cap.material = m;
-    }
-  }
-  console.log(`[Genesis] NPCs: ${Math.min(npcPositions.length, 15)} placed`);
-
-  // ── Monsters at spawners ──────────────────────────────────
-  const monsterMap: Record<number, string[]> = {
-    5: ["/assets/grudge-legacy/monster/wolf.glb", "/assets/grudge-legacy/monster/bat.glb"],
-    10: ["/assets/grudge-legacy/monster/bear.glb", "/assets/grudge-legacy/monster/arachnid.glb"],
-    15: ["/assets/grudge-legacy/monster/gargoyle.glb", "/assets/grudge-legacy/monster/reptilian.glb"],
-    20: ["/assets/grudge-legacy/monster/juggernaut.glb", "/assets/grudge-legacy/monster/hunter_boss.glb"],
-  };
-  for (const sp of spawnerPositions.slice(0, 20)) {
-    const models = monsterMap[sp.level] || monsterMap[5];
-    await loadGLB(scene, models[Math.floor(Math.random() * models.length)], 1 + sp.level * 0.1, sp.pos, shadowGen);
-  }
-  console.log(`[Genesis] Monsters: ${Math.min(spawnerPositions.length, 20)} at spawners`);
-
-  // ── Crafting stations ─────────────────────────────────────
-  for (const cs of craftingPositions) {
-    const node = await loadGLB(scene, "/assets/grudge-legacy/prop/chest.glb", 1.5, cs.pos);
-    if (!node) {
-      const box = MeshBuilder.CreateBox("craft", { size: 1.5 }, scene);
-      box.position = cs.pos; box.position.y += 0.75;
-      box.material = fallbackMat;
-    }
-  }
-
-  // ── Airship ───────────────────────────────────────────────
-  if (airshipPos) {
-    const hull = MeshBuilder.CreateBox("airship", { width: 12, height: 3, depth: 30 }, scene);
-    hull.position = airshipPos.clone(); hull.position.y += 30;
-    const hMat = new PBRMaterial("hullMat", scene);
-    hMat.albedoColor = new Color3(0.4, 0.25, 0.12); hMat.roughness = 0.7;
-    hull.material = hMat; hull.receiveShadows = true; shadowGen.addShadowCaster(hull);
-
-    const balloon = MeshBuilder.CreateSphere("balloon", { diameterX: 14, diameterY: 8, diameterZ: 28 }, scene);
-    balloon.position = hull.position.clone(); balloon.position.y += 10;
-    const bMat = new PBRMaterial("balloonMat", scene);
-    bMat.albedoColor = new Color3(0.7, 0.15, 0.1); bMat.roughness = 0.5;
-    balloon.material = bMat;
-
-    const baseY = hull.position.y;
-    scene.onBeforeRenderObservable.add(() => {
-      hull.position.y = baseY + Math.sin(waveTime * 0.3) * 0.5;
-      balloon.position.y = hull.position.y + 10;
-    });
-    console.log("[Genesis] Airship placed");
-  }
-
-  // ── Point lights at key locations ─────────────────────────
-  const lightSpots = [...craftingPositions.map(c => c.pos), ...npcPositions.slice(0, 5).map(n => n.pos)];
-  for (let i = 0; i < Math.min(lightSpots.length, 8); i++) {
-    const lp = lightSpots[i];
-    const pl = new PointLight(`torch_${i}`, new Vector3(lp.x, lp.y + 3, lp.z), scene);
-    pl.intensity = 15; pl.diffuse = new Color3(1.0, 0.7, 0.3); pl.range = 30;
-  }
-
-  // ── Player character (spawn at island center, guaranteed on terrain) ──
-  // Use race start if found, otherwise island center
-  const spawnPos = raceStarts[selection.race.toLowerCase()] || new Vector3(0, 10, 0);
-  console.log(`[Genesis] Spawn position: ${spawnPos.toString()}, race starts found: ${Object.keys(raceStarts).join(', ') || 'none'}`);
-
-  const charModel = MODEL_PATHS[selection.modelIndex] || "/assets/grudge-legacy/character/bambi.glb";
-  const playerNode = await loadGLB(scene, charModel, 1.8, spawnPos, shadowGen);
-  if (playerNode) {
-    playerNode.name = "player";
-    playerNode.position.y = spawnPos.y + 1;
-  } else {
-    const cap = MeshBuilder.CreateCapsule("player", { height: 1.8, radius: 0.4 }, scene);
-    cap.position = spawnPos.clone(); cap.position.y += 1;
-    const pm = new PBRMaterial("playerMat", scene);
-    pm.albedoColor = new Color3(0.2, 0.6, 0.9); pm.roughness = 0.6;
-    cap.material = pm; shadowGen.addShadowCaster(cap);
-  }
-  camera.position = new Vector3(spawnPos.x, spawnPos.y + 15, spawnPos.z - 30);
+  camera.position = new Vector3(0, 25, -30);
   camera.setTarget(spawnPos);
 
-  // ── Octree ────────────────────────────────────────────────
-  if (scene.createOrUpdateSelectionOctree) scene.createOrUpdateSelectionOctree(32, 2);
-
-  // ── Game Bridge (connects all game systems to 3D world) ──
+  // ── Game Bridge ─────────────────────────────────────────
   const bridge = new GenesisGameBridge(scene);
-
-  // Register resource nodes at tree/rock positions for harvesting
   bridge.spawnNodesForBiome("forest", treePositions.slice(0, 50));
   bridge.spawnNodesForBiome("cave", rockPositions.slice(0, 30));
 
-  const snap = bridge.getSnapshot();
-  console.log(`[Genesis] Bridge active: ${snap.name} (${snap.race} ${snap.heroClass}) Lv${snap.level} HP:${snap.maxHp} MP:${snap.maxMp}`);
+  // ── Player controller ───────────────────────────────────
+  const controller = new GenesisPlayerController(scene, bridge, playerCap as any, camera, canvas);
 
-  // ── Player controller (replaces FreeCamera with ArcRotate 3rd person) ──
-  let controller: GenesisPlayerController | null = null;
-  const playerMesh = playerNode || scene.getMeshByName("player");
-  if (playerMesh) {
-    controller = new GenesisPlayerController(scene, bridge, playerMesh as TransformNode, camera, canvas);
-    console.log("[Genesis] 3rd-person controller active");
-  }
-
-  // ── DefaultRenderingPipeline (must use the FINAL active camera) ──
-  const activeCamera = controller ? controller.getCamera() : camera;
-  const pipeline = new DefaultRenderingPipeline("pipeline", true, scene, [activeCamera]);
-  pipeline.bloomEnabled = true;
-  pipeline.bloomThreshold = 0.8;
-  pipeline.bloomWeight = 0.3;
-  pipeline.bloomKernel = 64;
-  pipeline.fxaaEnabled = true;
-  pipeline.imageProcessingEnabled = true;
-  if (pipeline.imageProcessing) {
-    pipeline.imageProcessing.toneMappingEnabled = true;
-    pipeline.imageProcessing.toneMappingType = 1; // ACES
-    pipeline.imageProcessing.exposure = 1.1;
-    pipeline.imageProcessing.contrast = 1.15;
-    pipeline.imageProcessing.vignetteEnabled = true;
-    pipeline.imageProcessing.vignetteWeight = 1.2;
-    pipeline.imageProcessing.vignetteCameraFov = 0.6;
-    pipeline.imageProcessing.vignetteColor = new Color4(0, 0, 0, 0.4);
-  }
-
-  // ── HUD ────────────────────────────────────────────────────
+  // ── HUD ─────────────────────────────────────────────────
   const hud = new GenesisHUD(scene, bridge);
-  console.log("[Genesis] HUD active");
 
-  // ── Render loop (includes bridge update) ──────────────────
+  // ── START RENDER LOOP NOW (terrain + player visible immediately) ──
   engine.runRenderLoop(() => {
     const dt = engine.getDeltaTime() * 0.001;
     bridge.update(dt);
     scene.render();
   });
   window.addEventListener("resize", () => engine.resize());
+  console.log("[Genesis] Render loop started — terrain + player visible");
 
-  console.log("[Genesis] Scene complete");
+  // ── BACKGROUND: load all GLB models (doesn't block rendering) ──
+  (async () => {
+    // Load player character GLB and replace capsule
+    const charModel = MODEL_PATHS[selection.modelIndex] || MODEL_PATHS[0];
+    const charNode = await loadGLB(scene, charModel, 1.8, spawnPos, shadowGen);
+    if (charNode) {
+      charNode.name = "player_model";
+      charNode.position.y = spawnPos.y + 1;
+      // Hide capsule, parent model to capsule position
+      playerCap.isVisible = false;
+      scene.onBeforeRenderObservable.add(() => {
+        charNode.position.copyFrom(playerCap.position);
+        charNode.position.y -= 0.9;
+        charNode.rotation.copyFrom(playerCap.rotation);
+      });
+      console.log("[Genesis] Player model loaded");
+    }
+
+    // Trees
+    for (let ti = 0; ti < treeGLBs.length; ti++) {
+      const subset = treePositions.slice(ti * treesPerModel, (ti + 1) * treesPerModel);
+      if (subset.length === 0) continue;
+      try {
+        const result = await SceneLoader.ImportMeshAsync("", treeGLBs[ti], "", scene);
+        const root = result.meshes[0];
+        const tpl = result.meshes.find(m => m !== root && (m as Mesh).getTotalVertices?.() > 0) as Mesh | undefined;
+        if (tpl) {
+          root.setEnabled(false);
+          tpl.isVisible = true;
+          tpl.refreshBoundingInfo(true);
+          const ext = tpl.getBoundingInfo().boundingBox.extendSize;
+          const maxE = Math.max(ext.x, ext.y, ext.z) * 2;
+          const bs = maxE > 0 ? 8 / maxE : 0.02;
+          const buf = new Float32Array(subset.length * 16);
+          for (let i = 0; i < subset.length; i++) {
+            const s = bs * (0.6 + Math.random() * 0.8);
+            Matrix.Compose(
+              new Vector3(s, s, s),
+              Quaternion.RotationAxis(Vector3.Up(), Math.random() * Math.PI * 2),
+              subset[i],
+            ).copyToArray(buf, i * 16);
+          }
+          tpl.thinInstanceSetBuffer("matrix", buf, 16);
+          tpl.receiveShadows = true;
+        }
+        console.log(`[Genesis] Trees: ${subset.length}x ${treeGLBs[ti].split("/").pop()}`);
+      } catch { /* skip failed tree */ }
+    }
+
+    // Buildings (limit 5 per type for speed)
+    for (const [type, posArr] of Object.entries(bldgGroups)) {
+      const glbPath = bldgMap[type] || bldgMap.house;
+      const cap = Math.min(posArr.length, 5);
+      try {
+        const result = await SceneLoader.ImportMeshAsync("", glbPath, "", scene);
+        const root = result.meshes[0];
+        let maxY = 1;
+        result.meshes.forEach(m => { const e = m.getBoundingInfo?.()?.boundingBox?.extendSize; if (e) maxY = Math.max(maxY, e.y * 2); });
+        const targetH = type === "wall" ? 4 : type === "tower" ? 8 : 6;
+        root.scaling.setAll(maxY > 0 ? targetH / maxY : 1);
+        root.position = posArr[0];
+        result.meshes.forEach(m => { m.receiveShadows = true; });
+        for (let i = 1; i < cap; i++) {
+          const cl = root.clone(`${type}_${i}`, null);
+          if (cl) { cl.position = posArr[i]; (cl as Mesh).rotation = new Vector3(0, Math.random() * Math.PI * 2, 0); }
+        }
+        console.log(`[Genesis] Buildings: ${cap}x ${type}`);
+      } catch { /* skip */ }
+    }
+
+    // NPCs (limit 5)
+    for (let i = 0; i < Math.min(npcPositions.length, 5); i++) {
+      await loadGLB(scene, npcModels[i % npcModels.length], 1.8, npcPositions[i].pos);
+    }
+
+    // Monsters (limit 5)
+    for (const sp of spawnerPositions.slice(0, 5)) {
+      const models = monsterMap[sp.level] || monsterMap[5];
+      await loadGLB(scene, models[Math.floor(Math.random() * models.length)], 1 + sp.level * 0.1, sp.pos);
+    }
+
+    console.log("[Genesis] Background loading complete");
+  })();
+
   return {
     engine, scene, camera, bridge, controller, hud,
     dispose: () => {
       hud.dispose();
-      controller?.dispose();
+      controller.dispose();
       bridge.dispose();
       engine.stopRenderLoop();
       scene.dispose();
