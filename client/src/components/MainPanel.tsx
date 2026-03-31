@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import css from './MainPanel.module.css';
 import { OWHudState } from '@/game/open-world';
 import { OpenWorldState } from '@/game/open-world';
+import { QUICK_CRAFT_ITEMS, QuickCraftItem } from '@/game/crafting';
 import { allocateOWAttribute, claimOWMission, equipBagItemOW } from '@/game/open-world';
 import { AttributeId } from '@/game/attributes';
 import { HeroData, AbilityDef, CLASS_COLORS, ABILITY_ICONS, RACE_COLORS } from '@/game/types';
@@ -770,6 +771,107 @@ function UpgradesTab() {
   );
 }
 
+/* ── Quick Craft Bar ── */
+const QC_CATEGORY_ICONS: Record<string, string> = {
+  camp: '🏕️', survival: '🌿', base: '🏠',
+};
+
+const QC_ROLE_TAGS: ((item: QuickCraftItem) => string | null)[] = [
+  i => i.isWarmthSource    ? '🔥 Warmth'    : null,
+  i => i.isSleepPoint      ? '😴 Sleep'     : null,
+  i => i.isRespawnPoint    ? '⚓ Respawn'   : null,
+  i => i.isStorageChest    ? '📦 Storage'   : null,
+  i => i.isLockedChest     ? '🔒 Locked'    : null,
+  i => i.isCraftingStation ? '🛠️ Crafting'  : null,
+  i => i.isWaterSource     ? '💧 Water'     : null,
+];
+
+function QuickCraftBar() {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [filterCat, setFilterCat] = useState<'all' | 'camp' | 'survival' | 'base'>('all');
+
+  const shown = filterCat === 'all'
+    ? QUICK_CRAFT_ITEMS
+    : QUICK_CRAFT_ITEMS.filter(i => i.category === filterCat);
+
+  return (
+    <div style={{ marginBottom: 12 }}>
+      {/* Category filter */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        {(['all', 'camp', 'survival', 'base'] as const).map(cat => (
+          <button key={cat}
+            className={filterCat === cat ? css.tabBtnActive : css.tabBtn}
+            style={{ fontSize: 10, padding: '3px 10px' }}
+            onClick={() => setFilterCat(cat)}
+          >
+            {cat === 'all' ? '🗂️ All' : `${QC_CATEGORY_ICONS[cat]} ${cat.charAt(0).toUpperCase() + cat.slice(1)}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Item grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+        {shown.map(item => (
+          <div key={item.id}
+            style={{
+              background: expanded === item.id ? 'rgba(212,164,0,.12)' : 'rgba(30,20,10,.45)',
+              border: `1px solid ${expanded === item.id ? 'rgba(212,164,0,.45)' : 'rgba(80,60,30,.35)'}`,
+              borderRadius: 6,
+              padding: '6px 8px',
+              cursor: 'pointer',
+            }}
+            onClick={() => setExpanded(expanded === item.id ? null : item.id)}
+          >
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#f5e2c1' }}>{item.name}</div>
+                <div style={{ fontSize: 9, color: '#9b7d52' }}>
+                  {QC_CATEGORY_ICONS[item.category]} {item.category} · ⏱ {item.craftTime}s · ✨ {item.xpReward}xp
+                </div>
+              </div>
+            </div>
+
+            {/* Role tags */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
+              {QC_ROLE_TAGS.map(fn => fn(item)).filter(Boolean).map(tag => (
+                <span key={tag} style={{
+                  fontSize: 8, background: 'rgba(212,164,0,.1)',
+                  border: '1px solid rgba(212,164,0,.2)', borderRadius: 3, padding: '1px 5px', color: '#d4a400',
+                }}>{tag}</span>
+              ))}
+            </div>
+
+            {/* Expanded: description + ingredients + craft button */}
+            {expanded === item.id && (
+              <div style={{ marginTop: 6, borderTop: '1px solid rgba(80,60,30,.4)', paddingTop: 6 }}>
+                <div style={{ fontSize: 9, color: '#b8a07a', marginBottom: 5, lineHeight: 1.4 }}>{item.description}</div>
+                <div style={{ fontSize: 9, color: '#9b7d52', marginBottom: 4, fontWeight: 700 }}>Requires:</div>
+                {item.ingredients.map(ing => (
+                  <div key={ing.name} style={{ fontSize: 9, color: '#c4a05a', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{ing.name} <span style={{ color: '#6b5535' }}>(T{ing.tier})</span></span>
+                    <span style={{ fontWeight: 700 }}>×{ing.quantity}</span>
+                  </div>
+                ))}
+                <button
+                  className={css.craftBtn}
+                  style={{ width: '100%', marginTop: 6, fontSize: 10 }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    // TODO: hook up executeCraft / placeObject when world state is wired
+                    console.log('[QuickCraft] craft:', item.id);
+                  }}
+                >⚒ Craft {item.name}</button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── Crafting / Professions Tab ── */
 function CraftingTab({ hud }: { hud: OWHudState }) {
   return (
@@ -807,6 +909,9 @@ function CraftingTab({ hud }: { hud: OWHudState }) {
           </div>
         </div>
       ))}
+
+      <div className={css.sectionTitle}>Quick Craft</div>
+      <QuickCraftBar />
 
       <div className={css.sectionTitle}>Crafting Station</div>
       <div className={css.craftLayout}>

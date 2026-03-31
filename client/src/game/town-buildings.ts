@@ -17,6 +17,8 @@ export interface InteriorFurniture {
 export interface InteriorNPCDef {
   name: string;
   role: 'vendor' | 'innkeeper' | 'trainer' | 'quest' | 'blacksmith' | 'guard';
+  appearance?: 'default' | 'blacksmith' | 'hunter' | 'child';
+  assetId?: string;
   ix: number; // interior x (0..1)
   iy: number; // interior y (0..1)
   /** Greeting lines (one picked randomly) */
@@ -91,7 +93,7 @@ export const ZONE0_BUILDINGS: TownBuilding[] = [
       { type: 'rack', ix: 0.15, iy: 0.4 },
       { type: 'barrel', ix: 0.8, iy: 0.7 },
     ],
-    [{ name: 'Forge-Master Dunn', role: 'blacksmith', ix: 0.45, iy: 0.5, dialogue: ['Bring me ore and I\'ll craft wonders.', 'The anvil never rests.', 'What do you need forged?'] }],
+    [{ name: 'Forge-Master Dunn', role: 'blacksmith', appearance: 'blacksmith', assetId: 'gc-villager-blacksmith', ix: 0.45, iy: 0.5, dialogue: ['Bring me ore and I\'ll craft wonders.', 'The anvil never rests.', 'What do you need forged?'] }],
     '#5a4030', '#3a2818',
   ),
   makeBldg('z0-shop', 'Gilda\'s General Store', 'shop', 0,
@@ -103,7 +105,10 @@ export const ZONE0_BUILDINGS: TownBuilding[] = [
       { type: 'chest', ix: 0.15, iy: 0.75 },
       { type: 'barrel', ix: 0.85, iy: 0.7 },
     ],
-    [{ name: 'Merchant Gilda', role: 'vendor', ix: 0.5, iy: 0.4, dialogue: ['Best prices in town!', 'Looking to buy or sell?', 'Fresh stock from the capital.'] }],
+    [
+      { name: 'Merchant Gilda', role: 'vendor', appearance: 'hunter', assetId: 'gc-villager-hunter', ix: 0.42, iy: 0.4, dialogue: ['Best prices in town!', 'Looking to buy or sell?', 'Fresh stock from the capital.'] },
+      { name: 'Pip the Runner', role: 'vendor', appearance: 'child', assetId: 'gc-villager-child', ix: 0.68, iy: 0.46, dialogue: ['I can carry small orders for you!', 'Need quick camp supplies?', 'The caravans brought fresh goods today.'] },
+    ],
     '#7a6040', '#5a4020',
   ),
   makeBldg('z0-trainer', 'Combat Hall', 'trainer', 0,
@@ -129,7 +134,7 @@ export const ZONE0_BUILDINGS: TownBuilding[] = [
     ],
     [
       { name: 'Elder Maren', role: 'quest', ix: 0.35, iy: 0.5, dialogue: ['The village needs your aid, adventurer.', 'Dark tidings from the forest...', 'Will you answer the call?'] },
-      { name: 'Guild Archivist', role: 'vendor', ix: 0.65, iy: 0.5, dialogue: ['All mission records are here.', 'I can issue you a contract.'] },
+      { name: 'Guild Archivist', role: 'vendor', appearance: 'hunter', assetId: 'gc-villager-hunter', ix: 0.65, iy: 0.5, dialogue: ['All mission records are here.', 'I can issue you a contract.'] },
     ],
     '#5a4a30', '#3a2e18',
   ),

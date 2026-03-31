@@ -16,7 +16,7 @@ import {
 import { OS_BASE } from '@/game/grudge-items';
 import { getAvailableMissions } from '@/game/missions';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
-import { initGLBSprites } from '@/game/glb-sprites';
+import { initGLBSprites } from '@/game/babylon-glb-sprites';
 import { ProgressEvent } from '@/game/player-progress';
 import { loadKeybindings, matchesKeyDown, KeybindAction, KeybindConfig } from '@/game/keybindings';
 import hudFramePath from '@assets/hud-frame.png';

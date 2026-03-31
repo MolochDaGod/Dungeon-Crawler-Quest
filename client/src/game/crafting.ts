@@ -22,7 +22,7 @@ export interface CraftingIngredient {
 export interface CraftingRecipe {
   id: string;
   name: string;
-  category: 'weapon' | 'armor' | 'consumable' | 'tool';
+  category: 'weapon' | 'armor' | 'consumable' | 'tool' | 'camp';
   resultType: string;      // e.g. 'swords', 'cloth-helm', 'health-potion'
   resultTier: number;      // 1-8
   profession: string;      // crafting profession id (miner, forester, chef, engineer, mystic)
@@ -34,7 +34,215 @@ export interface CraftingRecipe {
   description: string;
 }
 
-// ── Profession → Material Mapping ──────────────────────────────
+// ── Quick Craft Items ──────────────────────────────────
+// Placeables craftable from the quick-craft bar (E menu at campfire/bench)
+
+export interface QuickCraftItem {
+  id: string;
+  name: string;
+  icon: string;           // emoji or URL
+  modelAssetId: string;   // maps to AssetEntry.id in asset-packs
+  modelPath: string;      // direct path for BabylonJS loader
+  description: string;
+  ingredients: CraftingIngredient[];
+  craftTime: number;      // seconds
+  xpReward: number;
+  profession: string;
+  requiredLevel: number;
+  category: 'camp' | 'survival' | 'base';
+  // gameplay role flags
+  isRespawnPoint?: boolean;
+  isStorageChest?: boolean;
+  isLockedChest?: boolean;
+  isCraftingStation?: boolean;
+  isWaterSource?: boolean;
+  isWarmthSource?: boolean;
+  isSleepPoint?: boolean;
+}
+
+export const QUICK_CRAFT_ITEMS: QuickCraftItem[] = [
+  // ── Camp Assets ──────────────────────────────────────────────
+  {
+    id: 'qc-campfire',
+    name: 'Campfire',
+    icon: '🔥',
+    modelAssetId: 'ca-fireplace',
+    modelPath: '/assets/props/camps/CampAssets.fbx',
+    description: 'A crackling fireplace that provides warmth, cooking, and safety. Deters hostile NPCs at night.',
+    profession: 'forester',
+    requiredLevel: 1,
+    ingredients: [
+      { name: 'Pine Log', tier: 1, quantity: 3 },
+      { name: 'Rough Stone', tier: 1, quantity: 2 },
+    ],
+    craftTime: 5,
+    xpReward: 15,
+    category: 'camp',
+    isWarmthSource: true,
+  },
+  {
+    id: 'qc-tent',
+    name: 'Tent',
+    icon: '⛺',
+    modelAssetId: 'ca-tent',
+    modelPath: '/assets/props/camps/CampAssets.fbx',
+    description: 'A portable shelter. Restores HP & MP while resting inside. Required before sleeping bag placement.',
+    profession: 'forester',
+    requiredLevel: 2,
+    ingredients: [
+      { name: 'Rough Leather', tier: 1, quantity: 4 },
+      { name: 'Pine Log',      tier: 1, quantity: 2 },
+    ],
+    craftTime: 8,
+    xpReward: 20,
+    category: 'camp',
+    isSleepPoint: true,
+  },
+  {
+    id: 'qc-sleeping-bag',
+    name: 'Sleeping Bag',
+    icon: '🛏️',
+    modelAssetId: 'ca-sleeping-bag',
+    modelPath: '/assets/props/camps/CampAssets.fbx',
+    description: 'Sets your respawn point. Sleeping through the night fast-forwards time and fully restores stats.',
+    profession: 'forester',
+    requiredLevel: 1,
+    ingredients: [
+      { name: 'Rough Leather', tier: 1, quantity: 3 },
+      { name: 'Common Herb',   tier: 1, quantity: 1 },
+    ],
+    craftTime: 6,
+    xpReward: 12,
+    category: 'camp',
+    isRespawnPoint: true,
+    isSleepPoint: true,
+  },
+  // ── Medieval Props — Base Building ──────────────────────────
+  {
+    id: 'qc-bed',
+    name: 'Upgraded Bed',
+    icon: '🛏️',
+    modelAssetId: 'mp-bed',
+    modelPath: '/assets/props/medieval-props/BedSingleWithBedding.fbx',
+    description: 'A proper bed with bedding. Upgraded respawn point with bonus HP/MP restoration on wake.',
+    profession: 'forester',
+    requiredLevel: 10,
+    ingredients: [
+      { name: 'Ironwood Log',  tier: 2, quantity: 4 },
+      { name: 'Fine Leather',  tier: 2, quantity: 3 },
+      { name: 'Common Herb',   tier: 1, quantity: 2 },
+    ],
+    craftTime: 15,
+    xpReward: 40,
+    category: 'base',
+    isRespawnPoint: true,
+    isSleepPoint: true,
+  },
+  {
+    id: 'qc-chest-storage',
+    name: 'Storage Chest',
+    icon: '📦',
+    modelAssetId: 'mp-chest-storage',
+    modelPath: '/assets/props/medieval-props/ChestClosed.fbx',
+    description: 'A base storage chest shared with your crew. 40 extra inventory slots accessible at camp.',
+    profession: 'miner',
+    requiredLevel: 5,
+    ingredients: [
+      { name: 'Pine Log',  tier: 1, quantity: 5 },
+      { name: 'Iron Ore',  tier: 1, quantity: 3 },
+    ],
+    craftTime: 12,
+    xpReward: 30,
+    category: 'base',
+    isStorageChest: true,
+  },
+  {
+    id: 'qc-crafting-bench',
+    name: 'Crafting Bench',
+    icon: '🛠️',
+    modelAssetId: 'mp-bench',
+    modelPath: '/assets/props/medieval-props/SmallBench.fbx',
+    description: 'Unlocks the full crafting interface at camp. Required to craft T2+ weapons and armor.',
+    profession: 'miner',
+    requiredLevel: 5,
+    ingredients: [
+      { name: 'Pine Log',  tier: 1, quantity: 6 },
+      { name: 'Iron Ore',  tier: 1, quantity: 4 },
+      { name: 'Scrap Metal', tier: 1, quantity: 2 },
+    ],
+    craftTime: 20,
+    xpReward: 50,
+    category: 'base',
+    isCraftingStation: true,
+  },
+  {
+    id: 'qc-water-jug',
+    name: 'Water Jug',
+    icon: '🫙',
+    modelAssetId: 'mp-water-jug',
+    modelPath: '/assets/props/medieval-props/SmallJar.fbx',
+    description: 'Stores water for cooking recipes and survival. Fill from rivers, wells, or water barrels.',
+    profession: 'chef',
+    requiredLevel: 1,
+    ingredients: [
+      { name: 'Rough Stone',  tier: 1, quantity: 3 },
+      { name: 'Common Herb',  tier: 1, quantity: 1 },
+    ],
+    craftTime: 5,
+    xpReward: 10,
+    category: 'survival',
+    isWaterSource: true,
+  },
+  {
+    id: 'qc-chest-locked',
+    name: 'Locked Chest',
+    icon: '🔒',
+    modelAssetId: 'mp-chest-locked',
+    modelPath: '/assets/props/medieval-props/ChestClosed.fbx',
+    description: 'Personal locked inventory: 20 slots only accessible by you. Cannot be looted by other players.',
+    profession: 'miner',
+    requiredLevel: 10,
+    ingredients: [
+      { name: 'Iron Ore',       tier: 1, quantity: 6 },
+      { name: 'Pine Log',       tier: 1, quantity: 3 },
+      { name: 'Rough Leather',  tier: 1, quantity: 2 },
+    ],
+    craftTime: 18,
+    xpReward: 45,
+    category: 'base',
+    isLockedChest: true,
+  },
+  {
+    id: 'qc-water-barrel',
+    name: 'Water Barrel',
+    icon: '🫔',
+    modelAssetId: 'mp-water-barrel',
+    modelPath: '/assets/props/medieval-props/Barrel.fbx',
+    description: 'Collects rainwater passively (weather: rain/storm). Acts as a water source for cooking. Fills 1 unit per rain minute.',
+    profession: 'forester',
+    requiredLevel: 3,
+    ingredients: [
+      { name: 'Pine Log',   tier: 1, quantity: 4 },
+      { name: 'Iron Ore',   tier: 1, quantity: 2 },
+    ],
+    craftTime: 10,
+    xpReward: 20,
+    category: 'survival',
+    isWaterSource: true,
+  },
+];
+
+/** Returns only items craftable without a crafting bench (for early-game quick bar) */
+export function getEarlyCampItems(): QuickCraftItem[] {
+  return QUICK_CRAFT_ITEMS.filter(i => i.requiredLevel <= 5);
+}
+
+/** Returns camp items that require a crafting bench */
+export function getAdvancedCampItems(): QuickCraftItem[] {
+  return QUICK_CRAFT_ITEMS.filter(i => i.requiredLevel > 5);
+}
+
+// ── Profession → Material Mapping ────────────────────────────
 
 const PROFESSION_MATERIALS: Record<string, { primary: string; secondary: string }> = {
   miner:    { primary: 'Iron Ore', secondary: 'Rough Stone' },

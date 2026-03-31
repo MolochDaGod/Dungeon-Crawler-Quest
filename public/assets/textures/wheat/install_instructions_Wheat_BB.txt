@@ -1,0 +1,40 @@
+------------------------------------------------
+*** FS22 Wheat Crop Texture Replacement ***
+------------------------------------------------
+
+These Wheat crop textures can be used to replace any existing ones contained on a mod map, or the default game files.
+
+Can be used as default or with added tire tracks, crop destruction. (Details below.)
+
+
+(PLEASE NOTE: Before making any adjustments to a mod map ALWAYS make a backup first.)
+
+
+-------------------------------
+*** Installation (Textures) ***
+-------------------------------
+
+Unzip the zip folder, then copy and paste contents of the "wheat" folder into your maps foliage, wheat folder. Located usually at: "maps/foliage/wheat..."
+
+(PLEASE NOTE: Some mod maps may have the foliage folder in a different location.)
+
+
+SEE "texture_installation_01.png" IMAGE FOR VISUAL DESCRIPTION
+
+
+---------------------------------------
+*** Installation (Crop Destruction) ***
+---------------------------------------
+
+
+Open your mod map and locate the file: "maps_fruitTypes.xml" 
+
+(PLEASE NOTE: Some maps that use all default crop textures will not have this file present, if not you will need to copy it from the default map game files and edit the filepath in your mod maps "map.xml" file.)
+
+
+Search for the "wheat" section, locate the "destruction" coding line. Replace this line with the the following coding: <destruction canBeDestroyed="true" filterStart="8" filterEnd="10" state="11" />
+
+SEE "cropDestruction_Coding_01.png" IMAGE FOR VISUAL DESCRIPTION
+
+
+Save file and close.

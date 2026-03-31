@@ -21,7 +21,7 @@ import {
 } from '@/game/keybindings';
 import { createCombatActor, CombatVFX, COMBAT_ACTION_NAMES, COMBAT_HOTKEY_LEGEND } from '@/game/combat-machine';
 import { ensurePixelGothicLoaded, EVENT_BANNERS } from '@/game/combat-popups';
-import { initGLBSprites } from '@/game/glb-sprites';
+import { initGLBSprites } from '@/game/babylon-glb-sprites';
 import { MouseTargetingManager } from '@/game/mouse-targeting';
 import { PhysicsWorld, createPhysicsWorld } from '@/game/physics';
 import { ensurePlayerHeroLoaded, getPlayerHeroSync } from '@/game/player-account';
