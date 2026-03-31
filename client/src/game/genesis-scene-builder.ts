@@ -22,6 +22,7 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import "@babylonjs/loaders/glTF";
+import "@babylonjs/core/Culling/Octrees/octreeSceneComponent";
 
 // Shadow system — side-effect registers the component, ShadowGenerator exported from its own module
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
@@ -415,7 +416,7 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
   }
 
   // ── Enable octree for spatial culling ───────────────────
-  scene.createOrUpdateSelectionOctree(32, 2);
+  if (scene.createOrUpdateSelectionOctree) scene.createOrUpdateSelectionOctree(32, 2);
 
   console.log(`[Genesis3D] Scene built: ${treePositions.length} trees (instanced), ${rockPositions.length} rocks (instanced), ${wallPositions.length} walls, ${buildingPositions.length} buildings`);
 
