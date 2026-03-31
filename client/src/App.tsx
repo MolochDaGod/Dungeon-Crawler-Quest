@@ -21,6 +21,7 @@ import CharacterPage from "@/pages/character";
 import IslandPage from "@/pages/island";
 import AIDebugPage from "@/pages/ai-debug";
 import ToonAdminPage from "@/pages/toon-admin";
+import GenesisPage from "@/pages/genesis";
 import { useEffect } from "react";
 
 // ── Grudge Unified Auth ──
@@ -62,6 +63,8 @@ function Router() {
       <Route path="/worldeditor" component={WorldEditorPage} />
       <Route path="/character" component={CharacterPage} />
       <Route path="/island" component={IslandPage} />
+      <Route path="/genesis-admin" component={GenesisPage} />
+      <Route path="/genesis/:instanceId" component={GenesisPage} />
       <Route path="/ai-debug" component={AIDebugPage} />
       <Route path="/toonadmin" component={ToonAdminPage} />
       <Route component={NotFound} />

@@ -731,15 +731,27 @@ export function createOpenWorldState(heroId: number): OpenWorldState {
     mp: attrStats.mp + eqStats.mp,
   };
 
-  // Resolve spawn — new players start on Genesis Island (Zone 10)
-  // Existing players with a faction spawn at their faction dock
+  // Resolve spawn — check for forced zone (genesis routes), then new player, then faction
   const currentChar = getCurrentCharacter();
   let spawn: { x: number; y: number };
   let startZone = ISLAND_ZONES[0];
 
+  // Check if a genesis route is forcing zone 10
+  const forceZoneId = typeof sessionStorage !== 'undefined'
+    ? parseInt(sessionStorage.getItem('genesis_force_zone') || '', 10)
+    : NaN;
   const genesisZone = ISLAND_ZONES.find(z => z.id === 10);
 
-  if (currentChar?.level && currentChar.level > 1 && currentChar.faction) {
+  if (!isNaN(forceZoneId)) {
+    // Forced zone from /genesis-admin or /genesis/:id route
+    const forcedZone = ISLAND_ZONES.find(z => z.id === forceZoneId);
+    if (forcedZone) {
+      startZone = forcedZone;
+      spawn = startZone.playerSpawns[0];
+    } else {
+      spawn = startZone.playerSpawns[0];
+    }
+  } else if (currentChar?.level && currentChar.level > 1 && currentChar.faction) {
     // Returning player → faction dock
     const factionSpawn = getFactionSpawnPoint(currentChar);
     const factionZone = ISLAND_ZONES.find(z => z.id === factionSpawn.zoneId);
