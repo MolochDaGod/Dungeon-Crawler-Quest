@@ -13,6 +13,8 @@
 
 import type { EquipmentAppearance } from './voxel-equipment';
 import type { ModularVoxelConfig } from './voxel-modular';
+import type { ToonRtsRaceKey } from '../../../shared/toon-rts-registry';
+import type { MountState } from './mount-system';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -37,6 +39,10 @@ export interface PlayerCharacterDef {
   objectStoreId?: string;
   /** ObjectStore GLB URL (set after upload) */
   glbUrl?: string;
+  /** Toon_RTS character GLB path (high-poly selectable model) */
+  toonRtsCharacterGlb?: string;
+  /** Toon_RTS cavalry GLB path (mounted variant) */
+  toonRtsCavalryGlb?: string;
 }
 
 export interface PlayerCharacterState {
@@ -66,6 +72,10 @@ export interface PlayerCharacterState {
   bearSpriteVariant: 'brown' | 'white';
   /** V2 modular voxel customization (lower/chest/face/arm styles) */
   modularConfig?: ModularVoxelConfig;
+  /** Mount / cavalry state */
+  mountState?: MountState;
+  /** Use Toon_RTS 3D model instead of voxel (when GLBs are available) */
+  useToonRtsModel?: boolean;
   /** ISO timestamp */
   createdAt: string;
   /** ISO timestamp */
@@ -82,6 +92,51 @@ export const RACE_SKIN_COLORS: Record<string, string> = {
   Orc: '#5a8a3a',
   Undead: '#7a8a7a',
 };
+
+// ── Race → Toon_RTS Mapping ────────────────────────────────────
+
+/** Maps game race → Toon_RTS asset prefix and race key */
+export const RACE_TOON_RTS: Record<string, { key: ToonRtsRaceKey; prefix: string; characterGlb: string; cavalryGlb: string }> = {
+  Human:     { key: 'western_kingdoms', prefix: 'WK',  characterGlb: '/models/toon-rts/western_kingdoms/WK_Characters_customizable.glb',  cavalryGlb: '/models/toon-rts/western_kingdoms/WK_Cavalry_customizable.glb' },
+  Barbarian: { key: 'barbarians',       prefix: 'BRB', characterGlb: '/models/toon-rts/barbarians/BRB_Characters_customizable.glb',     cavalryGlb: '/models/toon-rts/barbarians/BRB_Cavalry_customizable.glb' },
+  Dwarf:     { key: 'dwarves',          prefix: 'DWF', characterGlb: '/models/toon-rts/dwarves/DWF_Characters_customizable.glb',        cavalryGlb: '/models/toon-rts/dwarves/DWF_Cavalry_customizable.glb' },
+  Elf:       { key: 'elves',            prefix: 'ELF', characterGlb: '/models/toon-rts/elves/ELF_Characters_customizable.glb',          cavalryGlb: '/models/toon-rts/elves/ELF_Cavalry_customizable.glb' },
+  Orc:       { key: 'orcs',             prefix: 'ORC', characterGlb: '/models/toon-rts/orcs/ORC_Characters_Customizable.glb',           cavalryGlb: '/models/toon-rts/orcs/ORC_Cavalry_Customizable.glb' },
+  Undead:    { key: 'undead',           prefix: 'UD',  characterGlb: '/models/toon-rts/undead/UD_Characters_customizable.glb',           cavalryGlb: '/models/toon-rts/undead/UD_Cavalry_customizable.glb' },
+};
+
+/** Toon_RTS equipment mapping: game weapon type → race-specific equipment GLB */
+export const TOON_RTS_EQUIPMENT: Record<string, Record<string, string>> = {
+  Barbarian: {
+    hammers:    '/models/toon-rts/barbarians/equipment/BRB_weapon_hammer_B.glb',
+    spears:     '/models/toon-rts/barbarians/equipment/BRB_weapon_spear.glb',
+    fireStaves: '/models/toon-rts/barbarians/equipment/BRB_weapon_staff_B.glb',
+    swords:     '/models/toon-rts/barbarians/equipment/BRB_weapon_sword_B.glb',
+  },
+  Elf: {
+    spears:      '/models/toon-rts/elves/equipment/ELF_weapon_spear.glb',
+    natureStaves:'/models/toon-rts/elves/equipment/ELF_weapon_staff_C.glb',
+  },
+  Orc: {
+    greataxes:  '/models/toon-rts/orcs/equipment/ORC_weapon_Axe_A.glb',
+    fireStaves: '/models/toon-rts/orcs/equipment/ORC_weapon_staff_B.glb',
+  },
+  Undead: {
+    spears:      '/models/toon-rts/undead/equipment/UD_weapon_Spear.glb',
+    frostStaves: '/models/toon-rts/undead/equipment/UD_weapon_staff_B.glb',
+    greatswords: '/models/toon-rts/undead/equipment/UD_weapon_Sword_C.glb',
+  },
+  Human: {
+    arcaneStaves:'/models/toon-rts/western_kingdoms/equipment/WK_weapon_staff_B.glb',
+    swords:      '/models/toon-rts/western_kingdoms/equipment/WK_weapon_sword_A.glb',
+  },
+  Dwarf: {},
+};
+
+/** Get Toon_RTS equipment GLB for a race + weapon type combo */
+export function getToonRtsWeapon(race: string, weaponType: string): string | null {
+  return TOON_RTS_EQUIPMENT[race]?.[weaponType] ?? null;
+}
 
 // ── Race → Faction Mapping ─────────────────────────────────────
 
@@ -200,6 +255,11 @@ export function createPlayerCharacterState(
   weaponType?: string,
 ): PlayerCharacterState {
   const def = getCharacterDef(modelIndex);
+  const { createMountState, getDefaultMountForRace } = require('./mount-system');
+  const raceToon = RACE_TOON_RTS[race];
+  const mountState = createMountState();
+  mountState.equippedMountId = getDefaultMountForRace(race);
+
   return {
     accountId,
     grudgeId,
@@ -222,6 +282,8 @@ export function createPlayerCharacterState(
       faceStyle: 0,
       armStyle: 0,
     },
+    mountState,
+    useToonRtsModel: !!raceToon,
     createdAt: new Date().toISOString(),
     lastLogin: new Date().toISOString(),
   };
