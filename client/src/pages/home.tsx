@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Sword, Shield, Skull, Crown, Settings, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree, Lock } from 'lucide-react';
+import { AuthBar } from '@/components/AuthBar';
+import { initAuth } from '@/game/grudge-auth';
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -13,6 +15,8 @@ export default function Home() {
   const [titlePulse, setTitlePulse] = useState(false);
 
   useEffect(() => {
+    // Initialize auth on mount (guest login if no session)
+    initAuth();
     setLoaded(true);
     const pulseInterval = setInterval(() => {
       setTitlePulse(prev => !prev);
@@ -120,6 +124,7 @@ export default function Home() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#0a0f0a]" data-testid="home-page">
+      <AuthBar />
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
       <div className={`relative z-10 flex flex-col items-center justify-center h-full px-4 transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
