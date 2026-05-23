@@ -84,19 +84,35 @@ export default function Home() {
 
   const handlePlay = async () => {
     localStorage.setItem('grudge_mode', selectedMode);
-    // Check if player has a saved character — if so, load & go directly to game
-    const savedHeroId = localStorage.getItem('grudge_hero_id');
-    const savedHero = localStorage.getItem('grudge_custom_hero');
-    if (savedHeroId && savedHero) {
-      // Ensure the character is loaded into HEROES[] before navigating
-      const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
-      await ensurePlayerHeroLoaded();
-      // Existing character — go to game
-      if (selectedMode === 'openworld') setLocation('/open-world-play');
-      else setLocation('/game');
-    } else {
-      // No character — go to character creation (WoW-classic flow)
-      setLocation('/create-character');
+    // Check if player has characters — backend first, localStorage fallback
+    try {
+      const { getAll } = await import('@/lib/grudgeCharacters');
+      const chars = await getAll();
+      if (chars.length > 0) {
+        // Has characters — also ensure the legacy HEROES[] array is populated
+        // so existing game code can find the active hero.
+        const savedHero = localStorage.getItem('grudge_custom_hero');
+        if (savedHero) {
+          const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
+          await ensurePlayerHeroLoaded();
+        }
+        if (selectedMode === 'openworld') setLocation('/open-world-play');
+        else setLocation('/game');
+      } else {
+        // No characters — go to character creation
+        setLocation('/create-character');
+      }
+    } catch {
+      // Fallback: check localStorage directly (offline/error)
+      const savedHero = localStorage.getItem('grudge_custom_hero');
+      if (savedHero) {
+        const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
+        await ensurePlayerHeroLoaded();
+        if (selectedMode === 'openworld') setLocation('/open-world-play');
+        else setLocation('/game');
+      } else {
+        setLocation('/create-character');
+      }
     }
   };
 

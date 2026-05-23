@@ -12,7 +12,9 @@ vite.config.ts.*
 .agents
 .config
 
-.vercel
+# Replit artifacts
+.replit
+replit.md
 
 # Game server (Colyseus multiplayer)
 game-server/node_modules

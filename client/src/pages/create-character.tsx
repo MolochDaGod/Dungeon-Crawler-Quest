@@ -15,16 +15,11 @@ import { findBestHeroModel } from '@/game/player-characters';
 import { mintAndTrack, type MintResult } from '@/game/cnft-mint';
 import { addToCharacterList } from '@/game/shared-character-state';
 
-// Inline Grudge auth helper (from src/utils/grudge-auth.js — outside vite root)
+import { getCurrentUser } from '@/lib/grudgeBackend';
+import * as grudgeCharacters from '@/lib/grudgeCharacters';
+
 function getGrudgeUser() {
-  const token = localStorage.getItem('grudge_auth_token');
-  if (!token) return null;
-  return {
-    token,
-    userId: localStorage.getItem('grudge_user_id') || null,
-    grudgeId: localStorage.getItem('grudge_id') || null,
-    username: localStorage.getItem('grudge_username') || 'Player',
-  };
+  return getCurrentUser();
 }
 
 /* ── Constants ── */
@@ -219,7 +214,22 @@ export default function CreateCharacter() {
       const newHero = playerCharacterToHeroData(character);
       newHero.equippedWeaponId = weapon;
 
-      // Save to localStorage
+      // Persist to Grudge backend (API-first, localStorage cache)
+      await grudgeCharacters.create({
+        name: name.trim(),
+        race,
+        heroClass,
+        faction,
+        level: 1,
+        xp: 0,
+        attributes: attrs.allocated,
+        equipment: {},
+        weaponType: weapon,
+        avatarUrl: avatarUrl || null,
+        _localOnly: false,
+      });
+
+      // Also save to legacy localStorage keys so existing game code works
       localStorage.setItem('grudge_hero_id', String(newHero.id));
       localStorage.setItem('grudge_team', '0');
       localStorage.setItem('grudge_custom_hero', JSON.stringify(newHero));
