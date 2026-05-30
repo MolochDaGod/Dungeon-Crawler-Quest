@@ -146,7 +146,7 @@ const HERO_CUSTOMIZATIONS: Record<string, HeroCustomization> = {
   'Cpt. John Wayne': { cape: '#3050a0', hat: 'captain', hatColor: '#1a1a3e', hatAccent: '#c5a059', shoulders: '#c5a059' },
 };
 
-export type TerrainType = 'grass' | 'dirt' | 'stone' | 'water' | 'lane' | 'jungle' | 'base_blue' | 'base_red' | 'river' | 'jungle_path';
+export type TerrainType = 'grass' | 'dirt' | 'stone' | 'water' | 'lane' | 'jungle' | 'base_blue' | 'base_red' | 'river' | 'jungle_path' | 'snow' | 'ice' | 'crystal' | 'coal' | 'brick' | 'leaves';
 export type DungeonTileVoxelType = 'floor' | 'wall' | 'wall_top' | 'door' | 'trap' | 'stairs' | 'chest';
 
 const TERRAIN_PALETTES: Record<TerrainType, { base: string[]; accent: string[]; height: number }> = {
@@ -160,6 +160,13 @@ const TERRAIN_PALETTES: Record<TerrainType, { base: string[]; accent: string[]; 
   base_red:  { base: ['#5a1a1a', '#702020', '#501616', '#802828'], accent: ['#a03030', '#401010'], height: 2 },
   river:     { base: ['#1a5a7a', '#206a8a', '#154a6a', '#207a9a'], accent: ['#3090b0', '#104060'], height: 0 },
   jungle_path: { base: ['#3a3020', '#453828', '#2e2818', '#4a3e28'], accent: ['#5a4e38', '#252010'], height: 1 },
+  // Cube World block types
+  snow:    { base: ['#e8e8f0', '#d8d8e8', '#c8c8d8', '#b8b8c8'], accent: ['#f0f0ff', '#a0a0b0'], height: 1 },
+  ice:     { base: ['#88ccee', '#78bbdd', '#68aacc', '#5899bb'], accent: ['#aaddff', '#4488aa'], height: 0 },
+  crystal: { base: ['#aa44ff', '#9933ee', '#8822dd', '#bb55ff'], accent: ['#cc66ff', '#6600cc'], height: 2 },
+  coal:    { base: ['#2a2a2a', '#222222', '#1a1a1a', '#333333'], accent: ['#444444', '#111111'], height: 1 },
+  brick:   { base: ['#8b4513', '#7a3b10', '#6b300d', '#9b5520'], accent: ['#aa5520', '#553010'], height: 1 },
+  leaves:  { base: ['#2a6a1a', '#1e5612', '#163e0e', '#358025'], accent: ['#3a8a2a', '#0e3808'], height: 1 },
 };
 
 const DUNGEON_PALETTES: Record<DungeonTileVoxelType, { base: string[]; accent: string[] }> = {
