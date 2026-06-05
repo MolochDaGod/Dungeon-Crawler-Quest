@@ -17,7 +17,7 @@ import { OS_BASE } from '@/game/grudge-items';
 import { getSunIntensity } from '@/game/world-state';
 import { getAvailableMissions } from '@/game/missions';
 import { renderMinimap, createMinimapConfig, minimapZoomIn, minimapZoomOut, MinimapConfig } from '@/game/minimap';
-import { initGLBSprites } from '@/game/babylon-glb-sprites';
+import { initGLBSprites } from '@/game/glb-sprites';
 import { ProgressEvent } from '@/game/player-progress';
 import { loadKeybindings, matchesKeyDown, KeybindAction, KeybindConfig } from '@/game/keybindings';
 import hudFramePath from '@assets/hud-frame.png';
@@ -26,7 +26,7 @@ import NpcDialog from '@/components/NpcDialog';
 import { IntroSequence, shouldShowIntro } from '@/components/IntroSequence';
 import { ensurePlayerHeroLoaded, getPlayerHeroSync } from '@/game/player-account';
 import { ensurePixelGothicLoaded, EVENT_BANNERS } from '@/game/combat-popups';
-import { OpenWorldBabylonRenderer } from '@/game/babylon-ow-renderer';
+import { OpenWorldThreeRenderer } from '@/game/ow-three-renderer';
 
 export default function OpenWorldPage({ force3D = false }: { force3D?: boolean } = {}) {
   const [, setLocation] = useLocation();
@@ -34,7 +34,7 @@ export default function OpenWorldPage({ force3D = false }: { force3D?: boolean }
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<OpenWorldState | null>(null);
   const rendererRef = useRef<OpenWorldRenderer | null>(null);
-  const renderer3DRef = useRef<OpenWorldBabylonRenderer | null>(null);
+  const renderer3DRef = useRef<OpenWorldThreeRenderer | null>(null);
   const minimapRef = useRef<MinimapConfig>(createMinimapConfig());
   const keysRef = useRef<Set<string>>(new Set());
   const [hud, setHud] = useState<OWHudState | null>(null);
@@ -68,13 +68,13 @@ export default function OpenWorldPage({ force3D = false }: { force3D?: boolean }
 
     // ── 3D BabylonJS mode (Genesis / force3D) ──────────────────
     if (force3D && containerRef.current) {
-      const babylon3D = new OpenWorldBabylonRenderer(containerRef.current);
-      renderer3DRef.current = babylon3D;
+      const three3D = new OpenWorldThreeRenderer(containerRef.current);
+      renderer3DRef.current = three3D;
 
       // Load player model
       const hd = getHeroById(state.player.heroDataId);
       if (hd) {
-        babylon3D.loadPlayerModel(hd.id, hd.heroClass, hd.race);
+        three3D.loadPlayerModel(hd.id, hd.heroClass, hd.race);
       }
     }
 

@@ -15,10 +15,17 @@
  * and player actions flow through this bridge into the existing systems.
  */
 
-import { Scene } from "@babylonjs/core/scene";
-import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { Vector3 } from "@babylonjs/core/Maths/math";
-import { Observable } from "@babylonjs/core/Misc/observable";
+import * as THREE from 'three';
+
+// Engine-agnostic Observable (same API as Babylon Observable)
+class Observable<T> {
+  private observers: Array<(data: T) => void> = [];
+  add(fn: (data: T) => void) { this.observers.push(fn); }
+  remove(fn: (data: T) => void) { this.observers = this.observers.filter(o => o !== fn); }
+  notifyObservers(data: T) { this.observers.forEach(fn => fn(data)); }
+  clear() { this.observers = []; }
+}
+export { Observable };
 
 // ── Existing game systems ──────────────────────────────────────
 import { loadCharacterData, CharacterData } from "./character-data";
@@ -55,7 +62,7 @@ export interface BridgeEvents {
   /** Level up */
   onLevelUp: Observable<{ newLevel: number; unspentPoints: number }>;
   /** Interaction prompt (NPC, crafting station, etc) */
-  onInteractionPrompt: Observable<{ type: string; name: string; worldPos: Vector3 } | null>;
+  onInteractionPrompt: Observable<{ type: string; name: string; worldPos: THREE.Vector3 } | null>;
 }
 
 // ── Snapshot for UI ────────────────────────────────────────────
@@ -135,7 +142,7 @@ export class GenesisGameBridge {
   private combatActor;
 
   // World
-  private resourceNodes: Map<string, { def: ResourceNodeDef; instance: ResourceNodeInstance; meshNode?: TransformNode }> = new Map();
+  private resourceNodes: Map<string, { def: ResourceNodeDef; instance: ResourceNodeInstance; meshNode?: THREE.Object3D }> = new Map();
 
   // Runtime
   private currentHp: number;
@@ -145,7 +152,7 @@ export class GenesisGameBridge {
   // Events
   public events: BridgeEvents;
 
-  constructor(private scene: Scene) {
+  constructor(private scene: THREE.Scene | any) {
     // Load all existing game state
     this.charData = loadCharacterData();
     this.equipment = loadEquipment();
