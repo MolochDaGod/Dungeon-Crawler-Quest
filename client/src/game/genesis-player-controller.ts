@@ -120,7 +120,7 @@ export class GenesisPlayerController {
       const key = ev.event.key.toLowerCase();
       if (ev.type === KeyboardEventTypes.KEYDOWN) {
         this.keys.add(key);
-        this.onKeyDown(key, ev.event);
+        this.onKeyDown(key, ev.event as unknown as KeyboardEvent);
       } else {
         this.keys.delete(key);
         this.onKeyUp(key);
@@ -246,13 +246,13 @@ export class GenesisPlayerController {
       this.bridge.events.onInteractionPrompt.notifyObservers({
         type: "npc",
         name: target.name,
-        worldPos: target.mesh.absolutePosition,
+        worldPos: target.mesh.absolutePosition as any,
       });
     } else if (target.type === "crafting") {
       this.bridge.events.onInteractionPrompt.notifyObservers({
         type: "crafting",
         name: target.name,
-        worldPos: target.mesh.absolutePosition,
+        worldPos: target.mesh.absolutePosition as any,
       });
     }
   }
@@ -366,7 +366,7 @@ export class GenesisPlayerController {
       this.bridge.events.onInteractionPrompt.notifyObservers({
         type: this.nearbyInteractable.type,
         name: this.nearbyInteractable.name,
-        worldPos: this.nearbyInteractable.mesh.absolutePosition,
+        worldPos: this.nearbyInteractable.mesh.absolutePosition as any,
       });
     } else {
       this.bridge.events.onInteractionPrompt.notifyObservers(null);

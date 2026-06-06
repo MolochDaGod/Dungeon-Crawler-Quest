@@ -414,8 +414,8 @@ export async function buildGenesisScene(container: HTMLElement): Promise<Genesis
 
   // ── Game Bridge ─────────────────────────────────────────
   const bridge = new GenesisGameBridge(scene);
-  bridge.spawnNodesForBiome("forest", treePositions.slice(0, 50));
-  bridge.spawnNodesForBiome("cave", rockPositions.slice(0, 30));
+  bridge.spawnNodesForBiome("forest", treePositions.slice(0, 50) as any);
+  bridge.spawnNodesForBiome("cave", rockPositions.slice(0, 30) as any);
 
   // ── Player controller ───────────────────────────────────
   const controller = new GenesisPlayerController(scene, bridge, playerCap as any, camera, canvas);

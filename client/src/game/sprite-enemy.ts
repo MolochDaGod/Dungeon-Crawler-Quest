@@ -255,8 +255,8 @@ interface PCSpriteDef {
 
 // Pixel Crawler assets: served from ObjectStore CDN for deployment.
 // Local fallback: /assets/packs/pixel-crawler/Pixel Crawler - Free Pack
-// CDN: https://molochdagod.github.io/ObjectStore/sprites/pixel-crawler
-const OS_CDN = 'https://molochdagod.github.io/ObjectStore';
+import { getBaseUrl as _getOSBase } from '@/lib/grudge-objectstore';
+const OS_CDN = _getOSBase();
 const PC_BASE = `${OS_CDN}/sprites/pixel-crawler`;
 
 const PC_SPRITE_DEFS: PCSpriteDef[] = [

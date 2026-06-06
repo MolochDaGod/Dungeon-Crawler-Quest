@@ -15,6 +15,7 @@
  */
 
 import * as THREE from 'three';
+// @ts-ignore — rapier3d-compat is an optional peer dependency loaded at runtime
 import RAPIER from '@dimforge/rapier3d-compat';
 import { ISLAND_ZONES, OPEN_WORLD_SIZE, getZoneAtPosition, type ZoneDef } from './zones';
 import { loadGLB, loadFBX, type LoadedModel, createAnimatedEntity, playAnimation, type AnimatedEntity, loadAnimSetForEntity } from './model-loader';

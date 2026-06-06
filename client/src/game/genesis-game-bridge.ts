@@ -431,13 +431,13 @@ export class GenesisGameBridge {
   // ── World Node Management ────────────────────────────────────
 
   /** Register a resource node in the 3D world */
-  registerResourceNode(key: string, def: ResourceNodeDef, worldPos: Vector3, meshNode?: TransformNode): void {
+  registerResourceNode(key: string, def: ResourceNodeDef, worldPos: THREE.Vector3, meshNode?: THREE.Object3D): void {
     const instance = createNodeInstance(def, worldPos.x, worldPos.z);
     this.resourceNodes.set(key, { def, instance, meshNode });
   }
 
   /** Spawn resource nodes for a biome region */
-  spawnNodesForBiome(biome: string, positions: Vector3[]): void {
+  spawnNodesForBiome(biome: string, positions: THREE.Vector3[]): void {
     const defs = getNodesForBiome(biome);
     if (defs.length === 0) return;
 
@@ -450,7 +450,7 @@ export class GenesisGameBridge {
   }
 
   /** Get all registered resource nodes */
-  getResourceNodes(): Map<string, { def: ResourceNodeDef; instance: ResourceNodeInstance; meshNode?: TransformNode }> {
+  getResourceNodes(): Map<string, { def: ResourceNodeDef; instance: ResourceNodeInstance; meshNode?: THREE.Object3D }> {
     return this.resourceNodes;
   }
 

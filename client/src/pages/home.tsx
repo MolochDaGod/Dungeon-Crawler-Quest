@@ -266,6 +266,31 @@ export default function Home() {
               <span>Island Camp</span>
             </button>
           </div>
+
+          {/* 3D Game Modes */}
+          <div className="flex gap-3 mt-3 flex-wrap justify-center">
+            <button
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-[#00ffcc] transition-colors cursor-pointer px-3 py-1.5 rounded border border-gray-800 hover:border-[#00ffcc]/40"
+              onClick={() => setLocation('/sandbox')}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Sandbox</span>
+            </button>
+            <button
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-[#ff0055] transition-colors cursor-pointer px-3 py-1.5 rounded border border-gray-800 hover:border-[#ff0055]/40"
+              onClick={() => setLocation('/arena')}
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+              <span>Arena Fighter</span>
+            </button>
+            <button
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer px-3 py-1.5 rounded border border-gray-800 hover:border-[#c5a059]/40"
+              onClick={() => setLocation('/dungeon3d')}
+            >
+              <Skull className="w-3.5 h-3.5" />
+              <span>3D Dungeon</span>
+            </button>
+          </div>
         </div>
 
         {/* Admin button — bottom right corner */}

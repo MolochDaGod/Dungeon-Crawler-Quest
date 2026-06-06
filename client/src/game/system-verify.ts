@@ -298,7 +298,8 @@ async function checkBackendConnectivity(): Promise<CheckResult> {
 
 async function checkObjectStoreConnectivity(): Promise<CheckResult> {
   try {
-    const resp = await fetch('https://molochdagod.github.io/ObjectStore/api/v1/attributes.json', { signal: AbortSignal.timeout(5000) });
+    const { getBaseUrl: _osBase } = await import('@/lib/grudge-objectstore');
+    const resp = await fetch(`${_osBase()}/api/v1/attributes.json`, { signal: AbortSignal.timeout(5000) });
     if (resp.ok) return { name: 'api.objectStore', severity: 'pass', message: 'ObjectStore API reachable' };
     return { name: 'api.objectStore', severity: 'warn', message: `ObjectStore responded ${resp.status}` };
   } catch {

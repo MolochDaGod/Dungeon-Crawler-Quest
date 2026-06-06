@@ -4,7 +4,8 @@
  * Caches in memory with 5-min TTL, falls back to bundled defaults offline.
  */
 
-const BASE_URL = 'https://molochdagod.github.io/ObjectStore';
+import { getBaseUrl } from '@/lib/grudge-objectstore';
+const BASE_URL = getBaseUrl();
 const CACHE_TTL = 5 * 60 * 1000;
 
 // ── Typed Interfaces ───────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRoute } from 'wouter';
-import { buildGenesisScene, type GenesisScene } from '@/game/genesis-scene-builder';
+import { buildGenesisScene, type GenesisScene } from '@/game/three-genesis-scene-builder';
 
 /**
  * Genesis Island Page
@@ -118,6 +118,7 @@ function GenesisIslandView({ instanceId, isLocal }: { instanceId: string; isLoca
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GenesisScene | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sceneError, setSceneError] = useState<string | null>(null);
   const [playerInfo, setPlayerInfo] = useState<{ name: string; race: string; heroClass: string; level: number } | null>(null);
 
   useEffect(() => {
@@ -133,7 +134,7 @@ function GenesisIslandView({ instanceId, isLocal }: { instanceId: string; isLoca
       setLoading(false);
     }).catch(err => {
       console.error('[Genesis] Scene build failed:', err?.message || err, err?.stack);
-      setError(`Scene failed: ${err?.message || String(err)}`);
+      setSceneError(`Scene failed: ${err?.message || String(err)}`);
       setLoading(false);
     });
 
@@ -145,6 +146,17 @@ function GenesisIslandView({ instanceId, isLocal }: { instanceId: string; isLoca
       }
     };
   }, []);
+
+  if (sceneError) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a1a', color: '#ef4444', fontFamily: 'monospace', fontSize: '18px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>💀</div>
+          <div>{sceneError}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#0a0a1a', position: 'relative' }}>
@@ -166,8 +178,7 @@ function GenesisIslandView({ instanceId, isLocal }: { instanceId: string; isLoca
           </div>
         </div>
       )}
-      {/* HUD overlay */}
-      {/* HUD is now rendered by BabylonJS GUI (genesis-hud.ts) */}
+      {/* HUD overlay rendered by Three.js DOM HUD (three-genesis-scene-builder.ts) */}
     </div>
   );
 }

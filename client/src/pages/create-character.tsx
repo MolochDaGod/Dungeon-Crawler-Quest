@@ -64,7 +64,8 @@ const CLASS_BASE_STATS: Record<string, { hp: number; atk: number; def: number; s
 };
 
 // ObjectStore CDN icon base for weapon types
-const OS_ICON = 'https://molochdagod.github.io/ObjectStore/icons/weapons';
+import { getBaseUrl } from '@/lib/grudge-objectstore';
+const OS_ICON = `${getBaseUrl()}/icons/weapons`;
 
 // Fallback placeholder for missing weapon icons
 const WEAPON_ICON_FALLBACK = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect fill="%23222" width="48" height="48" rx="6"/><text x="24" y="30" text-anchor="middle" font-size="20" fill="%23666">⚔</text></svg>';
@@ -194,7 +195,7 @@ export default function CreateCharacter() {
 
       // Get account info from Grudge auth
       const grudgeUser = getGrudgeUser();
-      const accountId = grudgeUser?.grudgeId || grudgeUser?.userId || localStorage.getItem('grudge_id') || 'local';
+      const accountId = grudgeUser?.grudgeId || grudgeUser?.username || localStorage.getItem('grudge_id') || 'local';
 
       // Find the best body model for race+class combo
       const modelIndex = findBestHeroModel(race, heroClass);
@@ -222,7 +223,7 @@ export default function CreateCharacter() {
         faction,
         level: 1,
         xp: 0,
-        attributes: attrs.allocated,
+        attributes: attrs.base,
         equipment: {},
         weaponType: weapon,
         avatarUrl: avatarUrl || null,
@@ -266,7 +267,7 @@ export default function CreateCharacter() {
         faction,
         level: 1,
         imageUrl: avatarUrl,
-        recipientEmail: grudgeUser?.userId?.includes('@') ? grudgeUser.userId : undefined,
+        recipientEmail: grudgeUser?.username?.includes('@') ? grudgeUser.username : undefined,
       }, (mintResult: MintResult) => {
         if (mintResult.success && mintResult.mintAddress) {
           console.log(`[cNFT] Character minted: ${mintResult.mintAddress}`);

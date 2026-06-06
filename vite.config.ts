@@ -71,6 +71,7 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     rollupOptions: {
+      external: ['@dimforge/rapier3d-compat'],
       output: {
         manualChunks(id) {
           // BabylonJS → dedicated chunk (largest dep, only loaded on 3D pages)

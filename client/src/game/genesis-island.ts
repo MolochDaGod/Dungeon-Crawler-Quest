@@ -30,7 +30,7 @@
  *   PvP lobby codes (GRD-XXXX) link to specific island instances.
  */
 
-import { v4 as uuidv4 } from 'uuid' // falls back to crypto.randomUUID if unavailable
+// UUID generation handled by generateInstanceId() below
 
 // ── Genesis Island Instance ────────────────────────────────────
 

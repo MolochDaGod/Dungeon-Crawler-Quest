@@ -251,7 +251,7 @@ export default function OpenWorldPage({ force3D = false }: { force3D?: boolean }
     };
 
     const onMouseMove = (e: MouseEvent) => {
-      updateOWMouseWorld(state, e.clientX, e.clientY, canvas.width, canvas.height);
+      if (canvas) updateOWMouseWorld(state, e.clientX, e.clientY, canvas.width, canvas.height);
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -260,10 +260,10 @@ export default function OpenWorldPage({ force3D = false }: { force3D?: boolean }
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
-    canvas.addEventListener('click', onClick);
-    canvas.addEventListener('contextmenu', onContextMenu);
-    canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('wheel', onWheel);
+    canvas?.addEventListener('click', onClick);
+    canvas?.addEventListener('contextmenu', onContextMenu);
+    canvas?.addEventListener('mousemove', onMouseMove);
+    canvas?.addEventListener('wheel', onWheel);
 
     return () => {
       cancelAnimationFrame(animId);
@@ -272,10 +272,10 @@ export default function OpenWorldPage({ force3D = false }: { force3D?: boolean }
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
-      canvas.removeEventListener('click', onClick);
-      canvas.removeEventListener('contextmenu', onContextMenu);
-      canvas.removeEventListener('mousemove', onMouseMove);
-      canvas.removeEventListener('wheel', onWheel);
+      canvas?.removeEventListener('click', onClick);
+      canvas?.removeEventListener('contextmenu', onContextMenu);
+      canvas?.removeEventListener('mousemove', onMouseMove);
+      canvas?.removeEventListener('wheel', onWheel);
     };
   }, [heroId, heroReady, setLocation]);
 

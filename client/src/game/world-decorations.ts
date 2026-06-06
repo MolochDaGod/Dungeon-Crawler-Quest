@@ -15,7 +15,8 @@ import { ZoneDef, ISLAND_ZONES } from './zones';
 
 const FARM = '/assets/sprites/farm-animals/PNG';
 const GUILD = '/assets/sprites/blacksmith-house/PNG';
-const OS = 'https://molochdagod.github.io/ObjectStore';
+import { getBaseUrl } from '@/lib/grudge-objectstore';
+const OS = getBaseUrl();
 
 // ── Types ──────────────────────────────────────────────────────
 
