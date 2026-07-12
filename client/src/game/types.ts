@@ -302,6 +302,8 @@ export interface MobaState {
   killFeed: { text: string; color: string; time: number }[];
   terrainMap: number[][];
   decorations: { x: number; y: number; type: string; seed: number }[];
+  /** Optional map-editor top/mid/bot paths (minions use these when all 3 are valid). */
+  laneWaypoints?: Vec2[][];
   cursorMode: 'default' | 'attack' | 'ability' | 'move' | 'attackmove';
   hoveredEntityId: number | null;
   aKeyHeld: boolean;

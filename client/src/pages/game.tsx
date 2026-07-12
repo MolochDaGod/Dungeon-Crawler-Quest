@@ -187,18 +187,28 @@ export default function GamePage() {
 
   // Ensure custom character is registered in HEROES[] before game boots
   useEffect(() => {
-    ensurePlayerHeroLoaded().then(() => setHeroReady(true));
+    ensurePlayerHeroLoaded()
+      .then((hd) => {
+        if (hd) {
+          localStorage.setItem('grudge_hero_id', String(hd.id));
+        }
+        setHeroReady(true);
+      })
+      .catch(() => setHeroReady(true));
   }, []);
 
   useEffect(() => {
     if (!heroReady) return;
-    if (heroId < 0) {
+    // Re-read after ensurePlayerHeroLoaded may have fixed the id
+    const resolvedHeroId = parseInt(localStorage.getItem('grudge_hero_id') || String(heroId) || '-1', 10);
+    const resolvedTeam = parseInt(localStorage.getItem('grudge_team') || String(team) || '0', 10);
+    if (resolvedHeroId < 0) {
       setLocation('/');
       return;
     }
 
     getPlayerHeroSync();
-    const state = createInitialState(heroId, team);
+    const state = createInitialState(resolvedHeroId, resolvedTeam === 1 ? 1 : 0);
     stateRef.current = state;
 
     // Load PixelGothic for canvas damage numbers + combo text

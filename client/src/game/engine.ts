@@ -49,9 +49,12 @@ const TOWER_POSITIONS: { x: number; y: number; lane: number; team: number; tier:
 
 function initTowerPositions() {
   TOWER_POSITIONS.length = 0;
+  // Use full top/mid/bot geometry (DOTA_LANES) so towers aren't all on mid
+  const lanes = [TOP_LANE, MID_LANE, BOT_LANE];
   for (let team = 0; team < 2; team++) {
     for (let lane = 0; lane < 3; lane++) {
-      const waypoints = DOTA_LANES[lane] ?? LANE_WAYPOINTS[lane];
+      const waypoints = lanes[lane] ?? LANE_WAYPOINTS[lane];
+      if (!waypoints || waypoints.length < 2) continue;
       const path = team === 0 ? waypoints : [...waypoints].reverse();
       for (let tier = 0; tier < 2; tier++) {
         const t = (tier + 1) / 4;
@@ -209,6 +212,44 @@ const BOT_LANE: Vec2[] = [
 ];
 
 const DOTA_LANES = [TOP_LANE, MID_LANE, BOT_LANE];
+
+/**
+ * Active lane paths for minions/towers/render.
+ * Prefer saved-map waypoints when all 3 lanes have enough points; otherwise Dota layout.
+ * Never silently collapse to a single mid path.
+ */
+function getLanePaths(state?: MobaState | null): Vec2[][] {
+  const fromMap = (state as any)?.laneWaypoints as Vec2[][] | undefined;
+  if (fromMap && fromMap.length >= 3) {
+    const valid = fromMap
+      .slice(0, 3)
+      .map((lane) => (Array.isArray(lane) ? lane.filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y)) : []));
+    if (valid.every((l) => l.length >= 2)) return valid as Vec2[][];
+  }
+  return DOTA_LANES;
+}
+
+/** Spawn just outside base along the chosen lane (not stacked on center). */
+function minionBarracksSpawn(lane: number, team: number, lanes: Vec2[][]): Vec2 {
+  const path = lanes[lane] ?? lanes[1] ?? DOTA_LANES[1];
+  const waypoints = team === 0 ? path : [...path].reverse();
+  if (waypoints.length >= 2) {
+    const a = waypoints[0];
+    const b = waypoints[1];
+    // 12% along first segment so waves leave the fountain toward their lane
+    const t = 0.12;
+    const spread = 36;
+    const perpX = -(b.y - a.y);
+    const perpY = b.x - a.x;
+    const plen = Math.hypot(perpX, perpY) || 1;
+    const side = (Math.random() - 0.5) * 2 * spread;
+    return {
+      x: a.x + (b.x - a.x) * t + (perpX / plen) * side,
+      y: a.y + (b.y - a.y) * t + (perpY / plen) * side,
+    };
+  }
+  return { ...BASE_POSITIONS[team] };
+}
 
 function generateTerrainMap(): number[][] {
   const grid: number[][] = [];
@@ -432,6 +473,8 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
 
   initTowerPositions();
 
+  const team = playerTeam === 1 ? 1 : 0;
+
   const state: MobaState = {
     heroes: [],
     minions: [],
@@ -440,7 +483,7 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     projectiles: [],
     particles: [],
     floatingTexts: [],
-    camera: { x: BASE_POSITIONS[playerTeam].x, y: BASE_POSITIONS[playerTeam].y, zoom: 1 },
+    camera: { x: BASE_POSITIONS[team].x, y: BASE_POSITIONS[team].y, zoom: 1 },
     gameTime: 0,
     nextMinionWave: 5,
     playerHeroIndex: 0,
@@ -456,6 +499,8 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     terrainMap: savedMap ? savedMap.terrain : generateTerrainMap(),
     // collisionMap loaded from saved map data (stored as 'any' — accessed via isTileBlocked)
     ...(savedMap?.collision ? { collisionMap: savedMap.collision } : {}),
+    // Persist map lanes so minion pathing can use editor-authored top/mid/bot
+    ...(savedMap?.laneWaypoints ? { laneWaypoints: savedMap.laneWaypoints } : {}),
     decorations: savedMap ? savedMap.decorations.map(d => ({ x: d.x, y: d.y, type: d.type, seed: d.seed })) : generateDecorations(),
     jungleCamps: [],
     cursorMode: 'default',
@@ -472,35 +517,84 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     activeSpells: []
   };
 
-  const team0Heroes = [playerHeroId];
-  const team1Heroes: number[] = [];
+  // Resolve player hero — custom chars are id>=100 and must be registered first
+  let resolvedPlayerId = playerHeroId;
+  let playerHd = HEROES.find((h) => h.id === playerHeroId) ?? null;
+  if (!playerHd) {
+    playerHd = getHeroById(playerHeroId);
+    // If still missing or fell back to AI roster while id was custom, force roster[0]
+    if (!playerHd || (playerHeroId >= 100 && playerHd.id < 100)) {
+      playerHd = HEROES.find((h) => !h.isAINpc) || HEROES[0];
+      resolvedPlayerId = playerHd.id;
+      console.warn(
+        `[moba] player hero id ${playerHeroId} not in HEROES — using ${playerHd.name} (${resolvedPlayerId})`,
+      );
+    }
+  }
 
-  const available = HEROES.filter(h => h.id !== playerHeroId && !h.isSecret);
+  const team0Heroes: number[] = [];
+  const team1Heroes: number[] = [];
+  if (team === 0) team0Heroes.push(resolvedPlayerId);
+  else team1Heroes.push(resolvedPlayerId);
+
+  const available = HEROES.filter((h) => h.id !== resolvedPlayerId && !h.isSecret);
   const shuffled = [...available].sort(() => Math.random() - 0.5);
 
-  for (let i = 0; i < 4 && i < shuffled.length; i++) team0Heroes.push(shuffled[i].id);
-  for (let i = 4; i < 9 && i < shuffled.length; i++) team1Heroes.push(shuffled[i].id);
+  // Fill each team to 5 heroes
+  for (let i = 0; i < shuffled.length && team0Heroes.length < 5; i++) {
+    if (!team0Heroes.includes(shuffled[i].id)) team0Heroes.push(shuffled[i].id);
+  }
+  for (let i = 0; i < shuffled.length && team1Heroes.length < 5; i++) {
+    if (!team1Heroes.includes(shuffled[i].id)) team1Heroes.push(shuffled[i].id);
+  }
 
+  // Lane spread: top, top, mid, mid, bot — not everyone mid
   const laneAssign = [0, 0, 1, 1, 2];
 
   team0Heroes.forEach((hid, idx) => {
-    const hd = HEROES.find(h => h.id === hid)!;
-    const lane = laneAssign[idx] ?? 1;
+    const hd = HEROES.find((h) => h.id === hid) ?? getHeroById(hid);
+    if (!hd) return;
+    const lane = laneAssign[idx] ?? (idx % 3);
     const spawn = laneSpawn(lane, 0);
-    const hero = createHero(state, hd, 0, spawn.x, spawn.y, idx === 0);
+    const isPlayer = team === 0 && hid === resolvedPlayerId;
+    const hero = createHero(state, hd, 0, spawn.x, spawn.y, isPlayer);
     hero.assignedLane = lane;
-    if (idx === 0) state.playerHeroIndex = state.heroes.length;
+    if (isPlayer) state.playerHeroIndex = state.heroes.length;
     state.heroes.push(hero);
   });
 
-  team1Heroes.forEach((hid, _idx) => {
-    const hd = HEROES.find(h => h.id === hid)!;
-    const lane = laneAssign[_idx] ?? 1;
+  team1Heroes.forEach((hid, idx) => {
+    const hd = HEROES.find((h) => h.id === hid) ?? getHeroById(hid);
+    if (!hd) return;
+    const lane = laneAssign[idx] ?? (idx % 3);
     const spawn = laneSpawn(lane, 1);
-    const hero = createHero(state, hd, 1, spawn.x, spawn.y, false);
+    const isPlayer = team === 1 && hid === resolvedPlayerId;
+    const hero = createHero(state, hd, 1, spawn.x, spawn.y, isPlayer);
     hero.assignedLane = lane;
+    if (isPlayer) state.playerHeroIndex = state.heroes.length;
     state.heroes.push(hero);
   });
+
+  // Safety: always have a playable hero at the correct base
+  if (!state.heroes[state.playerHeroIndex]?.isPlayer) {
+    const playerHero = state.heroes.find((h) => h.isPlayer);
+    if (playerHero) {
+      state.playerHeroIndex = state.heroes.indexOf(playerHero);
+    } else if (state.heroes.length > 0) {
+      state.heroes[0].isPlayer = true;
+      state.heroes[0].team = team;
+      state.heroes[0].x = BASE_POSITIONS[team].x;
+      state.heroes[0].y = BASE_POSITIONS[team].y;
+      state.playerHeroIndex = 0;
+    }
+  }
+
+  // Keep camera locked on the actual player entity
+  const ph = state.heroes[state.playerHeroIndex];
+  if (ph) {
+    state.camera.x = ph.x;
+    state.camera.y = ph.y;
+  }
 
   TOWER_POSITIONS.forEach(tp => {
     state.towers.push(createTower(state, tp.x, tp.y, tp.team, tp.lane, tp.tier));
@@ -783,22 +877,27 @@ function updateJungleCamps(state: MobaState, dt: number) {
 }
 
 function spawnMinionWave(state: MobaState) {
-  // Use Dota 2-style lanes for minion pathing
-  const lanes = typeof DOTA_LANES !== 'undefined' ? DOTA_LANES : LANE_WAYPOINTS;
+  // Always push a full wave down top (0), mid (1), and bot (2) — never mid-only.
+  const lanes = getLanePaths(state);
   for (let team = 0; team < 2; team++) {
     for (let lane = 0; lane < 3; lane++) {
-      const base = BASE_POSITIONS[team];
-      const offsets = [{ x: -40, y: -40 }, { x: 0, y: 0 }, { x: 40, y: 40 }];
+      const path = lanes[lane] ?? DOTA_LANES[lane];
+      if (!path || path.length < 2) continue;
+
       for (let i = 0; i < 4; i++) {
         const isSiege = i === 3 && state.gameTime > 120;
+        const spawn = minionBarracksSpawn(lane, team, lanes);
+        // Start at waypoint 1 (skip fountain node) so units immediately commit to their lane
+        const startWp = 1;
         state.minions.push({
           id: state.nextEntityId++,
-          x: base.x + offsets[lane].x + (Math.random() - 0.5) * 30,
-          y: base.y + offsets[lane].y + (Math.random() - 0.5) * 30,
-          team, lane,
+          x: spawn.x + (Math.random() - 0.5) * 18,
+          y: spawn.y + (Math.random() - 0.5) * 18,
+          team,
+          lane, // 0=top, 1=mid, 2=bot
           hp: isSiege ? 300 : 200 + Math.floor(state.gameTime / 60) * 15 + Math.floor(state.gameTime / 300) * 20,
           maxHp: isSiege ? 300 : 200 + Math.floor(state.gameTime / 60) * 15 + Math.floor(state.gameTime / 300) * 20,
-          waypointIndex: 0,
+          waypointIndex: startWp,
           targetId: null,
           atk: isSiege ? 35 : 18 + Math.floor(state.gameTime / 60) * 2 + Math.floor(state.gameTime / 300) * 3,
           def: isSiege ? 10 : 3,
@@ -3047,13 +3146,23 @@ function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
     return;
   }
 
-  const minionLanePts = DOTA_LANES[minion.lane] ?? LANE_WAYPOINTS[minion.lane];
+  const lanes = getLanePaths(state);
+  const laneIdx = Math.max(0, Math.min(2, minion.lane | 0));
+  const minionLanePts = lanes[laneIdx] ?? DOTA_LANES[laneIdx] ?? LANE_WAYPOINTS[laneIdx];
+  if (!minionLanePts || minionLanePts.length < 2) return;
+
   const waypoints = minion.team === 0 ? minionLanePts : [...minionLanePts].reverse();
+  // Clamp waypoint index so bad data never freezes units on a missing node
+  if (minion.waypointIndex < 0) minion.waypointIndex = 0;
+  if (minion.waypointIndex >= waypoints.length) {
+    minion.waypointIndex = waypoints.length - 1;
+  }
+
   if (minion.waypointIndex < waypoints.length) {
     const wp = waypoints[minion.waypointIndex];
     const d = dist(minion, wp);
-    if (d < 40) {
-      minion.waypointIndex++;
+    if (d < 48) {
+      if (minion.waypointIndex < waypoints.length - 1) minion.waypointIndex++;
     } else {
       const angle = angleTo(minion, wp);
       minion.x += Math.cos(angle) * minion.spd * dt;
@@ -4442,7 +4551,7 @@ export class MobaRenderer {
     ctx.translate(-cam.x, -cam.y);
 
     this.renderMap(ctx, cam, W, H, state);
-    this.renderLanes(ctx);
+    this.renderLanes(ctx, state);
 
     this.renderFogOfWar(ctx, cam, W, H, state);
 
@@ -5433,8 +5542,9 @@ export class MobaRenderer {
     ctx.restore();
   }
 
-  private isOnLane(x: number, y: number): boolean {
-    for (const lane of LANE_WAYPOINTS) {
+  private isOnLane(x: number, y: number, state?: MobaState): boolean {
+    const lanes = getLanePaths(state ?? null);
+    for (const lane of lanes) {
       for (let i = 1; i < lane.length; i++) {
         const a = lane[i - 1], b = lane[i];
         const d = this.pointToSegmentDist(x, y, a.x, a.y, b.x, b.y);
@@ -5453,10 +5563,13 @@ export class MobaRenderer {
     return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
   }
 
-  private renderLanes(ctx: CanvasRenderingContext2D) {
-    const laneColors = ['rgba(100,160,100,0.08)', 'rgba(140,140,100,0.08)', 'rgba(100,100,160,0.08)'];
+  private renderLanes(ctx: CanvasRenderingContext2D, state?: MobaState) {
+    // Match pathing (DOTA_LANES / map lanes) so painted roads align with minion routes
+    const lanes = getLanePaths(state ?? null);
+    const laneColors = ['rgba(100,160,100,0.10)', 'rgba(140,140,100,0.10)', 'rgba(100,100,160,0.10)'];
     for (let l = 0; l < 3; l++) {
-      const lane = LANE_WAYPOINTS[l];
+      const lane = lanes[l];
+      if (!lane || lane.length < 2) continue;
       ctx.strokeStyle = laneColors[l];
       ctx.lineWidth = 100;
       ctx.lineCap = 'round';
@@ -5595,10 +5708,12 @@ export class MobaRenderer {
 
   renderHero(ctx: CanvasRenderingContext2D, hero: MobaHero, _state: MobaState) {
     const heroData = getHeroById(hero.heroDataId);
-    if (!heroData) return;
-
-    const raceColor = RACE_COLORS[heroData.race] || '#888';
-    const classColor = CLASS_COLORS[heroData.heroClass] || '#888';
+    // Always draw something — getHeroById falls back to HEROES[0], but guard anyway
+    const race = heroData?.race || 'Human';
+    const heroClass = heroData?.heroClass || 'Warrior';
+    const heroName = heroData?.name || 'Hero';
+    const raceColor = RACE_COLORS[race] || '#888';
+    const classColor = CLASS_COLORS[heroClass] || '#888';
     const isPlayer = hero.isPlayer;
 
     ctx.save();
@@ -5648,12 +5763,29 @@ export class MobaRenderer {
     }
 
     const heroBuffNames = hero.activeEffects?.map((e: any) => e.name || '') || [];
-    this.voxel.drawHeroVoxel(ctx, 0, 0, raceColor, classColor, heroData.heroClass, hero.facing, hero.animState, hero.animTimer, heroData.race, heroData.name, hero.buffTimer, hero.items, hero.id, hero.shieldHp > 0 ? hero.shieldHp : undefined, heroBuffNames.length > 0 ? heroBuffNames : undefined, _state.gameTime);
+    try {
+      this.voxel.drawHeroVoxel(
+        ctx, 0, 0, raceColor, classColor, heroClass, hero.facing, hero.animState, hero.animTimer,
+        race, heroName, hero.buffTimer, hero.items, hero.id,
+        hero.shieldHp > 0 ? hero.shieldHp : undefined,
+        heroBuffNames.length > 0 ? heroBuffNames : undefined,
+        _state.gameTime,
+      );
+    } catch (err) {
+      // Fallback capsule if voxel pipeline throws (missing race/class data)
+      ctx.fillStyle = classColor;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 10, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = isPlayer ? '#fff' : raceColor;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     if (hero.animState === 'attack' || hero.animState === 'ability' || hero.animState === 'combo_finisher') {
-      const isMelee = heroData.heroClass === 'Warrior' || heroData.heroClass === 'Worg';
-      const trailColor = heroData.heroClass === 'Mage' ? '#a855f7' : heroData.heroClass === 'Ranger' ? '#22d3ee' : heroData.heroClass === 'Worg' ? '#ff6622' : '#f59e0b';
-      const trailGlowColor = heroData.heroClass === 'Mage' ? '#d8b4fe' : heroData.heroClass === 'Ranger' ? '#67e8f9' : heroData.heroClass === 'Worg' ? '#fbbf24' : '#fde68a';
+      const isMelee = heroClass === 'Warrior' || heroClass === 'Worg';
+      const trailColor = heroClass === 'Mage' ? '#a855f7' : heroClass === 'Ranger' ? '#22d3ee' : heroClass === 'Worg' ? '#ff6622' : '#f59e0b';
+      const trailGlowColor = heroClass === 'Mage' ? '#d8b4fe' : heroClass === 'Ranger' ? '#67e8f9' : heroClass === 'Worg' ? '#fbbf24' : '#fde68a';
       const swingPhase = Math.sin(hero.animTimer * (isMelee ? 10 : 6));
       const isCombo = hero.animState === 'combo_finisher';
       const trailIntensity = isCombo ? 1.4 : 1.0;
