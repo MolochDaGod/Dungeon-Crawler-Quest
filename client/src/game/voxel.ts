@@ -1447,25 +1447,57 @@ export function buildHeroModelWithPoses(race: string, heroClass: string, customP
   return model;
 }
 
-function buildMinionModel(color: string, minionType: string, animTimer: number): VoxelModel {
+/**
+ * Build a voxel minion with presentation anim states:
+ *   walk | attack | hurt | dead | idle
+ */
+function buildMinionModel(
+  color: string,
+  minionType: string,
+  animTimer: number,
+  animState: string = 'walk',
+): VoxelModel {
   const dark = shade(color, 0.5);
   const mid = shade(color, 0.75);
   const col = color;
   const light = shade(color, 1.15);
   const bright = shade(color, 1.4);
-  const walk = Math.sin(animTimer * 8);
-  const bob = Math.sin(animTimer * 6);
   const metal = '#9ca3af'; const metalDark = '#6b7280'; const metalBright = '#d1d5db';
-  const leather = '#78350f'; const wood = '#92400e'; const woodLight = '#b45309';
+  const wood = '#92400e';
+
+  const st = animState || 'walk';
+  const isWalk = st === 'walk';
+  const isAtk = st === 'attack';
+  const isHurt = st === 'hurt';
+  const isDead = st === 'dead';
+  const isIdle = st === 'idle' || (!isWalk && !isAtk && !isHurt && !isDead);
+
+  // Animation drivers
+  const walkCycle = isWalk ? Math.sin(animTimer * 10) : 0;
+  const walkBob = isWalk ? Math.abs(Math.sin(animTimer * 10)) : 0;
+  const atkPhase = isAtk ? Math.min(1, (animTimer % 0.55) / 0.55) : 0;
+  // Attack: windup (0-0.35) then slash (0.35-1)
+  const atkSwing = isAtk
+    ? (atkPhase < 0.35
+        ? -0.4 - atkPhase * 0.8 // pull back
+        : Math.sin(((atkPhase - 0.35) / 0.65) * Math.PI) * 1.4)
+    : 0;
+  const hurtKick = isHurt ? Math.sin(animTimer * 30) * 0.6 : 0;
+  const deathT = isDead ? Math.min(1, animTimer / 0.65) : 0;
 
   function makeGrid(h: number, w: number): VoxelModel {
     const m: VoxelModel = [];
-    for (let z = 0; z < h; z++) { m[z] = []; for (let y = 0; y < w; y++) { m[z][y] = []; for (let x = 0; x < w; x++) m[z][y][x] = null; } }
+    for (let z = 0; z < h; z++) {
+      m[z] = [];
+      for (let y = 0; y < w; y++) {
+        m[z][y] = [];
+        for (let x = 0; x < w; x++) m[z][y][x] = null;
+      }
+    }
     return m;
   }
 
   if (minionType === 'siege' || minionType === 'super') {
-    // Tank voxel model - armored vehicle with treads and cannon
     const model = makeGrid(10, 9);
     const isSup = minionType === 'super';
     const hull = isSup ? '#c5a059' : '#4a6741';
@@ -1475,127 +1507,255 @@ function buildMinionModel(color: string, minionType: string, animTimer: number):
     const treadLight = '#555555';
     const barrel = '#6b7280';
     const barrelDark = '#4b5563';
-    // Treads (left and right tracks)
-    const treadBob = Math.round(walk * 0.3);
+    const treadShift = isWalk ? Math.round(walkCycle * 0.8) : 0;
+    const barrelKick = isAtk ? Math.round(atkSwing * 1.2) : isHurt ? -1 : 0;
+
+    // Treads
     for (let y = 0; y <= 8; y++) {
-      model[0][y][0] = tread; model[0][y][1] = treadLight;
-      model[0][y][7] = treadLight; model[0][y][8] = tread;
+      const ty = (y + Math.max(0, treadShift) + 9) % 9;
+      model[0][y][0] = ty % 2 === 0 ? tread : treadLight;
+      model[0][y][1] = treadLight;
+      model[0][y][7] = treadLight;
+      model[0][y][8] = ty % 2 === 0 ? tread : treadLight;
     }
-    if (treadBob > 0) {
-      model[0][0][0] = treadLight; model[0][8][8] = treadLight;
+    if (isDead) {
+      // Flattened / smoking hull
+      for (let x = 1; x <= 7; x++) for (let y = 1; y <= 7; y++) {
+        model[0][y][x] = hullDark;
+        model[1][y][x] = shade(hull, 0.45);
+      }
+      model[2][4][4] = '#333';
+      model[3][4][3] = '#555';
+      model[3][4][5] = '#444';
+      return model;
     }
-    // Hull body (lower)
+    // Hull
     for (let x = 1; x <= 7; x++) for (let y = 1; y <= 7; y++) {
       model[1][y][x] = hullDark;
-      model[2][y][x] = hull;
+      model[2][y][x] = isHurt ? blend(hull, '#ff4444', 0.35) : hull;
     }
-    // Angled front armor
-    for (let x = 2; x <= 6; x++) { model[2][0][x] = hullLight; model[3][0][x] = hull; }
-    for (let x = 2; x <= 6; x++) { model[2][8][x] = hullDark; }
-    // Hull top
+    for (let x = 2; x <= 6; x++) {
+      model[2][0][x] = hullLight;
+      model[3][0][x] = hull;
+      model[2][8][x] = hullDark;
+    }
     for (let x = 2; x <= 6; x++) for (let y = 2; y <= 6; y++) model[3][y][x] = hull;
-    // Turret base
-    for (let x = 3; x <= 5; x++) for (let y = 3; y <= 5; y++) model[4][y][x] = hullLight;
-    for (let x = 3; x <= 5; x++) for (let y = 3; y <= 5; y++) model[5][y][x] = hull;
-    // Turret top
-    model[6][4][4] = hullLight; model[6][3][4] = hull; model[6][5][4] = hull;
-    model[6][4][3] = hull; model[6][4][5] = hull;
-    // Cannon barrel extending forward
-    for (let y = 0; y <= 2; y++) { model[5][y][4] = barrel; model[4][y][4] = barrelDark; }
-    model[5][0][4] = shade(barrel, 1.3);
-    // Side armor plates
-    for (let y = 1; y <= 7; y++) { model[2][y][0] = metalDark; model[2][y][8] = metalDark; }
-    for (let y = 1; y <= 7; y++) { model[3][y][0] = metal; model[3][y][8] = metal; }
-    // Exhaust pipes
-    model[4][7][2] = '#444'; model[4][7][6] = '#444';
-    model[5][7][2] = '#555'; model[5][7][6] = '#555';
-    // Hatches
-    model[6][4][4] = '#888';
+    for (let x = 3; x <= 5; x++) for (let y = 3; y <= 5; y++) {
+      model[4][y][x] = hullLight;
+      model[5][y][x] = hull;
+    }
+    model[6][4][4] = hullLight;
+    model[6][3][4] = hull;
+    model[6][5][4] = hull;
+    model[6][4][3] = hull;
+    model[6][4][5] = hull;
+    // Cannon — kicks back on attack
+    for (let y = Math.max(0, barrelKick); y <= 2 + Math.max(0, barrelKick); y++) {
+      if (y > 8) continue;
+      model[5][y][4] = barrel;
+      model[4][y][4] = barrelDark;
+    }
+    model[5][Math.max(0, barrelKick)][4] = shade(barrel, 1.3);
+    for (let y = 1; y <= 7; y++) {
+      model[2][y][0] = metalDark;
+      model[2][y][8] = metalDark;
+      model[3][y][0] = metal;
+      model[3][y][8] = metal;
+    }
+    model[4][7][2] = '#444';
+    model[4][7][6] = '#444';
+    model[5][7][2] = '#555';
+    model[5][7][6] = '#555';
+    if (isWalk) {
+      // Dust puffs under treads (extra dark voxels)
+      model[0][0][2] = shade('#888', 0.5 + walkBob * 0.3);
+      model[0][8][6] = shade('#888', 0.5 + walkBob * 0.3);
+    }
     if (isSup) {
-      // Gold trim for super version
-      for (let y = 0; y <= 8; y++) { model[3][y][1] = '#c5a059'; model[3][y][7] = '#c5a059'; }
+      for (let y = 0; y <= 8; y++) {
+        model[3][y][1] = '#c5a059';
+        model[3][y][7] = '#c5a059';
+      }
       model[7][4][4] = '#ffd700';
-      // Side cannons
-      model[4][0][2] = barrel; model[4][0][6] = barrel;
+      model[4][0][2] = barrel;
+      model[4][0][6] = barrel;
     }
     return model;
   }
 
   if (minionType === 'ranged') {
-    // Tall, thin robed caster with staff and pointed hat
     const model = makeGrid(10, 5);
-    const legOff = Math.round(walk * 0.4);
     const robeColor = shade(col, 0.8);
     const robeLight = shade(col, 1.1);
     const hatColor = shade(col, 0.55);
     const staffGem = bright;
-    // Thin legs
-    model[0][2][1 + (legOff > 0 ? 1 : 0)] = dark;
-    model[0][2][3 - (legOff > 0 ? 1 : 0)] = dark;
-    model[1][2][1] = dark; model[1][2][3] = dark;
-    // Wide robe skirt (z=2-3)
-    for (let x = 0; x <= 4; x++) { model[2][2][x] = robeColor; model[2][1][x] = robeColor; model[2][3][x] = robeColor; }
-    for (let x = 0; x <= 4; x++) { model[3][2][x] = robeLight; model[3][1][x] = robeColor; model[3][3][x] = robeColor; }
-    // Narrow torso with robe (z=4-5)
-    for (let x = 1; x <= 3; x++) { model[4][2][x] = col; model[4][1][x] = robeColor; model[4][3][x] = robeColor; }
-    model[5][2][2] = col; model[5][1][2] = robeColor; model[5][3][2] = robeColor;
-    model[5][2][1] = robeColor; model[5][2][3] = robeColor;
-    // Thin arms (z=4-5) sticking out
-    model[4][2][0] = mid; model[4][2][4] = mid;
-    model[5][2][0] = mid; model[5][2][4] = mid;
-    // Neck + head (z=6-7)
-    model[6][2][2] = light;
-    model[7][1][2] = bright; model[7][3][2] = bright; model[7][2][2] = light;
-    model[7][2][1] = light; model[7][2][3] = light;
-    // Pointed hat (z=8-9)
-    for (let x = 1; x <= 3; x++) { model[8][2][x] = hatColor; model[8][1][x] = hatColor; model[8][3][x] = hatColor; }
-    model[8][2][0] = hatColor; model[8][2][4] = hatColor;
-    model[9][2][2] = hatColor; model[9][1][2] = hatColor; model[9][3][2] = hatColor;
-    // Staff in left hand
-    const staffBob = Math.round(bob * 0.3);
-    for (let z = 1; z <= 8; z++) model[z][0][0] = z >= 7 ? staffGem : wood;
-    model[9][0][0] = bright;
-    if (bob > 0) model[9 + staffBob] && (model[9][0][0] = blend(staffGem, '#ffffff', Math.abs(bob) * 0.5));
+
+    // Legs / death crumple
+    if (isDead) {
+      // Collapsed robe pile
+      for (let x = 0; x <= 4; x++) for (let y = 1; y <= 3; y++) {
+        model[0][y][x] = robeColor;
+        model[1][y][x] = robeLight;
+      }
+      model[2][2][2] = light;
+      model[1][0][0] = wood;
+      model[2][0][0] = staffGem;
+      return model;
+    }
+
+    const legSwing = isWalk ? Math.round(walkCycle * 1.1) : isHurt ? Math.round(hurtKick) : 0;
+    const bodyLean = isAtk ? Math.round(atkSwing * 0.8) : isHurt ? -1 : 0;
+    // Legs
+    model[0][2][1 + Math.max(0, legSwing)] = dark;
+    model[0][2][3 - Math.max(0, legSwing)] = dark;
+    model[1][2][1] = dark;
+    model[1][2][3] = dark;
+    // Robe
+    for (let x = 0; x <= 4; x++) {
+      model[2][2][x] = robeColor;
+      model[2][1][x] = robeColor;
+      model[2][3][x] = robeColor;
+      model[3][2][x] = robeLight;
+      model[3][1][x] = robeColor;
+      model[3][3][x] = robeColor;
+    }
+    // Torso lean on attack
+    for (let x = 1; x <= 3; x++) {
+      const yy = Math.max(0, Math.min(4, 2 + bodyLean));
+      model[4][yy][x] = col;
+      model[4][Math.max(0, yy - 1)][x] = robeColor;
+      model[4][Math.min(4, yy + 1)][x] = robeColor;
+    }
+    model[5][2][2] = col;
+    model[5][1][2] = robeColor;
+    model[5][3][2] = robeColor;
+    model[5][2][1] = robeColor;
+    model[5][2][3] = robeColor;
+    // Arms — cast forward on attack
+    const armY = isAtk ? Math.max(0, 2 - Math.round(atkSwing * 1.5)) : 2;
+    model[4][armY][0] = mid;
+    model[4][armY][4] = mid;
+    model[5][armY][0] = mid;
+    model[5][armY][4] = mid;
+    // Head / hat
+    model[6][2][2] = isHurt ? blend(light, '#ff6666', 0.4) : light;
+    model[7][1][2] = bright;
+    model[7][3][2] = bright;
+    model[7][2][2] = light;
+    model[7][2][1] = light;
+    model[7][2][3] = light;
+    for (let x = 1; x <= 3; x++) {
+      model[8][2][x] = hatColor;
+      model[8][1][x] = hatColor;
+      model[8][3][x] = hatColor;
+    }
+    model[8][2][0] = hatColor;
+    model[8][2][4] = hatColor;
+    model[9][2][2] = hatColor;
+    // Staff — thrust on attack, limp on hurt
+    const staffY = isAtk ? Math.max(0, Math.round(2 - atkSwing * 2)) : isHurt ? 1 : 0;
+    for (let z = 1; z <= 8; z++) {
+      if (model[z] && model[z][staffY]) model[z][staffY][0] = z >= 7 ? staffGem : wood;
+    }
+    if (model[9]?.[staffY]) {
+      model[9][staffY][0] = isAtk ? blend(staffGem, '#ffffff', Math.max(0, atkSwing) * 0.6) : bright;
+    }
+    // Idle subtle bob via brighter gem pulse
+    if (isIdle && Math.sin(animTimer * 3) > 0.6) {
+      if (model[9]?.[0]) model[9][0][0] = blend(staffGem, '#fff', 0.35);
+    }
     return model;
   }
 
-  // Melee minion: wider, shorter, armored with shield + helmet
-  const model = makeGrid(7, 7);
-  const legOff = Math.round(walk * 0.5);
-  // Wide stumpy legs (z=0)
-  model[0][3][1 + (legOff > 0 ? 1 : 0)] = dark; model[0][3][2 + (legOff > 0 ? 1 : 0)] = dark;
-  model[0][3][4 - (legOff > 0 ? 1 : 0)] = dark; model[0][3][5 - (legOff > 0 ? 1 : 0)] = dark;
-  // Armored legs (z=1)
-  model[1][3][1] = metalDark; model[1][3][2] = metalDark;
-  model[1][3][4] = metalDark; model[1][3][5] = metalDark;
-  // Wide armored torso (z=2-3) - 5 voxels wide
+  // ── Melee minion ─────────────────────────────────────────────
+  const model = makeGrid(8, 7);
+
+  if (isDead) {
+    // Fallen body on its side
+    for (let x = 0; x <= 6; x++) {
+      model[0][2][x] = metalDark;
+      model[0][3][x] = metal;
+      model[1][3][x] = col;
+    }
+    model[1][4][3] = light;
+    model[1][1][1] = metalBright;
+    model[0][4][5] = metal;
+    return model;
+  }
+
+  const legSwing = isWalk ? Math.round(walkCycle * 1.2) : isHurt ? Math.round(hurtKick) : 0;
+  const armSwing = isWalk ? -legSwing : isAtk ? Math.round(atkSwing * 2) : isHurt ? 1 : 0;
+  const swordZ = isAtk
+    ? 2 + Math.round(Math.max(0, atkSwing) * 3)
+    : isWalk
+      ? 2 + Math.round(walkBob)
+      : 3;
+  const shieldY = isAtk ? 4 : isHurt ? 3 : 5;
+
+  // Legs
+  model[0][3][1 + Math.max(0, Math.min(2, legSwing))] = dark;
+  model[0][3][2 + Math.max(0, Math.min(1, legSwing))] = dark;
+  model[0][3][4 - Math.max(0, Math.min(1, legSwing))] = dark;
+  model[0][3][5 - Math.max(0, Math.min(2, legSwing))] = dark;
+  model[1][3][1] = metalDark;
+  model[1][3][2] = metalDark;
+  model[1][3][4] = metalDark;
+  model[1][3][5] = metalDark;
+  // Torso
   for (let x = 1; x <= 5; x++) for (let y = 2; y <= 4; y++) {
-    model[2][y][x] = metal; model[3][y][x] = metal;
+    model[2][y][x] = isHurt ? blend(metal, '#ff5555', 0.3) : metal;
+    model[3][y][x] = isHurt ? blend(metal, '#ff5555', 0.25) : metal;
   }
-  // Core body color inside armor
-  for (let x = 2; x <= 4; x++) { model[2][3][x] = col; model[3][3][x] = col; }
-  // Shoulder pauldrons (z=3)
-  model[3][3][0] = metalBright; model[3][2][0] = metalDark;
-  model[3][3][6] = metalBright; model[3][2][6] = metalDark;
-  model[3][4][0] = metalDark; model[3][4][6] = metalDark;
-  // Arms (z=2-3)
-  model[2][3][0] = mid; model[2][3][6] = mid;
-  // Head (z=4-5)
-  model[4][3][2] = light; model[4][3][3] = light; model[4][3][4] = light;
-  model[4][2][3] = light; model[4][4][3] = light;
-  model[5][3][3] = bright; model[5][2][3] = bright; model[5][4][3] = bright;
-  // Helmet (z=5-6)
-  model[5][3][2] = metalBright; model[5][3][4] = metalBright;
-  model[6][3][3] = metal; model[6][2][3] = metalDark; model[6][4][3] = metalDark;
-  // Sword in right hand
-  const swingOff = bob > 0.2 ? 1 : 0;
-  model[2][1][0] = metalBright; model[3][1][0] = metalBright;
-  model[4 + swingOff][1][0] = metalBright; model[5][1][0] = metalDark;
-  // Shield in left hand
+  for (let x = 2; x <= 4; x++) {
+    model[2][3][x] = col;
+    model[3][3][x] = col;
+  }
+  // Pauldrons
+  model[3][3][0] = metalBright;
+  model[3][2][0] = metalDark;
+  model[3][3][6] = metalBright;
+  model[3][2][6] = metalDark;
+  // Arms
+  const armY = Math.max(1, Math.min(5, 3 + armSwing));
+  model[2][armY][0] = mid;
+  model[2][Math.max(1, 6 - armSwing)][6] = mid;
+  // Head + helm
+  model[4][3][2] = light;
+  model[4][3][3] = light;
+  model[4][3][4] = light;
+  model[4][2][3] = light;
+  model[4][4][3] = light;
+  model[5][3][3] = isHurt ? blend(bright, '#ff8888', 0.5) : bright;
+  model[5][2][3] = bright;
+  model[5][4][3] = bright;
+  model[5][3][2] = metalBright;
+  model[5][3][4] = metalBright;
+  model[6][3][3] = metal;
+  model[6][2][3] = metalDark;
+  model[6][4][3] = metalDark;
+  // Sword slash arc (right hand)
+  const sz = Math.max(1, Math.min(7, swordZ));
+  model[2][1][0] = metalBright;
+  model[3][1][0] = metalBright;
+  if (model[sz]?.[1]) model[sz][1][0] = metalBright;
+  if (model[Math.min(7, sz + 1)]?.[1]) model[Math.min(7, sz + 1)][1][0] = metalDark;
+  if (isAtk && atkSwing > 0.5) {
+    // Slash trail voxels
+    const trailY = Math.max(0, 1 - Math.round((atkSwing - 0.5) * 2));
+    if (model[sz]?.[trailY]) model[sz][trailY][0] = blend(metalBright, '#ffffff', 0.5);
+  }
+  // Shield
   for (let z = 2; z <= 4; z++) {
-    model[z][5][6] = metal; model[z][4][6] = metalDark;
+    if (model[z]?.[shieldY]) {
+      model[z][shieldY][6] = metal;
+      if (model[z][Math.max(0, shieldY - 1)]) model[z][Math.max(0, shieldY - 1)][6] = metalDark;
+    }
   }
-  model[3][5][6] = metalBright;
+  if (model[3]?.[shieldY]) model[3][shieldY][6] = metalBright;
+  // Idle breathing: pulse chest highlight
+  if (isIdle && Math.sin(animTimer * 2.2) > 0.7) {
+    model[3][3][3] = bright;
+  }
   return model;
 }
 
@@ -3917,11 +4077,13 @@ export class VoxelRenderer {
     x: number, y: number,
     color: string, _size: number,
     facing: number, animTimer: number,
-    minionType: string
+    minionType: string,
+    animState: string = 'walk',
   ) {
-    const model = buildMinionModel(color, minionType, animTimer);
+    const model = buildMinionModel(color, minionType, animTimer, animState);
     const scale = minionType === 'siege' || minionType === 'super' ? 3 : 3;
-    this.renderVoxelModel(ctx, x, y - 6, model, scale, facing);
+    const yOff = animState === 'dead' ? -2 : animState === 'walk' ? -6 - Math.abs(Math.sin(animTimer * 10)) : -6;
+    this.renderVoxelModel(ctx, x, y + yOff, model, scale, facing);
   }
 
   drawJungleMobVoxel(

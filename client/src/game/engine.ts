@@ -907,6 +907,9 @@ function spawnMinionWave(state: MobaState) {
           minionType: isSiege ? 'siege' : (i < 3 ? 'melee' : 'ranged'),
           facing: team === 0 ? -Math.PI / 4 : Math.PI * 3 / 4,
           animTimer: Math.random() * 10,
+          animState: 'walk',
+          hurtTimer: 0,
+          deathTimer: 0,
           dead: false,
           goldValue: isSiege ? 40 : 20,
           xpValue: isSiege ? 50 : 25,
@@ -1032,7 +1035,11 @@ export function updateGame(state: MobaState, dt: number, keys: Set<string>) {
   updateFloatingTexts(state, dt);
   updateSpellEffects(state, dt);
 
-  state.minions = state.minions.filter(m => !m.dead);
+  // Keep corpses briefly for death anim (deathTimer set on kill)
+  state.minions = state.minions.filter((m) => {
+    if (!m.dead) return true;
+    return (m.deathTimer ?? 0) > 0;
+  });
   state.towers = state.towers.filter(t => !t.dead);
   state.projectiles = state.projectiles.filter(p => {
     const target = findEntityById(state, p.targetId);
@@ -2868,6 +2875,13 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
 
   target.hp -= dmg;
 
+  // Minion hurt flinch (short red flash + recoil pose)
+  if ('goldValue' in target && 'minionType' in target && target.hp > 0) {
+    const m = target as MobaMinion;
+    m.hurtTimer = 0.22;
+    m.animState = 'hurt';
+  }
+
   // Lifesteal from derived stats + Worg buff
   let totalDrain = result.drained;
   if ('heroDataId' in attacker && attacker.buffTimer > 0) {
@@ -2964,12 +2978,17 @@ function dealDamage(state: MobaState, attacker: any, target: any, rawDmg: number
         }
       }
     } else if ('goldValue' in target) {
+      const minion = target as MobaMinion;
+      minion.animState = 'dead';
+      minion.deathTimer = 0.7;
+      minion.animTimer = 0; // restart timer for death pose sampling
+      minion.hurtTimer = 0;
       if ('heroDataId' in attacker) {
         const killer = attacker as MobaHero;
         const lastHitBonus = 15;
-        const totalGold = (target as MobaMinion).goldValue + lastHitBonus;
+        const totalGold = minion.goldValue + lastHitBonus;
         killer.gold += totalGold;
-        killer.xp += (target as MobaMinion).xpValue;
+        killer.xp += minion.xpValue;
         addFloatingText(state, killer.x, killer.y - 30, `+${totalGold}g`, '#ffd700', 12);
         checkLevelUp(state, killer);
       }
@@ -3101,12 +3120,20 @@ function totalItemStat(hero: MobaHero, stat: 'hp' | 'atk' | 'def' | 'spd' | 'mp'
 }
 
 function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
-  if (minion.dead) return;
-
   minion.animTimer += dt;
+  if (minion.hurtTimer > 0) minion.hurtTimer = Math.max(0, minion.hurtTimer - dt);
+
+  // Death pose linger — stay visible while anim plays, then despawn filter removes us
+  if (minion.dead) {
+    minion.animState = 'dead';
+    minion.deathTimer = Math.max(0, (minion.deathTimer || 0) - dt);
+    return;
+  }
+
   minion.autoAttackTimer -= dt;
 
   if (minion.attackWindup > 0) {
+    minion.animState = 'attack';
     minion.attackWindup -= dt;
     const target = minion.pendingTarget ? findEntityById(state, minion.pendingTarget) : null;
     if (target && !target.dead) {
@@ -3117,21 +3144,30 @@ function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
         performAutoAttack(state, minion as any, target);
       }
       minion.pendingTarget = null;
-      minion.attackBackswing = 0.25;
+      minion.attackBackswing = 0.28;
     }
     return;
   }
 
   if (minion.attackBackswing > 0) {
+    minion.animState = 'attack';
     minion.attackBackswing -= dt;
+    return;
+  }
+
+  // Hurt flinch interrupts chase briefly but still shows
+  if (minion.hurtTimer > 0.12) {
+    minion.animState = 'hurt';
     return;
   }
 
   const enemy = findNearestEnemy(state, minion, 300, false);
   if (enemy && dist(minion, enemy) < minion.rng + 20) {
     minion.facing = angleTo(minion, enemy);
+    minion.animState = 'idle';
     if (minion.autoAttackTimer <= 0) {
-      minion.attackWindup = minion.minionType === 'melee' ? 0.3 : 0.2;
+      minion.animState = 'attack';
+      minion.attackWindup = minion.minionType === 'melee' ? 0.32 : 0.24;
       minion.pendingTarget = enemy.id;
       minion.autoAttackTimer = Math.max(1.0, 2.6 - minion.spd * 0.005);
     }
@@ -3143,16 +3179,19 @@ function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
     minion.x += Math.cos(angle) * minion.spd * dt;
     minion.y += Math.sin(angle) * minion.spd * dt;
     minion.facing = angle;
+    minion.animState = 'walk';
     return;
   }
 
   const lanes = getLanePaths(state);
   const laneIdx = Math.max(0, Math.min(2, minion.lane | 0));
   const minionLanePts = lanes[laneIdx] ?? DOTA_LANES[laneIdx] ?? LANE_WAYPOINTS[laneIdx];
-  if (!minionLanePts || minionLanePts.length < 2) return;
+  if (!minionLanePts || minionLanePts.length < 2) {
+    minion.animState = 'idle';
+    return;
+  }
 
   const waypoints = minion.team === 0 ? minionLanePts : [...minionLanePts].reverse();
-  // Clamp waypoint index so bad data never freezes units on a missing node
   if (minion.waypointIndex < 0) minion.waypointIndex = 0;
   if (minion.waypointIndex >= waypoints.length) {
     minion.waypointIndex = waypoints.length - 1;
@@ -3162,12 +3201,18 @@ function updateMinion(state: MobaState, minion: MobaMinion, dt: number) {
     const wp = waypoints[minion.waypointIndex];
     const d = dist(minion, wp);
     if (d < 48) {
-      if (minion.waypointIndex < waypoints.length - 1) minion.waypointIndex++;
+      if (minion.waypointIndex < waypoints.length - 1) {
+        minion.waypointIndex++;
+        minion.animState = 'walk';
+      } else {
+        minion.animState = 'idle';
+      }
     } else {
       const angle = angleTo(minion, wp);
       minion.x += Math.cos(angle) * minion.spd * dt;
       minion.y += Math.sin(angle) * minion.spd * dt;
       minion.facing = angle;
+      minion.animState = 'walk';
     }
   }
 }
@@ -4592,10 +4637,11 @@ export class MobaRenderer {
 
     const sortedMinions = [...state.minions].sort((a, b) => a.y - b.y);
     for (const minion of sortedMinions) {
-      if (!minion.dead) {
-        if (minion.team !== playerTeam && !this.isInVision(minion.x, minion.y)) continue;
-        this.renderMinion(ctx, minion);
-      }
+      // Draw living minions + corpses still in deathTimer window
+      if (minion.dead && (minion.deathTimer ?? 0) <= 0) continue;
+      if (!minion.dead && minion.team !== playerTeam && !this.isInVision(minion.x, minion.y)) continue;
+      if (minion.dead && minion.team !== playerTeam && !this.isInVision(minion.x, minion.y)) continue;
+      this.renderMinion(ctx, minion);
     }
 
     const sortedHeroes = [...state.heroes].sort((a, b) => a.y - b.y);
@@ -5658,19 +5704,52 @@ export class MobaRenderer {
 
   private renderMinion(ctx: CanvasRenderingContext2D, minion: MobaMinion) {
     const color = TEAM_COLORS[minion.team];
+    const animState = minion.animState || (minion.dead ? 'dead' : 'walk');
+    const size = minion.minionType === 'siege' || minion.minionType === 'super' ? 11 : 8;
 
     ctx.save();
     ctx.translate(minion.x, minion.y);
 
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    // Death: sink + fade + slight tip
+    if (animState === 'dead') {
+      const life = Math.max(0, Math.min(1, (minion.deathTimer || 0) / 0.7));
+      ctx.globalAlpha = life;
+      ctx.translate(0, (1 - life) * 10);
+      ctx.rotate((1 - life) * 0.9 * (minion.team === 0 ? 1 : -1));
+    } else if (animState === 'hurt') {
+      // Recoil flash
+      const kick = Math.sin((minion.hurtTimer || 0) * 40) * 2;
+      ctx.translate(-Math.cos(minion.facing) * kick, -Math.sin(minion.facing) * kick);
+      ctx.globalAlpha = 0.75 + Math.sin((minion.hurtTimer || 0) * 50) * 0.25;
+    } else if (animState === 'walk') {
+      // Subtle hop in the step cycle
+      const bob = Math.abs(Math.sin(minion.animTimer * 10)) * 1.5;
+      ctx.translate(0, -bob);
+    }
+
+    // Shadow flattens when dead
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
     ctx.beginPath();
-    ctx.ellipse(0, 10, 8, 3, 0, 0, Math.PI * 2);
+    const shadowW = animState === 'dead' ? 11 : 8;
+    const shadowH = animState === 'dead' ? 2 : 3;
+    ctx.ellipse(0, 10, shadowW, shadowH, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const size = minion.minionType === 'siege' ? 10 : 7;
-    this.voxel.drawMinionVoxel(ctx, 0, 0, color, size, minion.facing, minion.animTimer, minion.minionType);
+    this.voxel.drawMinionVoxel(
+      ctx, 0, 0, color, size, minion.facing, minion.animTimer, minion.minionType, animState,
+    );
 
-    this.renderHealthBar(ctx, 0, -size - 8, 12, minion.hp, minion.maxHp, color);
+    // Hurt tint overlay
+    if (animState === 'hurt' && !minion.dead) {
+      ctx.fillStyle = 'rgba(255,60,60,0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, -4, size + 2, size + 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (!minion.dead) {
+      this.renderHealthBar(ctx, 0, -size - 10, 14, minion.hp, minion.maxHp, color);
+    }
 
     ctx.restore();
   }
