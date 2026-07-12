@@ -84,36 +84,36 @@ export default function Home() {
 
   const handlePlay = async () => {
     localStorage.setItem('grudge_mode', selectedMode);
-    // Check if player has characters — backend first, localStorage fallback
-    try {
-      const { getAll } = await import('@/lib/grudgeCharacters');
-      const chars = await getAll();
-      if (chars.length > 0) {
-        // Has characters — also ensure the legacy HEROES[] array is populated
-        // so existing game code can find the active hero.
-        const savedHero = localStorage.getItem('grudge_custom_hero');
-        if (savedHero) {
-          const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
-          await ensurePlayerHeroLoaded();
+
+    // Brand-new players (no saved character at all) go to creation first
+    const hasAnyHero =
+      !!localStorage.getItem('grudge_custom_hero') ||
+      !!localStorage.getItem('grudge_player_character') ||
+      (parseInt(localStorage.getItem('grudge_hero_id') || '-1', 10) >= 0);
+
+    if (!hasAnyHero) {
+      // Still check backend roster before forcing creator
+      try {
+        const { getAll } = await import('@/lib/grudgeCharacters');
+        const chars = await getAll();
+        if (chars.length === 0) {
+          setLocation('/create-character');
+          return;
         }
-        if (selectedMode === 'openworld') setLocation('/open-world-play');
-        else setLocation('/game');
-      } else {
-        // No characters — go to character creation
+      } catch {
         setLocation('/create-character');
-      }
-    } catch {
-      // Fallback: check localStorage directly (offline/error)
-      const savedHero = localStorage.getItem('grudge_custom_hero');
-      if (savedHero) {
-        const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
-        await ensurePlayerHeroLoaded();
-        if (selectedMode === 'openworld') setLocation('/open-world-play');
-        else setLocation('/game');
-      } else {
-        setLocation('/create-character');
+        return;
       }
     }
+
+    // Resolve / register hero into HEROES[] (seeds starter if keys exist but data is broken)
+    try {
+      const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
+      await ensurePlayerHeroLoaded();
+    } catch { /* play with whatever localStorage has */ }
+
+    if (selectedMode === 'openworld') setLocation('/open-world-play');
+    else setLocation('/game');
   };
 
   const handleAdminLogin = () => {

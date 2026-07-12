@@ -197,10 +197,80 @@ export function updateCharacter(updates: Partial<PlayerCharacterState>): void {
 
 // ── Boot-Time Character Resolution ─────────────────────────────
 
+/** Persist race/class keys used by 3D modes (sandbox, arena, dungeon3d, open-world). */
+function syncHeroLocalKeys(hero: HeroData): void {
+  localStorage.setItem('grudge_hero_id', String(hero.id));
+  localStorage.setItem('grudge_custom_hero', JSON.stringify(hero));
+  localStorage.setItem('grudge_hero_race', hero.race || 'Human');
+  localStorage.setItem('grudge_hero_class', hero.heroClass || 'Warrior');
+  if (!localStorage.getItem('grudge_team')) {
+    localStorage.setItem('grudge_team', '0');
+  }
+}
+
+/**
+ * Create a local starter hero so the player is never stuck without a character.
+ * Used when no custom char / backend data is available.
+ */
+export function ensureDefaultStarterHero(): HeroData {
+  // Prefer an already-registered non-AI custom hero
+  const existingCustom = HEROES.find(h => !h.isAINpc && h.id >= 100);
+  if (existingCustom) {
+    syncHeroLocalKeys(existingCustom);
+    return existingCustom;
+  }
+
+  // Prefer a saved custom hero blob even if not in HEROES yet
+  try {
+    const raw = localStorage.getItem('grudge_custom_hero');
+    if (raw) {
+      const parsed = JSON.parse(raw) as HeroData;
+      if (parsed?.id != null && parsed.race && parsed.heroClass) {
+        parsed.isAINpc = false;
+        const idx = HEROES.findIndex(h => h.id === parsed.id);
+        if (idx >= 0) HEROES[idx] = parsed;
+        else HEROES.push(parsed);
+        syncHeroLocalKeys(parsed);
+        return parsed;
+      }
+    }
+  } catch { /* ignore */ }
+
+  // Build a starter from race/class prefs or Human Warrior defaults
+  const race = localStorage.getItem('grudge_hero_race') || 'Human';
+  const heroClass = localStorage.getItem('grudge_hero_class') || 'Warrior';
+  const name = localStorage.getItem('grudge_hero_name') || 'Warlord';
+  const modelIndex = findBestHeroModel(race, heroClass);
+  const starter: HeroData = {
+    id: 100 + modelIndex,
+    name,
+    title: `The ${heroClass}`,
+    race,
+    heroClass,
+    faction: RACE_FACTIONS[race] || 'Crusade',
+    rarity: 'Rare',
+    hp: heroClass === 'Mage' ? 160 : heroClass === 'Ranger' ? 180 : 220,
+    atk: 22,
+    def: heroClass === 'Warrior' ? 18 : 10,
+    spd: heroClass === 'Ranger' ? 70 : 55,
+    rng: heroClass === 'Mage' || heroClass === 'Ranger' ? 5.5 : 1.5,
+    mp: heroClass === 'Mage' ? 150 : 100,
+    quote: `A ${race} ${heroClass} ready for battle.`,
+    isAINpc: false,
+  };
+
+  const idx = HEROES.findIndex(h => h.id === starter.id);
+  if (idx >= 0) HEROES[idx] = starter;
+  else HEROES.push(starter);
+  syncHeroLocalKeys(starter);
+  console.info(`[player-account] seeded starter hero ${starter.name} (${starter.id})`);
+  return starter;
+}
+
 /**
  * Ensure the player's custom character is loaded and registered in HEROES[].
  * Call this at game boot BEFORE referencing HEROES by heroId.
- * Returns the resolved HeroData or null if no character exists.
+ * Always returns a playable HeroData (seeds a starter if nothing is saved).
  */
 export async function ensurePlayerHeroLoaded(): Promise<HeroData | null> {
   // 1. Try loading from backend via grudge auth
@@ -215,19 +285,35 @@ export async function ensurePlayerHeroLoaded(): Promise<HeroData | null> {
         const parsed = JSON.parse(raw) as HeroData;
         // This is already a HeroData — register directly
         if (parsed.id != null && parsed.race && parsed.heroClass) {
+          parsed.isAINpc = false;
           if (!HEROES.find(h => h.id === parsed.id)) {
-            parsed.isAINpc = false;
             HEROES.push(parsed);
+          } else {
+            const i = HEROES.findIndex(h => h.id === parsed.id);
+            if (i >= 0) HEROES[i] = parsed;
           }
-          localStorage.setItem('grudge_hero_id', String(parsed.id));
+          syncHeroLocalKeys(parsed);
           return parsed;
         }
       }
     } catch { /* corrupt data */ }
-    return null;
+
+    // 3. Fallback: grudge_hero_id pointing at roster / previously registered custom
+    const storedId = parseInt(localStorage.getItem('grudge_hero_id') || '-1', 10);
+    if (storedId >= 0) {
+      const found = HEROES.find(h => h.id === storedId);
+      if (found) {
+        found.isAINpc = false;
+        syncHeroLocalKeys(found);
+        return found;
+      }
+    }
+
+    // 4. Always provide a playable hero — never leave the player without one
+    return ensureDefaultStarterHero();
   }
 
-  // 3. Convert PlayerCharacterState → HeroData and register
+  // Convert PlayerCharacterState → HeroData and register
   const heroData = playerCharacterToHeroData(pc);
   heroData.isAINpc = false;
 
@@ -239,10 +325,7 @@ export async function ensurePlayerHeroLoaded(): Promise<HeroData | null> {
     HEROES.push(heroData);
   }
 
-  // Keep localStorage in sync
-  localStorage.setItem('grudge_hero_id', String(heroData.id));
-  localStorage.setItem('grudge_custom_hero', JSON.stringify(heroData));
-
+  syncHeroLocalKeys(heroData);
   return heroData;
 }
 

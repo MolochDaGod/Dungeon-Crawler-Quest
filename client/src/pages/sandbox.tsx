@@ -68,7 +68,15 @@ export default function SandboxPage() {
       sandbox.createSphere(0.5, (Math.random() - 0.5) * 20, 2, (Math.random() - 0.5) * 20, 5, 0xff4444, true);
     }
 
-    // ── Player voxel character ────────────────────────────
+    // ── Player voxel character (sync race/class from saved hero) ──
+    try {
+      const raw = localStorage.getItem('grudge_custom_hero');
+      if (raw) {
+        const h = JSON.parse(raw);
+        if (h.race) localStorage.setItem('grudge_hero_race', h.race);
+        if (h.heroClass) localStorage.setItem('grudge_hero_class', h.heroClass);
+      }
+    } catch { /* ignore */ }
     const race = localStorage.getItem('grudge_hero_race') || 'Human';
     const heroClass = localStorage.getItem('grudge_hero_class') || 'Warrior';
     const rig = buildVoxel3DCharacter(race, heroClass);

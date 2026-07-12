@@ -47,7 +47,8 @@ function Router() {
       <Route path="/create-character" component={CreateCharacter} />
       <Route path="/game" component={GamePage} />
       <Route path="/open-world" component={OpenWorldLobby} />
-      <Route path="/open-world-play">{() => <OpenWorldPage />}</Route>
+      {/* force3D: third-person camera + player model (was top-down 2D only) */}
+      <Route path="/open-world-play">{() => <OpenWorldPage force3D />}</Route>
       <Route path="/settings" component={SettingsPage} />
       <Route path="/animation-editor" component={AnimationEditorPage} />
       <Route path="/admin" component={AdminPage} />

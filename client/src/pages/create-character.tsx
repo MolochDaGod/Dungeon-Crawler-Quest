@@ -234,6 +234,9 @@ export default function CreateCharacter() {
       localStorage.setItem('grudge_hero_id', String(newHero.id));
       localStorage.setItem('grudge_team', '0');
       localStorage.setItem('grudge_custom_hero', JSON.stringify(newHero));
+      localStorage.setItem('grudge_hero_race', race);
+      localStorage.setItem('grudge_hero_class', heroClass);
+      localStorage.setItem('grudge_hero_name', name.trim());
       localStorage.setItem('grudge_avatar_url', avatarUrl || '');
       localStorage.setItem('grudge_character_weapon', weapon);
       saveAttributes(attrs);

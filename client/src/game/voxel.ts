@@ -1450,6 +1450,9 @@ export function buildHeroModelWithPoses(race: string, heroClass: string, customP
 /**
  * Build a voxel minion with presentation anim states:
  *   walk | attack | hurt | dead | idle
+ *
+ * Walk uses alternating leg/arm strides only — no whole-body hop (that looked
+ * like T-pose bouncing). Attack swings weapon; hurt recoils; dead collapses.
  */
 function buildMinionModel(
   color: string,
@@ -1472,18 +1475,16 @@ function buildMinionModel(
   const isDead = st === 'dead';
   const isIdle = st === 'idle' || (!isWalk && !isAtk && !isHurt && !isDead);
 
-  // Animation drivers
-  const walkCycle = isWalk ? Math.sin(animTimer * 10) : 0;
-  const walkBob = isWalk ? Math.abs(Math.sin(animTimer * 10)) : 0;
+  // Walk: slower stride (looks like marching, not hopping)
+  const phase = isWalk ? Math.sin(animTimer * 7) : 0;
+  const phaseOpp = -phase;
   const atkPhase = isAtk ? Math.min(1, (animTimer % 0.55) / 0.55) : 0;
-  // Attack: windup (0-0.35) then slash (0.35-1)
   const atkSwing = isAtk
     ? (atkPhase < 0.35
-        ? -0.4 - atkPhase * 0.8 // pull back
+        ? -0.4 - atkPhase * 0.8
         : Math.sin(((atkPhase - 0.35) / 0.65) * Math.PI) * 1.4)
     : 0;
   const hurtKick = isHurt ? Math.sin(animTimer * 30) * 0.6 : 0;
-  const deathT = isDead ? Math.min(1, animTimer / 0.65) : 0;
 
   function makeGrid(h: number, w: number): VoxelModel {
     const m: VoxelModel = [];
@@ -1507,10 +1508,10 @@ function buildMinionModel(
     const treadLight = '#555555';
     const barrel = '#6b7280';
     const barrelDark = '#4b5563';
-    const treadShift = isWalk ? Math.round(walkCycle * 0.8) : 0;
+    // Rolling tread scroll (no hop) — phase drives track pattern
+    const treadShift = isWalk ? Math.round(phase * 1.5) : 0;
     const barrelKick = isAtk ? Math.round(atkSwing * 1.2) : isHurt ? -1 : 0;
 
-    // Treads
     for (let y = 0; y <= 8; y++) {
       const ty = (y + Math.max(0, treadShift) + 9) % 9;
       model[0][y][0] = ty % 2 === 0 ? tread : treadLight;
@@ -1519,7 +1520,6 @@ function buildMinionModel(
       model[0][y][8] = ty % 2 === 0 ? tread : treadLight;
     }
     if (isDead) {
-      // Flattened / smoking hull
       for (let x = 1; x <= 7; x++) for (let y = 1; y <= 7; y++) {
         model[0][y][x] = hullDark;
         model[1][y][x] = shade(hull, 0.45);
@@ -1529,7 +1529,6 @@ function buildMinionModel(
       model[3][4][5] = '#444';
       return model;
     }
-    // Hull
     for (let x = 1; x <= 7; x++) for (let y = 1; y <= 7; y++) {
       model[1][y][x] = hullDark;
       model[2][y][x] = isHurt ? blend(hull, '#ff4444', 0.35) : hull;
@@ -1549,7 +1548,6 @@ function buildMinionModel(
     model[6][5][4] = hull;
     model[6][4][3] = hull;
     model[6][4][5] = hull;
-    // Cannon — kicks back on attack
     for (let y = Math.max(0, barrelKick); y <= 2 + Math.max(0, barrelKick); y++) {
       if (y > 8) continue;
       model[5][y][4] = barrel;
@@ -1566,11 +1564,6 @@ function buildMinionModel(
     model[4][7][6] = '#444';
     model[5][7][2] = '#555';
     model[5][7][6] = '#555';
-    if (isWalk) {
-      // Dust puffs under treads (extra dark voxels)
-      model[0][0][2] = shade('#888', 0.5 + walkBob * 0.3);
-      model[0][8][6] = shade('#888', 0.5 + walkBob * 0.3);
-    }
     if (isSup) {
       for (let y = 0; y <= 8; y++) {
         model[3][y][1] = '#c5a059';
@@ -1590,9 +1583,7 @@ function buildMinionModel(
     const hatColor = shade(col, 0.55);
     const staffGem = bright;
 
-    // Legs / death crumple
     if (isDead) {
-      // Collapsed robe pile
       for (let x = 0; x <= 4; x++) for (let y = 1; y <= 3; y++) {
         model[0][y][x] = robeColor;
         model[1][y][x] = robeLight;
@@ -1603,14 +1594,16 @@ function buildMinionModel(
       return model;
     }
 
-    const legSwing = isWalk ? Math.round(walkCycle * 1.1) : isHurt ? Math.round(hurtKick) : 0;
+    // Alternating stride along depth (y), not side-to-side slide
+    const lLegY = isWalk ? 2 + Math.round(phase) : isHurt ? 2 + Math.round(hurtKick) : 2;
+    const rLegY = isWalk ? 2 + Math.round(phaseOpp) : 2;
+    const clampY5 = (v: number) => Math.max(0, Math.min(4, v));
+    model[0][clampY5(lLegY)][1] = dark;
+    model[0][clampY5(rLegY)][3] = dark;
+    model[1][clampY5(lLegY)][1] = dark;
+    model[1][clampY5(rLegY)][3] = dark;
+
     const bodyLean = isAtk ? Math.round(atkSwing * 0.8) : isHurt ? -1 : 0;
-    // Legs
-    model[0][2][1 + Math.max(0, legSwing)] = dark;
-    model[0][2][3 - Math.max(0, legSwing)] = dark;
-    model[1][2][1] = dark;
-    model[1][2][3] = dark;
-    // Robe
     for (let x = 0; x <= 4; x++) {
       model[2][2][x] = robeColor;
       model[2][1][x] = robeColor;
@@ -1619,7 +1612,6 @@ function buildMinionModel(
       model[3][1][x] = robeColor;
       model[3][3][x] = robeColor;
     }
-    // Torso lean on attack
     for (let x = 1; x <= 3; x++) {
       const yy = Math.max(0, Math.min(4, 2 + bodyLean));
       model[4][yy][x] = col;
@@ -1631,13 +1623,19 @@ function buildMinionModel(
     model[5][3][2] = robeColor;
     model[5][2][1] = robeColor;
     model[5][2][3] = robeColor;
-    // Arms — cast forward on attack
-    const armY = isAtk ? Math.max(0, 2 - Math.round(atkSwing * 1.5)) : 2;
+
+    // Arms opposite to legs (walk) or cast forward (attack) — never stuck T-pose
+    const armY = isAtk
+      ? Math.max(0, 2 - Math.round(atkSwing * 1.5))
+      : isWalk
+        ? clampY5(2 + Math.round(phaseOpp))
+        : 2;
+    const armY2 = isWalk ? clampY5(2 + Math.round(phase)) : armY;
     model[4][armY][0] = mid;
-    model[4][armY][4] = mid;
     model[5][armY][0] = mid;
-    model[5][armY][4] = mid;
-    // Head / hat
+    model[4][armY2][4] = mid;
+    model[5][armY2][4] = mid;
+
     model[6][2][2] = isHurt ? blend(light, '#ff6666', 0.4) : light;
     model[7][1][2] = bright;
     model[7][3][2] = bright;
@@ -1652,15 +1650,14 @@ function buildMinionModel(
     model[8][2][0] = hatColor;
     model[8][2][4] = hatColor;
     model[9][2][2] = hatColor;
-    // Staff — thrust on attack, limp on hurt
-    const staffY = isAtk ? Math.max(0, Math.round(2 - atkSwing * 2)) : isHurt ? 1 : 0;
+
+    const staffY = isAtk ? Math.max(0, Math.round(2 - atkSwing * 2)) : isHurt ? 1 : isWalk ? clampY5(armY) : 0;
     for (let z = 1; z <= 8; z++) {
       if (model[z] && model[z][staffY]) model[z][staffY][0] = z >= 7 ? staffGem : wood;
     }
     if (model[9]?.[staffY]) {
       model[9][staffY][0] = isAtk ? blend(staffGem, '#ffffff', Math.max(0, atkSwing) * 0.6) : bright;
     }
-    // Idle subtle bob via brighter gem pulse
     if (isIdle && Math.sin(animTimer * 3) > 0.6) {
       if (model[9]?.[0]) model[9][0][0] = blend(staffGem, '#fff', 0.35);
     }
@@ -1671,7 +1668,6 @@ function buildMinionModel(
   const model = makeGrid(8, 7);
 
   if (isDead) {
-    // Fallen body on its side
     for (let x = 0; x <= 6; x++) {
       model[0][2][x] = metalDark;
       model[0][3][x] = metal;
@@ -1683,25 +1679,31 @@ function buildMinionModel(
     return model;
   }
 
-  const legSwing = isWalk ? Math.round(walkCycle * 1.2) : isHurt ? Math.round(hurtKick) : 0;
-  const armSwing = isWalk ? -legSwing : isAtk ? Math.round(atkSwing * 2) : isHurt ? 1 : 0;
+  // Stride along depth (y): left leg forward while right back, arms opposite
+  const clampY7 = (v: number) => Math.max(0, Math.min(6, v));
+  const lLegY = isWalk ? clampY7(3 + Math.round(phase * 1.5)) : isHurt ? clampY7(3 + Math.round(hurtKick)) : 3;
+  const rLegY = isWalk ? clampY7(3 + Math.round(phaseOpp * 1.5)) : 3;
+  // Arms hang down at sides (not T-pose out); swing forward/back on walk
+  const lArmY = isWalk ? clampY7(3 + Math.round(phaseOpp * 1.2)) : isAtk ? clampY7(3 - Math.round(atkSwing)) : 3;
+  const rArmY = isWalk ? clampY7(3 + Math.round(phase * 1.2)) : isAtk ? clampY7(2 + Math.round(Math.max(0, atkSwing) * 2)) : 3;
   const swordZ = isAtk
     ? 2 + Math.round(Math.max(0, atkSwing) * 3)
     : isWalk
-      ? 2 + Math.round(walkBob)
+      ? 3 // held at hip height while marching — no bounce
       : 3;
-  const shieldY = isAtk ? 4 : isHurt ? 3 : 5;
+  const shieldY = isAtk ? 4 : isHurt ? 3 : isWalk ? clampY7(5 + Math.round(phase * 0.3)) : 5;
 
-  // Legs
-  model[0][3][1 + Math.max(0, Math.min(2, legSwing))] = dark;
-  model[0][3][2 + Math.max(0, Math.min(1, legSwing))] = dark;
-  model[0][3][4 - Math.max(0, Math.min(1, legSwing))] = dark;
-  model[0][3][5 - Math.max(0, Math.min(2, legSwing))] = dark;
-  model[1][3][1] = metalDark;
-  model[1][3][2] = metalDark;
-  model[1][3][4] = metalDark;
-  model[1][3][5] = metalDark;
-  // Torso
+  // Legs plant on ground (z=0/1), stride along y
+  model[0][lLegY][1] = dark;
+  model[0][lLegY][2] = dark;
+  model[0][rLegY][4] = dark;
+  model[0][rLegY][5] = dark;
+  model[1][lLegY][1] = metalDark;
+  model[1][lLegY][2] = metalDark;
+  model[1][rLegY][4] = metalDark;
+  model[1][rLegY][5] = metalDark;
+
+  // Torso (stable — no vertical bob)
   for (let x = 1; x <= 5; x++) for (let y = 2; y <= 4; y++) {
     model[2][y][x] = isHurt ? blend(metal, '#ff5555', 0.3) : metal;
     model[3][y][x] = isHurt ? blend(metal, '#ff5555', 0.25) : metal;
@@ -1710,15 +1712,18 @@ function buildMinionModel(
     model[2][3][x] = col;
     model[3][3][x] = col;
   }
-  // Pauldrons
+  // Pauldrons (shoulders) — stay on torso, not flapping up
   model[3][3][0] = metalBright;
   model[3][2][0] = metalDark;
   model[3][3][6] = metalBright;
   model[3][2][6] = metalDark;
-  // Arms
-  const armY = Math.max(1, Math.min(5, 3 + armSwing));
-  model[2][armY][0] = mid;
-  model[2][Math.max(1, 6 - armSwing)][6] = mid;
+
+  // Arms at sides, swinging along y (forward/back), slightly lowered (z=2 not 4)
+  model[2][lArmY][0] = mid;
+  model[1][lArmY][0] = dark; // hand lower — avoids T-pose high arms
+  model[2][rArmY][6] = mid;
+  model[1][rArmY][6] = dark;
+
   // Head + helm
   model[4][3][2] = light;
   model[4][3][3] = light;
@@ -1733,18 +1738,20 @@ function buildMinionModel(
   model[6][3][3] = metal;
   model[6][2][3] = metalDark;
   model[6][4][3] = metalDark;
-  // Sword slash arc (right hand)
+
+  // Sword in right hand — follows arm, swings on attack
   const sz = Math.max(1, Math.min(7, swordZ));
-  model[2][1][0] = metalBright;
-  model[3][1][0] = metalBright;
-  if (model[sz]?.[1]) model[sz][1][0] = metalBright;
-  if (model[Math.min(7, sz + 1)]?.[1]) model[Math.min(7, sz + 1)][1][0] = metalDark;
+  const swordY = isAtk ? Math.max(0, Math.min(5, rArmY - 1)) : Math.max(0, rArmY - 1);
+  model[2][swordY][0] = metalBright;
+  model[3][swordY][0] = metalBright;
+  if (model[sz]?.[swordY]) model[sz][swordY][0] = metalBright;
+  if (model[Math.min(7, sz + 1)]?.[swordY]) model[Math.min(7, sz + 1)][swordY][0] = metalDark;
   if (isAtk && atkSwing > 0.5) {
-    // Slash trail voxels
-    const trailY = Math.max(0, 1 - Math.round((atkSwing - 0.5) * 2));
+    const trailY = Math.max(0, swordY - Math.round((atkSwing - 0.5) * 2));
     if (model[sz]?.[trailY]) model[sz][trailY][0] = blend(metalBright, '#ffffff', 0.5);
   }
-  // Shield
+
+  // Shield on left
   for (let z = 2; z <= 4; z++) {
     if (model[z]?.[shieldY]) {
       model[z][shieldY][6] = metal;
@@ -1752,7 +1759,7 @@ function buildMinionModel(
     }
   }
   if (model[3]?.[shieldY]) model[3][shieldY][6] = metalBright;
-  // Idle breathing: pulse chest highlight
+
   if (isIdle && Math.sin(animTimer * 2.2) > 0.7) {
     model[3][3][3] = bright;
   }
@@ -4082,7 +4089,8 @@ export class VoxelRenderer {
   ) {
     const model = buildMinionModel(color, minionType, animTimer, animState);
     const scale = minionType === 'siege' || minionType === 'super' ? 3 : 3;
-    const yOff = animState === 'dead' ? -2 : animState === 'walk' ? -6 - Math.abs(Math.sin(animTimer * 10)) : -6;
+    // Fixed ground offset — no hop. Walk motion is entirely in limb poses.
+    const yOff = animState === 'dead' ? -2 : -6;
     this.renderVoxelModel(ctx, x, y + yOff, model, scale, facing);
   }
 

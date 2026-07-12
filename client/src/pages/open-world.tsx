@@ -24,7 +24,7 @@ import hudFramePath from '@assets/hud-frame.png';
 import MainPanel from '@/components/MainPanel';
 import NpcDialog from '@/components/NpcDialog';
 import { IntroSequence, shouldShowIntro } from '@/components/IntroSequence';
-import { ensurePlayerHeroLoaded, getPlayerHeroSync } from '@/game/player-account';
+import { ensurePlayerHeroLoaded, ensureDefaultStarterHero, getPlayerHeroSync } from '@/game/player-account';
 import { ensurePixelGothicLoaded, EVENT_BANNERS } from '@/game/combat-popups';
 import { OpenWorldThreeRenderer } from '@/game/ow-three-renderer';
 
@@ -49,29 +49,47 @@ export default function OpenWorldPage({ force3D = false }: { force3D?: boolean }
   const [eventBanner, setEventBanner]   = useState<string | null>(null);
   const bannerDismissRef                = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Ensure player character is loaded into HEROES[] before game boot
-  useEffect(() => {
-    ensurePlayerHeroLoaded().then(() => setHeroReady(true));
-  }, []);
+  const [bootHeroId, setBootHeroId] = useState(() => parseInt(localStorage.getItem('grudge_hero_id') || '-1', 10));
 
-  const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
+  // Ensure player character is loaded into HEROES[] before game boot.
+  // Always seeds a starter if nothing is saved so the player is never stuck.
+  useEffect(() => {
+    ensurePlayerHeroLoaded()
+      .then((hd) => {
+        if (hd) setBootHeroId(hd.id);
+        setHeroReady(true);
+      })
+      .catch(() => {
+        try {
+          const hd = ensureDefaultStarterHero();
+          setBootHeroId(hd.id);
+        } catch { /* ignore */ }
+        setHeroReady(true);
+      });
+  }, []);
 
   useEffect(() => {
     if (!heroReady) return; // Wait for character to be loaded into HEROES[]
-    if (heroId < 0) { setLocation('/'); return; }
+    // Re-read after ensure — first-render heroId was often -1 before load finished
+    let resolvedHeroId = parseInt(localStorage.getItem('grudge_hero_id') || String(bootHeroId) || '-1', 10);
+    if (resolvedHeroId < 0) {
+      const sync = getPlayerHeroSync() || ensureDefaultStarterHero();
+      resolvedHeroId = sync.id;
+      setBootHeroId(resolvedHeroId);
+    }
 
     // Sync-ensure the player hero is registered (may have been loaded async above)
     getPlayerHeroSync();
 
-    const state = createOpenWorldState(heroId);
+    const state = createOpenWorldState(resolvedHeroId);
     stateRef.current = state;
 
-    // ── 3D BabylonJS mode (Genesis / force3D) ──────────────────
+    // ── 3D third-person mode ──────────────────────────────────
     if (force3D && containerRef.current) {
       const three3D = new OpenWorldThreeRenderer(containerRef.current);
       renderer3DRef.current = three3D;
 
-      // Load player model
+      // Load player model from hero race/class (custom id >= 100 works via getHeroById)
       const hd = getHeroById(state.player.heroDataId);
       if (hd) {
         three3D.loadPlayerModel(hd.id, hd.heroClass, hd.race);
@@ -251,19 +269,28 @@ export default function OpenWorldPage({ force3D = false }: { force3D?: boolean }
     };
 
     const onMouseMove = (e: MouseEvent) => {
-      if (canvas) updateOWMouseWorld(state, e.clientX, e.clientY, canvas.width, canvas.height);
+      const w = force3D
+        ? (containerRef.current?.clientWidth || window.innerWidth)
+        : (canvas?.width || window.innerWidth);
+      const h = force3D
+        ? (containerRef.current?.clientHeight || window.innerHeight)
+        : (canvas?.height || window.innerHeight);
+      updateOWMouseWorld(state, e.clientX, e.clientY, w, h);
     };
 
     const onWheel = (e: WheelEvent) => {
       state.camera.zoom = Math.max(0.6, Math.min(2.5, state.camera.zoom - e.deltaY * 0.001));
     };
 
+    // Pointer target: 2D canvas or 3D WebGL container
+    const pointerEl: HTMLElement | null = force3D ? containerRef.current : canvas;
+
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
-    canvas?.addEventListener('click', onClick);
-    canvas?.addEventListener('contextmenu', onContextMenu);
-    canvas?.addEventListener('mousemove', onMouseMove);
-    canvas?.addEventListener('wheel', onWheel);
+    pointerEl?.addEventListener('click', onClick);
+    pointerEl?.addEventListener('contextmenu', onContextMenu);
+    pointerEl?.addEventListener('mousemove', onMouseMove);
+    pointerEl?.addEventListener('wheel', onWheel as EventListener);
 
     return () => {
       cancelAnimationFrame(animId);
@@ -272,12 +299,12 @@ export default function OpenWorldPage({ force3D = false }: { force3D?: boolean }
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
-      canvas?.removeEventListener('click', onClick);
-      canvas?.removeEventListener('contextmenu', onContextMenu);
-      canvas?.removeEventListener('mousemove', onMouseMove);
-      canvas?.removeEventListener('wheel', onWheel);
+      pointerEl?.removeEventListener('click', onClick);
+      pointerEl?.removeEventListener('contextmenu', onContextMenu);
+      pointerEl?.removeEventListener('mousemove', onMouseMove);
+      pointerEl?.removeEventListener('wheel', onWheel as EventListener);
     };
-  }, [heroId, heroReady, setLocation]);
+  }, [bootHeroId, heroReady, force3D, setLocation]);
 
   // Clean up old notifications
   useEffect(() => {
@@ -294,7 +321,7 @@ export default function OpenWorldPage({ force3D = false }: { force3D?: boolean }
     if (blocking) keysRef.current.clear();
   }, [showCharPanel, showMissions]);
 
-  const heroData = HEROES.find(h => h.id === heroId);
+  const heroData = HEROES.find(h => h.id === bootHeroId);
   // Use weapon-based ability names from HUD when available
   const abilityNames = hud?.abilityNames || [];
   const abilityDescs = hud?.abilityDescriptions || [];

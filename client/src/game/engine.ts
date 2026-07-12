@@ -589,9 +589,16 @@ export function createInitialState(playerHeroId: number, playerTeam: number): Mo
     }
   }
 
-  // Keep camera locked on the actual player entity
+  // Player always starts at their fountain (not a random lane offset) so they
+  // are immediately visible and controllable — teammates still use lane spread.
   const ph = state.heroes[state.playerHeroIndex];
   if (ph) {
+    ph.isPlayer = true;
+    ph.team = team;
+    ph.x = BASE_POSITIONS[team].x;
+    ph.y = BASE_POSITIONS[team].y;
+    ph.facing = team === 0 ? -Math.PI / 4 : Math.PI * 3 / 4;
+    ph.animState = 'idle';
     state.camera.x = ph.x;
     state.camera.y = ph.y;
   }
@@ -5717,15 +5724,12 @@ export class MobaRenderer {
       ctx.translate(0, (1 - life) * 10);
       ctx.rotate((1 - life) * 0.9 * (minion.team === 0 ? 1 : -1));
     } else if (animState === 'hurt') {
-      // Recoil flash
+      // Recoil flash — push back, no hop
       const kick = Math.sin((minion.hurtTimer || 0) * 40) * 2;
       ctx.translate(-Math.cos(minion.facing) * kick, -Math.sin(minion.facing) * kick);
       ctx.globalAlpha = 0.75 + Math.sin((minion.hurtTimer || 0) * 50) * 0.25;
-    } else if (animState === 'walk') {
-      // Subtle hop in the step cycle
-      const bob = Math.abs(Math.sin(minion.animTimer * 10)) * 1.5;
-      ctx.translate(0, -bob);
     }
+    // walk: no whole-body hop — limb poses in buildMinionModel handle the stride
 
     // Shadow flattens when dead
     ctx.fillStyle = 'rgba(0,0,0,0.22)';
