@@ -533,11 +533,27 @@ export class ThreeRenderer {
       'camp_fire_glb', 'gravestone', 'tree_lava',
       'crypt', 'barracks', 'forge', 'storage_house', 'hellhouse',
       'tree_house', 'cabin_shed', 'coliseum', 'necropolis_walls', 'arch',
+      // TVS explicit keys (MOBA / settlement)
+      'tvs_keep', 'tvs_tower', 'tvs_gate', 'tent', 'statue', 'chest',
+      'marketStalls', 'villageMarket', 'bridge',
     ];
     for (const key of envModelsToLoad) {
       const prefab = ENV_PREFABS[key];
       if (prefab) promises.push(this.loadModel(prefab));
     }
+
+    // Prefetch TVS MOBA decoration plan models (towers / camps / keeps)
+    try {
+      const { planMobaTvsDecor } = await import('./tvs-mode-assets');
+      const decor = planMobaTvsDecor(1);
+      for (const d of decor) {
+        promises.push(this.loadModel({
+          modelPath: d.modelPath,
+          texturePath: d.texturePath,
+          format: d.format || 'fbx',
+        }));
+      }
+    } catch { /* optional */ }
 
     promises.push(
       loadAnimationSet(ANIMATION_PATHS).then(clips => {

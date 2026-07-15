@@ -7,7 +7,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld' | 'spaceconquest'>('openworld');
+  const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld' | 'dungeon' | 'dungeon3d' | 'spaceconquest'>('openworld');
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [titlePulse, setTitlePulse] = useState(false);
@@ -113,7 +113,9 @@ export default function Home() {
     } catch { /* play with whatever localStorage has */ }
 
     if (selectedMode === 'openworld') setLocation('/open-world-play');
-    else setLocation('/game');
+    else if (selectedMode === 'dungeon') setLocation('/dungeon');
+    else if (selectedMode === 'dungeon3d') setLocation('/dungeon3d');
+    else setLocation('/game'); // MOBA arena (top-down 5v5)
   };
 
   const handleAdminLogin = () => {
@@ -173,14 +175,17 @@ export default function Home() {
           <p className="text-gray-300 max-w-xl mx-auto text-lg mb-2" data-testid="text-tagline">
             Create your warrior. Choose your destiny. Enter the world.
           </p>
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-500 text-sm mb-2">
             6 Races &bull; 4 Classes &bull; 17 Weapon Types &bull; 8 Attributes &bull; Level 1-20
+          </p>
+          <p className="text-[11px] text-[#c5a059]/80 mb-6 tracking-wide uppercase" data-testid="text-tvs-badge">
+            TVS assets · D1/R2 · castles · camps · crypts · heroes
           </p>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-5 mb-8">
+        <div className="flex flex-wrap justify-center gap-4 mb-8 max-w-4xl">
           <button
-            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
+            className={`flex flex-col items-center gap-2 px-8 py-5 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[170px] ${
               selectedMode === 'arena'
                 ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
                 : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
@@ -188,15 +193,15 @@ export default function Home() {
             onClick={() => setSelectedMode('arena')}
             data-testid="button-mode-arena"
           >
-            <Sword className="w-12 h-12" />
-            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>ARENA</span>
-            <span className="text-xs text-gray-400">5v5 &bull; 3 Lanes &bull; Towers</span>
-            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
-              Destroy the enemy Nexus. Level up, buy items, and push lanes with your team.
+            <Sword className="w-10 h-10" />
+            <span className="text-base font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>MOBA</span>
+            <span className="text-xs text-gray-400">5v5 · Top-down · TVS towers</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[160px]">
+              Knight keeps, ranger camps, wizard towers from TVS packs.
             </p>
           </button>
           <button
-            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
+            className={`flex flex-col items-center gap-2 px-8 py-5 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[170px] ${
               selectedMode === 'openworld'
                 ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
                 : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
@@ -204,11 +209,43 @@ export default function Home() {
             onClick={() => setSelectedMode('openworld')}
             data-testid="button-mode-openworld"
           >
-            <Globe className="w-12 h-12" />
-            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>OPEN WORLD</span>
-            <span className="text-xs text-gray-400">MMO &bull; 8 Zones &bull; Dungeons &bull; Day/Night</span>
-            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
-              Explore a vast island. Enter dungeon events, earn reputation, and defeat world bosses.
+            <Globe className="w-10 h-10" />
+            <span className="text-base font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>OPEN WORLD</span>
+            <span className="text-xs text-gray-400">MMO · Zones · Settlements</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[160px]">
+              Villages, farms, camps — TVS world content.
+            </p>
+          </button>
+          <button
+            className={`flex flex-col items-center gap-2 px-8 py-5 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[170px] ${
+              selectedMode === 'dungeon'
+                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
+                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
+            }`}
+            onClick={() => setSelectedMode('dungeon')}
+            data-testid="button-mode-dungeon"
+          >
+            <Skull className="w-10 h-10" />
+            <span className="text-base font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>DCQ</span>
+            <span className="text-xs text-gray-400">Top-down crypt · 10 floors</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[160px]">
+              Cathedral crypt dressing · procedural floors.
+            </p>
+          </button>
+          <button
+            className={`flex flex-col items-center gap-2 px-8 py-5 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[170px] ${
+              selectedMode === 'dungeon3d'
+                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
+                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
+            }`}
+            onClick={() => setSelectedMode('dungeon3d')}
+            data-testid="button-mode-dungeon3d"
+          >
+            <Crosshair className="w-10 h-10" />
+            <span className="text-base font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>3D DUNGEON</span>
+            <span className="text-xs text-gray-400">TPS · Voxel rooms</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[160px]">
+              3D rooms with TVS crypt props &amp; heroes.
             </p>
           </button>
         </div>
@@ -223,7 +260,11 @@ export default function Home() {
             data-testid="button-play"
           >
             {localStorage.getItem('grudge_custom_hero')
-              ? (selectedMode === 'arena' ? 'ENTER THE ARENA' : selectedMode === 'spaceconquest' ? 'LAUNCH CONQUEST' : 'EXPLORE THE WORLD')
+              ? (selectedMode === 'arena' ? 'ENTER MOBA'
+                : selectedMode === 'dungeon' ? 'ENTER THE CRYPT'
+                : selectedMode === 'dungeon3d' ? 'ENTER 3D DUNGEON'
+                : selectedMode === 'spaceconquest' ? 'LAUNCH CONQUEST'
+                : 'EXPLORE THE WORLD')
               : 'CREATE CHARACTER'
             }
           </Button>
