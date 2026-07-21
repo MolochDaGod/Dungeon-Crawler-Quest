@@ -20,6 +20,7 @@
     "@babylonjs/materials": "^9.0.0",
     "@babylonjs/post-processes": "^9.0.0",
     "@babylonjs/serializers": "^9.0.0",
+    "@dimforge/rapier3d-compat": "^0.14.0",
     "@flatten-js/core": "^1.6.10",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",

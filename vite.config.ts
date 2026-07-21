@@ -71,11 +71,15 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     rollupOptions: {
-      external: ['@dimforge/rapier3d-compat'],
+      // Do NOT externalize @dimforge/rapier3d-compat — browsers cannot resolve
+      // bare package specifiers without an import map (causes:
+      // "Failed to resolve module specifier @dimforge/rapier3d-compat").
       output: {
         manualChunks(id) {
           // BabylonJS → dedicated chunk (largest dep, only loaded on 3D pages)
           if (id.includes("node_modules/@babylonjs")) return "chunk-babylon";
+          // Rapier WASM physics → own chunk (used by open-world Three renderer)
+          if (id.includes("node_modules/@dimforge/rapier")) return "chunk-rapier";
           // Socket.io → small dedicated chunk
           if (id.includes("node_modules/socket.io-client") ||
               id.includes("node_modules/engine.io-client")) return "chunk-socket";
@@ -89,6 +93,7 @@ export default defineConfig({
   // Havok WASM + BabylonJS shader assets
   optimizeDeps: {
     exclude: ["@babylonjs/havok"],
+    include: ["@dimforge/rapier3d-compat"],
   },
   assetsInclude: ["**/*.wasm"],
 });
