@@ -279,13 +279,8 @@ export default function CreateCharacter() {
         }
       });
 
-      // Route to the correct game mode (don't wait for mint)
-      const mode = localStorage.getItem('grudge_mode') || 'arena';
-      if (mode === 'openworld') {
-        setLocation('/open-world-play');
-      } else {
-        setLocation('/game');
-      }
+      // After create, land on account select so player can pick this (or other) heroes
+      setLocation('/character-select');
     } catch (err: any) {
       console.error('[CreateChar] Error:', err);
       setCreateError(err?.message || 'Failed to create character');

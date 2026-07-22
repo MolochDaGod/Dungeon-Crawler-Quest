@@ -197,6 +197,49 @@ export function setActive(id: string): void {
 }
 
 /**
+ * Convert an account character into a playable HeroData + localStorage keys.
+ * Call after the player picks a roster slot so arena / open world / dungeon load the same hero.
+ */
+export function applyAccountCharacterToPlay(char: GrudgeCharacter): void {
+  setActiveId(char.id);
+
+  // Stable numeric id for legacy HEROES[] lookups (avoid clashing with roster 0–99)
+  let numId = 0;
+  for (let i = 0; i < char.id.length; i++) numId = (numId * 31 + char.id.charCodeAt(i)) >>> 0;
+  numId = 10_000 + (numId % 90_000);
+
+  const hero = {
+    id: numId,
+    name: char.name,
+    title: `The ${char.heroClass}`,
+    race: char.race,
+    heroClass: char.heroClass,
+    faction: char.faction || "Crusade",
+    rarity: "Rare" as const,
+    hp: 200 + (char.level || 1) * 10,
+    atk: 20 + (char.level || 1),
+    def: 12 + Math.floor((char.level || 1) / 2),
+    spd: 60,
+    rng: char.heroClass === "Mage" || char.heroClass === "Ranger" ? 5.5 : 1.5,
+    mp: 100,
+    quote: `A ${char.race} ${char.heroClass}.`,
+    equippedWeaponId: char.weaponType || undefined,
+    isAINpc: false,
+  };
+
+  localStorage.setItem("grudge_hero_id", String(hero.id));
+  localStorage.setItem("grudge_team", "0");
+  localStorage.setItem("grudge_custom_hero", JSON.stringify(hero));
+  localStorage.setItem("grudge_hero_race", char.race);
+  localStorage.setItem("grudge_hero_class", char.heroClass);
+  localStorage.setItem("grudge_hero_name", char.name);
+  localStorage.setItem("grudge_avatar_url", char.avatarUrl || "");
+  if (char.weaponType) localStorage.setItem("grudge_character_weapon", char.weaponType);
+  localStorage.setItem("grudge_active_character_id", char.id);
+  localStorage.setItem("grudge_account_character_id", char.id);
+}
+
+/**
  * Check if the player has any characters (fast — checks localStorage first).
  */
 export function hasCharactersLocally(): boolean {

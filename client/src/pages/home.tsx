@@ -85,6 +85,16 @@ export default function Home() {
   const handlePlay = async () => {
     localStorage.setItem('grudge_mode', selectedMode);
 
+    // Always prefer account character select when roster has heroes
+    try {
+      const { getAll } = await import('@/lib/grudgeCharacters');
+      const chars = await getAll();
+      if (chars.length > 0) {
+        setLocation('/character-select');
+        return;
+      }
+    } catch { /* fall through */ }
+
     // Brand-new players (no saved character at all) go to creation first
     const hasAnyHero =
       !!localStorage.getItem('grudge_custom_hero') ||
@@ -92,21 +102,11 @@ export default function Home() {
       (parseInt(localStorage.getItem('grudge_hero_id') || '-1', 10) >= 0);
 
     if (!hasAnyHero) {
-      // Still check backend roster before forcing creator
-      try {
-        const { getAll } = await import('@/lib/grudgeCharacters');
-        const chars = await getAll();
-        if (chars.length === 0) {
-          setLocation('/create-character');
-          return;
-        }
-      } catch {
-        setLocation('/create-character');
-        return;
-      }
+      setLocation('/create-character');
+      return;
     }
 
-    // Resolve / register hero into HEROES[] (seeds starter if keys exist but data is broken)
+    // Single local hero path — load into engine then jump into mode
     try {
       const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
       await ensurePlayerHeroLoaded();

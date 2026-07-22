@@ -12,6 +12,8 @@ import {
   CODEX_FACTION_STYLES, CODEX_RARITY_CONFIG, RACIAL_TRAITS,
   CODEX_CLASS_ABILITIES, CODEX_HERO_META,
 } from '@/game/hero-codex';
+import * as grudgeCharacters from '@/lib/grudgeCharacters';
+import type { GrudgeCharacter } from '@/lib/grudgeCharacters';
 
 const sharedVoxel = new VoxelRenderer();
 
@@ -274,19 +276,46 @@ const CLASSES = ['All', 'Warrior', 'Worg', 'Mage', 'Ranger'];
 export default function CharacterSelect() {
   const [, setLocation] = useLocation();
   const [selectedHero, setSelectedHero] = useState<HeroData | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<GrudgeCharacter | null>(null);
+  const [accountChars, setAccountChars] = useState<GrudgeCharacter[]>([]);
+  const [loadingRoster, setLoadingRoster] = useState(true);
+  const [rosterMode, setRosterMode] = useState<'account' | 'codex'>('account');
   const [raceFilter, setRaceFilter] = useState('All');
   const [classFilter, setClassFilter] = useState('All');
   const [codexHero, setCodexHero] = useState<HeroData | null>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const voxelRef = useRef<VoxelRenderer | null>(null);
+  const isAdmin = typeof window !== 'undefined' && localStorage.getItem('grudge_admin') === 'true';
 
-  // Admin-only guard: redirect non-admins to create-character
+  // Load account characters (Railway / local cache) — primary path for all players
   useEffect(() => {
-    const isAdmin = localStorage.getItem('grudge_admin') === 'true';
-    if (!isAdmin) {
-      setLocation('/create-character');
-    }
-  }, [setLocation]);
+    let cancelled = false;
+    (async () => {
+      setLoadingRoster(true);
+      try {
+        const chars = await grudgeCharacters.getAll();
+        if (cancelled) return;
+        setAccountChars(chars);
+        if (chars.length > 0) {
+          setRosterMode('account');
+          const active = await grudgeCharacters.getActive();
+          const pick = active || chars[0];
+          setSelectedAccount(pick);
+        } else if (!isAdmin) {
+          // No account heroes yet — send non-admins straight to create
+          setLocation('/create-character');
+          return;
+        } else {
+          setRosterMode('codex');
+        }
+      } catch {
+        if (!cancelled && !isAdmin) setLocation('/create-character');
+      } finally {
+        if (!cancelled) setLoadingRoster(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [setLocation, isAdmin]);
 
   const filteredHeroes = HEROES.filter(h => {
     if (raceFilter !== 'All' && h.race !== raceFilter) return false;
@@ -335,11 +364,31 @@ export default function CharacterSelect() {
   }, [selectedHero]);
 
   const startGame = () => {
-    if (!selectedHero) return;
-    localStorage.setItem('grudge_hero_id', String(selectedHero.id));
-    localStorage.setItem('grudge_team', '0');
+    // Prefer account roster selection
+    if (rosterMode === 'account' && selectedAccount) {
+      grudgeCharacters.applyAccountCharacterToPlay(selectedAccount);
+      // Register in HEROES[] if needed
+      try {
+        const raw = localStorage.getItem('grudge_custom_hero');
+        if (raw) {
+          const hero = JSON.parse(raw) as HeroData;
+          if (!HEROES.find((h) => h.id === hero.id)) HEROES.push(hero);
+        }
+      } catch { /* ignore */ }
+    } else if (selectedHero) {
+      localStorage.setItem('grudge_hero_id', String(selectedHero.id));
+      localStorage.setItem('grudge_team', '0');
+      localStorage.setItem('grudge_hero_race', selectedHero.race);
+      localStorage.setItem('grudge_hero_class', selectedHero.heroClass);
+      localStorage.setItem('grudge_hero_name', selectedHero.name);
+    } else {
+      return;
+    }
     const mode = localStorage.getItem('grudge_mode') || 'arena';
-    setLocation(mode === 'openworld' ? '/open-world' : '/game');
+    if (mode === 'openworld') setLocation('/open-world-play');
+    else if (mode === 'dungeon') setLocation('/dungeon');
+    else if (mode === 'dungeon3d') setLocation('/dungeon3d');
+    else setLocation('/game');
   };
 
   const statBar = (label: string, value: number, max: number, color: string) => (
@@ -352,25 +401,143 @@ export default function CharacterSelect() {
     </div>
   );
 
+  if (loadingRoster) {
+    return (
+      <div className="min-h-screen bg-[#0a0f0a] text-white flex items-center justify-center" data-testid="character-select-loading">
+        <p className="text-gray-400">Loading your heroes…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0f0a] text-white" data-testid="character-select-page">
       <div className="sticky top-0 z-50 bg-[#0a0f0a]/95 backdrop-blur border-b border-[#c5a059]/30 px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1
             className="text-2xl font-black tracking-wider"
-            style={{ fontFamily: "'Oxanium', sans-serif", color: '#ef4444' }}
+            style={{ fontFamily: "'Oxanium', sans-serif", color: '#c5a059' }}
             data-testid="text-page-title"
           >
-            ADMIN — HERO SELECT
+            {rosterMode === 'account' ? 'SELECT HERO' : 'ADMIN — CODEX'}
           </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-500 text-sm">{filteredHeroes.length} heroes</span>
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <div className="flex gap-1 mr-2">
+                <button
+                  className={`px-3 py-1 text-xs rounded border ${rosterMode === 'account' ? 'border-[#c5a059] text-[#c5a059]' : 'border-gray-700 text-gray-500'}`}
+                  onClick={() => setRosterMode('account')}
+                >
+                  Account
+                </button>
+                <button
+                  className={`px-3 py-1 text-xs rounded border ${rosterMode === 'codex' ? 'border-[#c5a059] text-[#c5a059]' : 'border-gray-700 text-gray-500'}`}
+                  onClick={() => setRosterMode('codex')}
+                >
+                  Codex
+                </button>
+              </div>
+            )}
+            <Button size="sm" onClick={() => setLocation('/create-character')} data-testid="button-new-hero">
+              + New Hero
+            </Button>
+            <span className="text-gray-500 text-sm">
+              {rosterMode === 'account' ? `${accountChars.length} account` : `${filteredHeroes.length} codex`}
+            </span>
             <Button variant="outline" size="sm" onClick={() => setLocation('/')} data-testid="button-back">Back</Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-4">
+        {/* ── Account roster (default) ── */}
+        {rosterMode === 'account' && (
+          <div className="flex gap-4">
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
+              {accountChars.length === 0 && (
+                <div className="col-span-full text-center py-16 text-gray-500">
+                  <p className="mb-4">No account heroes yet.</p>
+                  <Button onClick={() => setLocation('/create-character')}>Create Hero</Button>
+                </div>
+              )}
+              {accountChars.map((char) => {
+                const isSelected = selectedAccount?.id === char.id;
+                const raceColor = RACE_COLORS[char.race] || '#888';
+                const classColor = CLASS_COLORS[char.heroClass] || '#888';
+                return (
+                  <Card
+                    key={char.id}
+                    className={`cursor-pointer transition-all overflow-hidden bg-[#1a1a2e] border hover:border-[#c5a059]/50 ${isSelected ? 'border-[#c5a059] ring-1 ring-[#c5a059]/30' : 'border-gray-800'}`}
+                    onClick={() => {
+                      setSelectedAccount(char);
+                      setSelectedHero(null);
+                    }}
+                    data-testid={`card-account-hero-${char.id}`}
+                  >
+                    <div className="relative h-28 bg-[#0a0f0a] flex items-center justify-center">
+                      {char.avatarUrl ? (
+                        <img src={char.avatarUrl} alt="" className="w-full h-28 object-cover" />
+                      ) : (
+                        <div
+                          className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
+                          style={{ background: raceColor + '33', color: raceColor, border: `2px solid ${raceColor}` }}
+                        >
+                          {(char.name || '?')[0]}
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-2.5 mt-1.5 pb-2.5">
+                      <h3 className="text-sm font-bold truncate text-[#c5a059]">{char.name}</h3>
+                      <div className="flex gap-1 mt-1 flex-wrap">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded border border-gray-700" style={{ color: raceColor }}>{char.race}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded border border-gray-700" style={{ color: classColor }}>{char.heroClass}</span>
+                        <span className="text-[10px] text-gray-500">Lv {char.level || 1}</span>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+            <div className="w-80 shrink-0">
+              {selectedAccount ? (
+                <div className="sticky top-20 bg-[#1a1a2e] border border-gray-800 rounded-xl p-4" data-testid="account-hero-detail">
+                  <h2 className="text-xl font-bold text-[#c5a059]" style={{ fontFamily: "'Oxanium', sans-serif" }}>
+                    {selectedAccount.name}
+                  </h2>
+                  <p className="text-sm text-gray-500 mb-3">
+                    {selectedAccount.race} {selectedAccount.heroClass} · {selectedAccount.faction}
+                  </p>
+                  {selectedAccount.avatarUrl && (
+                    <img src={selectedAccount.avatarUrl} alt="" className="w-full max-h-48 object-cover rounded-lg mb-4 border border-[#c5a059]/30" />
+                  )}
+                  <div className="flex gap-2 mb-4 flex-wrap">
+                    <span className="text-xs px-2 py-1 rounded border" style={{ color: RACE_COLORS[selectedAccount.race] }}>{selectedAccount.race}</span>
+                    <span className="text-xs px-2 py-1 rounded border" style={{ color: CLASS_COLORS[selectedAccount.heroClass] }}>{selectedAccount.heroClass}</span>
+                    <span className="text-xs px-2 py-1 rounded border text-gray-400">Lv {selectedAccount.level || 1}</span>
+                    {selectedAccount.weaponType && (
+                      <span className="text-xs px-2 py-1 rounded border text-amber-500/80">{selectedAccount.weaponType}</span>
+                    )}
+                  </div>
+                  <Button
+                    className="w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 font-bold tracking-wider"
+                    style={{ fontFamily: "'Oxanium', sans-serif" }}
+                    onClick={startGame}
+                    data-testid="button-start-game"
+                  >
+                    ENTER GAME
+                  </Button>
+                </div>
+              ) : (
+                <div className="sticky top-20 bg-[#1a1a2e] border border-gray-800 rounded-xl p-8 text-center">
+                  <p className="text-gray-500">Select a hero from your account</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Admin codex (preset HEROES) ── */}
+        {rosterMode === 'codex' && (
+        <>
         <div className="flex gap-3 flex-wrap mb-3">
           <div className="flex gap-1 items-center">
             <span className="text-xs text-gray-500 mr-1">Race:</span>
@@ -516,7 +683,6 @@ export default function CharacterSelect() {
             )}
           </div>
         </div>
-      </div>
       {/* Codex click popup */}
       {codexHero && (
         <HeroCodexPopup
@@ -524,6 +690,9 @@ export default function CharacterSelect() {
           onClose={() => setCodexHero(null)}
         />
       )}
+        </>
+        )}
+      </div>
     </div>
   );
 }

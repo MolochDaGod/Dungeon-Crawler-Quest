@@ -15,6 +15,7 @@ import type { EquipmentAppearance } from './voxel-equipment';
 import type { ModularVoxelConfig } from './voxel-modular';
 import type { ToonRtsRaceKey } from '../../../shared/toon-rts-registry';
 import type { MountState } from './mount-system';
+import { createMountState, getDefaultMountForRace } from './mount-system';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -255,7 +256,8 @@ export function createPlayerCharacterState(
   weaponType?: string,
 ): PlayerCharacterState {
   const def = getCharacterDef(modelIndex);
-  const { createMountState, getDefaultMountForRace } = require('./mount-system');
+  // ESM: static import only — require() breaks Vite browser bundles
+  // ("require is not defined" on character create Confirm step).
   const raceToon = RACE_TOON_RTS[race];
   const mountState = createMountState();
   mountState.equippedMountId = getDefaultMountForRace(race);
