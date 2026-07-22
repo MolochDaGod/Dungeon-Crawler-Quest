@@ -133,11 +133,33 @@ export function logout(): void {
 }
 
 // ── Login redirect (user-triggered only, never automatic) ────────────────────
+/** Prefer brand host when not on localhost (pin known DCQ production if set). */
+const DCQ_BRAND =
+  (typeof import.meta !== "undefined" &&
+    (import.meta as { env?: { VITE_DCQ_ORIGIN?: string } }).env?.VITE_DCQ_ORIGIN) ||
+  "https://dungeon-crawler-quest.vercel.app";
+
 export function getLoginUrl(returnPath?: string): string {
-  const returnTo = returnPath || window.location.pathname;
-  const origin = window.location.origin;
-  const redirectUrl = `${origin}${returnTo}`;
-  return `${GRUDGE_AUTH_URL}?redirect=${encodeURIComponent(redirectUrl)}&app=dcq`;
+  const path = returnPath || (typeof window !== "undefined" ? window.location.pathname : "/");
+  const h = typeof window !== "undefined" ? window.location.hostname || "" : "";
+  let redirectUrl: string;
+  if (h === "localhost" || h === "127.0.0.1" || h === "[::1]") {
+    redirectUrl = `${window.location.origin}${path.startsWith("/") ? path : `/${path}`}`;
+  } else if (h && !h.endsWith("vercel.app")) {
+    redirectUrl = `${window.location.origin}${path.startsWith("/") ? path : `/${path}`}`;
+  } else {
+    redirectUrl = `${DCQ_BRAND.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+  }
+  const q = new URLSearchParams({
+    redirect_uri: redirectUrl,
+    redirect: redirectUrl,
+    return: redirectUrl,
+    returnTo: redirectUrl,
+    return_to: redirectUrl,
+    origin: redirectUrl.replace(/\/[^/]*$/, "") || DCQ_BRAND,
+    app: "dcq",
+  });
+  return `${GRUDGE_AUTH_URL}/login?${q.toString()}`;
 }
 
 // ── Token validation (client-side JWT expiry check) ──────────────────────────
