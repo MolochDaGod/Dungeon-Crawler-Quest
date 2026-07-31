@@ -305,6 +305,17 @@ function wrapSkinned(
 }
 
 /**
+ * Instant procedural explorer (no network). Use for first paint, then upgrade
+ * via loadExplorerAvatar() when TVS CDN is ready.
+ */
+export function createExplorerAvatarSync(
+  opts: LoadExplorerOpts = {},
+): ExplorerAvatar {
+  const { race, heroClass } = normalizeRaceClass(opts.race, opts.heroClass);
+  return wrapVoxel(buildVoxel3DCharacter(race, heroClass), race, heroClass);
+}
+
+/**
  * Load the default explorer avatar for a race/class.
  * Always resolves (voxel fallback).
  */
@@ -314,7 +325,7 @@ export async function loadExplorerAvatar(
   const { race, heroClass } = normalizeRaceClass(opts.race, opts.heroClass);
 
   if (opts.forceVoxel) {
-    return wrapVoxel(buildVoxel3DCharacter(race, heroClass), race, heroClass);
+    return createExplorerAvatarSync(opts);
   }
 
   // 1) TVS CDN explorer (fleet voxel default)

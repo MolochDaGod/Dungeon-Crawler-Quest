@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
-import { buildVoxel3DCharacter, idlePose, walkPose, punchPose, kickPose } from '@/game/voxel3d';
+import { idlePose, walkPose, punchPose } from '@/game/voxel3d';
 import { SandboxWorld } from '@/game/sandbox-physics';
 import {
   ExplorerController,
@@ -17,6 +17,14 @@ import {
 } from '@/game/explorer-controller';
 import { getHeroAbilities, type AbilityDef } from '@/game/types';
 import { getAbilitiesWithWeapon } from '@/game/weapon-skills';
+import {
+  createExplorerAvatarSync,
+  loadExplorerAvatar,
+  driveExplorerLocomotion,
+  syncHeroFromStorage,
+  type ExplorerAvatar,
+} from '@/game/explorer-avatar';
+import { ModeVfx } from '@/game/mode-vfx';
 
 // ── Dungeon Room Generator ─────────────────────────────────────
 
@@ -116,7 +124,7 @@ function buildRoomMeshes(
 
 interface DungeonEnemy {
   id: string;
-  rig: ReturnType<typeof buildVoxel3DCharacter>;
+  rig: ExplorerAvatar;
   hp: number;
   maxHp: number;
   speed: number;
@@ -224,18 +232,11 @@ export default function Dungeon3DPage() {
     const rooms = generateDungeon(floor);
     rooms.forEach((r) => buildRoomMeshes(r, scene, sandbox, occluders));
 
-    // Player
-    try {
-      const raw = localStorage.getItem('grudge_custom_hero');
-      if (raw) {
-        const h = JSON.parse(raw);
-        if (h.race) localStorage.setItem('grudge_hero_race', h.race);
-        if (h.heroClass) localStorage.setItem('grudge_hero_class', h.heroClass);
-      }
-    } catch { /* ignore */ }
-    const race = localStorage.getItem('grudge_hero_race') || 'Human';
-    const heroClass = localStorage.getItem('grudge_hero_class') || 'Warrior';
-    const rig = buildVoxel3DCharacter(race, heroClass);
+    // Player — explorer avatar (voxel first paint, TVS CDN upgrade)
+    const hero = syncHeroFromStorage();
+    const race = hero.race;
+    const heroClass = hero.heroClass;
+    let rig: ExplorerAvatar = createExplorerAvatarSync({ race, heroClass });
     const startRoom = rooms[0];
     rig.group.position.set(
       startRoom.x + startRoom.w / 2,
@@ -243,6 +244,7 @@ export default function Dungeon3DPage() {
       startRoom.z + startRoom.d / 2,
     );
     scene.add(rig.group);
+    const vfx = new ModeVfx(scene);
 
     let playerHp = 100;
     let playerMp = 100;
@@ -327,7 +329,11 @@ export default function Dungeon3DPage() {
       for (let j = 0; j < count; j++) {
         const eRace = enemyRaces[Math.floor(Math.random() * enemyRaces.length)];
         const eClass = enemyClasses[Math.floor(Math.random() * enemyClasses.length)];
-        const eRig = buildVoxel3DCharacter(eRace, eClass);
+        const eRig = createExplorerAvatarSync({
+          race: eRace,
+          heroClass: eClass,
+          teamTint: 0xaa2244,
+        });
         const ex = r.x + 2 + Math.random() * (r.w - 4);
         const ez = r.z + 2 + Math.random() * (r.d - 4);
         eRig.group.position.set(ex, 0, ez);
@@ -368,15 +374,24 @@ export default function Dungeon3DPage() {
       if (!en.alive) return;
       en.hp -= dmg;
       en.hitFlash = 0.2;
+      en.rig.play('hit');
+      vfx.emit(
+        en.rig.group.position.clone().add(new THREE.Vector3(0, 1, 0)),
+        0xff4422,
+        8,
+        2.5,
+      );
       if (en.hp <= 0) {
         en.alive = false;
         en.hp = 0;
+        en.rig.play('death');
         scene.remove(en.rig.group);
         scene.remove(en.ring);
         killCount += 1;
         setKills(killCount);
         publishTargets();
         showFlash('KILL', 0.5);
+        vfx.castRing(en.rig.group.position, 0xffaa44);
         // Floor clear → next
         if (enemies.every((e) => !e.alive)) {
           showFlash('FLOOR CLEAR', 1.5);
@@ -459,15 +474,27 @@ export default function Dungeon3DPage() {
       onAttack: (type, aim) => {
         if (playerDead) return;
         attackAnimT = type === 'lmb' ? 0.35 : 0.5;
+        rig.play('attack');
         const origin = rig.group.position.clone();
         origin.y = 0;
+        vfx.slash(
+          origin,
+          rig.group.rotation.y,
+          type === 'lmb' ? 0xffe08a : 0xff6622,
+          type === 'rmb',
+        );
         const prefer =
           controller.state.hardTarget?.id ?? controller.state.softTarget?.id ?? null;
         const dmg = type === 'lmb' ? 14 + floor * 2 : 22 + floor * 3;
         const range = type === 'lmb' ? 2.1 : 2.6;
         const n = hitEnemiesInRange(origin, range, dmg, prefer);
-        if (n === 0 && prefer) {
-          // Miss locked target — still slash air
+        if (n > 0) {
+          vfx.emit(
+            origin.clone().add(new THREE.Vector3(0, 1, 0)),
+            0xff4422,
+            10,
+            3,
+          );
         }
       },
       onSkill: (slot, aim, target) => {
@@ -488,8 +515,16 @@ export default function Dungeon3DPage() {
         skillCd[slot] = ab.cooldown > 0 ? ab.cooldown : 0.45;
         attackAnimT = 0.45;
         showFlash(ab.name.toUpperCase(), 0.7);
+        rig.play(
+          ab.castType === 'self_cast' || ab.type === 'buff' ? 'cast' : 'attack',
+        );
 
         const origin = rig.group.position.clone();
+        if (ab.type === 'aoe' || ab.castType === 'self_cast') {
+          vfx.castRing(origin, 0x88aaff);
+        } else {
+          vfx.slash(origin, rig.group.rotation.y, 0x66ccff, true);
+        }
 
         if (ab.type === 'buff' || ab.castType === 'self_cast') {
           if (ab.damage > 0 || ab.type === 'aoe') {
@@ -540,6 +575,23 @@ export default function Dungeon3DPage() {
     controller.setOccluders(occluders);
     publishTargets();
 
+    // Upgrade player mesh to TVS CDN explorer when ready
+    void loadExplorerAvatar({ race, heroClass }).then((av) => {
+      if (disposed || av.source === 'voxel') {
+        if (av.source === 'voxel' && av !== rig) av.dispose();
+        return;
+      }
+      const pos = rig.group.position.clone();
+      const rot = rig.group.rotation.y;
+      scene.remove(rig.group);
+      rig.dispose();
+      rig = av;
+      rig.group.position.copy(pos);
+      rig.group.rotation.y = rot;
+      scene.add(rig.group);
+      controller.setPlayer(rig.group);
+    });
+
     // Game loop
     const clock = new THREE.Clock();
     let animId = 0;
@@ -579,17 +631,19 @@ export default function Dungeon3DPage() {
       sandbox.step(dt);
       if (!playerDead) controller.update(dt);
 
-      // Player pose
-      let pose;
-      if (attackAnimT > 0) {
-        pose = punchPose(1 - attackAnimT / 0.5);
-      } else if (controller.isMoving()) {
-        pose = walkPose(time * (controller.state.sprinting ? 1.4 : 1));
-      } else {
-        pose = idlePose(time);
+      // Player locomotion + explorer anims
+      driveExplorerLocomotion(
+        rig,
+        controller.isMoving(),
+        attackAnimT > 0,
+        time,
+        controller.state.sprinting,
+      );
+      if (attackAnimT > 0 && rig.voxel) {
+        rig.setPose(punchPose(1 - attackAnimT / 0.5));
       }
-      rig.setPose(pose);
       rig.update(dt);
+      vfx.update(dt);
 
       playerLight.position.copy(rig.group.position);
       playerLight.position.y += 2;
@@ -657,12 +711,17 @@ export default function Dungeon3DPage() {
               en.rig.group.position.y,
               rig.group.position.z,
             );
-            en.rig.setPose(walkPose(time, 0.9));
+            en.rig.play('walk');
+            if (en.rig.voxel) en.rig.setPose(walkPose(time, 0.9));
           } else {
-            en.rig.setPose(punchPose(Math.sin(time * 8) * 0.5 + 0.5));
+            en.rig.play('attack');
+            if (en.rig.voxel) {
+              en.rig.setPose(punchPose(Math.sin(time * 8) * 0.5 + 0.5));
+            }
           }
         } else {
-          en.rig.setPose(idlePose(time));
+          en.rig.play('idle');
+          if (en.rig.voxel) en.rig.setPose(idlePose(time));
         }
         en.rig.update(dt);
 
@@ -700,6 +759,9 @@ export default function Dungeon3DPage() {
       cancelAnimationFrame(animId);
       controller.dispose();
       sandbox.dispose();
+      vfx.dispose();
+      rig.dispose();
+      enemies.forEach((e) => e.rig.dispose());
       renderer.dispose();
       window.removeEventListener('resize', onResize);
       if (canvas.parentElement) canvas.parentElement.removeChild(canvas);

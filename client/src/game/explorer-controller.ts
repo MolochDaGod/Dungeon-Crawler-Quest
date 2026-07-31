@@ -118,6 +118,12 @@ export class ExplorerController {
   private _onPointerLockChange: () => void;
   private _onBlur: () => void;
 
+  /** Hot-swap player mesh (TVS explorer upgrade after voxel first paint). */
+  setPlayer(player: THREE.Object3D): void {
+    this.player = player;
+    this.state.playerY = player.position.y;
+  }
+
   constructor(
     camera: THREE.PerspectiveCamera,
     player: THREE.Object3D,
