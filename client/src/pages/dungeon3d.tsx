@@ -25,6 +25,16 @@ import {
   type ExplorerAvatar,
 } from '@/game/explorer-avatar';
 import { ModeVfx } from '@/game/mode-vfx';
+import {
+  FANTASY_CREEPS,
+  HORROR_CREEPS,
+  loadCreepMesh,
+  rollCreepLoot,
+  pushFarmLoot,
+  formatLootLine,
+  type NeutralCreepDef,
+  type LoadedCreepMesh,
+} from '@/game/neutral-creeps';
 
 // ── Dungeon Room Generator ─────────────────────────────────────
 
@@ -122,9 +132,18 @@ function buildRoomMeshes(
 
 // ── Enemy ──────────────────────────────────────────────────────
 
+/** Explorer avatar OR threejs-games creep mesh (shared surface). */
+type EnemyRig = ExplorerAvatar | {
+  group: THREE.Group;
+  play: (anim: string) => void;
+  update: (dt: number) => void;
+  dispose: () => void;
+  voxel: null;
+};
+
 interface DungeonEnemy {
   id: string;
-  rig: ExplorerAvatar;
+  rig: EnemyRig;
   hp: number;
   maxHp: number;
   speed: number;
@@ -133,6 +152,38 @@ interface DungeonEnemy {
   alive: boolean;
   /** World reticle under feet when soft/hard locked */
   ring: THREE.Mesh;
+  /** WC3-style neutral farm creep */
+  isNeutral?: boolean;
+  creepDef?: NeutralCreepDef;
+  damage?: number;
+}
+
+function adaptCreepMesh(loaded: LoadedCreepMesh): EnemyRig {
+  return {
+    group: loaded.group,
+    voxel: null,
+    play: (anim) => {
+      // Mixer clips optional; VFX/feedback is enough if clips missing
+      const mixer = loaded.mixer;
+      if (!mixer) return;
+      const ud = loaded.group.userData as {
+        walkClip?: THREE.AnimationClip;
+        attackClip?: THREE.AnimationClip;
+      };
+      const clip =
+        anim === 'attack'
+          ? ud.attackClip
+          : anim === 'walk'
+            ? ud.walkClip
+            : null;
+      if (clip) {
+        const a = mixer.clipAction(clip);
+        a.reset().setLoop(THREE.LoopOnce, 1).play();
+      }
+    },
+    update: (dt) => loaded.update(dt),
+    dispose: () => loaded.dispose(),
+  };
 }
 
 /** 2D ability range (~80–120) → metres for SI dungeon */
@@ -169,6 +220,8 @@ export default function Dungeon3DPage() {
   const [skills, setSkills] = useState<SkillHudSlot[]>([]);
   const [flash, setFlash] = useState('');
   const [dead, setDead] = useState(false);
+  const [farmGold, setFarmGold] = useState(0);
+  const [lootLine, setLootLine] = useState('');
 
   const flashTimer = useRef(0);
   const showFlash = useCallback((msg: string, sec = 0.8) => {
@@ -323,8 +376,14 @@ export default function Dungeon3DPage() {
       return mesh;
     };
 
+    // Dungeon guards (explorer placeholders) + WC3-style neutral creep camps
     for (let i = 1; i < rooms.length; i++) {
       const r = rooms[i];
+      const isNeutralCamp = i % 2 === 1; // every other room = farm camp
+      if (isNeutralCamp) {
+        // Spawned async below (threejs-games CDN FBX)
+        continue;
+      }
       const count = 1 + Math.floor(Math.random() * 3);
       for (let j = 0; j < count; j++) {
         const eRace = enemyRaces[Math.floor(Math.random() * enemyRaces.length)];
@@ -350,9 +409,59 @@ export default function Dungeon3DPage() {
           hitFlash: 0,
           alive: true,
           ring: makeRing(0xef4444),
+          isNeutral: false,
+          damage: 6 + floor,
         });
       }
     }
+
+    // Neutral creep camps — threejs-games fantasy + horror (CDN)
+    void (async () => {
+      const campRooms = rooms.filter((_, idx) => idx > 0 && idx % 2 === 1);
+      for (const r of campRooms) {
+        if (disposed) return;
+        const familyPool =
+          Math.random() > 0.45 ? FANTASY_CREEPS : HORROR_CREEPS;
+        const count = 2 + Math.floor(Math.random() * 2);
+        for (let j = 0; j < count; j++) {
+          if (disposed) return;
+          const def =
+            familyPool[Math.floor(Math.random() * familyPool.length)]!;
+          try {
+            const loaded = await loadCreepMesh(def);
+            if (disposed) {
+              loaded.dispose();
+              return;
+            }
+            const rig = adaptCreepMesh(loaded);
+            const ex = r.x + 2 + Math.random() * (r.w - 4);
+            const ez = r.z + 2 + Math.random() * (r.d - 4);
+            rig.group.position.set(ex, 0, ez);
+            rig.group.userData.selectable = 'hostile';
+            const id = `creep-${++enemySeq}`;
+            rig.group.userData.enemyId = id;
+            scene.add(rig.group);
+            enemies.push({
+              id,
+              rig,
+              hp: def.hp + floor * 8,
+              maxHp: def.hp + floor * 8,
+              speed: def.speed,
+              attackCooldown: 0,
+              hitFlash: 0,
+              alive: true,
+              ring: makeRing(def.color),
+              isNeutral: true,
+              creepDef: def,
+              damage: def.damage,
+            });
+            publishTargets();
+          } catch (err) {
+            console.warn('[dungeon3d] creep load failed', def.id, err);
+          }
+        }
+      }
+    })();
 
     const publishTargets = () => {
       const list: SoftLockTarget[] = enemies
@@ -390,8 +499,21 @@ export default function Dungeon3DPage() {
         killCount += 1;
         setKills(killCount);
         publishTargets();
-        showFlash('KILL', 0.5);
         vfx.castRing(en.rig.group.position, 0xffaa44);
+
+        // WC3-style farm loot from neutral creeps
+        if (en.isNeutral && en.creepDef) {
+          const drops = rollCreepLoot(en.creepDef);
+          pushFarmLoot(drops);
+          const gold = drops.find((d) => d.kind === 'gold');
+          if (gold) setFarmGold((g) => g + gold.qty);
+          const line = formatLootLine(drops);
+          setLootLine(line);
+          showFlash(`${en.creepDef.label.toUpperCase()} · ${line}`, 1.4);
+        } else {
+          showFlash('KILL', 0.5);
+        }
+
         // Floor clear → next
         if (enemies.every((e) => !e.alive)) {
           showFlash('FLOOR CLEAR', 1.5);
@@ -712,24 +834,28 @@ export default function Dungeon3DPage() {
               rig.group.position.z,
             );
             en.rig.play('walk');
-            if (en.rig.voxel) en.rig.setPose(walkPose(time, 0.9));
+            if ('voxel' in en.rig && en.rig.voxel) {
+              en.rig.setPose(walkPose(time, 0.9));
+            }
           } else {
             en.rig.play('attack');
-            if (en.rig.voxel) {
+            if ('voxel' in en.rig && en.rig.voxel) {
               en.rig.setPose(punchPose(Math.sin(time * 8) * 0.5 + 0.5));
             }
           }
         } else {
           en.rig.play('idle');
-          if (en.rig.voxel) en.rig.setPose(idlePose(time));
+          if ('voxel' in en.rig && en.rig.voxel) {
+            en.rig.setPose(idlePose(time));
+          }
         }
         en.rig.update(dt);
 
         en.attackCooldown -= dt;
         if (!playerDead && dist < 1.55 && en.attackCooldown <= 0) {
-          en.attackCooldown = 1.35;
+          en.attackCooldown = en.isNeutral ? 1.6 : 1.35;
           if (invuln <= 0) {
-            playerHp -= 6 + floor;
+            playerHp -= en.damage ?? 6 + floor;
             if (playerHp <= 0) {
               playerHp = 0;
               playerDead = true;
@@ -761,7 +887,11 @@ export default function Dungeon3DPage() {
       sandbox.dispose();
       vfx.dispose();
       rig.dispose();
-      enemies.forEach((e) => e.rig.dispose());
+      enemies.forEach((e) => {
+        if ('dispose' in e.rig && typeof e.rig.dispose === 'function') {
+          e.rig.dispose();
+        }
+      });
       renderer.dispose();
       window.removeEventListener('resize', onResize);
       if (canvas.parentElement) canvas.parentElement.removeChild(canvas);
@@ -809,6 +939,16 @@ export default function Dungeon3DPage() {
         <span style={{ color: '#c5a059', fontWeight: 'bold' }}>Floor {floor}</span>
         <span style={{ color: '#555' }}>|</span>
         <span style={{ color: '#4ade80' }}>Kills: {kills}</span>
+        <span style={{ color: '#555' }}>|</span>
+        <span style={{ color: '#fbbf24' }}>Gold: {farmGold}</span>
+        {lootLine ? (
+          <>
+            <span style={{ color: '#555' }}>|</span>
+            <span style={{ color: '#c5a059', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {lootLine}
+            </span>
+          </>
+        ) : null}
         {lockLabel && (
           <>
             <span style={{ color: '#555' }}>|</span>
@@ -1012,9 +1152,9 @@ export default function Dungeon3DPage() {
       >
         WASD move · Shift sprint · Space jump · Click free-look
         <br />
-        LMB attack · RMB hard lock · Tab soft-lock · Alt+Tab free cam
+        LMB attack · RMB hard lock · Tab soft-lock · farm neutrals for loot
         <br />
-        1–4 / Q E R F skills · X dodge · C parry
+        1–4 / Q E R F skills · X dodge · C parry · Esc home
       </div>
 
       {dead && (
