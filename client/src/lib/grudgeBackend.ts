@@ -9,7 +9,18 @@
  */
 
 // ── Constants ────────────────────────────────────────────────────────────────
+/** Canonical write key — fleet production-wiring SSOT. */
 const AUTH_TOKEN_KEY = "grudge_auth_token";
+/**
+ * Fleet read order (stay logged in across Warlords / GCS / Open / DCQ).
+ * Write always to grudge_auth_token; read any of these.
+ */
+const FLEET_AUTH_TOKEN_KEYS = [
+  "grudge_auth_token",
+  "grudge_session_token",
+  "grudge.token",
+  "sso_token",
+] as const;
 const SESSION_KEY = "grudge-session";
 const GRUDGE_AUTH_URL = "https://id.grudge-studio.com";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
@@ -20,11 +31,16 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
 (function pickupSsoToken() {
   try {
     const params = new URLSearchParams(window.location.search);
-    const ssoToken = params.get("sso_token");
+    const ssoToken =
+      params.get("sso_token") ||
+      params.get("token") ||
+      params.get("grudge_token");
     if (!ssoToken) return;
 
-    // Save token
-    localStorage.setItem(AUTH_TOKEN_KEY, ssoToken);
+    // Persist under all fleet keys so other surfaces stay in sync
+    for (const k of FLEET_AUTH_TOKEN_KEYS) {
+      localStorage.setItem(k, ssoToken);
+    }
     setCookie(AUTH_TOKEN_KEY, ssoToken);
 
     // Save identity fields
@@ -32,6 +48,7 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
     const username = params.get("grudge_username") || params.get("username") || "";
     if (grudgeId) {
       localStorage.setItem("grudge_id", grudgeId);
+      localStorage.setItem("grudge_account_id", grudgeId);
       setCookie("grudge_id", grudgeId);
     }
     if (username) localStorage.setItem("grudge_username", username);
@@ -39,6 +56,8 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
     // Also handle legacy hash-based tokens (some old links still use #token=)
     // so existing bookmarks don't break.
     params.delete("sso_token");
+    params.delete("token");
+    params.delete("grudge_token");
     params.delete("grudge_id");
     params.delete("grudgeId");
     params.delete("grudge_username");
@@ -54,12 +73,15 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
   try {
     if (!location.hash || !location.hash.includes("token=")) return;
     const hash = new URLSearchParams(location.hash.slice(1));
-    const token = hash.get("token");
+    const token = hash.get("token") || hash.get("sso_token");
     if (!token) return;
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    for (const k of FLEET_AUTH_TOKEN_KEYS) {
+      localStorage.setItem(k, token);
+    }
     setCookie(AUTH_TOKEN_KEY, token);
     if (hash.get("grudgeId")) {
       localStorage.setItem("grudge_id", hash.get("grudgeId")!);
+      localStorage.setItem("grudge_account_id", hash.get("grudgeId")!);
       setCookie("grudge_id", hash.get("grudgeId")!);
     }
     if (hash.get("name")) localStorage.setItem("grudge_username", hash.get("name")!);
@@ -81,17 +103,28 @@ function clearCookie(name: string): void {
 }
 
 // ── Token helpers ────────────────────────────────────────────────────────────
+/** Read first non-empty fleet token key (stay logged in across apps). */
 export function getToken(): string | null {
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+  try {
+    for (const k of FLEET_AUTH_TOKEN_KEYS) {
+      const v = localStorage.getItem(k);
+      if (v && v.trim()) return v.trim();
+    }
+  } catch { /* SSR */ }
+  return null;
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  for (const k of FLEET_AUTH_TOKEN_KEYS) {
+    localStorage.setItem(k, token);
+  }
   setCookie(AUTH_TOKEN_KEY, token);
 }
 
 export function clearToken(): void {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
+  for (const k of FLEET_AUTH_TOKEN_KEYS) {
+    localStorage.removeItem(k);
+  }
   clearCookie(AUTH_TOKEN_KEY);
 }
 
