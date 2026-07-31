@@ -10,10 +10,19 @@
 
 import * as THREE from 'three';
 import {
-  type Voxel3DRig, type Voxel3DPose,
+  type Voxel3DPose,
   idlePose, walkPose, punchPose, kickPose,
   blockPose, hitPose, grabPose, dropkickPose,
 } from './voxel3d';
+import type { ExplorerAnim } from './explorer-avatar';
+
+/** Minimal rig surface — Voxel3DRig or ExplorerAvatar both work. */
+export interface FighterRig {
+  group: THREE.Group;
+  setPose: (pose: Voxel3DPose) => void;
+  update: (dt: number) => void;
+  play?: (anim: ExplorerAnim) => void;
+}
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -47,7 +56,7 @@ const FRAME_DATA: Record<string, { totalFrames: number; activeStart: number; act
 // ── Fighter Class ──────────────────────────────────────────────
 
 export class ArenaFighter {
-  rig: Voxel3DRig;
+  rig: FighterRig;
   stats: FighterStats;
   hp: number;
   maxHp: number;
@@ -61,7 +70,7 @@ export class ArenaFighter {
 
   private time = 0;
 
-  constructor(rig: Voxel3DRig, stats: FighterStats, isPlayer: boolean, startX: number) {
+  constructor(rig: FighterRig, stats: FighterStats, isPlayer: boolean, startX: number) {
     this.rig = rig;
     this.stats = stats;
     this.isPlayer = isPlayer;
@@ -79,6 +88,15 @@ export class ArenaFighter {
     this.frame = 0;
     this.hasHit = false;
     this.totalFrames = FRAME_DATA[action]?.totalFrames ?? 0;
+
+    // Drive explorer clips when present (TVS / GLB)
+    const play = this.rig.play;
+    if (play) {
+      if (action === 'walk') play('walk');
+      else if (action === 'idle' || action === 'block') play(action === 'block' ? 'block' : 'idle');
+      else if (action === 'hit') play('hit');
+      else play('attack');
+    }
   }
 
   /** Returns active hitbox if currently in active attack frames, null otherwise */

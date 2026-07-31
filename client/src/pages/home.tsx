@@ -308,11 +308,12 @@ export default function Home() {
             </button>
           </div>
 
-          {/* 3D Game Modes */}
+          {/* 3D Game Modes — voxel/TVS explorer avatars + weapon skills */}
           <div className="flex gap-3 mt-3 flex-wrap justify-center">
             <button
               className="flex items-center gap-2 text-xs text-gray-500 hover:text-[#00ffcc] transition-colors cursor-pointer px-3 py-1.5 rounded border border-gray-800 hover:border-[#00ffcc]/40"
               onClick={() => setLocation('/sandbox')}
+              title="Explorer sandbox — build, skills, physics props"
             >
               <LayoutGrid className="w-3.5 h-3.5" />
               <span>Sandbox</span>
@@ -320,6 +321,7 @@ export default function Home() {
             <button
               className="flex items-center gap-2 text-xs text-gray-500 hover:text-[#ff0055] transition-colors cursor-pointer px-3 py-1.5 rounded border border-gray-800 hover:border-[#ff0055]/40"
               onClick={() => setLocation('/arena')}
+              title="1v1 explorer arena fighter"
             >
               <Crosshair className="w-3.5 h-3.5" />
               <span>Arena Fighter</span>
@@ -327,11 +329,15 @@ export default function Home() {
             <button
               className="flex items-center gap-2 text-xs text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer px-3 py-1.5 rounded border border-gray-800 hover:border-[#c5a059]/40"
               onClick={() => setLocation('/dungeon3d')}
+              title="Procedural 3D dungeon with explorer units"
             >
               <Skull className="w-3.5 h-3.5" />
               <span>3D Dungeon</span>
             </button>
           </div>
+          <p className="text-[10px] text-gray-600 text-center mt-1 max-w-md mx-auto">
+            Modes use TVS explorer avatars (GrudgeDot CDN), class weapon skills, and shared combat VFX.
+          </p>
         </div>
 
         {/* Admin button — bottom right corner */}
