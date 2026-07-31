@@ -18,6 +18,15 @@ import { generateGrudgeUUID } from "@/lib/grudge-uuid";
 export const THREEJS_GAMES_CDN =
   "https://threejs-games.github.io/assets/models/character";
 
+/** Preferred production CDN after mirror (ObjectStore script). Falls back to threejs-games. */
+export const CREEP_R2_CDN =
+  "https://assets.grudge-studio.com/models/creeps/threejs-games";
+
+/** Set true after `npm run creeps:mirror` + R2 put ships production keys. */
+export const PREFER_R2_CREEPS =
+  typeof localStorage !== "undefined" &&
+  localStorage.getItem("grudge_creeps_r2") === "1";
+
 export type CreepFaction = "neutral" | "hostile";
 export type CreepFamily = "fantasy" | "horror";
 
@@ -472,8 +481,30 @@ export const ALL_NEUTRAL_CREEPS: NeutralCreepDef[] = [
   ...HORROR_CREEPS,
 ];
 
-export function creepModelUrl(def: NeutralCreepDef): string {
+export function creepModelUrl(def: NeutralCreepDef, preferR2 = PREFER_R2_CREEPS): string {
+  if (preferR2) {
+    return `${CREEP_R2_CDN}/${def.slug}/${def.modelFile}`;
+  }
   return `${THREEJS_GAMES_CDN}/${def.slug}/${def.modelFile}`;
+}
+
+/** Try R2 first, fall back to threejs-games on 404 (async HEAD). */
+export async function resolveCreepModelUrl(def: NeutralCreepDef): Promise<string> {
+  const r2 = creepModelUrl(def, true);
+  try {
+    const res = await fetch(r2, { method: "HEAD", signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      try {
+        localStorage.setItem("grudge_creeps_r2", "1");
+      } catch {
+        /* ignore */
+      }
+      return r2;
+    }
+  } catch {
+    /* fall through */
+  }
+  return creepModelUrl(def, false);
 }
 
 export function pickCreep(
@@ -571,12 +602,25 @@ function groundAndScale(root: THREE.Object3D, heightM: number): void {
 export async function loadCreepMesh(
   def: NeutralCreepDef,
 ): Promise<LoadedCreepMesh> {
-  const url = creepModelUrl(def);
+  const url = await resolveCreepModelUrl(def);
   let template = fbxCache.get(url);
   if (!template) {
-    template = await new Promise<THREE.Group>((resolve, reject) => {
-      loader.load(url, (obj) => resolve(obj as THREE.Group), undefined, reject);
-    });
+    try {
+      template = await new Promise<THREE.Group>((resolve, reject) => {
+        loader.load(url, (obj) => resolve(obj as THREE.Group), undefined, reject);
+      });
+    } catch (err) {
+      // R2 miss → force threejs-games fallback
+      if (url.includes("assets.grudge-studio.com")) {
+        const fb = creepModelUrl(def, false);
+        template = await new Promise<THREE.Group>((resolve, reject) => {
+          loader.load(fb, (obj) => resolve(obj as THREE.Group), undefined, reject);
+        });
+        fbxCache.set(fb, template);
+      } else {
+        throw err;
+      }
+    }
     fbxCache.set(url, template);
   }
 
@@ -660,7 +704,33 @@ export function pushFarmLoot(drops: RolledLoot[]): RolledLoot[] {
     }
   }
   localStorage.setItem(FARM_BAG_KEY, JSON.stringify(bag.slice(-80)));
+  // Side-channel farm stats for home / character UI
+  try {
+    const gold = drops.find((x) => x.kind === "gold")?.qty || 0;
+    const line = formatLootLine(drops);
+    const raw = localStorage.getItem("grudge_farm_stats");
+    const s = raw
+      ? (JSON.parse(raw) as {
+          gold: number;
+          kills: number;
+          byCreep: Record<string, number>;
+          lastLoot: string;
+          updatedAt: number;
+        })
+      : { gold: 0, kills: 0, byCreep: {}, lastLoot: "", updatedAt: 0 };
+    s.gold += gold;
+    s.kills += 1;
+    s.lastLoot = line;
+    s.updatedAt = Date.now();
+    localStorage.setItem("grudge_farm_stats", JSON.stringify(s));
+  } catch {
+    /* ignore */
+  }
   return bag;
+}
+
+export function clearFarmBag(): void {
+  localStorage.removeItem(FARM_BAG_KEY);
 }
 
 export function formatLootLine(drops: RolledLoot[]): string {

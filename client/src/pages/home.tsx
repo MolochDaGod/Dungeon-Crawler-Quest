@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Sword, Shield, Skull, Crown, Settings, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree, Lock } from 'lucide-react';
+import { getFarmStats } from '@/game/game-flow';
+import { getFarmBag } from '@/game/neutral-creeps';
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -245,7 +247,7 @@ export default function Home() {
             <span className="text-base font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>3D DUNGEON</span>
             <span className="text-xs text-gray-400">TPS · Voxel rooms</span>
             <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[160px]">
-              3D rooms with TVS crypt props &amp; heroes.
+              TPS · explorer · soft-lock · farm neutrals (goblin, orc, demon…) for gold &amp; loot.
             </p>
           </button>
         </div>
@@ -336,8 +338,11 @@ export default function Home() {
             </button>
           </div>
           <p className="text-[10px] text-gray-600 text-center mt-1 max-w-md mx-auto">
-            Modes use TVS explorer avatars (GrudgeDot CDN), class weapon skills, and shared combat VFX.
+            Explorers + weapon skills + VFX. 3D Dungeon &amp; Sandbox farm{" "}
+            <strong className="text-gray-500">WC3-style neutrals</strong> (threejs-games creeps)
+            for gold and materials.
           </p>
+          <FarmStatsStrip />
         </div>
 
         {/* Admin button — bottom right corner */}
@@ -478,6 +483,32 @@ export default function Home() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function FarmStatsStrip() {
+  const stats = getFarmStats();
+  const bag = getFarmBag();
+  const goldBag = bag.find((b) => b.id === 'gold')?.qty ?? stats.gold;
+  if (stats.kills <= 0 && goldBag <= 0) {
+    return (
+      <p className="text-[10px] text-gray-700 text-center mt-2">
+        Farm tip: Enter 3D Dungeon → clear neutral camps (goblin, orc, demon…) for gold.
+      </p>
+    );
+  }
+  return (
+    <div className="mt-2 px-3 py-2 rounded border border-gray-800 bg-black/40 text-[11px] text-gray-400 text-center max-w-md mx-auto">
+      <span className="text-[#fbbf24]">Farm gold: {goldBag}</span>
+      <span className="text-gray-600"> · </span>
+      <span>Creep kills: {stats.kills}</span>
+      {stats.lastLoot ? (
+        <>
+          <span className="text-gray-600"> · </span>
+          <span className="text-[#c5a059]">Last: {stats.lastLoot}</span>
+        </>
+      ) : null}
     </div>
   );
 }

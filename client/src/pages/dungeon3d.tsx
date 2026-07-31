@@ -35,6 +35,7 @@ import {
   type NeutralCreepDef,
   type LoadedCreepMesh,
 } from '@/game/neutral-creeps';
+import { setActiveMode, recordFarmKill } from '@/game/game-flow';
 
 // ── Dungeon Room Generator ─────────────────────────────────────
 
@@ -232,6 +233,7 @@ export default function Dungeon3DPage() {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    setActiveMode('dungeon3d');
 
     const canvas = document.createElement('canvas');
     canvas.style.cssText = 'width:100%;height:100%;display:block;cursor:none;';
@@ -506,9 +508,11 @@ export default function Dungeon3DPage() {
           const drops = rollCreepLoot(en.creepDef);
           pushFarmLoot(drops);
           const gold = drops.find((d) => d.kind === 'gold');
+          const goldQty = gold?.qty ?? 0;
           if (gold) setFarmGold((g) => g + gold.qty);
           const line = formatLootLine(drops);
           setLootLine(line);
+          recordFarmKill(en.creepDef.id, goldQty, line);
           showFlash(`${en.creepDef.label.toUpperCase()} · ${line}`, 1.4);
         } else {
           showFlash('KILL', 0.5);

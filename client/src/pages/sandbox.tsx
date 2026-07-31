@@ -17,6 +17,23 @@ import {
   type ModeSkillState,
 } from "@/game/mode-skills";
 import { startSession } from "@/lib/grudge-uuid";
+import {
+  ALL_NEUTRAL_CREEPS,
+  loadCreepMesh,
+  rollCreepLoot,
+  pushFarmLoot,
+  formatLootLine,
+  type LoadedCreepMesh,
+  type NeutralCreepDef,
+} from "@/game/neutral-creeps";
+import { setActiveMode } from "@/game/game-flow";
+
+interface SandboxCreep {
+  loaded: LoadedCreepMesh;
+  def: NeutralCreepDef;
+  hp: number;
+  alive: boolean;
+}
 
 export default function SandboxPage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,11 +46,15 @@ export default function SandboxPage() {
   const [skillLabels, setSkillLabels] = useState<string[]>([]);
   const [cds, setCds] = useState<number[]>([]);
   const [mp, setMp] = useState(100);
+  const [creepCount, setCreepCount] = useState(0);
+  const [farmGold, setFarmGold] = useState(0);
+  const [lootLine, setLootLine] = useState("");
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     startSession();
+    setActiveMode("sandbox");
 
     const canvas = document.createElement("canvas");
     canvas.style.cssText = "width:100%;height:100%;display:block;outline:none;";
@@ -115,6 +136,67 @@ export default function SandboxPage() {
     let animId = 0;
     let time = 0;
     const clock = new THREE.Clock();
+    /** WC3 neutrals for farm testing */
+    const creeps: SandboxCreep[] = [];
+
+    const spawnCreepCamp = async (near: THREE.Vector3) => {
+      const def =
+        ALL_NEUTRAL_CREEPS[
+          Math.floor(Math.random() * ALL_NEUTRAL_CREEPS.length)
+        ]!;
+      try {
+        setStatus(`Spawning ${def.label}…`);
+        const loaded = await loadCreepMesh(def);
+        if (disposed) {
+          loaded.dispose();
+          return;
+        }
+        const ox = near.x + (Math.random() - 0.5) * 6;
+        const oz = near.z + (Math.random() - 0.5) * 6;
+        loaded.group.position.set(ox, 0, oz);
+        scene.add(loaded.group);
+        creeps.push({
+          loaded,
+          def,
+          hp: def.hp,
+          alive: true,
+        });
+        setCreepCount(creeps.filter((c) => c.alive).length);
+        setStatus(`Creep camp: ${def.label} (${creeps.filter((c) => c.alive).length} live)`);
+        vfx.castRing(loaded.group.position, def.color);
+      } catch (e) {
+        console.warn("[sandbox] creep spawn failed", e);
+        setStatus("Creep load failed (CDN/network)");
+      }
+    };
+
+    const hitCreeps = (origin: THREE.Vector3, range: number, dmg: number) => {
+      for (const c of creeps) {
+        if (!c.alive) continue;
+        if (c.loaded.group.position.distanceTo(origin) > range) continue;
+        c.hp -= dmg;
+        vfx.emit(
+          c.loaded.group.position.clone().add(new THREE.Vector3(0, 1, 0)),
+          0xff4422,
+          8,
+          3,
+        );
+        if (c.hp <= 0) {
+          c.alive = false;
+          scene.remove(c.loaded.group);
+          c.loaded.dispose();
+          const drops = rollCreepLoot(c.def);
+          pushFarmLoot(drops);
+          const gold = drops.find((d) => d.kind === "gold");
+          if (gold) setFarmGold((g) => g + gold.qty);
+          const line = formatLootLine(drops);
+          setLootLine(line);
+          setStatus(`Farm: ${c.def.label} · ${line}`);
+          setCreepCount(creeps.filter((x) => x.alive).length);
+          vfx.castRing(c.loaded.group.position, 0xfbbf24);
+        }
+      }
+    };
 
     const boot = async () => {
       setStatus("Loading TVS explorer avatar…");
@@ -129,9 +211,12 @@ export default function SandboxPage() {
       avatar.group.position.set(0, 0, 0);
       scene.add(avatar.group);
       setStatus(
-        `Explorer ready (${avatar.source}) · ${hero.race} ${hero.heroClass}`,
+        `Explorer ready (${avatar.source}) · N = spawn creep camp`,
       );
       setLoading(false);
+
+      // Seed one farm camp for game flow
+      void spawnCreepCamp(new THREE.Vector3(4, 0, -6));
 
       controller = new VoxelController(
         camera,
@@ -141,6 +226,15 @@ export default function SandboxPage() {
         {
           onToolChange: (t) => setTool(t),
           onAttack: (type) => {
+            const origin = avatar!.group.position.clone();
+            vfx.slash(
+              origin,
+              avatar!.group.rotation.y,
+              type === "lmb" ? 0xffe08a : 0xff6622,
+              type === "rmb",
+            );
+            // Farm creeps first (game flow), then sandbox props
+            hitCreeps(origin, type === "lmb" ? 2.4 : 3.0, type === "lmb" ? 18 : 28);
             const dir = new THREE.Vector3();
             camera.getWorldDirection(dir);
             const pos = camera.position.clone().add(dir.multiplyScalar(5));
@@ -156,7 +250,6 @@ export default function SandboxPage() {
                 5,
                 Math.random() * 0xffffff,
               );
-              vfx.slash(avatar!.group.position, avatar!.group.rotation.y, 0xffe08a);
             }
             if (type === "rmb") {
               sandbox.createSphere(
@@ -199,10 +292,11 @@ export default function SandboxPage() {
     void boot();
 
     const onKey = (e: KeyboardEvent) => {
-      // Q is also strafe in controller — hold Shift+Q or use spawn via button later;
-      // toggle menu on Key '`' or 'm'
       if ((e.key === "`" || e.key.toLowerCase() === "m") && e.type === "keydown") {
         setShowSpawnMenu((v) => !v);
+      }
+      if (e.type === "keydown" && e.key.toLowerCase() === "n" && avatar) {
+        void spawnCreepCamp(avatar.group.position.clone());
       }
       if (e.type === "keydown" && e.key === "Escape") setLocation("/");
     };
@@ -240,6 +334,9 @@ export default function SandboxPage() {
         driveExplorerLocomotion(avatar, moving, attacking, time, sprint);
         avatar.update(dt);
       }
+      for (const c of creeps) {
+        if (c.alive) c.loaded.update(dt);
+      }
 
       renderer.render(scene, camera);
       setObjCount(sandbox.objects.length);
@@ -260,6 +357,7 @@ export default function SandboxPage() {
       sandbox.dispose();
       vfx.dispose();
       avatar?.dispose();
+      creeps.forEach((c) => c.loaded.dispose());
       renderer.dispose();
       window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onKey);
@@ -326,10 +424,16 @@ export default function SandboxPage() {
           VOXEL SANDBOX
         </div>
         <div style={{ color: "#aaa", fontSize: 11 }}>{status}</div>
-        <div>Objects: {objCount}</div>
-        <div>Tool: {SandboxTool[tool]} · MP {mp}</div>
+        <div>Objects: {objCount} · Creeps: {creepCount}</div>
+        <div>
+          Tool: {SandboxTool[tool]} · MP {mp} ·{" "}
+          <span style={{ color: "#fbbf24" }}>Gold {farmGold}</span>
+        </div>
+        {lootLine && (
+          <div style={{ color: "#c5a059", fontSize: 10 }}>Loot: {lootLine}</div>
+        )}
         <div style={{ color: "#888", marginTop: 4 }}>
-          WASD · LMB box · RMB ball · 1-4 skills · M spawn · Esc home
+          WASD · LMB hit creeps / box · N creep camp · M props · 1-4 skills · Esc
         </div>
       </div>
 
