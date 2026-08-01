@@ -22,10 +22,21 @@ export const THREEJS_GAMES_CDN =
 export const CREEP_R2_CDN =
   "https://assets.grudge-studio.com/models/creeps/threejs-games";
 
-/** Set true after `npm run creeps:mirror` + R2 put ships production keys. */
-export const PREFER_R2_CREEPS =
-  typeof localStorage !== "undefined" &&
-  localStorage.getItem("grudge_creeps_r2") === "1";
+/**
+ * Prefer R2 first — keys live on assets.grudge-studio.com after creeps:mirror:upload.
+ * Opt out: localStorage grudge_creeps_r2=0
+ * Fleet catalog: https://objectstore.grudge-studio.com/api/v1/neutral-creeps.json
+ */
+export const PREFER_R2_CREEPS = (() => {
+  try {
+    if (typeof localStorage === "undefined") return true;
+    const v = localStorage.getItem("grudge_creeps_r2");
+    if (v === "0" || v === "false") return false;
+    return true;
+  } catch {
+    return true;
+  }
+})();
 
 export type CreepFaction = "neutral" | "hostile";
 export type CreepFamily = "fantasy" | "horror";

@@ -12,6 +12,11 @@ import {
   syncHeroFromStorage,
   type ExplorerAvatar,
 } from "@/game/explorer-avatar";
+import {
+  loadCreepMesh,
+  pickCreep,
+  type LoadedCreepMesh,
+} from "@/game/neutral-creeps";
 import { ModeVfx } from "@/game/mode-vfx";
 import {
   createModeSkills,
@@ -19,6 +24,7 @@ import {
   tryCastSkill,
   skillIndexFromKey,
 } from "@/game/mode-skills";
+import type { FighterRig } from "@/game/arena-fighter";
 
 const RACES = ["Human", "Barbarian", "Dwarf", "Elf", "Orc", "Undead"];
 const CLASSES = ["Warrior", "Mage", "Ranger", "Worg"];
@@ -82,6 +88,7 @@ export default function ArenaPage() {
     let p1: ArenaFighter | null = null;
     let p2: ArenaFighter | null = null;
     let avatars: ExplorerAvatar[] = [];
+    let creepP2: LoadedCreepMesh | null = null;
     let skills = createModeSkills("Human", "Warrior");
     let shakeIntensity = 0;
     let ended = false;
@@ -118,29 +125,64 @@ export default function ArenaPage() {
       scene.add(p1Avatar.group);
       avatars.push(p1Avatar);
 
-      const cpuRace = RACES[Math.floor(Math.random() * RACES.length)];
-      const cpuClass = CLASSES[Math.floor(Math.random() * CLASSES.length)];
-      setStatus(`Loading rival explorer (${cpuRace} ${cpuClass})…`);
-      const p2Avatar = await loadExplorerAvatar({
-        race: cpuRace,
-        heroClass: cpuClass,
-        teamTint: 0xff2244,
-      });
-      if (disposed) {
-        p2Avatar.dispose();
-        return;
-      }
-      scene.add(p2Avatar.group);
-      avatars.push(p2Avatar);
-
+      // ~60% chance: WC3 neutral creep from R2 as rival (else explorer CPU)
+      const useCreep = Math.random() < 0.6;
       const p1Stats: FighterStats = { speed: 1.0, power: 1.0, reach: 1.0 };
-      const p2Stats: FighterStats = { speed: 0.9, power: 1.1, reach: 1.0 };
       p1 = new ArenaFighter(p1Avatar, p1Stats, true, -2);
-      p2 = new ArenaFighter(p2Avatar, p2Stats, false, 2);
 
-      setStatus(
-        `Arena ready · You: ${hero.race} ${hero.heroClass} (${p1Avatar.source}) vs ${cpuRace} ${cpuClass}`,
-      );
+      if (useCreep) {
+        const def = pickCreep();
+        setStatus(`Loading neutral creep (${def.label})…`);
+        try {
+          creepP2 = await loadCreepMesh(def);
+          if (disposed) {
+            creepP2.dispose();
+            return;
+          }
+          scene.add(creepP2.group);
+          const creepRig: FighterRig = {
+            group: creepP2.group,
+            setPose: () => {},
+            update: (dt) => creepP2?.update(dt),
+            play: () => {},
+          };
+          const p2Stats: FighterStats = {
+            speed: Math.min(1.4, def.speed / 2.2),
+            power: Math.min(1.5, def.damage / 10),
+            reach: 1.0,
+          };
+          p2 = new ArenaFighter(creepRig, p2Stats, false, 2);
+          p2.maxHp = def.hp;
+          p2.hp = def.hp;
+          setStatus(
+            `Arena ready · You: ${hero.race} ${hero.heroClass} vs ${def.label} (R2 creep)`,
+          );
+        } catch (e) {
+          console.warn("[arena] creep load failed, explorer fallback", e);
+        }
+      }
+
+      if (!p2) {
+        const cpuRace = RACES[Math.floor(Math.random() * RACES.length)]!;
+        const cpuClass = CLASSES[Math.floor(Math.random() * CLASSES.length)]!;
+        setStatus(`Loading rival explorer (${cpuRace} ${cpuClass})…`);
+        const p2Avatar = await loadExplorerAvatar({
+          race: cpuRace,
+          heroClass: cpuClass,
+          teamTint: 0xff2244,
+        });
+        if (disposed) {
+          p2Avatar.dispose();
+          return;
+        }
+        scene.add(p2Avatar.group);
+        avatars.push(p2Avatar);
+        const p2Stats: FighterStats = { speed: 0.9, power: 1.1, reach: 1.0 };
+        p2 = new ArenaFighter(p2Avatar, p2Stats, false, 2);
+        setStatus(
+          `Arena ready · You: ${hero.race} ${hero.heroClass} (${p1Avatar.source}) vs ${cpuRace} ${cpuClass}`,
+        );
+      }
       setGameState("fighting");
     };
     void boot();
@@ -335,6 +377,7 @@ export default function ArenaPage() {
       clearInterval(timerInterval);
       vfx.dispose();
       avatars.forEach((a) => a.dispose());
+      creepP2?.dispose();
       renderer.dispose();
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);

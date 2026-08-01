@@ -128,28 +128,30 @@ export const GOBLIN_CHARACTER_PACK: AssetPack = {
 };
 
 /**
- * WC3-style neutral creeps — hotlinked from threejs-games.github.io (RigModels personal license).
- * Runtime catalog + loot: client/src/game/neutral-creeps.ts
- * Mirror + bake to R2 before commercial ship.
+ * WC3-style neutral creeps — R2 production (mirrored). Runtime: neutral-creeps.ts
+ * Fleet catalog: objectstore /api/v1/neutral-creeps.json
  */
+const CREEP_R2 = 'https://assets.grudge-studio.com/models/creeps/threejs-games';
 export const THREEJS_GAMES_NEUTRAL_CREEP_PACK: AssetPack = {
   id: 'threejs-games-neutral-creeps',
   name: 'Three.js Games Neutral Creeps',
   description:
-    'Fantasy + horror neutrals for farming camps (demon, goblin, golem, orc, ogre, sorceress, troll, witch, skeleton, zombies). CDN FBX from threejs-games.',
-  basePath: 'https://threejs-games.github.io/assets/models/character',
+    'Fantasy + horror neutrals (R2). Used as dungeon/sandbox/arena enemies.',
+  basePath: CREEP_R2,
   texturePath: '',
   assets: [
-    fbx('tjg-demon', 'Demon', 'https://threejs-games.github.io/assets/models/character/demon/model.fbx', 'character', ['neutral', 'creep', 'fantasy', 'farm'], 0.01),
-    fbx('tjg-goblin', 'Goblin', 'https://threejs-games.github.io/assets/models/character/goblin/model.fbx', 'character', ['neutral', 'creep', 'fantasy', 'farm'], 0.01),
-    fbx('tjg-golem', 'Golem', 'https://threejs-games.github.io/assets/models/character/golem/model.fbx', 'character', ['neutral', 'creep', 'fantasy', 'farm'], 0.01),
-    fbx('tjg-orc', 'Orc', 'https://threejs-games.github.io/assets/models/character/orc/model.fbx', 'character', ['neutral', 'creep', 'fantasy', 'farm'], 0.01),
-    fbx('tjg-orc-ogre', 'Orc Ogre', 'https://threejs-games.github.io/assets/models/character/orc-ogre/model.fbx', 'character', ['neutral', 'creep', 'fantasy', 'farm'], 0.01),
-    fbx('tjg-sorceress', 'Sorceress', 'https://threejs-games.github.io/assets/models/character/sorceress/model.fbx', 'character', ['neutral', 'creep', 'fantasy', 'farm'], 0.01),
-    fbx('tjg-troll', 'Troll', 'https://threejs-games.github.io/assets/models/character/troll/model.fbx', 'character', ['neutral', 'creep', 'fantasy', 'farm'], 0.01),
-    fbx('tjg-witch', 'Witch', 'https://threejs-games.github.io/assets/models/character/witch/model.fbx', 'character', ['neutral', 'creep', 'fantasy', 'farm'], 0.01),
-    fbx('tjg-skeleton', 'Skeleton', 'https://threejs-games.github.io/assets/models/character/skeleton/model.fbx', 'character', ['neutral', 'creep', 'horror', 'farm'], 0.01),
-    fbx('tjg-zombie', 'Zombie', 'https://threejs-games.github.io/assets/models/character/zombie/zombie-barefoot.fbx', 'character', ['neutral', 'creep', 'horror', 'farm'], 0.01),
+    fbx('tjg-demon', 'Demon', `${CREEP_R2}/demon/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-goblin', 'Goblin', `${CREEP_R2}/goblin/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-golem', 'Golem', `${CREEP_R2}/golem/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-orc', 'Orc', `${CREEP_R2}/orc/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-orc-ogre', 'Orc Ogre', `${CREEP_R2}/orc-ogre/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-sorceress', 'Sorceress', `${CREEP_R2}/sorceress/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-troll', 'Troll', `${CREEP_R2}/troll/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-witch', 'Witch', `${CREEP_R2}/witch/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-skeleton', 'Skeleton', `${CREEP_R2}/skeleton/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'horror'], 0.01),
+    fbx('tjg-zombie', 'Zombie', `${CREEP_R2}/zombie/zombie-barefoot.fbx`, 'character', ['neutral', 'creep', 'enemy', 'horror'], 0.01),
+    fbx('tjg-zombie-cop', 'Zombie Cop', `${CREEP_R2}/zombie/zombie-cop.fbx`, 'character', ['neutral', 'creep', 'enemy', 'horror'], 0.01),
+    fbx('tjg-zombie-guard', 'Zombie Guard', `${CREEP_R2}/zombie/zombie-guard.fbx`, 'character', ['neutral', 'creep', 'enemy', 'horror'], 0.01),
   ],
 };
 

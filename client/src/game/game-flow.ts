@@ -60,8 +60,8 @@ export const GAME_MODES: GameModeDef[] = [
     id: "arena_fighter",
     label: "Arena Fighter",
     route: "/arena",
-    blurb: "1v1 explorer fighters.",
-    features: ["explorer", "melee"],
+    blurb: "1v1 explorer vs explorer or R2 neutral creep.",
+    features: ["explorer", "melee", "neutral-creeps"],
   },
 ];
 
