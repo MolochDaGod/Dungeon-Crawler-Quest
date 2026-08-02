@@ -12,16 +12,17 @@
  */
 
 import type { EquipmentInstance, EquipSlot } from './equipment';
+import { getBaseUrl, getIconUrl as _getIconUrl } from '@/lib/grudge-objectstore';
 
-// ── ObjectStore base URL ───────────────────────────────────────
+// ── ObjectStore base URL (resolved dynamically via grudge-objectstore) ──
 
+export { getBaseUrl as OS_BASE_FN };
+/** @deprecated Use getBaseUrl() from grudge-objectstore for dynamic resolution */
 export const OS_BASE = 'https://molochdagod.github.io/ObjectStore';
 
-/** Resolve a spritePath (e.g. /icons/weapons/swords/blade.png) to full URL */
+/** Resolve a spritePath to full CDN URL (routes through R2 when available) */
 export function getIconUrl(spritePath: string | null | undefined): string | null {
-  if (!spritePath) return null;
-  if (spritePath.startsWith('http')) return spritePath;
-  return `${OS_BASE}${spritePath}`;
+  return _getIconUrl(spritePath);
 }
 
 // ── Raw ObjectStore types ──────────────────────────────────────
@@ -200,11 +201,12 @@ export async function loadGrudgeItems(): Promise<void> {
   _reg.loading = true;
 
   try {
+    const base = getBaseUrl();
     const [wRes, aRes, cRes, mRes] = await Promise.all([
-      fetch(`${OS_BASE}/api/v1/weapons.json`),
-      fetch(`${OS_BASE}/api/v1/armor.json`),
-      fetch(`${OS_BASE}/api/v1/consumables.json`),
-      fetch(`${OS_BASE}/api/v1/materials.json`),
+      fetch(`${base}/api/v1/weapons.json`),
+      fetch(`${base}/api/v1/armor.json`),
+      fetch(`${base}/api/v1/consumables.json`),
+      fetch(`${base}/api/v1/materials.json`),
     ]);
 
     if (wRes.ok) {

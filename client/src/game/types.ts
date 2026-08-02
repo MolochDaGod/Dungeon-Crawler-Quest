@@ -142,6 +142,8 @@ export interface MobaHero extends GameEntity {
   auraModifiers?: import('./aura-system').AuraStatModifiers;
 }
 
+export type MinionAnimState = 'idle' | 'walk' | 'attack' | 'hurt' | 'dead';
+
 export interface MobaMinion extends GameEntity {
   lane: number;
   waypointIndex: number;
@@ -154,6 +156,12 @@ export interface MobaMinion extends GameEntity {
   minionType: 'melee' | 'ranged' | 'siege' | 'super';
   facing: number;
   animTimer: number;
+  /** Presentation state for voxel animations */
+  animState: MinionAnimState;
+  /** Seconds remaining on hurt flash / flinch */
+  hurtTimer: number;
+  /** Seconds remaining of corpse / death pose before despawn */
+  deathTimer: number;
   goldValue: number;
   xpValue: number;
   attackWindup: number;
@@ -302,6 +310,8 @@ export interface MobaState {
   killFeed: { text: string; color: string; time: number }[];
   terrainMap: number[][];
   decorations: { x: number; y: number; type: string; seed: number }[];
+  /** Optional map-editor top/mid/bot paths (minions use these when all 3 are valid). */
+  laneWaypoints?: Vec2[][];
   cursorMode: 'default' | 'attack' | 'ability' | 'move' | 'attackmove';
   hoveredEntityId: number | null;
   aKeyHeld: boolean;

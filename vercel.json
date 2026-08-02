@@ -3,7 +3,20 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/api/characters/:path*", "destination": "https://api.grudge-studio.com/api/characters/:path*" },
+    { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
+    { "source": "/api/assets/:path*", "destination": "https://assets.grudge-studio.com/:path*" },
+    { "source": "/api/game/:path*", "destination": "https://api.grudge-studio.com/api/:path*" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "frame-ancestors 'self' https://id.grudge-studio.com https://*.grudge-studio.com" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
   ]
 }

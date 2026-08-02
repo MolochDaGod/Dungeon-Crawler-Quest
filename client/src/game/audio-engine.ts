@@ -59,7 +59,8 @@ function saveSettings(s: AudioSettings): void {
 
 const SFX_BASE = '/assets/audio/sfx';
 const MUSIC_BASE = '/assets/audio/music';
-const OS = 'https://molochdagod.github.io/ObjectStore';
+import { getBaseUrl } from '@/lib/grudge-objectstore';
+const OS = getBaseUrl();
 
 export const SOUND_REGISTRY: SoundDef[] = [
   // ── Combat SFX ──

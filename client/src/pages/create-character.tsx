@@ -15,16 +15,11 @@ import { findBestHeroModel } from '@/game/player-characters';
 import { mintAndTrack, type MintResult } from '@/game/cnft-mint';
 import { addToCharacterList } from '@/game/shared-character-state';
 
-// Inline Grudge auth helper (from src/utils/grudge-auth.js — outside vite root)
+import { getCurrentUser } from '@/lib/grudgeBackend';
+import * as grudgeCharacters from '@/lib/grudgeCharacters';
+
 function getGrudgeUser() {
-  const token = localStorage.getItem('grudge_auth_token');
-  if (!token) return null;
-  return {
-    token,
-    userId: localStorage.getItem('grudge_user_id') || null,
-    grudgeId: localStorage.getItem('grudge_id') || null,
-    username: localStorage.getItem('grudge_username') || 'Player',
-  };
+  return getCurrentUser();
 }
 
 /* ── Constants ── */
@@ -69,7 +64,8 @@ const CLASS_BASE_STATS: Record<string, { hp: number; atk: number; def: number; s
 };
 
 // ObjectStore CDN icon base for weapon types
-const OS_ICON = 'https://molochdagod.github.io/ObjectStore/icons/weapons';
+import { getBaseUrl } from '@/lib/grudge-objectstore';
+const OS_ICON = `${getBaseUrl()}/icons/weapons`;
 
 // Fallback placeholder for missing weapon icons
 const WEAPON_ICON_FALLBACK = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect fill="%23222" width="48" height="48" rx="6"/><text x="24" y="30" text-anchor="middle" font-size="20" fill="%23666">⚔</text></svg>';
@@ -199,7 +195,7 @@ export default function CreateCharacter() {
 
       // Get account info from Grudge auth
       const grudgeUser = getGrudgeUser();
-      const accountId = grudgeUser?.grudgeId || grudgeUser?.userId || localStorage.getItem('grudge_id') || 'local';
+      const accountId = grudgeUser?.grudgeId || grudgeUser?.username || localStorage.getItem('grudge_id') || 'local';
 
       // Find the best body model for race+class combo
       const modelIndex = findBestHeroModel(race, heroClass);
@@ -219,10 +215,28 @@ export default function CreateCharacter() {
       const newHero = playerCharacterToHeroData(character);
       newHero.equippedWeaponId = weapon;
 
-      // Save to localStorage
+      // Persist to Grudge backend (API-first, localStorage cache)
+      await grudgeCharacters.create({
+        name: name.trim(),
+        race,
+        heroClass,
+        faction,
+        level: 1,
+        xp: 0,
+        attributes: attrs.base,
+        equipment: {},
+        weaponType: weapon,
+        avatarUrl: avatarUrl || null,
+        _localOnly: false,
+      });
+
+      // Also save to legacy localStorage keys so existing game code works
       localStorage.setItem('grudge_hero_id', String(newHero.id));
       localStorage.setItem('grudge_team', '0');
       localStorage.setItem('grudge_custom_hero', JSON.stringify(newHero));
+      localStorage.setItem('grudge_hero_race', race);
+      localStorage.setItem('grudge_hero_class', heroClass);
+      localStorage.setItem('grudge_hero_name', name.trim());
       localStorage.setItem('grudge_avatar_url', avatarUrl || '');
       localStorage.setItem('grudge_character_weapon', weapon);
       saveAttributes(attrs);
@@ -256,7 +270,7 @@ export default function CreateCharacter() {
         faction,
         level: 1,
         imageUrl: avatarUrl,
-        recipientEmail: grudgeUser?.userId?.includes('@') ? grudgeUser.userId : undefined,
+        recipientEmail: grudgeUser?.username?.includes('@') ? grudgeUser.username : undefined,
       }, (mintResult: MintResult) => {
         if (mintResult.success && mintResult.mintAddress) {
           console.log(`[cNFT] Character minted: ${mintResult.mintAddress}`);
@@ -265,13 +279,8 @@ export default function CreateCharacter() {
         }
       });
 
-      // Route to the correct game mode (don't wait for mint)
-      const mode = localStorage.getItem('grudge_mode') || 'arena';
-      if (mode === 'openworld') {
-        setLocation('/open-world-play');
-      } else {
-        setLocation('/game');
-      }
+      // After create, land on account select so player can pick this (or other) heroes
+      setLocation('/character-select');
     } catch (err: any) {
       console.error('[CreateChar] Error:', err);
       setCreateError(err?.message || 'Failed to create character');

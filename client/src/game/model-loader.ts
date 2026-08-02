@@ -24,6 +24,12 @@ export function getTexture(path: string): THREE.Texture {
   if (textureCache.has(path)) return textureCache.get(path)!;
   const tex = textureLoader.load(path);
   tex.colorSpace = THREE.SRGBColorSpace;
+  // Voxel atlases (TVS PNG) — crisp pixels
+  if (path.includes('voxels/tvs') || path.endsWith('.png')) {
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+  }
   textureCache.set(path, tex);
   return tex;
 }

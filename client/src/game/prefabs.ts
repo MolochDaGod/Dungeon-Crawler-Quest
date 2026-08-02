@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TVS_MOBA, USE_TVS_CDN, tvsHeroPrefab } from '@/lib/tvs-cdn';
 
 export interface PrefabConfig {
   modelPath: string;
@@ -10,31 +11,59 @@ export interface PrefabConfig {
   format?: 'glb' | 'fbx';
 }
 
+/** Local legacy tower paths (fallback when TVS CDN disabled). */
+const LOCAL_TOWER_ARCHER = {
+  modelPath: '/assets/models/towers/archer_tower_1.fbx',
+  texturePath: '/assets/textures/tower_texture.png',
+  scale: 0.025,
+  offset: new THREE.Vector3(0, 0, 0),
+};
+const LOCAL_TOWER_CANNON = {
+  modelPath: '/assets/models/towers/cannon_tower_1.fbx',
+  texturePath: '/assets/textures/tower_texture.png',
+  scale: 0.025,
+  offset: new THREE.Vector3(0, 0, 0),
+};
+const LOCAL_TOWER_WIZARD = {
+  modelPath: '/assets/models/towers/wizard_tower_1.fbx',
+  texturePath: '/assets/textures/tower_texture.png',
+  scale: 0.025,
+  offset: new THREE.Vector3(0, 0, 0),
+};
+const LOCAL_TOWER_POISON = {
+  modelPath: '/assets/models/towers/poison_tower_1.fbx',
+  texturePath: '/assets/textures/tower_texture.png',
+  scale: 0.025,
+  offset: new THREE.Vector3(0, 0, 0),
+};
+
+/** TVS CDN knights/rangers/wizards towers — preferred for MOBA top-down. */
+function tvsTower(kind: 'archer' | 'cannon' | 'wizard' | 'poison'): PrefabConfig {
+  if (!USE_TVS_CDN) {
+    if (kind === 'archer') return { ...LOCAL_TOWER_ARCHER };
+    if (kind === 'cannon') return { ...LOCAL_TOWER_CANNON };
+    if (kind === 'wizard') return { ...LOCAL_TOWER_WIZARD };
+    return { ...LOCAL_TOWER_POISON };
+  }
+  const src =
+    kind === 'wizard' ? TVS_MOBA.wizardTower :
+    kind === 'archer' ? TVS_MOBA.rangerTower :
+    kind === 'cannon' ? TVS_MOBA.towerDoor :
+    TVS_MOBA.tower;
+  return {
+    modelPath: src.modelPath,
+    texturePath: src.texturePath,
+    scale: src.scale,
+    offset: new THREE.Vector3(0, 0, 0),
+    format: 'fbx',
+  };
+}
+
 export const TOWER_PREFABS: Record<string, PrefabConfig> = {
-  archer: {
-    modelPath: '/assets/models/towers/archer_tower_1.fbx',
-    texturePath: '/assets/textures/tower_texture.png',
-    scale: 0.025,
-    offset: new THREE.Vector3(0, 0, 0),
-  },
-  cannon: {
-    modelPath: '/assets/models/towers/cannon_tower_1.fbx',
-    texturePath: '/assets/textures/tower_texture.png',
-    scale: 0.025,
-    offset: new THREE.Vector3(0, 0, 0),
-  },
-  wizard: {
-    modelPath: '/assets/models/towers/wizard_tower_1.fbx',
-    texturePath: '/assets/textures/tower_texture.png',
-    scale: 0.025,
-    offset: new THREE.Vector3(0, 0, 0),
-  },
-  poison: {
-    modelPath: '/assets/models/towers/poison_tower_1.fbx',
-    texturePath: '/assets/textures/tower_texture.png',
-    scale: 0.025,
-    offset: new THREE.Vector3(0, 0, 0),
-  },
+  archer: tvsTower('archer'),
+  cannon: tvsTower('cannon'),
+  wizard: tvsTower('wizard'),
+  poison: tvsTower('poison'),
   flamethrower: {
     modelPath: '/assets/models/turrets/Flamethrower_Turret.glb',
     scale: 0.4,
@@ -106,7 +135,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  human_worg: {
+  human_worge: {
     modelPath: '/assets/models/characters/berserker.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -134,7 +163,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  barbarian_worg: {
+  barbarian_worge: {
     modelPath: '/assets/models/characters/humandeathgiver.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -162,7 +191,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  dwarf_worg: {
+  dwarf_worge: {
     modelPath: '/assets/models/characters/Character_Toon_Animated.glb',
     scale: 0.006,
     offset: new THREE.Vector3(0, 0, 0),
@@ -190,7 +219,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  elf_worg: {
+  elf_worge: {
     modelPath: '/assets/models/characters/Animated_Woman.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -218,7 +247,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  orc_worg: {
+  orc_worge: {
     modelPath: '/assets/models/characters/orcpeon.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -246,7 +275,7 @@ export const HERO_PREFABS: Record<string, PrefabConfig> = {
     format: 'glb',
     animations: SHARED_ANIMS,
   },
-  undead_worg: {
+  undead_worge: {
     modelPath: '/assets/models/characters/undeadworker.glb',
     scale: 0.008,
     offset: new THREE.Vector3(0, 0, 0),
@@ -405,23 +434,48 @@ export const MINION_PREFABS: Record<string, PrefabConfig> = {
 };
 
 export const ENV_PREFABS: Record<string, PrefabConfig> = {
-  castle: { modelPath: '/assets/models/environment/Castle.glb', scale: 0.5, offset: new THREE.Vector3(0, 0, 0) },
-  fortress: { modelPath: '/assets/models/environment/Fortress.glb', scale: 0.3, offset: new THREE.Vector3(0, 0, 0) },
+  // Prefer TVS keep/castle when CDN enabled (MOBA nexus + open-world fortresses)
+  castle: USE_TVS_CDN
+    ? { modelPath: TVS_MOBA.keep.modelPath, texturePath: TVS_MOBA.keep.texturePath, scale: TVS_MOBA.keep.scale, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/Castle.glb', scale: 0.5, offset: new THREE.Vector3(0, 0, 0) },
+  fortress: USE_TVS_CDN
+    ? { modelPath: TVS_MOBA.keep.modelPath, texturePath: TVS_MOBA.keep.texturePath, scale: TVS_MOBA.keep.scale * 0.9, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/Fortress.glb', scale: 0.3, offset: new THREE.Vector3(0, 0, 0) },
   tree: { modelPath: '/assets/models/environment/Tree.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
   rock: { modelPath: '/assets/models/environment/Rock.glb', scale: 0.1, offset: new THREE.Vector3(0, 0, 0) },
   mountain: { modelPath: '/assets/models/environment/Mountain.glb', scale: 0.3, offset: new THREE.Vector3(0, 0, 0) },
-  bridge: { modelPath: '/assets/models/environment/Bridge.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
+  bridge: USE_TVS_CDN
+    ? { modelPath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-knights/environment/voxel-knights-bridge.fbx', texturePath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-knights/textures/voxel-knights-bridge-texture.png', scale: 0.012, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/Bridge.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
   well: { modelPath: '/assets/models/environment/Well.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
-  campfire: { modelPath: '/assets/models/environment/Campfire.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
+  campfire: USE_TVS_CDN
+    ? { modelPath: TVS_MOBA.campfire.modelPath, texturePath: TVS_MOBA.campfire.texturePath, scale: TVS_MOBA.campfire.scale, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/Campfire.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
   camp_fire_glb: { modelPath: '/assets/models/environment/Camp_Fire.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
-  tent: { modelPath: '/assets/models/environment/Tent.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
+  tent: USE_TVS_CDN
+    ? { modelPath: TVS_MOBA.tent.modelPath, texturePath: TVS_MOBA.tent.texturePath, scale: TVS_MOBA.tent.scale, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/Tent.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
   shrine: { modelPath: '/assets/models/environment/Shrine.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
-  banner: { modelPath: '/assets/models/environment/Banner.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
+  banner: USE_TVS_CDN
+    ? { modelPath: TVS_MOBA.banner.modelPath, texturePath: TVS_MOBA.banner.texturePath, scale: TVS_MOBA.banner.scale, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/Banner.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
   torch: { modelPath: '/assets/models/environment/Torch.glb', scale: 0.12, offset: new THREE.Vector3(0, 0, 0) },
-  statue: { modelPath: '/assets/models/environment/Statue.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
-  marketStalls: { modelPath: '/assets/models/environment/MarketStalls.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
-  villageMarket: { modelPath: '/assets/models/environment/VillageMarket.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
-  chest: { modelPath: '/assets/models/environment/Chest.glb', scale: 0.1, offset: new THREE.Vector3(0, 0, 0) },
+  statue: USE_TVS_CDN
+    ? { modelPath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-cathedral/environment/voxel-cathedral-statue.fbx', texturePath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-cathedral/textures/voxel-cathedral-statue-texture.png', scale: 0.015, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/Statue.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0) },
+  marketStalls: USE_TVS_CDN
+    ? { modelPath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-village/environment/voxel-village-stall.fbx', texturePath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-village/textures/voxel-village-stall-texture.png', scale: 0.015, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/MarketStalls.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
+  villageMarket: USE_TVS_CDN
+    ? { modelPath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-village/environment/voxel-village-shop.fbx', texturePath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-village/textures/voxel-village-shop-texture.png', scale: 0.012, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/VillageMarket.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
+  chest: USE_TVS_CDN
+    ? { modelPath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-knights/environment/voxel-knights-chest.fbx', texturePath: 'https://assets.grudge-studio.com/models/voxels/tvs/voxel-knights/textures/voxel-knights-chest-texture.png', scale: 0.02, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' }
+    : { modelPath: '/assets/models/environment/Chest.glb', scale: 0.1, offset: new THREE.Vector3(0, 0, 0) },
+  // Explicit TVS keys for map admin / world editor
+  tvs_keep: { modelPath: TVS_MOBA.keep.modelPath, texturePath: TVS_MOBA.keep.texturePath, scale: TVS_MOBA.keep.scale, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' },
+  tvs_tower: { modelPath: TVS_MOBA.tower.modelPath, texturePath: TVS_MOBA.tower.texturePath, scale: TVS_MOBA.tower.scale, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' },
+  tvs_gate: { modelPath: TVS_MOBA.gate.modelPath, texturePath: TVS_MOBA.gate.texturePath, scale: TVS_MOBA.gate.scale, offset: new THREE.Vector3(0, 0, 0), format: 'fbx' },
   portalDoor: { modelPath: '/assets/models/environment/PortalDoor.glb', scale: 0.2, offset: new THREE.Vector3(0, 0, 0) },
   sail_ship: { modelPath: '/assets/models/props/Sail_Ship.glb', scale: 0.15, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
   sail_boat: { modelPath: '/assets/models/props/Sail_Boat.glb', scale: 0.1, offset: new THREE.Vector3(0, 0, 0), format: 'glb' },
@@ -481,9 +535,37 @@ export function getHeroPrefabKey(race: string, heroClass: string, heroName?: str
     const lowerName = heroName.toLowerCase();
     if (lowerName.includes('racalvin') || lowerName.includes('pirate')) return 'racalvin';
   }
+  // Prefer TVS class skin key when CDN enabled
+  if (USE_TVS_CDN) {
+    const cls = (heroClass || 'warrior').toLowerCase();
+    const tvsKey = `tvs_${cls}`;
+    if (HERO_PREFABS[tvsKey]) return tvsKey;
+  }
   const key = `${race.toLowerCase()}_${heroClass.toLowerCase()}`;
   if (HERO_PREFABS[key]) return key;
   return 'human_warrior';
+}
+
+// Inject TVS hero prefabs (class-based) for MOBA / top-down
+if (USE_TVS_CDN) {
+  for (const cls of ['warrior', 'ranger', 'mage', 'worge', 'melee', 'ranged', 'magic', 'paladin', 'priest']) {
+    const p = tvsHeroPrefab(cls);
+    HERO_PREFABS[`tvs_${cls}`] = {
+      modelPath: p.modelPath,
+      texturePath: p.texturePath,
+      scale: p.scale,
+      offset: new THREE.Vector3(0, 0, 0),
+      format: 'fbx',
+      animations: SHARED_ANIMS,
+    };
+  }
+  // Also alias common race_class keys to TVS for live MOBA
+  for (const race of ['human', 'barbarian', 'dwarf', 'elf', 'orc', 'undead']) {
+    HERO_PREFABS[`${race}_warrior`] = { ...HERO_PREFABS.tvs_warrior };
+    HERO_PREFABS[`${race}_ranger`] = { ...HERO_PREFABS.tvs_ranger };
+    HERO_PREFABS[`${race}_mage`] = { ...HERO_PREFABS.tvs_mage };
+    HERO_PREFABS[`${race}_worge`] = { ...HERO_PREFABS.tvs_worge };
+  }
 }
 
 export function getMinionPrefabKey(minionType: string, team: number): string {
@@ -504,7 +586,7 @@ export function getJungleMobPrefab(mobType: string): string {
 export function getWeaponForClass(heroClass: string): string {
   switch (heroClass.toLowerCase()) {
     case 'warrior': return 'sword';
-    case 'worg': return 'axe';
+    case 'worge': return 'axe';
     case 'mage': return 'staff';
     case 'ranger': return 'bow';
     default: return 'sword';
@@ -512,7 +594,7 @@ export function getWeaponForClass(heroClass: string): string {
 }
 
 /**
- * Get the bear form prefab key for Worg shapeshifts.
+ * Get the bear form prefab key for Worge shapeshifts.
  * Always returns 'owlbear' — the per-race color tint is applied
  * after loading via owlbear-form.ts applyBearTintThree/Babylon.
  */

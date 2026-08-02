@@ -1,5 +1,5 @@
 {
-  "name": "dungeon-crawler-quest",
+  "name": "grudge-2d-mmo",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
@@ -9,7 +9,8 @@
     "preview": "vite preview --config vite.config.ts",
     "check": "tsc",
     "sprite-audit": "node scripts/sprite-audit.mjs",
-    "sprite-fix": "node scripts/sprite-audit.mjs --fix"
+    "sprite-fix": "node scripts/sprite-audit.mjs --fix",
+    "metrics:deploy": "node scripts/deployment-metrics.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^9.0.0",
@@ -20,6 +21,7 @@
     "@babylonjs/materials": "^9.0.0",
     "@babylonjs/post-processes": "^9.0.0",
     "@babylonjs/serializers": "^9.0.0",
+    "@dimforge/rapier3d-compat": "^0.14.0",
     "@flatten-js/core": "^1.6.10",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
@@ -102,6 +104,14 @@
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0"
   },
+  "overrides": {
+    "undici": ">=6.24.0",
+    "path-to-regexp": ">=6.3.0",
+    "minimatch": ">=10.2.3",
+    "ajv": ">=8.18.0",
+    "smol-toml": ">=1.6.1",
+    "got": ">=11.8.5"
+  },
   "devDependencies": {
     "@gltf-transform/core": "^4.3.0",
     "@gltf-transform/extensions": "^4.3.0",
@@ -119,6 +129,7 @@
     "autoprefixer": "^10.4.20",
     "collada2gltf": "^0.0.0",
     "esbuild": "^0.25.0",
+    "fbx2gltf": "^0.9.7-p1",
     "gltf-pipeline": "^4.3.0",
     "obj2gltf": "^3.2.0",
     "postcss": "^8.4.47",

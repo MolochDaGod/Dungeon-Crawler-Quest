@@ -16,6 +16,7 @@ import {
   SG_ENVIRONMENT_PACK,
   HIGHLAND_BUILDINGS_PACK,
 } from './elf-asset-packs';
+import { GRUDGE_LEGACY_PACKS } from './grudge-legacy-packs';
 
 const P = '/assets/packs';
 
@@ -123,6 +124,34 @@ export const GOBLIN_CHARACTER_PACK: AssetPack = {
     gltf('gc-basic-goblin', 'Basic Goblin', `${GC}/goblins/Basic_Goblin.glb`, 'character', ['enemy', 'goblin', 'camp'], 1),
     gltf('gc-goblin-archer', 'Goblin Archer', `${GC}/goblins/Goblin_Archer.glb`, 'character', ['enemy', 'goblin', 'archer', 'camp'], 1),
     gltf('gc-goblin-warrior', 'Goblin Warrior', `${GC}/goblins/Goblin_Warrior.glb`, 'character', ['enemy', 'goblin', 'warrior', 'camp'], 1),
+  ],
+};
+
+/**
+ * WC3-style neutral creeps — R2 production (mirrored). Runtime: neutral-creeps.ts
+ * Fleet catalog: objectstore /api/v1/neutral-creeps.json
+ */
+const CREEP_R2 = 'https://assets.grudge-studio.com/models/creeps/threejs-games';
+export const THREEJS_GAMES_NEUTRAL_CREEP_PACK: AssetPack = {
+  id: 'threejs-games-neutral-creeps',
+  name: 'Three.js Games Neutral Creeps',
+  description:
+    'Fantasy + horror neutrals (R2). Used as dungeon/sandbox/arena enemies.',
+  basePath: CREEP_R2,
+  texturePath: '',
+  assets: [
+    fbx('tjg-demon', 'Demon', `${CREEP_R2}/demon/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-goblin', 'Goblin', `${CREEP_R2}/goblin/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-golem', 'Golem', `${CREEP_R2}/golem/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-orc', 'Orc', `${CREEP_R2}/orc/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-orc-ogre', 'Orc Ogre', `${CREEP_R2}/orc-ogre/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-sorceress', 'Sorceress', `${CREEP_R2}/sorceress/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-troll', 'Troll', `${CREEP_R2}/troll/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-witch', 'Witch', `${CREEP_R2}/witch/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'fantasy'], 0.01),
+    fbx('tjg-skeleton', 'Skeleton', `${CREEP_R2}/skeleton/model.fbx`, 'character', ['neutral', 'creep', 'enemy', 'horror'], 0.01),
+    fbx('tjg-zombie', 'Zombie', `${CREEP_R2}/zombie/zombie-barefoot.fbx`, 'character', ['neutral', 'creep', 'enemy', 'horror'], 0.01),
+    fbx('tjg-zombie-cop', 'Zombie Cop', `${CREEP_R2}/zombie/zombie-cop.fbx`, 'character', ['neutral', 'creep', 'enemy', 'horror'], 0.01),
+    fbx('tjg-zombie-guard', 'Zombie Guard', `${CREEP_R2}/zombie/zombie-guard.fbx`, 'character', ['neutral', 'creep', 'enemy', 'horror'], 0.01),
   ],
 };
 
@@ -679,6 +708,9 @@ export const MEDIEVAL_PROPS_PACK: AssetPack = {
 
 // ── Elf / Fabled Shore Packs (Zone 2) ──────────────────────────
 // (imported at top of file from './elf-asset-packs')
+
+// ── GRUDGE Legacy Packs (from Unity FRESH GRUDGE project) ────
+// (imported at top of file from './grudge-legacy-packs')
 export {
   ENCHANTED_FOREST_PACK,
   ELF_WEAPON_PACK,
@@ -716,9 +748,12 @@ export const ALL_ASSET_PACKS: AssetPack[] = [
   GOLEM_CHARACTER_PACK,
   BANDIT_CHARACTER_PACK,
   GOBLIN_CHARACTER_PACK,
+  THREEJS_GAMES_NEUTRAL_CREEP_PACK,
   VILLAGER_CHARACTER_PACK,
   // Elf / Fabled Shore (Zone 2) packs
   ...ELF_ASSET_PACKS,
+  // GRUDGE Legacy (Unity FRESH GRUDGE conversion)
+  ...GRUDGE_LEGACY_PACKS,
 ];
 
 /** Flat list of every asset for quick lookups */

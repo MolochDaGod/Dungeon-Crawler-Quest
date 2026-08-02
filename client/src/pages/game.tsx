@@ -24,7 +24,7 @@ import { ensurePixelGothicLoaded, EVENT_BANNERS } from '@/game/combat-popups';
 import { initGLBSprites } from '@/game/babylon-glb-sprites';
 import { MouseTargetingManager } from '@/game/mouse-targeting';
 import { PhysicsWorld, createPhysicsWorld } from '@/game/physics';
-import { ensurePlayerHeroLoaded, getPlayerHeroSync } from '@/game/player-account';
+import { ensurePlayerHeroLoaded, ensureDefaultStarterHero, getPlayerHeroSync } from '@/game/player-account';
 import {
   SKILL_TREES, MobaSkillLoadout, createDefaultMobaLoadout,
   buildAbilitiesFromMobaLoadout, getHudOrderAbilities, hudIndexToAbilityIndex,
@@ -181,24 +181,48 @@ export default function GamePage() {
   const [eventBanner, setEventBanner] = useState<string | null>(null);
   const bannerDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const heroId = parseInt(localStorage.getItem('grudge_hero_id') || '-1');
-  const team = parseInt(localStorage.getItem('grudge_team') || '0');
   const [heroReady, setHeroReady] = useState(false);
+  const [bootHeroId, setBootHeroId] = useState(() => parseInt(localStorage.getItem('grudge_hero_id') || '-1', 10));
+  const team = parseInt(localStorage.getItem('grudge_team') || '0');
 
-  // Ensure custom character is registered in HEROES[] before game boots
+  // Ensure custom character is registered in HEROES[] before game boots.
+  // Always yields a playable hero (starter seeded if nothing saved).
   useEffect(() => {
-    ensurePlayerHeroLoaded().then(() => setHeroReady(true));
+    ensurePlayerHeroLoaded()
+      .then((hd) => {
+        if (hd) {
+          localStorage.setItem('grudge_hero_id', String(hd.id));
+          setBootHeroId(hd.id);
+        }
+        setHeroReady(true);
+      })
+      .catch(() => {
+        // Last-resort seed so we never bounce the player out
+        try {
+          const hd = ensureDefaultStarterHero();
+          setBootHeroId(hd.id);
+        } catch { /* ignore */ }
+        setHeroReady(true);
+      });
   }, []);
 
   useEffect(() => {
     if (!heroReady) return;
-    if (heroId < 0) {
-      setLocation('/');
-      return;
+    // Re-read after ensurePlayerHeroLoaded (bootHeroId tracks React state too)
+    let resolvedHeroId = parseInt(localStorage.getItem('grudge_hero_id') || String(bootHeroId) || '-1', 10);
+    const resolvedTeam = parseInt(localStorage.getItem('grudge_team') || String(team) || '0', 10);
+    if (resolvedHeroId < 0) {
+      const sync = getPlayerHeroSync();
+      if (sync) {
+        resolvedHeroId = sync.id;
+      } else {
+        setLocation('/');
+        return;
+      }
     }
 
     getPlayerHeroSync();
-    const state = createInitialState(heroId, team);
+    const state = createInitialState(resolvedHeroId, resolvedTeam === 1 ? 1 : 0);
     stateRef.current = state;
 
     // Load PixelGothic for canvas damage numbers + combo text
@@ -595,7 +619,7 @@ export default function GamePage() {
       if (physics) physics.clear();
       combatActor.stop();
     };
-  }, [heroId, team, heroReady, setLocation]);
+  }, [bootHeroId, team, heroReady, setLocation]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -603,7 +627,7 @@ export default function GamePage() {
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const heroData = HEROES.find(h => h.id === heroId);
+  const heroData = HEROES.find(h => h.id === bootHeroId);
   // Use race-specific abilities, expanded to 6 via skill tree loadout
   const baseAbilities = heroData ? getHeroAbilities(heroData.race, heroData.heroClass) : [];
   const mobaLoadout = skillLoadout || (heroData ? createDefaultMobaLoadout(heroData.race, heroData.heroClass) : null);

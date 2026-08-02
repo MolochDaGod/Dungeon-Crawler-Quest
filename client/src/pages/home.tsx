@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Sword, Shield, Skull, Crown, Settings, MousePointer2, Keyboard, Crosshair, ShoppingBag, LayoutGrid, Globe, User, Palmtree, Lock } from 'lucide-react';
 import { AuthBar } from '@/components/AuthBar';
 import { initAuth } from '@/game/grudge-auth';
+import { getFarmStats } from '@/game/game-flow';
+import { getFarmBag } from '@/game/neutral-creeps';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld' | 'spaceconquest'>('openworld');
+  const [selectedMode, setSelectedMode] = useState<'arena' | 'openworld' | 'dungeon' | 'dungeon3d' | 'spaceconquest'>('openworld');
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [titlePulse, setTitlePulse] = useState(false);
@@ -88,20 +90,38 @@ export default function Home() {
 
   const handlePlay = async () => {
     localStorage.setItem('grudge_mode', selectedMode);
-    // Check if player has a saved character — if so, load & go directly to game
-    const savedHeroId = localStorage.getItem('grudge_hero_id');
-    const savedHero = localStorage.getItem('grudge_custom_hero');
-    if (savedHeroId && savedHero) {
-      // Ensure the character is loaded into HEROES[] before navigating
+
+    // Always prefer account character select when roster has heroes
+    try {
+      const { getAll } = await import('@/lib/grudgeCharacters');
+      const chars = await getAll();
+      if (chars.length > 0) {
+        setLocation('/character-select');
+        return;
+      }
+    } catch { /* fall through */ }
+
+    // Brand-new players (no saved character at all) go to creation first
+    const hasAnyHero =
+      !!localStorage.getItem('grudge_custom_hero') ||
+      !!localStorage.getItem('grudge_player_character') ||
+      (parseInt(localStorage.getItem('grudge_hero_id') || '-1', 10) >= 0);
+
+    if (!hasAnyHero) {
+      setLocation('/create-character');
+      return;
+    }
+
+    // Single local hero path — load into engine then jump into mode
+    try {
       const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
       await ensurePlayerHeroLoaded();
-      // Existing character — go to game
-      if (selectedMode === 'openworld') setLocation('/open-world-play');
-      else setLocation('/game');
-    } else {
-      // No character — go to character creation (WoW-classic flow)
-      setLocation('/create-character');
-    }
+    } catch { /* play with whatever localStorage has */ }
+
+    if (selectedMode === 'openworld') setLocation('/open-world-play');
+    else if (selectedMode === 'dungeon') setLocation('/dungeon');
+    else if (selectedMode === 'dungeon3d') setLocation('/dungeon3d');
+    else setLocation('/game'); // MOBA arena (top-down 5v5)
   };
 
   const handleAdminLogin = () => {
@@ -162,14 +182,17 @@ export default function Home() {
           <p className="text-gray-300 max-w-xl mx-auto text-lg mb-2" data-testid="text-tagline">
             Create your warrior. Choose your destiny. Enter the world.
           </p>
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-500 text-sm mb-2">
             6 Races &bull; 4 Classes &bull; 17 Weapon Types &bull; 8 Attributes &bull; Level 1-20
+          </p>
+          <p className="text-[11px] text-[#c5a059]/80 mb-6 tracking-wide uppercase" data-testid="text-tvs-badge">
+            TVS assets · D1/R2 · castles · camps · crypts · heroes
           </p>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-5 mb-8">
+        <div className="flex flex-wrap justify-center gap-4 mb-8 max-w-4xl">
           <button
-            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
+            className={`flex flex-col items-center gap-2 px-8 py-5 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[170px] ${
               selectedMode === 'arena'
                 ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
                 : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
@@ -177,15 +200,15 @@ export default function Home() {
             onClick={() => setSelectedMode('arena')}
             data-testid="button-mode-arena"
           >
-            <Sword className="w-12 h-12" />
-            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>ARENA</span>
-            <span className="text-xs text-gray-400">5v5 &bull; 3 Lanes &bull; Towers</span>
-            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
-              Destroy the enemy Nexus. Level up, buy items, and push lanes with your team.
+            <Sword className="w-10 h-10" />
+            <span className="text-base font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>MOBA</span>
+            <span className="text-xs text-gray-400">5v5 · Top-down · TVS towers</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[160px]">
+              Knight keeps, ranger camps, wizard towers from TVS packs.
             </p>
           </button>
           <button
-            className={`flex flex-col items-center gap-2 px-10 py-6 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[200px] ${
+            className={`flex flex-col items-center gap-2 px-8 py-5 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[170px] ${
               selectedMode === 'openworld'
                 ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
                 : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
@@ -193,11 +216,43 @@ export default function Home() {
             onClick={() => setSelectedMode('openworld')}
             data-testid="button-mode-openworld"
           >
-            <Globe className="w-12 h-12" />
-            <span className="text-lg font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>OPEN WORLD</span>
-            <span className="text-xs text-gray-400">MMO &bull; 8 Zones &bull; Dungeons &bull; Day/Night</span>
-            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[180px]">
-              Explore a vast island. Enter dungeon events, earn reputation, and defeat world bosses.
+            <Globe className="w-10 h-10" />
+            <span className="text-base font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>OPEN WORLD</span>
+            <span className="text-xs text-gray-400">MMO · Zones · Settlements</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[160px]">
+              Villages, farms, camps — TVS world content.
+            </p>
+          </button>
+          <button
+            className={`flex flex-col items-center gap-2 px-8 py-5 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[170px] ${
+              selectedMode === 'dungeon'
+                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
+                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
+            }`}
+            onClick={() => setSelectedMode('dungeon')}
+            data-testid="button-mode-dungeon"
+          >
+            <Skull className="w-10 h-10" />
+            <span className="text-base font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>DCQ</span>
+            <span className="text-xs text-gray-400">Top-down crypt · 10 floors</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[160px]">
+              Cathedral crypt dressing · procedural floors.
+            </p>
+          </button>
+          <button
+            className={`flex flex-col items-center gap-2 px-8 py-5 rounded-lg border-2 transition-all duration-300 cursor-pointer min-w-[170px] ${
+              selectedMode === 'dungeon3d'
+                ? 'border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059] shadow-lg shadow-[#c5a059]/20'
+                : 'border-gray-700 bg-black/30 text-gray-500 hover:border-gray-500 hover:bg-black/50'
+            }`}
+            onClick={() => setSelectedMode('dungeon3d')}
+            data-testid="button-mode-dungeon3d"
+          >
+            <Crosshair className="w-10 h-10" />
+            <span className="text-base font-bold" style={{ fontFamily: "'Oxanium', sans-serif" }}>3D DUNGEON</span>
+            <span className="text-xs text-gray-400">TPS · Voxel rooms</span>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[160px]">
+              TPS · explorer · soft-lock · farm neutrals (goblin, orc, demon…) for gold &amp; loot.
             </p>
           </button>
         </div>
@@ -212,7 +267,11 @@ export default function Home() {
             data-testid="button-play"
           >
             {localStorage.getItem('grudge_custom_hero')
-              ? (selectedMode === 'arena' ? 'ENTER THE ARENA' : selectedMode === 'spaceconquest' ? 'LAUNCH CONQUEST' : 'EXPLORE THE WORLD')
+              ? (selectedMode === 'arena' ? 'ENTER MOBA'
+                : selectedMode === 'dungeon' ? 'ENTER THE CRYPT'
+                : selectedMode === 'dungeon3d' ? 'ENTER 3D DUNGEON'
+                : selectedMode === 'spaceconquest' ? 'LAUNCH CONQUEST'
+                : 'EXPLORE THE WORLD')
               : 'CREATE CHARACTER'
             }
           </Button>
@@ -255,6 +314,40 @@ export default function Home() {
               <span>Island Camp</span>
             </button>
           </div>
+
+          {/* 3D Game Modes — voxel/TVS explorer avatars + weapon skills */}
+          <div className="flex gap-3 mt-3 flex-wrap justify-center">
+            <button
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-[#00ffcc] transition-colors cursor-pointer px-3 py-1.5 rounded border border-gray-800 hover:border-[#00ffcc]/40"
+              onClick={() => setLocation('/sandbox')}
+              title="Explorer sandbox — build, skills, physics props"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Sandbox</span>
+            </button>
+            <button
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-[#ff0055] transition-colors cursor-pointer px-3 py-1.5 rounded border border-gray-800 hover:border-[#ff0055]/40"
+              onClick={() => setLocation('/arena')}
+              title="1v1 explorer arena fighter"
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+              <span>Arena Fighter</span>
+            </button>
+            <button
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-[#c5a059] transition-colors cursor-pointer px-3 py-1.5 rounded border border-gray-800 hover:border-[#c5a059]/40"
+              onClick={() => setLocation('/dungeon3d')}
+              title="Procedural 3D dungeon with explorer units"
+            >
+              <Skull className="w-3.5 h-3.5" />
+              <span>3D Dungeon</span>
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-600 text-center mt-1 max-w-md mx-auto">
+            Explorers + weapon skills + VFX. 3D Dungeon &amp; Sandbox farm{" "}
+            <strong className="text-gray-500">WC3-style neutrals</strong> (threejs-games creeps)
+            for gold and materials.
+          </p>
+          <FarmStatsStrip />
         </div>
 
         {/* Admin button — bottom right corner */}
@@ -395,6 +488,32 @@ export default function Home() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function FarmStatsStrip() {
+  const stats = getFarmStats();
+  const bag = getFarmBag();
+  const goldBag = bag.find((b) => b.id === 'gold')?.qty ?? stats.gold;
+  if (stats.kills <= 0 && goldBag <= 0) {
+    return (
+      <p className="text-[10px] text-gray-700 text-center mt-2">
+        Farm tip: Enter 3D Dungeon → clear neutral camps (goblin, orc, demon…) for gold.
+      </p>
+    );
+  }
+  return (
+    <div className="mt-2 px-3 py-2 rounded border border-gray-800 bg-black/40 text-[11px] text-gray-400 text-center max-w-md mx-auto">
+      <span className="text-[#fbbf24]">Farm gold: {goldBag}</span>
+      <span className="text-gray-600"> · </span>
+      <span>Creep kills: {stats.kills}</span>
+      {stats.lastLoot ? (
+        <>
+          <span className="text-gray-600"> · </span>
+          <span className="text-[#c5a059]">Last: {stats.lastLoot}</span>
+        </>
+      ) : null}
     </div>
   );
 }

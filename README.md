@@ -1,10 +1,11 @@
-# GRUDGE Warlords
+# Dungeon Crawler Quest — Grudge Warlords
 
-Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open World MMO modes. Built with React, Three.js, and the Grudge ObjectStore API.
+> **Created by Racalvin The Pirate King** · Grudge Studio  
+> Dark fantasy MMO with Open World, 5v5 MOBA, Dungeon Crawler, Voxel Sandbox, Arena Fighter, 3D Dungeon, and Genesis Island modes. Built with React + Three.js + BabylonJS 9.
+>
+> **Live:** [dungeon-crawler-quest.vercel.app](https://dungeon-crawler-quest.vercel.app) · **Hub:** [grudgewarlords.com](https://grudgewarlords.com)
 
-**Live:** [dungeon-crawler-quest.vercel.app](https://dungeon-crawler-quest.vercel.app)
-
-**Backend:** [grudge-studio.com](https://grudge-studio.com) · **Dashboard:** [dash.grudge-studio.com](https://dash.grudge-studio.com) · **ObjectStore:** [molochdagod.github.io/ObjectStore](https://molochdagod.github.io/ObjectStore)
+**Backend:** [api.grudge-studio.com](https://api.grudge-studio.com) · **Auth:** [id.grudge-studio.com](https://id.grudge-studio.com) · **ObjectStore:** [grudge-objectstore.pages.dev](https://grudge-objectstore.pages.dev/api/v1/weapons.json)
 
 ## Game Modes
 
@@ -19,6 +20,32 @@ Browser-based dark fantasy RPG featuring 5v5 MOBA, Dungeon Crawler, and Open Wor
 - Recursive shadowcasting line-of-sight
 - Enemy AI heroes with patrol/chase/attack/retreat behavior
 - Inventory and loot system
+
+### Voxel Sandbox (`/sandbox`)
+- Three.js + Cannon-ES physics sandbox with voxel characters
+- 23 tools (hand, pistol, RPG, C4, bat, phys gun, build, paint, freeze, weld, rope, hinge, motor, etc.)
+- 10 compound props (crate, barrel, sofa, chair, table, barrier, dumpster, hydrant, vending, pallet)
+- Constraint system (LockConstraint, DistanceConstraint, HingeConstraint with motors)
+- Spawn menu (Q key) for placing props at crosshair
+- LMB spawns boxes, RMB spawns bouncy balls, explosions, freeze/unfreeze
+- World save/load to Grudge R2 cloud storage
+- WASD over-the-shoulder controller with jump, sprint, combat/harvest toggle
+
+### Arena Fighter (`/arena`)
+- 1v1 voxel combat with frame-data hitbox system
+- 6 attack types: punch, kick, headbutt, dropkick, grab, block
+- Active hitbox frames with per-move damage, range, and type
+- CPU AI opponent with random race/class
+- HP bars, 60-second timer, camera shake, hit/block particles
+- Stats derived from Grudge character attributes (speed, power, reach)
+
+### 3D Dungeon Crawler (`/dungeon3d`)
+- Procedural 3D dungeon rooms with voxel walls, floors, and door gaps
+- Voxel NPC enemies (Orc/Undead Warriors and Worgs) with chase AI
+- Destructible physics props (crates, barrels) via Cannon-ES
+- Player torch light that follows character through dark rooms
+- Floor progression with scaling enemy HP
+- Over-the-shoulder camera with WASD + melee combat
 
 ### Open World MMO
 - 16000×16000 island-based world with 16+ zones, day/night cycle, dynamic weather
@@ -161,16 +188,23 @@ See [docs/GRUDGE_BACKEND_INTEGRATION.md](docs/GRUDGE_BACKEND_INTEGRATION.md) for
 
 ## Tech Stack
 
-- **Frontend:** React, TypeScript, Tailwind CSS, Shadcn UI
-- **3D Rendering:** Three.js with voxel art pipeline
-- **2D Rendering:** Custom HTML5 Canvas with fog of war, 29 new voxel model builders
+- **Frontend:** React 18, TypeScript, Tailwind CSS, Shadcn UI
+- **3D Engines:** Three.js (voxel sandbox, arena, dungeon3d), BabylonJS 9 (Genesis island, open world 3D mode)
+- **Voxel Engine:** InstancedMesh character builder (`voxel3d.ts`) with 11 body parts, race/class colors, joint hierarchy, pose animation
+- **3D Assets:** 45 GLB models from Unity FRESH GRUDGE (characters, monsters, buildings, weapons, animations)
+- **2D Rendering:** Custom HTML5 Canvas with fog of war, voxel model builders
+- **Game Bridge:** genesis-game-bridge.ts connects all RPG systems to 3D scene
+- **Combat:** XState finite state machine (combo, block, dash, jump, whirlwind, etc.) + arena frame-data hitbox system
 - **Routing:** Wouter
-- **Animation:** GSAP, custom voxel-motion library
-- **Physics:** cannon-es
-- **State Machines:** XState
-- **Fonts:** Craftpix `StraightPixelGothic.otf` (canvas + CSS), Cinzel, Crimson Text, JetBrains Mono
-- **Asset packs:** Craftpix animated text GIFs (event banners), tropical city tileset (256px), castle defense tileset (32px), house constructor tileset (32px)
-- **Deployment:** Vercel
+- **Animation:** GSAP, custom voxel-motion library, pose-based procedural animation
+- **Physics:** Cannon-ES (sandbox, dungeon3d), Havok (BabylonJS Genesis)
+- **AI Backend:** Grudge Studio ai-agent service (Anthropic → OpenAI → DeepSeek → Gemini → Ollama fallback chain)
+- **Multiplayer:** Colyseus.js + Socket.IO
+- **Auth:** Grudge ID (id.grudge-studio.com)
+- **Object Storage:** Grudge ObjectStore R2 CDN (`objectstore.grudge-studio.com`) with GitHub Pages fallback
+- **UUID Tracking:** Typed Grudge UUIDs (CHAR-, ITEM-, WRLD-, SESS- prefixes) for entity tracking and cloud persistence
+- **Fonts:** Craftpix `StraightPixelGothic.otf`, Cinzel, Crimson Text, Oxanium, JetBrains Mono
+- **Deployment:** Vercel (frontend), Grudge Studio VPS (backend)
 
 ## Project Structure
 
@@ -204,6 +238,10 @@ client/src/
 │   ├── dungeon.ts             # Dungeon crawler engine
 │   ├── types.ts               # Shared types, 26 heroes, abilities
 │   ├── voxel.ts               # Voxel rendering, weapon animations, VFX
+│   ├── voxel3d.ts             # Three.js InstancedMesh voxel character builder (3D rig)
+│   ├── voxel-controller.ts    # Unified 3D player controller (WASD, camera, combat)
+│   ├── sandbox-physics.ts     # Cannon-ES sandbox engine (tools, constraints, props, ragdolls)
+│   ├── arena-fighter.ts       # Arena hitbox/frame-data combat system
 │   ├── voxel-parts.ts         # Part-based voxel rig (15 weapon types, T-pose, full animations)
 │   ├── voxel-motion.ts        # Animation primitives
 │   ├── ow-anim-fsm.ts         # Open World animation FSM (priority/interruptibility)
@@ -213,8 +251,14 @@ client/src/
 │   ├── tilesets.ts            # Tileset catalog: tropical (256px), castle/house (32px), biome mappings
 │   ├── tile-renderer.ts       # TileMapRenderer: camera-culled ground/road/building/decor rendering
 │   ├── combat-popups.ts       # PixelGothic font loader + EVENT_BANNERS GIF paths
-│   └── character-data.ts      # Unified character data layer (reactive stats from equipment)
+│   ├── character-data.ts      # Unified character data layer (reactive stats from equipment)
+├── lib/
+│   ├── grudge-objectstore.ts  # R2 CDN client with GitHub Pages fallback, world save/load
+│   ├── grudge-uuid.ts         # Typed Grudge UUID generator + session registry
 ├── pages/
+│   ├── sandbox.tsx            # Voxel Sandbox mode (physics, spawning, tools)
+│   ├── arena.tsx              # Arena Fighter mode (1v1 voxel combat)
+│   ├── dungeon3d.tsx          # 3D Dungeon Crawler mode (procedural rooms, enemies)
 │   ├── open-world.tsx         # Open World UI, HUD, game loop, event banner overlay
 │   ├── game.tsx               # MOBA UI, event banner overlay
 │   ├── dungeon-game.tsx       # Dungeon UI
@@ -266,6 +310,28 @@ git push origin main
 
 See [docs/GRUDGE_BACKEND_INTEGRATION.md](docs/GRUDGE_BACKEND_INTEGRATION.md) for full backend integration guide.
 
+## Grudge Backend Integration
+
+DCQ connects to the Grudge Studio backend for auth and character persistence:
+
+- **`client/src/lib/grudgeBackend.ts`** — SSO token pickup (`?sso_token=...`), session management, `getCurrentUser()`, cookie mirroring. Also handles legacy hash tokens for backward compat.
+- **`client/src/lib/grudgeCharacters.ts`** — Backend-first character CRUD against `api.grudge-studio.com/api/characters` with localStorage fallback for offline play.
+- **`vercel.json` rewrites** — `/api/characters/*` → `api.grudge-studio.com`, `/api/auth/*` → `id.grudge-studio.com`, `/api/assets/*` → `assets.grudge-studio.com`.
+
+Guests play immediately without auth. Characters created offline sync to the backend when connectivity is restored.
+
+## Grudge Fleet
+
+DCQ is one game in the **Grudge Warlords** fleet. All games share the same Grudge ID, characters, and backend.
+
+| Game | Repo | Domain | Engine |
+|---|---|---|---|
+| **Grudge Warlords** (hub) | Grudge-Builder | grudgewarlords.com | React + Three.js + Phaser |
+| **RTS Grudge** | RTS-Grudge | rts-grudge.vercel.app | React-Three-Fiber + Rapier |
+| **Dungeon Crawler Quest** (this repo) | Dungeon-Crawler-Quest | dcq.grudge-studio.com | BabylonJS + Havok |
+
+---
+
 ## License
 
-Grudge Studio — All rights reserved.
+Grudge Studio — All rights reserved. Created by Racalvin The Pirate King.

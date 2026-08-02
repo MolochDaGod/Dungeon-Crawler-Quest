@@ -1,5 +1,6 @@
-// ── ObjectStore CDN base ────────────────────────────────────────
-const OS = 'https://molochdagod.github.io/ObjectStore';
+// ── ObjectStore CDN base (resolved via grudge-objectstore) ──────
+import { getBaseUrl } from '@/lib/grudge-objectstore';
+const OS = getBaseUrl();
 
 // ── Sprite Effect Types ────────────────────────────────────────
 export type SpriteEffectType =

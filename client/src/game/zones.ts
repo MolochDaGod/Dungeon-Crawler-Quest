@@ -652,6 +652,69 @@ export const ISLAND_ZONES: ZoneDef[] = [
     islandType: 'boss-arena', claimable: true,
     connectedZoneIds: [3, 4], portalPositions: [],
   },
+
+  // 10: GENESIS ISLAND — Starting zone, guild-instanced ─────────
+  { id: 10, name: 'Genesis Island', bounds: FULL,
+    requiredLevel: 1, isPvP: true, isSafeZone: false,
+    terrainType: 'grass', ambientColor: '#4a7a3a',
+    description: 'A small island in a vast ocean. New players begin here on the airship above. Guilds can claim their own instance.',
+    playerSpawns: [{ x: 7882, y: 8456 }],  // Safe teleporter position → warps to airship deck
+    monsterSpawns: [
+      // Monster Spawner group (50 fish spawn points → Crabs)
+      { x: 7869, y: 7626, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      { x: 7739, y: 7624, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      { x: 7546, y: 7562, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      { x: 7718, y: 7414, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      { x: 7359, y: 7568, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      { x: 7244, y: 7848, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      { x: 7580, y: 8281, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      { x: 7387, y: 7741, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      { x: 7695, y: 7345, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      { x: 7171, y: 8191, type: 'Crab', level: 2, respawnTime: 30, count: 1 },
+      // Harbor Spawner group (20 → Bandits)
+      { x: 7783, y: 7888, type: 'Bandit', level: 3, respawnTime: 30, count: 1 },
+      { x: 7662, y: 7841, type: 'Bandit', level: 3, respawnTime: 30, count: 1 },
+      { x: 7609, y: 7794, type: 'Bandit', level: 3, respawnTime: 30, count: 1 },
+      { x: 7553, y: 7762, type: 'Bandit', level: 3, respawnTime: 30, count: 1 },
+      // Mine Spawner group (21 → Spiders)
+      { x: 8289, y: 7814, type: 'Spider', level: 6, respawnTime: 35, count: 1 },
+      { x: 8327, y: 7712, type: 'Spider', level: 6, respawnTime: 35, count: 1 },
+      { x: 8209, y: 7885, type: 'Spider', level: 6, respawnTime: 35, count: 1 },
+      { x: 8384, y: 7634, type: 'Spider', level: 6, respawnTime: 35, count: 1 },
+      // Cave Spawner group (6 → Cave Hounds)
+      { x: 8218, y: 7502, type: 'Cave Hound', level: 8, respawnTime: 45, count: 1 },
+      { x: 8137, y: 7470, type: 'Cave Hound', level: 8, respawnTime: 45, count: 1 },
+      { x: 8061, y: 7438, type: 'Cave Hound', level: 8, respawnTime: 45, count: 1 },
+    ],
+    npcPositions: [
+      { x: 7381, y: 8459 },  // Barbarian Commander
+      { x: 7404, y: 8384 },  // Barbarian Guard
+      { x: 7470, y: 8418 },  // Barbarian Watchman
+      { x: 7504, y: 8517 },  // Barbarian Scout
+      { x: 7595, y: 8460 },  // Mount Trainer
+      { x: 7636, y: 8380 },  // Dealer
+      { x: 7713, y: 8454 },  // PvP Vendor
+    ],
+    exits: [],  // No walking exits — boat/portal only
+    subZones: [
+      { name: 'Harbor', bounds: { x: 7600, y: 7700, w: 400, h: 400 }, terrainType: 'water', safe: true, description: 'Docked ships and fishing boats. Sail from here to Pirate Bay.' },
+      { name: 'Mine', bounds: { x: 8100, y: 7600, w: 500, h: 400 }, terrainType: 'stone', safe: false, description: 'Rich ore deposits. Mining carts and crystal veins.' },
+      { name: 'Cave', bounds: { x: 8050, y: 7350, w: 300, h: 300 }, terrainType: 'stone', safe: false, description: 'Dark cave entrance. Cave Hounds lurk within.' },
+      { name: 'Camp', bounds: { x: 7200, y: 8300, w: 400, h: 400 }, terrainType: 'grass', safe: true, description: 'Starting camp with palisade walls, armory, and stables.' },
+      { name: 'Windmill Hill', bounds: { x: 7200, y: 7600, w: 300, h: 300 }, terrainType: 'grass', safe: false, description: 'Windmill overlooking the harbor.' },
+    ],
+    waterLanes: [],  // Ocean is the entire zone outside the island
+    cliffWalls: [],
+    dungeons: [
+      { id: 'genesis-cave', name: 'Genesis Cave', x: 8088, y: 7408, requiredLevel: 5, description: 'Winding cave beneath the island. Spiders, bats, and hidden treasure.', difficulty: 'normal', icon: '🕸️', floors: 3 },
+    ],
+    assetPack: 'grudge-legacy',
+    structureAssets: ['gb-house-1','gb-house-2','gb-tavern','gb-windmill','gb-town-gate','gb-wall-1','gb-wall-wooden','gb-dungeon-entrance','gp-barrel','gp-chest','gp-cart-2w'],
+    islandType: 'village', claimable: true,
+    connectedZoneIds: [4], portalPositions: [
+      { x: 7660, y: 7889, targetZoneId: 4 },  // Harbor portal → Pirate Bay
+    ],
+  },
 ];
 
 // ── Zone Queries ───────────────────────────────────────────────
