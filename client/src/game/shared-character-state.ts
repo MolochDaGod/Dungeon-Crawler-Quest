@@ -34,6 +34,7 @@ import {
   loadPlayerCharacter, savePlayerCharacter, getCurrentCharacter,
   ensurePlayerHeroLoaded, playerCharacterToHeroData,
 } from './player-account';
+import { initAuth } from './grudge-auth';
 import { loadAttributes, saveAttributes } from './attributes';
 import {
   loadProfessions, saveProfessions,
@@ -138,8 +139,11 @@ export function getActiveSnapshot(): CharacterSnapshot | null {
 
 /**
  * Initialize the shared character state. Call once at app boot.
+ * Ensures auth is initialized first so character loads use a valid grudgeId.
  */
 export async function initSharedCharacterState(): Promise<CharacterSnapshot> {
+  // Ensure auth is initialized (guest login if needed) before loading character
+  await initAuth();
   _activeSnapshot = await loadCharacterSnapshot();
   return _activeSnapshot;
 }
