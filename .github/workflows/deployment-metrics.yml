@@ -1,0 +1,54 @@
+name: Deployment Metrics
+
+# Records DORA-style deployment metrics (lead time for changes, deployment
+# frequency) whenever the site is deployed. Vercel reports a `deployment_status`
+# to GitHub for each deploy; we record metrics only on successful deploys. Also
+# runs on published releases and can be triggered manually.
+on:
+  deployment_status:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      deploy_tag_pattern:
+        description: 'Glob for deploy/release tags used to measure frequency'
+        required: false
+        default: 'v*'
+
+concurrency:
+  group: deployment-metrics-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    # Only record on successful deployments (Vercel emits pending/in_progress/error too).
+    if: ${{ github.event_name != 'deployment_status' || github.event.deployment_status.state == 'success' }}
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Collect deployment metrics
+        env:
+          # Optional: set this repo/org secret to ship metrics to your dashboard/collector.
+          METRICS_WEBHOOK_URL: ${{ secrets.METRICS_WEBHOOK_URL }}
+          DEPLOY_TAG_PATTERN: ${{ github.event.inputs.deploy_tag_pattern || 'v*' }}
+        run: node scripts/deployment-metrics.mjs --out deployment-metrics.json
+
+      - name: Upload metrics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-metrics-${{ github.run_id }}
+          path: deployment-metrics.json
+          if-no-files-found: warn
+          retention-days: 90

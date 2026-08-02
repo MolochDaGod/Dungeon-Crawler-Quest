@@ -9,7 +9,8 @@
     "preview": "vite preview --config vite.config.ts",
     "check": "tsc",
     "sprite-audit": "node scripts/sprite-audit.mjs",
-    "sprite-fix": "node scripts/sprite-audit.mjs --fix"
+    "sprite-fix": "node scripts/sprite-audit.mjs --fix",
+    "metrics:deploy": "node scripts/deployment-metrics.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^9.0.0",
