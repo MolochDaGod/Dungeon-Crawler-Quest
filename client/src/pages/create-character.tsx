@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -110,6 +110,22 @@ type Step = 'race' | 'class' | 'weapon' | 'name' | 'attributes' | 'avatar' | 'co
 
 export default function CreateCharacter() {
   const [, setLocation] = useLocation();
+  // If player already created a hero, jump into game (stop create loop). ?force=1 to create another.
+  useEffect(() => {
+    try {
+      if (window.location.search.includes('force=1')) return;
+      const named = localStorage.getItem('grudge_hero_name');
+      const custom = localStorage.getItem('grudge_custom_hero');
+      if (!named && !custom) return;
+      const mode = localStorage.getItem('grudge_mode') || 'openworld';
+      const path =
+        mode === 'dungeon' ? '/dungeon'
+        : mode === 'dungeon3d' ? '/dungeon3d'
+        : mode === 'arena' ? '/game'
+        : '/open-world-play';
+      window.location.replace(path);
+    } catch { /* ignore */ }
+  }, []);
   const [step, setStep] = useState<Step>('race');
   const [race, setRace] = useState<string | null>(null);
   const [heroClass, setHeroClass] = useState<string | null>(null);
@@ -186,70 +202,69 @@ export default function CreateCharacter() {
   };
 
   /* ── Save & Start ── */
+  /** Hard navigation into play — wouter setLocation can fail if SPA re-bootstraps wrong. */
+  const enterGameAfterCreate = (heroName: string) => {
+    localStorage.setItem('grudge_mode', localStorage.getItem('grudge_mode') || 'openworld');
+    localStorage.setItem('dcq_last_created_name', heroName);
+    localStorage.setItem('dcq_create_entry_v2', '1'); // deploy-verify marker
+    const mode = localStorage.getItem('grudge_mode') || 'openworld';
+    const path =
+      mode === 'dungeon' ? '/dungeon'
+      : mode === 'dungeon3d' ? '/dungeon3d'
+      : mode === 'arena' ? '/game'
+      : '/open-world-play';
+    // Full page load so game boot re-reads localStorage (fixes empty-API loop)
+    window.location.assign(path);
+  };
+
   const createCharacter = async () => {
     if (!race || !heroClass || !name.trim() || !finalStats || !weapon) return;
     setIsCreating(true);
     setCreateError(null);
+    const heroName = name.trim();
+    const faction = RACE_FACTIONS[race] || 'Crusade';
     try {
-      const faction = RACE_FACTIONS[race] || 'Crusade';
-
-      // Get account info from Grudge auth
       const grudgeUser = getGrudgeUser();
       const accountId = grudgeUser?.grudgeId || grudgeUser?.username || localStorage.getItem('grudge_id') || 'local';
-
-      // Find the best body model for race+class combo
       const modelIndex = findBestHeroModel(race, heroClass);
 
-      // Use the player-account system to create on backend
+      // 1) Build + persist LOCAL first (always succeeds) — characters like "god" must stick
       const character = await createNewCharacter(
         accountId,
         modelIndex,
         race,
         heroClass,
-        name.trim(),
+        heroName,
       );
-      // Set weapon on the character
       character.weaponType = weapon;
 
-      // Convert to HeroData for the game engine
       const newHero = playerCharacterToHeroData(character);
       newHero.equippedWeaponId = weapon;
+      newHero.name = heroName;
 
-      // Persist to Grudge backend (API-first, localStorage cache)
-      await grudgeCharacters.create({
-        name: name.trim(),
-        race,
-        heroClass,
-        faction,
-        level: 1,
-        xp: 0,
-        attributes: attrs.base,
-        equipment: {},
-        weaponType: weapon,
-        avatarUrl: avatarUrl || null,
-        _localOnly: false,
-      });
+      // Stable unique id so re-creates don't collide on same modelIndex
+      if (!Number.isFinite(newHero.id) || newHero.id < 100) {
+        newHero.id = 10000 + (Date.now() % 90000);
+      }
 
-      // Also save to legacy localStorage keys so existing game code works
       localStorage.setItem('grudge_hero_id', String(newHero.id));
       localStorage.setItem('grudge_team', '0');
       localStorage.setItem('grudge_custom_hero', JSON.stringify(newHero));
       localStorage.setItem('grudge_hero_race', race);
       localStorage.setItem('grudge_hero_class', heroClass);
-      localStorage.setItem('grudge_hero_name', name.trim());
+      localStorage.setItem('grudge_hero_name', heroName);
       localStorage.setItem('grudge_avatar_url', avatarUrl || '');
       localStorage.setItem('grudge_character_weapon', weapon);
+      localStorage.setItem('grudge_player_character', JSON.stringify(character));
       saveAttributes(attrs);
 
-      // Register in runtime HEROES array
       if (!HEROES.find(h => h.id === newHero.id)) {
         HEROES.push(newHero);
       }
 
-      // Add to character list for multi-character support
       addToCharacterList({
         grudgeId: character.grudgeId,
-        customName: name.trim(),
+        customName: heroName,
         race,
         heroClass,
         faction,
@@ -258,14 +273,34 @@ export default function CreateCharacter() {
         createdAt: new Date().toISOString(),
       });
 
-      // Start background sync
-      startSync();
+      // 2) Best-effort server roster (never block entry)
+      try {
+        await Promise.race([
+          grudgeCharacters.create({
+            name: heroName,
+            race,
+            heroClass,
+            faction,
+            level: 1,
+            xp: 0,
+            attributes: attrs.base,
+            equipment: {},
+            weaponType: weapon,
+            avatarUrl: avatarUrl || null,
+            _localOnly: false,
+          }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('create timeout')), 6000)),
+        ]);
+      } catch (apiErr) {
+        console.warn('[CreateChar] server create skipped — local hero ready', apiErr);
+      }
 
-      // Fire-and-forget cNFT mint (non-blocking — character is playable immediately)
+      try { startSync(); } catch { /* ignore */ }
+
       try {
         mintAndTrack({
           grudgeId: character.grudgeId,
-          characterName: name.trim(),
+          characterName: heroName,
           race,
           heroClass,
           faction,
@@ -275,33 +310,30 @@ export default function CreateCharacter() {
         }, (mintResult: MintResult) => {
           if (mintResult.success && mintResult.mintAddress) {
             console.log(`[cNFT] Character minted: ${mintResult.mintAddress}`);
-          } else {
-            console.warn('[cNFT] Mint fallback — character playable without NFT');
           }
         });
-      } catch (mintErr) {
-        console.warn('[cNFT] mint kickoff failed — still entering game', mintErr);
-      }
+      } catch { /* mint optional */ }
 
-      // ENTER GAME — do not bounce to character-select (empty API roster caused a loop:
-      // select sees [] → redirects back here forever).
-      try {
-        const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
-        await ensurePlayerHeroLoaded();
-      } catch { /* local keys already set */ }
-
-      const mode = localStorage.getItem('grudge_mode') || 'openworld';
-      if (mode === 'dungeon') setLocation('/dungeon');
-      else if (mode === 'dungeon3d') setLocation('/dungeon3d');
-      else if (mode === 'arena') setLocation('/game');
-      else setLocation('/open-world-play');
+      // 3) ENTER GAME — hard assign (no character-select bounce)
+      console.info('[CreateChar] dcq_create_entry_v2 enter game', heroName);
+      enterGameAfterCreate(heroName);
+      return;
     } catch (err: any) {
       console.error('[CreateChar] Error:', err);
+      // Last resort: if we at least have a name, still try to enter with starter keys
+      if (heroName.length >= 2 && race && heroClass) {
+        localStorage.setItem('grudge_hero_name', heroName);
+        localStorage.setItem('grudge_hero_race', race);
+        localStorage.setItem('grudge_hero_class', heroClass);
+        localStorage.setItem('grudge_character_weapon', weapon || '');
+        try {
+          enterGameAfterCreate(heroName);
+          return;
+        } catch { /* fall through to error UI */ }
+      }
       setCreateError(err?.message || 'Failed to create character');
       setIsCreating(false);
-      return;
     }
-    setIsCreating(false);
   };
 
   /* ── UI Helpers ── */

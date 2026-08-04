@@ -302,17 +302,25 @@ export default function CharacterSelect() {
           const pick = active || chars[0];
           setSelectedAccount(pick);
         } else if (!isAdmin) {
-          // Also honor legacy single-hero keys so we don't loop create↔select
+          // Never bounce create↔select when any local hero exists (API often returns [])
           const legacy =
             !!localStorage.getItem('grudge_custom_hero') ||
-            !!localStorage.getItem('grudge_player_character');
+            !!localStorage.getItem('grudge_player_character') ||
+            !!localStorage.getItem('grudge_hero_name') ||
+            localStorage.getItem('dcq_create_entry_v2') === '1';
           if (legacy) {
-            setRosterMode('account');
-            // Stay on select; Enter Play will use ensurePlayerHeroLoaded
-          } else {
-            setLocation('/create-character');
+            // Go straight into play instead of empty select UI
+            const mode = localStorage.getItem('grudge_mode') || 'openworld';
+            const path =
+              mode === 'dungeon' ? '/dungeon'
+              : mode === 'dungeon3d' ? '/dungeon3d'
+              : mode === 'arena' ? '/game'
+              : '/open-world-play';
+            window.location.replace(path);
             return;
           }
+          setLocation('/create-character');
+          return;
         } else {
           setRosterMode('codex');
         }
