@@ -10,6 +10,22 @@ import { authHeaders, getCurrentUser } from "./grudgeBackend";
 const API_BASE = "/api/characters";
 const LOCAL_KEY = "grudge_characters";
 const ACTIVE_KEY = "grudge_active_character_id";
+/** Avoid hanging create-character forever when API never responds. */
+const API_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  ms = API_TIMEOUT_MS,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(input, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,25 +73,37 @@ function setActiveId(id: string): void {
 
 /**
  * Fetch all characters for the current user.
- * Tries the Grudge API first, falls back to localStorage.
+ * API + localStorage merge — never drop local heroes when API returns [].
+ * (Empty 200 from /api/characters was looping create → select → create.)
  */
 export async function getAll(): Promise<GrudgeCharacter[]> {
+  const local = loadLocal();
   try {
-    const res = await fetch(API_BASE, {
+    const res = await fetchWithTimeout(API_BASE, {
       headers: { ...authHeaders(), "Content-Type": "application/json" },
     });
     if (res.ok) {
       const data = await res.json();
-      const chars: GrudgeCharacter[] = Array.isArray(data) ? data : data.characters || [];
-      // Sync to localStorage as cache
-      if (chars.length > 0) saveLocal(chars);
-      return chars;
+      const remote: GrudgeCharacter[] = Array.isArray(data)
+        ? data
+        : data.characters || [];
+      if (remote.length > 0) {
+        // Prefer remote, keep local-only stubs not yet on server
+        const remoteIds = new Set(remote.map((c) => c.id));
+        const localOnly = local.filter(
+          (c) => c._localOnly || !remoteIds.has(c.id),
+        );
+        const merged = [...remote, ...localOnly];
+        saveLocal(merged);
+        return merged;
+      }
+      // API empty: keep local heroes (guest / offline / failed mint path)
+      return local;
     }
   } catch {
     // Network error — fall through to localStorage
   }
-  // Fallback: localStorage
-  return loadLocal();
+  return local;
 }
 
 /**
@@ -91,22 +119,22 @@ export async function create(
   };
 
   try {
-    const res = await fetch(API_BASE, {
+    const res = await fetchWithTimeout(API_BASE, {
       method: "POST",
       headers: { ...authHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if (res.ok) {
       const created: GrudgeCharacter = await res.json();
-      // Cache locally
-      const local = loadLocal();
+      // Cache locally (dedupe by id)
+      const local = loadLocal().filter((c) => c.id !== created.id);
       local.push(created);
       saveLocal(local);
       setActiveId(created.id);
       return created;
     }
   } catch {
-    // Network error — create locally
+    // Network / timeout — create locally
   }
 
   // Fallback: create locally with a generated ID

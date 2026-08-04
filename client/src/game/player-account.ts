@@ -138,19 +138,25 @@ export async function createNewCharacter(
     accountId, tempGrudgeId, modelIndex, race, heroClass, customName,
   );
 
-  // Try to create on backend
+  // Try to create on backend (hard timeout so create-character never hangs)
   try {
-    const resp = await fetch(`${GRUDGE_API_BASE}/characters`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify(character),
-    });
-    if (resp.ok) {
-      const serverData = await resp.json();
-      // Server may assign a real grudgeId
-      if (serverData.grudgeId) character.grudgeId = serverData.grudgeId;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const resp = await fetch(`${GRUDGE_API_BASE}/characters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(character),
+        signal: ctrl.signal,
+      });
+      if (resp.ok) {
+        const serverData = await resp.json();
+        if (serverData.grudgeId) character.grudgeId = serverData.grudgeId;
+      }
+    } finally {
+      clearTimeout(t);
     }
-  } catch { /* offline — character created locally */ }
+  } catch { /* offline / timeout — character created locally */ }
 
   await savePlayerCharacter(character);
   startSync();

@@ -262,28 +262,44 @@ export default function CreateCharacter() {
       startSync();
 
       // Fire-and-forget cNFT mint (non-blocking — character is playable immediately)
-      mintAndTrack({
-        grudgeId: character.grudgeId,
-        characterName: name.trim(),
-        race,
-        heroClass,
-        faction,
-        level: 1,
-        imageUrl: avatarUrl,
-        recipientEmail: grudgeUser?.username?.includes('@') ? grudgeUser.username : undefined,
-      }, (mintResult: MintResult) => {
-        if (mintResult.success && mintResult.mintAddress) {
-          console.log(`[cNFT] Character minted: ${mintResult.mintAddress}`);
-        } else {
-          console.warn('[cNFT] Mint fallback — character playable without NFT');
-        }
-      });
+      try {
+        mintAndTrack({
+          grudgeId: character.grudgeId,
+          characterName: name.trim(),
+          race,
+          heroClass,
+          faction,
+          level: 1,
+          imageUrl: avatarUrl,
+          recipientEmail: grudgeUser?.username?.includes('@') ? grudgeUser.username : undefined,
+        }, (mintResult: MintResult) => {
+          if (mintResult.success && mintResult.mintAddress) {
+            console.log(`[cNFT] Character minted: ${mintResult.mintAddress}`);
+          } else {
+            console.warn('[cNFT] Mint fallback — character playable without NFT');
+          }
+        });
+      } catch (mintErr) {
+        console.warn('[cNFT] mint kickoff failed — still entering game', mintErr);
+      }
 
-      // After create, land on account select so player can pick this (or other) heroes
-      setLocation('/character-select');
+      // ENTER GAME — do not bounce to character-select (empty API roster caused a loop:
+      // select sees [] → redirects back here forever).
+      try {
+        const { ensurePlayerHeroLoaded } = await import('@/game/player-account');
+        await ensurePlayerHeroLoaded();
+      } catch { /* local keys already set */ }
+
+      const mode = localStorage.getItem('grudge_mode') || 'openworld';
+      if (mode === 'dungeon') setLocation('/dungeon');
+      else if (mode === 'dungeon3d') setLocation('/dungeon3d');
+      else if (mode === 'arena') setLocation('/game');
+      else setLocation('/open-world-play');
     } catch (err: any) {
       console.error('[CreateChar] Error:', err);
       setCreateError(err?.message || 'Failed to create character');
+      setIsCreating(false);
+      return;
     }
     setIsCreating(false);
   };

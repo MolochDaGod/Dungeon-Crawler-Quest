@@ -302,14 +302,36 @@ export default function CharacterSelect() {
           const pick = active || chars[0];
           setSelectedAccount(pick);
         } else if (!isAdmin) {
-          // No account heroes yet — send non-admins straight to create
-          setLocation('/create-character');
-          return;
+          // Also honor legacy single-hero keys so we don't loop create↔select
+          const legacy =
+            !!localStorage.getItem('grudge_custom_hero') ||
+            !!localStorage.getItem('grudge_player_character');
+          if (legacy) {
+            setRosterMode('account');
+            // Stay on select; Enter Play will use ensurePlayerHeroLoaded
+          } else {
+            setLocation('/create-character');
+            return;
+          }
         } else {
           setRosterMode('codex');
         }
       } catch {
-        if (!cancelled && !isAdmin) setLocation('/create-character');
+        // Prefer local roster over forced create (avoids empty-API loop)
+        if (!cancelled) {
+          try {
+            const local = await grudgeCharacters.getAll();
+            if (local.length > 0) {
+              setAccountChars(local);
+              setSelectedAccount(local[0]);
+              setRosterMode('account');
+            } else if (!isAdmin) {
+              setLocation('/create-character');
+            }
+          } catch {
+            if (!isAdmin) setLocation('/create-character');
+          }
+        }
       } finally {
         if (!cancelled) setLoadingRoster(false);
       }

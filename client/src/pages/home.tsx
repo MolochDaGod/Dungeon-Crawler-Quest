@@ -91,12 +91,22 @@ export default function Home() {
   const handlePlay = async () => {
     localStorage.setItem('grudge_mode', selectedMode);
 
-    // Always prefer account character select when roster has heroes
+    // Account roster (API + local merge). Empty remote no longer hides local heroes.
     try {
       const { getAll } = await import('@/lib/grudgeCharacters');
       const chars = await getAll();
-      if (chars.length > 0) {
+      if (chars.length > 1) {
         setLocation('/character-select');
+        return;
+      }
+      if (chars.length === 1) {
+        // One hero — skip select bounce, go straight into the chosen mode
+        const { applyAccountCharacterToPlay } = await import('@/lib/grudgeCharacters');
+        applyAccountCharacterToPlay(chars[0]);
+        if (selectedMode === 'openworld') setLocation('/open-world-play');
+        else if (selectedMode === 'dungeon') setLocation('/dungeon');
+        else if (selectedMode === 'dungeon3d') setLocation('/dungeon3d');
+        else setLocation('/game');
         return;
       }
     } catch { /* fall through */ }
